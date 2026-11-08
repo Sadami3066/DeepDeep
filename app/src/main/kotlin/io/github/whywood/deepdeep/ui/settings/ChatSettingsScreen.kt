@@ -43,6 +43,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
@@ -69,7 +70,7 @@ fun ChatSettingsScreen(
             .navigationBarsPadding(),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -84,14 +85,14 @@ fun ChatSettingsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_chat),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SettingsGroup {
                 ChatFontSizeRow(
                     scale = preferences.chatFontScale,
@@ -127,7 +128,7 @@ fun ChatSettingsScreen(
                     onCheckedChange = onVoiceAutoSpeakChange,
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }
@@ -228,7 +229,7 @@ private fun ChatFontSizeRow(scale: Float, onChange: (Float) -> Unit) {
     Column(
         Modifier.fillMaxWidth().padding(
             horizontal = LocalDdRowHorizontalPadding.current,
-            vertical = 12.dp,
+            vertical = DdSpacing.Md,
         ),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -259,7 +260,7 @@ private fun ChatFontSizeRow(scale: Float, onChange: (Float) -> Unit) {
         )
         Text(
             text = stringResource(R.string.chat_font_size_preview),
-            modifier = Modifier.padding(vertical = 4.dp),
+            modifier = Modifier.padding(vertical = DdSpacing.Xs),
             style = DdType.body.copy(
                 fontSize = (16f * sliderValue).sp,
                 lineHeight = (26f * sliderValue).sp,

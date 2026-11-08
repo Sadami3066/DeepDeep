@@ -12,6 +12,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -46,13 +47,13 @@ fun MiniappInvalidDialog(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 Text(
                     text = stringResource(R.string.miniapp_invalid_title),
                     style = DdType.micro,
                     color = colors.inkTertiary,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(DdSpacing.Xxs))
                 Text(
                     text = reasonText,
                     style = DdType.bodySmall,

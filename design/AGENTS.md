@@ -28,7 +28,7 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 | `DdShapes.kt` | 圆角 token：`DdRadius` 档位与 `DdShapes` 常用形状 |
 | `DdSpacing.kt` | 间距 token：0/2/4/8/12/16/18/20/24/32/40 与语义间距 |
 | `DdSpinner.kt` | 旋转弧线加载圈 |
-| `DdText.kt` | 文本薄封装：DdType + 颜色/maxLines/overflow/textAlign |
+| `DdText.kt` | 文本薄封装：DdType + 颜色/maxLines/overflow/textAlign；String/AnnotatedString 双重重载，支持 softWrap/onTextLayout/inlineContent |
 | `DdTextField.kt` | 单行输入框与多行文本域，聚焦变色 |
 | `DdTheme.kt` | 主题变体：`DdTheme.lightSantorini()`（浅色）与 `DdTheme.darkOceanic()`（深色） |
 | `DdTypingDots.kt` | 三点错峰呼吸的正在输入指示 |
@@ -44,7 +44,7 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 - 边距与按压反馈：可点组件的内容与按压/波纹边缘之间至少留 `DdSpacing.Md`（12dp）横向内边距，文字与图标不许贴边（`DdTextAction` 已按此修正）；按压反馈只覆盖组件可视形状，不许溢出到相邻内容；所有可点区域 ≥ 44dp。
 - 主题预设：`ThemePreset { SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC }`，入口是 `DeepDeepTheme(preset, fontStyle)`；Santorini 固定浅色、Oceanic 固定深色、DeepDeep 固定浅色（已删除其深色配色）；默认 SYSTEM 自动在 Santorini/Oceanic 间选择。新增主题只需在 `DdTheme` 加颜色函数并在 `ThemePreset` 登记，设置页会自动出现选项。
 - 不用「图标容器」：列表行、空状态、展示页等位置图标直接以线性稿呈现，不加圆角方框或圆圈底色；旧 `DdIconBox` 仅为插件兼容保留，新界面不再使用。
-- 设计系统仅保留 token（间距/圆角/阴影/透明度/字号）与 Phase 0 基础组件（DdText/DdAvatar/DdEmptyState/DdSearchField/DdIconBox 等）；Phase 1/2 新增组件已移除，后续不再扩张组件库；圣托里尼日光主题（近白底 #F7F8F8、纯白组件 #FFFFFF、发丝线 #E2E5E7、#0078D7 主蓝、#E3F2FD 浅天蓝、#1E3A47 深青灰）由 `DdTheme.lightSantorini()` 提供，深色镜像 `DdTheme.darkOceanic()`（#1B2B34 深海青、#6699CC 极光青、#FAC863 星群黄、#EC5F67 落霞红）提供夜间方案；默认主题走「跟随系统」（浅色 Santorini / 深色 Oceanic）。
+- 设计系统仅保留 token（间距/圆角/阴影/透明度/字号）与 Phase 0 基础组件（DdText/DdAvatar/DdEmptyState/DdSearchField/DdIconBox 等）；Phase 1/2 新增组件已移除；组件可按需扩展，但新增公共组件或新增全局约束前必须先向用户汇报并获同意；圣托里尼日光主题（近白底 #F7F8F8、纯白组件 #FFFFFF、发丝线 #E2E5E7、#0078D7 主蓝、#E3F2FD 浅天蓝、#1E3A47 深青灰）由 `DdTheme.lightSantorini()` 提供，深色镜像 `DdTheme.darkOceanic()`（#1B2B34 深海青、#6699CC 极光青、#FAC863 星群黄、#EC5F67 落霞红）提供夜间方案；默认主题走「跟随系统」（浅色 Santorini / 深色 Oceanic）。
 - debug 展示页在 App 侧 `ui/settings/DesignSystemScreen.kt`：Settings → 关于 → 设计系统（仅 `BuildConfig.DEBUG`），用圣托里尼主题展示 tokens 与基础组件，供视觉验收参考。
 - 本模块无单测，改组件以编译通过 + 真机截图验收。
 - 插件 UI 直接消费本模块组件（`DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()` 等），所以公共组件的签名与视觉是跨仓库 API：改签名要同步 `plugin-api` ABI 与 `docs/PLUGIN_DEV.md`，并让 `plugins/` 仓库重编译。

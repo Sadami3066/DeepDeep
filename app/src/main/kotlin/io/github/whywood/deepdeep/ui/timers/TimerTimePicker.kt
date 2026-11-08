@@ -30,7 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.deepDeepColors
 import java.time.LocalTime
@@ -58,8 +60,8 @@ fun DdTimePicker(
     DdSheet(onDismiss = onDismiss) {
         TimerPickerHeader(title = stringResource(R.string.timers_time_label), onDismiss = onDismiss)
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Huge),
+            horizontalArrangement = Arrangement.spacedBy(DdSpacing.Xxl),
         ) {
             TimeColumn(
                 values = 0..23,
@@ -81,7 +83,7 @@ fun DdTimePicker(
             )
         }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -91,7 +93,7 @@ fun DdTimePicker(
                 color = colors.ink,
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
     }
 }
 
@@ -119,8 +121,8 @@ private fun TimeColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(ROW_HEIGHT)
-                    .padding(horizontal = 8.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .padding(horizontal = DdSpacing.Sm)
+                    .clip(DdShapes.Medium)
                     .then(if (isSelected) Modifier.background(colors.ink) else Modifier)
                     .clickable(
                         interactionSource = interaction,

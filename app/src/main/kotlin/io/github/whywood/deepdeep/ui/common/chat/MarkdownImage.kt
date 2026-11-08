@@ -50,6 +50,8 @@ import io.github.whywood.deepdeep.data.guessMime
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.ui.common.chat.FileViewerDialog
@@ -87,7 +89,7 @@ internal fun MarkdownImage(alt: String, source: String, title: String?, colors: 
         return
     }
     val context = LocalContext.current
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     BoxWithConstraints(Modifier.fillMaxWidth().clip(shape)) {
         val density = LocalDensity.current
         val widthPx = if (constraints.hasBoundedWidth) {
@@ -156,7 +158,7 @@ private fun AnimatedMarkdownImage(
                         width = with(density) { dimensions.first.toDp() },
                         height = with(density) { dimensions.second.toDp() },
                     )
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(DdShapes.Medium)
                     .testTag("markdown_animated_image_${file.name.hashCode()}"),
                 onClick = { previewVisible = true },
             )
@@ -242,7 +244,7 @@ private fun LoadedImage(
             },
             modifier = Modifier
                 .size(width = with(density) { widthPx.toDp() }, height = with(density) { heightPx.toDp() })
-                .clip(RoundedCornerShape(12.dp))
+                .clip(DdShapes.Medium)
                 .clickable { previewVisible = true }
                 .graphicsLayer { alpha = fade }
                 .testTag("markdown_image_${source.hashCode()}"),
@@ -302,7 +304,7 @@ private fun MarkdownImagePreview(
             Image(
                 bitmap = bitmap,
                 contentDescription = label.ifBlank { null },
-                modifier = Modifier.fillMaxSize().padding(20.dp),
+                modifier = Modifier.fillMaxSize().padding(DdSpacing.Xl),
                 contentScale = ContentScale.Fit,
             )
         }
@@ -328,14 +330,14 @@ private fun ImageFailure(alt: String, title: String?, colors: DeepDeepColors) {
         Modifier
             .fillMaxWidth()
             .heightIn(min = 120.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(DdShapes.Medium)
             .background(colors.wash)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = DdSpacing.Lg),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
         ) {
             DdIcon(icon = DdIcons.Image, tint = colors.inkTertiary, size = 18.dp)
             Text(

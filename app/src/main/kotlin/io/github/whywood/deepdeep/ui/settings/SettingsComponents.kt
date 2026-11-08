@@ -15,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -25,13 +27,13 @@ internal fun SettingsGroup(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = deepDeepColors()
-    CompositionLocalProvider(LocalDdRowHorizontalPadding provides 16.dp) {
+    CompositionLocalProvider(LocalDdRowHorizontalPadding provides DdSpacing.Lg) {
         Column(
             modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(DdShapes.Row)
                 .background(colors.surface)
-                .padding(vertical = 4.dp),
+                .padding(vertical = DdSpacing.Xs),
             content = content,
         )
     }
@@ -45,7 +47,7 @@ internal fun StatusPill(text: String, active: Boolean) {
         modifier = Modifier
             .clip(CircleShape)
             .background(if (active) colors.accentSoft else colors.wash)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = DdSpacing.Xs),
         style = DdType.chip,
         color = if (active) colors.accent else colors.inkTertiary,
         maxLines = 1,

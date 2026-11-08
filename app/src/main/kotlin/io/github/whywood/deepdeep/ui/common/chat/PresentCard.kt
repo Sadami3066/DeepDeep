@@ -39,10 +39,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
@@ -231,7 +234,7 @@ private fun PresentedImageItem(item: PresentedItem, root: File, colors: DeepDeep
 private fun PresentedHtmlItem(item: PresentedItem, root: File, colors: DeepDeepColors) {
     val path = remember(item.path, root) { resolvePresentedPath(item.path.orEmpty(), root) }
     val label = item.title ?: item.name
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     var fullscreen by rememberSaveable(path) { mutableStateOf(false) }
     val available = remember(path) { File(path).isFile }
     if (!available) {
@@ -245,7 +248,7 @@ private fun PresentedHtmlItem(item: PresentedItem, root: File, colors: DeepDeepC
                 .fillMaxWidth()
                 .height(220.dp)
                 .clip(shape)
-                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+                .border(1.dp, colors.hairline.copy(alpha = DdAlpha.Secondary), shape)
                 .testTag("present_html"),
             onActivate = { fullscreen = true },
         )
@@ -290,7 +293,7 @@ private fun PresentedVideoItem(
     val cover by produceState<Bitmap?>(initialValue = null, path) {
         value = withContext(Dispatchers.IO) { videoCover(path) }
     }
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         DdPressable(
             onClick = onOpen,
@@ -318,7 +321,7 @@ private fun PresentedVideoItem(
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(colors.ink.copy(alpha = 0.55f)),
+                        .background(colors.ink.copy(alpha = DdAlpha.Muted)),
                     contentAlignment = Alignment.Center,
                 ) {
                     DdIcon(icon = DdIcons.Play, tint = colors.surface, size = 22.dp)
@@ -367,7 +370,7 @@ private fun PresentedFileItem(
     onOpen: () -> Unit,
     onShare: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     DdPressable(
         onClick = onOpen,
         modifier = Modifier.fillMaxWidth().testTag("present_file"),
@@ -378,7 +381,7 @@ private fun PresentedFileItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+                .border(1.dp, colors.hairline.copy(alpha = DdAlpha.Secondary), shape)
                 .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -394,7 +397,7 @@ private fun PresentedFileItem(
                 )
                 val subtitle = item.title?.takeIf { it != item.name }
                 if (subtitle != null) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(DdSpacing.Xxs))
                     Text(
                         text = subtitle,
                         style = DdType.bodySmall,
@@ -439,9 +442,9 @@ private fun PresentedFailureRow(name: String, colors: DeepDeepColors) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(DdShapes.Medium)
             .background(colors.wash)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = DdSpacing.Md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DdIcon(icon = DdIcons.Globe, tint = colors.inkTertiary, size = 15.dp)
@@ -486,7 +489,7 @@ private fun PresentedHtmlDialog(path: String, onDismiss: () -> Unit) {
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 8.dp, end = 10.dp)
+                    .padding(top = DdSpacing.Sm, end = 10.dp)
                     .testTag("present_html_close"),
                 tint = colors.ink,
             )

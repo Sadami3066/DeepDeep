@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPageScaffold
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -59,14 +60,14 @@ fun WebSearchSettingsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.web_search_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SettingsGroup {
                 WebSearchProviderEntry(
                     id = WebSearchSettingsStore.DEEPSEEK,
@@ -94,7 +95,7 @@ fun WebSearchSettingsScreen(
                     onEdit = { editing = WebSearchSettingsStore.SERPER },
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
     val provider = editing
@@ -116,7 +117,7 @@ fun WebSearchSettingsScreen(
                         testTag = "web_search_key_$provider",
                     )
                     if (configured[provider] == true) {
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(DdSpacing.Md))
                         DdTextAction(
                             text = stringResource(R.string.web_search_clear),
                             onClick = {

@@ -10,6 +10,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -59,7 +61,9 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -182,7 +186,7 @@ private fun SkillsContent(
             .testTag("skills_screen"),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -192,7 +196,7 @@ private fun SkillsContent(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.skills_title),
                 modifier = Modifier.weight(1f),
@@ -225,75 +229,82 @@ private fun SkillsContent(
             onSelect = onTabSelect,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Xs),
             testTags = listOf("skills_tab_market", "skills_tab_mine"),
         )
         DdSearchField(
             query = if (showMarket) marketQuery else state.searchQuery,
             onQueryChange = if (showMarket) onMarketQueryChange else onQueryChange,
             placeholder = stringResource(R.string.skills_search_placeholder),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "skills_search_field",
             clearTestTag = "skills_search_clear",
         )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-        ) {
-            if (showMarket) {
-                MarketTab(
-                    repository = marketRepository,
-                    type = MarketEntryType.Skill,
-                    query = marketQuery,
-                    testTagPrefix = "skills",
-                    onInstalled = onMarketInstalled,
-                )
-            } else when {
-                state.loading && state.items.isEmpty() -> Unit
+        if (showMarket) {
+            MarketTab(
+                repository = marketRepository,
+                type = MarketEntryType.Skill,
+                query = marketQuery,
+                testTagPrefix = "skills",
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                onInstalled = onMarketInstalled,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(start = DdSpacing.Lg, end = DdSpacing.Lg, bottom = DdSpacing.Xxxl),
+            ) {
+                when {
+                    state.loading && state.items.isEmpty() -> Unit
 
-                state.items.isEmpty() && state.error != null -> Box(
-                    Modifier.fillMaxWidth().padding(top = 72.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SkillsErrorRow(error = state.error, onRetry = onRetry)
-                }
-
-                state.items.isEmpty() -> EmptySkills(onInstall = onInstall)
-
-                state.visibleItems.isEmpty() -> Box(
-                    Modifier.fillMaxWidth().padding(top = 72.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.search_no_match),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
-                }
-
-                else -> {
-                    if (state.error != null) {
-                        SkillsErrorRow(
-                            error = state.error,
-                            onRetry = onRetry,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
+                    state.items.isEmpty() && state.error != null -> item {
+                        Box(
+                            Modifier.fillMaxWidth().padding(top = 72.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            SkillsErrorRow(error = state.error, onRetry = onRetry)
+                        }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    SkillsGroup(
-                        skills = state.visibleItems,
-                        togglingIds = state.togglingIds,
-                        onOpen = { selected = it },
-                        onToggle = onToggle,
-                    )
-                    Spacer(Modifier.height(16.dp))
+
+                    state.items.isEmpty() -> item { EmptySkills(onInstall = onInstall) }
+
+                    state.visibleItems.isEmpty() -> item {
+                        Box(
+                            Modifier.fillMaxWidth().padding(top = 72.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.search_no_match),
+                                style = DdType.bodySmall,
+                                color = colors.inkTertiary,
+                            )
+                        }
+                    }
+
+                    else -> {
+                        if (state.error != null) {
+                            item {
+                                SkillsErrorRow(
+                                    error = state.error,
+                                    onRetry = onRetry,
+                                    modifier = Modifier.padding(top = DdSpacing.Sm),
+                                )
+                            }
+                        }
+                        item { Spacer(Modifier.height(DdSpacing.Sm)) }
+                        item {
+                            SkillsGroup(
+                                skills = state.visibleItems,
+                                togglingIds = state.togglingIds,
+                                onOpen = { selected = it },
+                                onToggle = onToggle,
+                            )
+                        }
+                        item { Spacer(Modifier.height(DdSpacing.Lg)) }
+                    }
                 }
             }
-            Spacer(Modifier.height(32.dp))
         }
     }
 
@@ -397,7 +408,7 @@ private fun EmptySkills(onInstall: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DdIcon(icon = DdIcons.Sparkles, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         Text(
             text = stringResource(R.string.skills_empty_title),
             style = DdType.label,
@@ -409,7 +420,7 @@ private fun EmptySkills(onInstall: () -> Unit) {
             style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         DdTextAction(
             text = stringResource(R.string.skills_install_hint),
             onClick = onInstall,
@@ -431,9 +442,9 @@ private fun SkillsGroup(
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(DdShapes.Row)
                 .background(colors.surface)
-                .padding(vertical = 4.dp),
+                .padding(vertical = DdSpacing.Xs),
         ) {
             skills.forEachIndexed { index, skill ->
                 if (index > 0) DdHairline()
@@ -477,7 +488,7 @@ private fun ManualTag() {
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
             .background(colors.wash)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(horizontal = 6.dp, vertical = DdSpacing.Xxs),
         style = DdType.chip,
         color = colors.inkTertiary,
         maxLines = 1,
@@ -503,7 +514,7 @@ private fun SkillDetailSheet(
     DdSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().testTag("skill_detail")) {
             Row(
-                modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = 24.dp, end = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = DdSpacing.Xxl, end = DdSpacing.Md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -525,7 +536,7 @@ private fun SkillDetailSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = DdSpacing.Xxl)
                     .heightIn(max = maxBodyHeight)
                     .verticalScroll(rememberScrollState()),
             ) {
@@ -535,7 +546,7 @@ private fun SkillDetailSheet(
                         style = DdType.bodySmall,
                         color = colors.inkSecondary,
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(DdSpacing.Lg))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -560,19 +571,19 @@ private fun SkillDetailSheet(
                         ManualTag()
                     }
                 }
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(DdSpacing.Xl))
                 Text(
                     text = stringResource(R.string.skills_detail_content),
                     style = DdType.micro,
                     color = colors.inkTertiary,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(DdShapes.Medium)
                         .background(colors.wash)
-                        .padding(12.dp),
+                        .padding(DdSpacing.Md),
                 ) {
                     when {
                         loading -> DdSpinner(size = 18.dp)
@@ -593,7 +604,7 @@ private fun SkillDetailSheet(
                         )
                     }
                 }
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(DdSpacing.Xl))
                 DdTextAction(
                     text = stringResource(R.string.skills_delete_confirm),
                     onClick = onDelete,
@@ -601,7 +612,7 @@ private fun SkillDetailSheet(
                     modifier = Modifier.testTag("skill_delete"),
                     color = colors.danger,
                 )
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
         }
     }

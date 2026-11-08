@@ -33,6 +33,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -72,16 +73,16 @@ fun OAuthLoginSheet(
                     .fillMaxWidth()
                     .heightIn(max = 520.dp)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = DdSpacing.Xxl),
             ) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 state.message?.takeIf { it.isNotBlank() }?.let { message ->
                     Text(
                         text = message,
                         style = DdType.bodySmall,
                         color = colors.inkSecondary,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                 }
                 state.instructions?.takeIf { it.isNotBlank() }?.let { instructions ->
                     Text(
@@ -89,14 +90,14 @@ fun OAuthLoginSheet(
                         style = DdType.bodySmall,
                         color = colors.inkTertiary,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(DdSpacing.Xs))
                 }
                 state.url?.let { url ->
                     DdTextAction(
                         text = stringResource(R.string.settings_oauth_open_browser),
                         onClick = { openBrowser(url) },
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(DdSpacing.Xs))
                 }
                 if (state.url != null && !state.finished) {
                     Text(
@@ -104,7 +105,7 @@ fun OAuthLoginSheet(
                         style = DdType.bodySmall,
                         color = colors.inkTertiary,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(DdSpacing.Xs))
                 }
                 if (state.options.isNotEmpty()) {
                     state.options.forEachIndexed { index, option ->
@@ -116,7 +117,7 @@ fun OAuthLoginSheet(
                             modifier = Modifier.testTag("oauth_login_option_${option.id}"),
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                 }
                 state.prompt?.let { prompt ->
                     if (state.url != null) {
@@ -132,7 +133,7 @@ fun OAuthLoginSheet(
                         style = DdType.bodySmall,
                         color = colors.inkSecondary,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     DdTextField(
                         value = draft,
                         onValueChange = { draft = it },
@@ -149,7 +150,7 @@ fun OAuthLoginSheet(
                         onDone = { submit() },
                         testTag = "oauth_login_prompt",
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     DdPrimaryButton(
                         text = stringResource(R.string.settings_oauth_confirm),
                         onClick = { submit() },
@@ -169,7 +170,7 @@ fun OAuthLoginSheet(
                 }
                 if (!state.finished) {
                     state.error?.takeIf { it.isNotBlank() }?.let { error ->
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(DdSpacing.Sm))
                         Text(
                             text = error,
                             style = DdType.bodySmall,
@@ -177,7 +178,7 @@ fun OAuthLoginSheet(
                         )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(DdSpacing.Lg))
                 DdTextAction(
                     text = stringResource(R.string.settings_oauth_cancel),
                     onClick = {
@@ -187,7 +188,7 @@ fun OAuthLoginSheet(
                     color = colors.inkTertiary,
                     modifier = Modifier.testTag("oauth_login_cancel"),
                 )
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
         }
     }

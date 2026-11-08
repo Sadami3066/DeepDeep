@@ -35,6 +35,7 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -61,7 +62,7 @@ fun AssistantSettingsScreen(
             .testTag("assistant_settings"),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -77,20 +78,20 @@ fun AssistantSettingsScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.Xxl),
         ) {
             Text(
                 text = stringResource(R.string.assistant_settings_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             Text(
                 text = stringResource(R.string.assistant_settings_subtitle),
                 style = DdType.bodySmall,
                 color = colors.inkTertiary,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Sparkles,
@@ -129,7 +130,7 @@ fun AssistantSettingsScreen(
                     modifier = Modifier.testTag("assistant_power_settings"),
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }

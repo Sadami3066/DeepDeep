@@ -18,6 +18,8 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -32,15 +34,15 @@ fun JobsMeter(
     DdPressable(
         onClick = onClick,
         modifier = modifier.sizeIn(minWidth = 31.dp, minHeight = 31.dp).testTag("jobs_meter"),
-        shape = RoundedCornerShape(8.dp),
+        shape = DdShapes.Small,
         contentDescription = stringResource(R.string.jobs_meter_description, count),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 3.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 3.dp, vertical = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 11.dp)
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = count.toString(),
                 style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),

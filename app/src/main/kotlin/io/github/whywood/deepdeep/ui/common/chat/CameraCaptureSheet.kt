@@ -66,11 +66,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -151,7 +153,7 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Un
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp),
+                .padding(horizontal = DdSpacing.Xxxl),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -161,7 +163,7 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Un
                 color = Color.White.copy(alpha = 0.85f),
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(DdSpacing.Lg))
             DdPrimaryButton(
                 text = stringResource(R.string.camera_open_settings),
                 onClick = onOpenSettings,
@@ -174,7 +176,7 @@ private fun CameraPermissionHint(onOpenSettings: () -> Unit, onDismiss: () -> Un
             contentDescription = stringResource(R.string.camera_close),
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(4.dp),
+                .padding(DdSpacing.Xs),
             tint = Color.White,
             iconSize = 20.dp,
         )
@@ -349,7 +351,7 @@ private fun CameraBody(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(horizontal = 32.dp),
+                    .padding(horizontal = DdSpacing.Xxxl),
             )
 
             request != null -> CameraXViewfinder(
@@ -371,7 +373,7 @@ private fun CameraBody(
                 .height(120.dp)
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = DdAlpha.Border)),
                     ),
                 ),
         )
@@ -380,7 +382,7 @@ private fun CameraBody(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                .padding(start = DdSpacing.Md, end = DdSpacing.Md, bottom = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -419,7 +421,7 @@ private fun CameraBody(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = 100.dp),
+                .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, bottom = 100.dp),
         ) {
             ScanResultCard(
                 decisions = cardDecisions,
@@ -469,7 +471,7 @@ private fun ShutterButton(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(if (enabled || capturing) Color.White else Color.White.copy(alpha = 0.4f)),
+                .background(if (enabled || capturing) Color.White else Color.White.copy(alpha = DdAlpha.Divider)),
             contentAlignment = Alignment.Center,
         ) {
             if (capturing) {

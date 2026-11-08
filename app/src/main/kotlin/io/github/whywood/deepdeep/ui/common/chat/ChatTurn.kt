@@ -37,8 +37,11 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -183,10 +186,10 @@ private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(DdShapes.Medium)
                 .background(colors.wash)
                 .clickable { expanded = !expanded }
-                .padding(start = 12.dp, end = 10.dp, top = 9.dp, bottom = 9.dp)
+                .padding(start = DdSpacing.Md, end = 10.dp, top = 9.dp, bottom = 9.dp)
                 .testTag("assistant_summary"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -198,14 +201,14 @@ private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
                 tint = colors.inkTertiary,
                 size = 13.dp,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Text(
                 text = title,
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                 color = colors.inkSecondary,
             )
             if (tokens != null) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(DdSpacing.Sm))
                 Text(
                     text = tokens,
                     style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
@@ -223,7 +226,7 @@ private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
         if (summary.text.isNotBlank()) {
             Text(
                 text = summary.text.trim(),
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 6.dp),
+                modifier = Modifier.padding(start = DdSpacing.Md, end = DdSpacing.Md, top = 6.dp),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
                 color = colors.inkTertiary,
                 maxLines = if (expanded) Int.MAX_VALUE else 4,
@@ -268,7 +271,7 @@ private fun NoticeRow(notice: TurnNotice) {
 private fun NoticeText(text: String) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xs),
         horizontalArrangement = Arrangement.Center,
     ) {
         Text(
@@ -283,7 +286,7 @@ private fun NoticeText(text: String) {
 private fun JobFinishedNotice(notice: TurnNotice.JobFinished) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = DdSpacing.Xxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 12.dp)
@@ -309,7 +312,7 @@ private fun GoalRoundNotice(notice: TurnNotice.GoalRound) {
         verticalAlignment = Alignment.Top,
     ) {
         DdIcon(icon = DdIcons.Target, tint = colors.accent, size = 14.dp)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(DdSpacing.Sm))
         Column(Modifier.weight(1f)) {
             Text(
                 text = if (notice.maxRounds > 0) {
@@ -321,7 +324,7 @@ private fun GoalRoundNotice(notice: TurnNotice.GoalRound) {
                 color = colors.inkTertiary,
             )
             if (notice.objective.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(DdSpacing.Xxs))
                 Text(
                     text = notice.objective,
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
@@ -368,7 +371,7 @@ private fun UserBubble(
             if (reminder != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
                 ) {
                     DdIcon(icon = DdIcons.Clock, tint = colors.inkTertiary, size = 12.dp)
                     Text(
@@ -420,7 +423,7 @@ private fun QuoteContext(text: String) {
                 .width(2.dp)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(1.dp))
-                .background(colors.inkTertiary.copy(alpha = 0.45f)),
+                .background(colors.inkTertiary.copy(alpha = DdAlpha.Hairline)),
         )
         Text(
             text = text,
@@ -495,7 +498,7 @@ private fun AssistantTurn(
             )
         }
         if (liveAsk != null) {
-            if (hasVisibleProcess) Spacer(Modifier.height(12.dp))
+            if (hasVisibleProcess) Spacer(Modifier.height(DdSpacing.Md))
             key(liveAsk.requestId) {
                 AskQuestionCard(
                     questions = liveAsk.questions,
@@ -519,7 +522,7 @@ private fun AssistantTurn(
             }
         }
         if (presentedItems.isNotEmpty() && !message.streaming) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
             PresentCard(
                 items = presentedItems,
                 attachmentRoot = attachmentRoot,
@@ -529,8 +532,8 @@ private fun AssistantTurn(
             )
         }
         if (miniappApps.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(DdSpacing.Md))
+            Column(verticalArrangement = Arrangement.spacedBy(DdSpacing.Sm)) {
                 miniappApps.forEach { app ->
                     MiniappChatCard(app = app, onOpen = onOpenMiniapp)
                 }
@@ -556,7 +559,7 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
     val colors = deepDeepColors()
     val rawDetails = rawErrorDetails(message.rawError)
     var detailsExpanded by rememberSaveable(message.id, message.rawError) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = DdSpacing.Sm)) {
         if (message.retrying) {
             Row(
                 modifier = Modifier.fillMaxWidth().height(44.dp),
@@ -569,7 +572,7 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
                     strokeWidth = 1.8.dp,
                 )
                 if (retryAttempt != null) {
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(DdSpacing.Sm))
                     Text(
                         text = stringResource(R.string.chat_status_retrying_format, retryAttempt),
                         style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
@@ -581,13 +584,13 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(DdShapes.Medium)
                     .background(colors.danger.copy(alpha = if (colors.dark) 0.12f else 0.06f))
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = DdSpacing.Md, vertical = 10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     DdIcon(icon = DdIcons.Info, tint = colors.danger, size = 15.dp)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(DdSpacing.Sm))
                     Text(
                         text = message.error ?: stringResource(R.string.assistant_failed),
                         modifier = Modifier.weight(1f),
@@ -598,7 +601,7 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
                     )
                 }
                 if (rawDetails != null) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(DdSpacing.Xxs))
                     Row(
                         modifier = Modifier.fillMaxWidth().height(36.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -622,9 +625,9 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 6.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(DdShapes.Small)
                                 .background(colors.codeBackground)
-                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                                .padding(horizontal = 10.dp, vertical = DdSpacing.Sm)
                                 .testTag("assistant_error_details"),
                             style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 17.sp),
                             color = colors.inkSecondary,
@@ -638,7 +641,7 @@ private fun FailedMark(message: AssistantMessage, retryAttempt: Int?) {
 
 @Composable
 private fun StatusMark(text: String, color: Color) {
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    Row(Modifier.fillMaxWidth().padding(top = DdSpacing.Sm)) {
         Text(
             text = text,
             style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),

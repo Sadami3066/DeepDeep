@@ -36,9 +36,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -71,12 +73,12 @@ internal fun AnsweredAskCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = DdSpacing.Xs)
                 .heightIn(min = 32.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button) { expanded = !expanded }
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = DdSpacing.Sm)
                 .testTag("answered_ask_toggle_$toolCallId"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -88,14 +90,14 @@ internal fun AnsweredAskCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             DdIcon(
                 icon = DdIcons.ChevronRight,
                 modifier = Modifier.rotate(rotation),
-                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
                 size = 12.dp,
             )
-            Spacer(Modifier.width(2.dp))
+            Spacer(Modifier.width(DdSpacing.Xxs))
         }
         AnimatedVisibility(
             visible = expanded,
@@ -108,7 +110,7 @@ internal fun AnsweredAskCard(
                 shrinkTowards = Alignment.Top,
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
-            Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 6.dp)) {
+            Column(Modifier.fillMaxWidth().padding(top = DdSpacing.Sm, bottom = 6.dp)) {
                 record.questions.forEachIndexed { index, question ->
                     if (index > 0) Spacer(Modifier.height(14.dp))
                     val answer = answerText(answerById[question.id])
@@ -118,14 +120,14 @@ internal fun AnsweredAskCard(
                             style = DdType.micro,
                             color = colors.inkTertiary,
                         )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(DdSpacing.Xs))
                     }
                     Text(
                         text = question.question,
                         style = DdType.body,
                         color = colors.ink,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(DdSpacing.Xs))
                     Text(
                         text = answer ?: stringResource(R.string.ask_card_skipped),
                         style = DdType.bodySmall,

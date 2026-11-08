@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -226,7 +227,7 @@ private fun VoiceWaveform(
             }
         }
     }
-    val faintColor = colors.inkTertiary.copy(alpha = 0.34f)
+    val faintColor = colors.inkTertiary.copy(alpha = DdAlpha.SpotFocused)
     val loudColor = colors.ink
     Canvas(modifier) {
         val fraction = scrollFraction.floatValue

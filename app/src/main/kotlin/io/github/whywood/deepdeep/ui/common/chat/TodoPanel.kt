@@ -46,11 +46,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlinx.serialization.json.Json
@@ -62,7 +65,7 @@ import kotlinx.serialization.json.contentOrNull
 private const val PendingStatus = "pending"
 private const val InProgressStatus = "in_progress"
 private const val CompletedStatus = "completed"
-private val PanelShape = RoundedCornerShape(18.dp)
+private val PanelShape = DdShapes.Card
 private val HeaderHeight = 44.dp
 private val DividerHeight = 1.dp
 
@@ -109,7 +112,7 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
     BoxWithConstraints(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs),
     ) {
         val listMaxHeight = (maxHeight * 0.4f - HeaderHeight - DividerHeight).coerceAtLeast(0.dp)
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
@@ -140,7 +143,7 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
                     shape = PanelShape,
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (allCompleted) {
@@ -162,7 +165,7 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(DdSpacing.Sm))
                         Text(
                             text = stringResource(
                                 R.string.assistant_todo_progress,
@@ -176,7 +179,7 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
                         DdIcon(
                             icon = DdIcons.ChevronDown,
                             modifier = Modifier.graphicsLayer { rotationZ = chevronRotation.value },
-                            tint = colors.inkTertiary.copy(alpha = 0.7f),
+                            tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
                             size = 14.dp,
                         )
                     }
@@ -187,7 +190,7 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
                     exit = fadeOut(tween(DdMotion.FAST)),
                 ) {
                     Column {
-                        DdHairline(Modifier.padding(horizontal = 16.dp))
+                        DdHairline(Modifier.padding(horizontal = DdSpacing.Lg))
                         Column(
                             Modifier
                                 .fillMaxWidth()
@@ -211,7 +214,7 @@ private fun TodoPanelRow(todo: TodoItem) {
     val colors = deepDeepColors()
     val completed = todo.status == CompletedStatus
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StatusDot(

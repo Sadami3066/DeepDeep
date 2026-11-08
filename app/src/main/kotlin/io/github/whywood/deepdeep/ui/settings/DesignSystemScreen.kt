@@ -80,7 +80,7 @@ fun DesignSystemScreen(onClose: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .padding(start = 8.dp, end = 12.dp),
+                        .padding(start = DdSpacing.Sm, end = DdSpacing.Md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     DdIconButton(
@@ -142,7 +142,7 @@ private fun PaletteSection(colors: DeepDeepColors) {
         )
         swatches.forEach { (name, color) ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -209,7 +209,7 @@ private fun SpacingSection(colors: DeepDeepColors) {
         )
         steps.forEach { (name, value) ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 DdText(text = name, modifier = Modifier.width(56.dp), style = DdType.label, color = colors.inkSecondary)
@@ -349,7 +349,7 @@ private fun MotionSection(colors: DeepDeepColors) {
         )
         durations.forEach { (name, value) ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xxs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 DdText(text = name, modifier = Modifier.weight(1f), style = DdType.label, color = colors.inkSecondary)

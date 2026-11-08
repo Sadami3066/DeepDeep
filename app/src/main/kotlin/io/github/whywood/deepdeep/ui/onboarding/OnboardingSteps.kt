@@ -71,14 +71,17 @@ import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.DevBundle
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.TonePreset
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -109,9 +112,9 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
         label = "onboarding-welcome-offset",
     )
     Column(
-        modifier.fillMaxSize().padding(horizontal = 24.dp).testTag("onboarding_step_welcome"),
+        modifier.fillMaxSize().padding(horizontal = DdSpacing.Xxl).testTag("onboarding_step_welcome"),
     ) {
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(DdSpacing.Xs))
         DdWordmark(color = colors.ink, dotColor = colors.accent, style = DdType.wordmark)
         Spacer(Modifier.height(26.dp))
         Text(
@@ -119,13 +122,13 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
             style = DdType.pageTitle,
             color = colors.ink,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(DdSpacing.Md))
         Text(
             text = stringResource(R.string.onboarding_welcome_lead),
             style = DdType.bodySmall,
             color = colors.inkSecondary,
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(DdSpacing.Xl))
         BoxWithConstraints(
             Modifier.fillMaxWidth().weight(1f),
             contentAlignment = Alignment.Center,
@@ -134,7 +137,7 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
             Canvas(Modifier.size(artSize)) {
                 val radius = size.minDimension / 2f
                 drawCircle(
-                    color = colors.accent.copy(alpha = 0.16f),
+                    color = colors.accent.copy(alpha = DdAlpha.IndicatorDark),
                     radius = radius * 0.94f,
                     style = Stroke(width = 1.dp.toPx()),
                 )
@@ -178,17 +181,17 @@ internal fun AccountStep(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .testTag("onboarding_step_account"),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         StepHeading(
             title = stringResource(R.string.onboarding_account_title),
             subtitle = stringResource(R.string.onboarding_account_subtitle),
         )
         Spacer(Modifier.height(28.dp))
         FieldLabel(text = stringResource(R.string.onboarding_nickname_label))
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(DdSpacing.Xxs))
         UnderlineField(
             value = nickname,
             onValueChange = { onNicknameChange(it.take(PersonalizationStore.MAX_NICKNAME_LENGTH)) },
@@ -207,19 +210,19 @@ internal fun AccountStep(
         )
         Spacer(Modifier.height(28.dp))
         FieldLabel(text = stringResource(R.string.onboarding_language_label))
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(DdSpacing.Xxs))
         SettingRow(
             text = languageLabel(language),
             onClick = { languageSheetOpen = true },
             testTag = "onboarding_language_row",
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(DdSpacing.Xl))
         Text(
             text = stringResource(R.string.onboarding_account_note),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
     if (languageSheetOpen) {
         DdSheet(onDismiss = { languageSheetOpen = false }) {
@@ -227,9 +230,9 @@ internal fun AccountStep(
                 title = stringResource(R.string.onboarding_language_label),
                 onClose = { languageSheetOpen = false },
             )
-            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 24.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Md).padding(bottom = DdSpacing.Xxl)) {
                 AppLanguage.entries.forEachIndexed { index, option ->
-                    if (index > 0) DdHairline(Modifier.padding(horizontal = 8.dp))
+                    if (index > 0) DdHairline(Modifier.padding(horizontal = DdSpacing.Sm))
                     DdListRow(
                         title = languageLabel(option),
                         onClick = {
@@ -276,17 +279,17 @@ internal fun ProviderStep(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .testTag("onboarding_step_provider"),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         StepHeading(
             title = stringResource(R.string.onboarding_provider_title),
             subtitle = stringResource(R.string.onboarding_provider_subtitle),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         FieldLabel(text = stringResource(R.string.onboarding_provider_section))
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         OnboardingCard {
             ProviderOption(
                 providerId = ProviderCatalog.DEFAULT_PROVIDER_ID,
@@ -317,10 +320,10 @@ internal fun ProviderStep(
             testTag = "onboarding_provider_other",
         )
         if (provider != null) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(DdSpacing.Xxl))
             if (provider.hasOAuth) {
                 FieldLabel(text = stringResource(R.string.onboarding_provider_oauth_label))
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 OnboardingCard {
                     OAuthOptionRow(
                         signedIn = oauthSignedIn,
@@ -329,7 +332,7 @@ internal fun ProviderStep(
                     )
                     if (oauthSignedIn) {
                         DdHairline()
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm)) {
                             DdTextAction(
                                 text = stringResource(R.string.onboarding_provider_oauth_sign_out),
                                 onClick = onSignOutOAuth,
@@ -343,18 +346,18 @@ internal fun ProviderStep(
                             text = oauthError,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md)
                                 .testTag("onboarding_provider_oauth_error"),
                             style = DdType.bodySmall,
                             color = colors.danger,
                         )
                     }
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
             if (provider.supportsApiKey) {
                 FieldLabel(text = stringResource(R.string.onboarding_provider_api_key_label))
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(DdSpacing.Xxs))
                 UnderlineField(
                     value = apiKey,
                     onValueChange = onApiKeyChange,
@@ -385,10 +388,10 @@ internal fun ProviderStep(
                 )
                 when (keyState) {
                     KEY_STATE_SAVING -> {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(DdSpacing.Sm))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             DdSpinner(size = 14.dp, strokeWidth = 1.5.dp)
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(DdSpacing.Sm))
                             Text(
                                 text = stringResource(R.string.onboarding_provider_key_saving),
                                 style = DdType.bodySmall,
@@ -398,7 +401,7 @@ internal fun ProviderStep(
                     }
 
                     KEY_STATE_SAVED -> {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(DdSpacing.Sm))
                         Text(
                             text = stringResource(R.string.onboarding_provider_key_saved),
                             style = DdType.bodySmall,
@@ -407,7 +410,7 @@ internal fun ProviderStep(
                     }
 
                     KEY_STATE_FAILED -> {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(DdSpacing.Sm))
                         Text(
                             text = stringResource(R.string.onboarding_provider_key_failed),
                             style = DdType.bodySmall,
@@ -423,7 +426,7 @@ internal fun ProviderStep(
                 )
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
     if (sheetOpen) {
         ProviderPickerSheet(
@@ -457,15 +460,15 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .testTag("onboarding_step_permissions"),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         StepHeading(
             title = stringResource(R.string.onboarding_permissions_title),
             subtitle = stringResource(R.string.onboarding_permissions_subtitle),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
             PermissionRow(
                 icon = DdIcons.Notifications,
@@ -497,7 +500,7 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
                 onClick = { openAssistantSettings(context) },
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
 }
 
@@ -513,15 +516,15 @@ internal fun EnvironmentStep(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .testTag("onboarding_step_environment"),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         StepHeading(
             title = stringResource(R.string.onboarding_environment_title),
             subtitle = stringResource(R.string.onboarding_environment_subtitle),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
             bundles.forEachIndexed { index, bundle ->
                 if (index > 0) DdHairline()
@@ -533,7 +536,7 @@ internal fun EnvironmentStep(
                 )
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
 }
 
@@ -552,12 +555,12 @@ private fun EnvironmentRow(
             .fillMaxWidth()
             .testTag("onboarding_environment_${bundle.id}")
             .semantics { this.selected = selected && !installed },
-        shape = RoundedCornerShape(18.dp),
+        shape = DdShapes.Card,
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = DdSpacing.Lg, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -567,7 +570,7 @@ private fun EnvironmentRow(
                         style = DdType.body,
                         color = colors.ink,
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(DdSpacing.Sm))
                     Text(
                         text = bundle.sizeLabel,
                         style = DdType.bodySmall,
@@ -583,7 +586,7 @@ private fun EnvironmentRow(
                     )
                 }
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             if (installed) {
                 Text(
                     text = stringResource(R.string.dev_installed),
@@ -631,15 +634,15 @@ internal fun PrivilegeStep(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .testTag("onboarding_step_privilege"),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         StepHeading(
             title = stringResource(R.string.onboarding_privilege_title),
             subtitle = stringResource(R.string.onboarding_privilege_subtitle),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
             PrivilegeRow(
                 level = PrivilegeLevel.NORMAL,
@@ -665,7 +668,7 @@ internal fun PrivilegeStep(
                 testTag = "onboarding_privilege_root",
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
 }
 
@@ -732,19 +735,19 @@ private fun ProviderOption(
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().testTag(testTag),
-        shape = RoundedCornerShape(18.dp),
+        shape = DdShapes.Card,
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ProviderIcon(providerId, name, size = 40.dp, iconSize = 24.dp)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = name, style = DdType.body, color = colors.ink)
                     if (badge != null) {
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(DdSpacing.Sm))
                         Text(text = badge, style = DdType.bodySmall, color = colors.accent)
                     }
                 }

@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -55,7 +58,9 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -311,7 +316,7 @@ private fun PluginsContent(
             .testTag("plugins_screen"),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -321,7 +326,7 @@ private fun PluginsContent(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.plugins_title),
                 modifier = Modifier.weight(1f),
@@ -397,105 +402,108 @@ private fun PluginsContent(
             onSelect = onTabSelect,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Xs),
             testTags = listOf("plugins_tab_market", "plugins_tab_mine"),
         )
         DdSearchField(
             query = if (showMarket) marketQuery else query,
             onQueryChange = if (showMarket) onMarketQueryChange else onQueryChange,
             placeholder = stringResource(R.string.plugins_search_placeholder),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "plugins_search_field",
             clearTestTag = "plugins_search_clear",
         )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-        ) {
-            if (showMarket) {
-                MarketTab(
-                    repository = marketRepository,
-                    type = MarketEntryType.Plugin,
-                    query = marketQuery,
-                    testTagPrefix = "plugins",
-                    onInstalled = onMarketInstalled,
-                )
-            } else {
-                Spacer(Modifier.height(8.dp))
+        if (showMarket) {
+            MarketTab(
+                repository = marketRepository,
+                type = MarketEntryType.Plugin,
+                query = marketQuery,
+                testTagPrefix = "plugins",
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                onInstalled = onMarketInstalled,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Sm, bottom = DdSpacing.Huge),
+            ) {
                 if (state.availableUpdates.isNotEmpty()) {
-                    UpdatesBanner(
-                        count = state.availableUpdates.size,
-                        onClick = onShowUpdates,
-                    )
-                    Spacer(Modifier.height(8.dp))
+                    item {
+                        UpdatesBanner(
+                            count = state.availableUpdates.size,
+                            onClick = onShowUpdates,
+                        )
+                        Spacer(Modifier.height(DdSpacing.Sm))
+                    }
                 }
                 when {
                     state.loading && state.plugins.isEmpty() -> Unit
 
                     visible.isEmpty() -> {
                         if (state.plugins.isEmpty()) {
-                            EmptyPlugins()
+                            item { EmptyPlugins() }
                         } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 48.dp)
-                                    .testTag("plugins_search_empty"),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.search_no_match),
-                                    style = DdType.bodySmall,
-                                    color = colors.inkTertiary,
-                                )
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 48.dp)
+                                        .testTag("plugins_search_empty"),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.search_no_match),
+                                        style = DdType.bodySmall,
+                                        color = colors.inkTertiary,
+                                    )
+                                }
                             }
                         }
                     }
 
-                    else -> visible.forEachIndexed { index, snapshot ->
-                        if (index > 0) DdHairline()
-                        PluginRow(
-                            snapshot = snapshot,
-                            pluginsRoot = pluginsRoot,
-                            interactive = interactive && snapshot.id !in togglingIds,
-                            onOpenPage = {
-                                snapshot.pages.firstOrNull()?.let { page ->
-                                    onOpenPluginPage(snapshot.id, page.id)
-                                }
-                            },
-                            onToggle = { enabled -> onToggle(snapshot.id, enabled) },
-                            onOpenDetail = { onOpenDetail(snapshot) },
-                            onRetryActivation = { onRetryActivation(snapshot) },
-                            onRollback = { onRollback(snapshot) },
-                            onUninstall = { onUninstall(snapshot) },
-                        )
+                    else -> itemsIndexed(visible, key = { _, snapshot -> snapshot.id }) { index, snapshot ->
+                        Column {
+                            if (index > 0) DdHairline()
+                            PluginRow(
+                                snapshot = snapshot,
+                                pluginsRoot = pluginsRoot,
+                                interactive = interactive && snapshot.id !in togglingIds,
+                                onOpenPage = {
+                                    snapshot.pages.firstOrNull()?.let { page ->
+                                        onOpenPluginPage(snapshot.id, page.id)
+                                    }
+                                },
+                                onToggle = { enabled -> onToggle(snapshot.id, enabled) },
+                                onOpenDetail = { onOpenDetail(snapshot) },
+                                onRetryActivation = { onRetryActivation(snapshot) },
+                                onRollback = { onRollback(snapshot) },
+                                onUninstall = { onUninstall(snapshot) },
+                            )
+                        }
                     }
                 }
                 state.error?.let { error ->
-                    Spacer(Modifier.height(14.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = error,
-                            modifier = Modifier.weight(1f).testTag("plugins_error"),
-                            style = DdType.bodySmall,
-                            color = colors.danger,
-                        )
-                        DdTextAction(
-                            text = stringResource(R.string.assistant_retry),
-                            onClick = onRefresh,
-                            modifier = Modifier.testTag("plugins_error_retry"),
-                        )
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = DdSpacing.Xs, end = DdSpacing.Xs),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = error,
+                                modifier = Modifier.weight(1f).testTag("plugins_error"),
+                                style = DdType.bodySmall,
+                                color = colors.danger,
+                            )
+                            DdTextAction(
+                                text = stringResource(R.string.assistant_retry),
+                                onClick = onRefresh,
+                                modifier = Modifier.testTag("plugins_error_retry"),
+                            )
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(40.dp))
         }
     }
 }
@@ -509,7 +517,7 @@ private fun UpdatesBanner(
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().testTag("plugins_updates_available"),
-        shape = RoundedCornerShape(14.dp),
+        shape = DdShapes.Segmented,
         background = colors.accentSoft,
     ) {
         Row(
@@ -545,7 +553,7 @@ private fun EmptyPlugins() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DdIcon(icon = DdIcons.Puzzle, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         Text(
             text = stringResource(R.string.plugins_empty),
             style = DdType.label,
@@ -588,14 +596,14 @@ private fun PluginRow(
     DdPressable(
         onClick = onOpenPage,
         modifier = Modifier.fillMaxWidth().testTag("plugin_row_${snapshot.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         enabled = snapshot.hasPages,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 64.dp)
-                .padding(vertical = 12.dp),
+                .padding(vertical = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PluginIcon(
@@ -622,7 +630,7 @@ private fun PluginRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             DdSwitch(
                 checked = snapshot.enabled,
                 onCheckedChange = onToggle,
@@ -720,7 +728,7 @@ private fun PluginDetailSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .padding(start = 24.dp, end = 12.dp),
+                    .padding(start = DdSpacing.Xxl, end = DdSpacing.Md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PluginIcon(
@@ -749,7 +757,7 @@ private fun PluginDetailSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
+                    .padding(horizontal = DdSpacing.Xxl)
                     .heightIn(max = bodyMaxHeight)
                     .verticalScroll(rememberScrollState()),
             ) {
@@ -759,7 +767,7 @@ private fun PluginDetailSheet(
                         style = DdType.bodySmall,
                         color = colors.inkSecondary,
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(DdSpacing.Lg))
                 }
                 failure?.let { error ->
                     Text(
@@ -767,7 +775,7 @@ private fun PluginDetailSheet(
                         style = DdType.bodySmall,
                         color = colors.danger,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                 }
                 PluginGroup {
                     DdListRow(
@@ -842,7 +850,7 @@ private fun PluginDetailSheet(
                         )
                     }
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
         }
     }

@@ -28,10 +28,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.ui.common.scan.ScanStrategy
 import io.github.whywood.deepdeep.ui.common.scan.scanAppInfo
@@ -51,7 +54,7 @@ internal fun ScanAppPickerOverlay(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+                .padding(start = DdSpacing.Xl, end = DdSpacing.Sm, top = DdSpacing.Sm, bottom = DdSpacing.Xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -71,8 +74,8 @@ internal fun ScanAppPickerOverlay(
             Text(
                 text = stringResource(R.string.scan_picker_empty),
                 style = DdType.bodySmall,
-                color = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+                color = Color.White.copy(alpha = DdAlpha.Border),
+                modifier = Modifier.padding(horizontal = DdSpacing.Xl, vertical = DdSpacing.Xxl),
             )
         } else {
             Column(
@@ -80,7 +83,7 @@ internal fun ScanAppPickerOverlay(
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                    .padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs),
             ) {
                 strategies.forEach { strategy ->
                     StrategyRow(strategy = strategy, onClick = { onSelect(strategy) })
@@ -97,13 +100,13 @@ private fun StrategyRow(strategy: ScanStrategy, onClick: () -> Unit) {
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = DdShapes.Large,
         contentDescription = info.label,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val icon = info.icon
@@ -115,7 +118,7 @@ private fun StrategyRow(strategy: ScanStrategy, onClick: () -> Unit) {
                     modifier = Modifier.size(26.dp),
                 )
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = info.label,
@@ -127,12 +130,12 @@ private fun StrategyRow(strategy: ScanStrategy, onClick: () -> Unit) {
                 Text(
                     text = strategy.packageName,
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = Color.White.copy(alpha = DdAlpha.Muted),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             DdIcon(icon = DdIcons.ChevronRight, tint = Color.White.copy(alpha = 0.5f), size = 16.dp)
         }
     }

@@ -100,6 +100,8 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -468,10 +470,10 @@ fun ChatScreen(
                             end = 14.dp,
                             top = 6.dp,
                             bottom = with(chatDensity) {
-                                (overlayHeightPx + 12.dp.roundToPx()).toDp()
+                                (overlayHeightPx + DdSpacing.Md.roundToPx()).toDp()
                             },
                         ),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxl),
                     ) {
                         items(streamMessages, key = { it.id }) { message ->
                             Box(
@@ -539,7 +541,7 @@ fun ChatScreen(
             ) {
                 if (controller.showJumpToBottom) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = DdSpacing.Sm),
                         contentAlignment = Alignment.Center,
                     ) {
                         JumpToBottomChip(
@@ -553,7 +555,7 @@ fun ChatScreen(
                     exit = fadeOut(tween(DdMotion.FAST)) + shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Card, vertical = DdSpacing.Xs),
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         Text(
@@ -564,14 +566,14 @@ fun ChatScreen(
                     }
                 }
                 foreignQuestion?.let { foreign ->
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs), contentAlignment = Alignment.Center) {
                         Row(
                             modifier = Modifier
                                 .widthIn(max = 780.dp)
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(DdShapes.Segmented)
                                 .background(colors.raised)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Sm)
                                 .testTag("chat_foreign_question"),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -593,7 +595,7 @@ fun ChatScreen(
                         view = view,
                         onPause = onPauseGoal,
                         onResume = onResumeGoal,
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = Modifier.padding(horizontal = DdSpacing.Md),
                     )
                 }
                 key(state.conversationId) {
@@ -613,7 +615,7 @@ fun ChatScreen(
                         items = commandItems,
                         query = paletteQuery ?: lastPaletteQuery,
                         onPick = { item -> onPickCommand(item) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs),
                     )
                 }
                 ChatComposer(
@@ -661,7 +663,7 @@ fun ChatScreen(
                         onOpenPluginPage = onOpenPluginPage,
                     ),
                     voiceLanguage = voiceLanguage,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
+                    modifier = Modifier.padding(top = 6.dp, bottom = DdSpacing.Sm),
                 )
             }
         }
@@ -709,7 +711,7 @@ private fun EmptyState(
                                 .testTag("home_avatar"),
                             contentScale = ContentScale.Crop,
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(DdSpacing.Lg))
                     } else {
                         Image(
                             painter = painterResource(R.drawable.mascot_wave),
@@ -717,7 +719,7 @@ private fun EmptyState(
                             modifier = Modifier.size(148.dp),
                             contentScale = ContentScale.Fit,
                         )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(DdSpacing.Xs))
                     }
                     Text(
                         text = greeting(nickname),
@@ -726,7 +728,7 @@ private fun EmptyState(
                         color = colors.ink,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                     Text(
                         text = stringResource(R.string.assistant_home_prompt),
                         style = DdType.body,

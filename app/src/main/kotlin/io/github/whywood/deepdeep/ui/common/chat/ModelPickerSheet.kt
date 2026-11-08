@@ -30,6 +30,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -66,9 +67,9 @@ internal fun ModelPickerSheet(
                 .fillMaxWidth()
                 .heightIn(max = 520.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.Xxl),
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             if (providers.isNotEmpty()) {
                 val providerName = providers.firstOrNull { it.id == providerId }?.name ?: providerId
                 DdDropdown(
@@ -187,7 +188,7 @@ internal fun ModelPickerSheet(
             }
             Spacer(Modifier.height(28.dp))
         }
-        DdHairline(Modifier.padding(horizontal = 24.dp))
+        DdHairline(Modifier.padding(horizontal = DdSpacing.Xxl))
         DdListRow(
             title = stringResource(R.string.assistant_model_manage_providers),
             onClick = {
@@ -195,8 +196,8 @@ internal fun ModelPickerSheet(
                 onManageProviders()
             },
             showChevron = true,
-            modifier = Modifier.padding(horizontal = 24.dp),
+            modifier = Modifier.padding(horizontal = DdSpacing.Xxl),
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(DdSpacing.Xl))
     }
 }

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -60,6 +61,8 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
@@ -211,7 +214,7 @@ fun DeepDeepDrawer(
             .background(colors.paper)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .testTag("drawer_panel"),
     ) {
         Spacer(Modifier.height(22.dp))
@@ -239,7 +242,7 @@ fun DeepDeepDrawer(
         DrawerNewChatButton(
             onClick = { newChatWorkspaceId?.let(onNewSessionInWorkspace) },
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         Column(Modifier.fillMaxWidth()) {
             DrawerNavItem(
                 icon = DdIcons.Apps,
@@ -296,10 +299,10 @@ fun DeepDeepDrawer(
             }
         }
         Spacer(Modifier.height(14.dp))
-        DdHairline(color = colors.hairline.copy(alpha = 0.45f))
+        DdHairline(color = colors.hairline.copy(alpha = DdAlpha.Hairline))
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 4.dp),
+            contentPadding = PaddingValues(top = DdSpacing.Sm, bottom = DdSpacing.Xs),
         ) {
             items(entries, key = { it.key }) { entry ->
                 when (entry) {
@@ -383,10 +386,10 @@ fun DeepDeepDrawer(
                 }
             }
         }
-        DdHairline(color = colors.hairline.copy(alpha = 0.45f))
-        Spacer(Modifier.height(12.dp))
+        DdHairline(color = colors.hairline.copy(alpha = DdAlpha.Hairline))
+        Spacer(Modifier.height(DdSpacing.Md))
         DrawerAccountRow(userName = userName, avatar = avatar, onClick = onSettings)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(DdSpacing.Md))
     }
     renameTarget?.let { session ->
         RenameSessionDialog(
@@ -432,13 +435,13 @@ private fun DrawerWorkspacesHeader(
         )
         DdPressable(
             onClick = onCreate,
-            modifier = Modifier.testTag("drawer_workspace_create").padding(end = 4.dp),
-            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.testTag("drawer_workspace_create").padding(end = DdSpacing.Xs),
+            shape = DdShapes.Small,
             contentDescription = stringResource(R.string.drawer_workspace_create_short),
         ) {
             Text(
                 text = stringResource(R.string.drawer_workspace_create_short),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                modifier = Modifier.padding(horizontal = DdSpacing.Sm, vertical = 5.dp),
                 style = DdType.bodySmall.copy(fontSize = 12.sp),
                 color = colors.inkTertiary,
                 maxLines = 1,
@@ -454,11 +457,11 @@ private fun DrawerNewChatButton(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(DdShapes.Segmented)
             .background(colors.accentSoft)
             .clickable(onClick = onClick)
             .testTag("drawer_new_chat")
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = DdSpacing.Lg),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -495,7 +498,7 @@ private fun DrawerWorkspaceRow(
         label = "workspace-row-wash",
     )
     var menuOpen by remember { mutableStateOf(false) }
-    Box(modifier.fillMaxWidth().padding(top = if (first) 0.dp else 6.dp)) {
+    Box(modifier.fillMaxWidth().padding(top = if (first) DdSpacing.None else 6.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -517,7 +520,7 @@ private fun DrawerWorkspaceRow(
                     )
                 }
                 .testTag("workspace_${workspace.id}")
-                .padding(start = 10.dp, end = 2.dp),
+                .padding(start = 10.dp, end = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
@@ -525,7 +528,7 @@ private fun DrawerWorkspaceRow(
                 tint = colors.inkTertiary,
                 size = 16.dp,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Text(
                 text = workspace.name,
                 modifier = Modifier.weight(1f),
@@ -547,7 +550,7 @@ private fun DrawerWorkspaceRow(
         DdMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false },
-            offset = DpOffset(x = 52.dp, y = 0.dp),
+            offset = DpOffset(x = 52.dp, y = DdSpacing.None),
             menuWidth = 196.dp,
         ) {
             DdMenuItem(
@@ -681,7 +684,7 @@ private fun DrawerNavItem(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(DdShapes.Medium)
             .clickable(onClick = onClick)
             .testTag(testTag)
             .padding(horizontal = 10.dp),
@@ -735,7 +738,7 @@ private fun DrawerSessionRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(DdShapes.Medium)
                 .background(colors.ink.copy(alpha = if (selected) 0.06f else wash))
                 .pointerInput(Unit) {
                     detectTapGestures(
@@ -767,7 +770,7 @@ private fun DrawerSessionRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Box(
                 modifier = Modifier.widthIn(min = 40.dp),
                 contentAlignment = Alignment.CenterEnd,
@@ -816,7 +819,7 @@ private fun DrawerAccountRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(DdShapes.Segmented)
             .clickable(onClick = onClick)
             .testTag("drawer_account")
             .padding(horizontal = 6.dp),

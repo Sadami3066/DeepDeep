@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.mcp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,8 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +41,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -183,7 +185,7 @@ private fun McpScreenContent(
             .testTag("mcp_screen"),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -193,7 +195,7 @@ private fun McpScreenContent(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.mcp_title),
                 modifier = Modifier.weight(1f),
@@ -228,90 +230,96 @@ private fun McpScreenContent(
             onSelect = onTabSelect,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Xs),
             testTags = listOf("mcp_tab_market", "mcp_tab_mine"),
         )
         DdSearchField(
             query = if (showMarket) marketQuery else state.searchQuery,
             onQueryChange = if (showMarket) onMarketQueryChange else onQueryChange,
             placeholder = stringResource(R.string.mcp_search_placeholder),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "mcp_search_field",
             clearTestTag = "mcp_search_clear",
         )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-        ) {
-            if (showMarket) {
-                MarketTab(
-                    repository = marketRepository,
-                    type = MarketEntryType.Mcp,
-                    query = marketQuery,
-                    testTagPrefix = "mcp",
-                    onInstalled = onMarketInstalled,
-                    onAuthorizeMcp = onAuthorizeMcp,
-                )
-            } else {
+        if (showMarket) {
+            MarketTab(
+                repository = marketRepository,
+                type = MarketEntryType.Mcp,
+                query = marketQuery,
+                testTagPrefix = "mcp",
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                onInstalled = onMarketInstalled,
+                onAuthorizeMcp = onAuthorizeMcp,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(start = DdSpacing.Lg, end = DdSpacing.Lg, bottom = DdSpacing.Xxl),
+            ) {
                 if (state.notices.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = state.notices.joinToString("\n"),
-                        modifier = Modifier.padding(horizontal = 4.dp).testTag("mcp_errors"),
-                        style = DdType.bodySmall,
-                        color = colors.danger,
-                    )
+                    item {
+                        Text(
+                            text = state.notices.joinToString("\n"),
+                            modifier = Modifier.padding(top = DdSpacing.Sm, start = DdSpacing.Xs, end = DdSpacing.Xs).testTag("mcp_errors"),
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                        )
+                    }
                 }
                 when {
                     state.loading && state.servers.isEmpty() -> Unit
 
-                    state.servers.isEmpty() && error != null -> Box(
-                        Modifier.fillMaxWidth().padding(top = 72.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        McpErrorRow(error = error, onRetry = onRetry)
+                    state.servers.isEmpty() && error != null -> item {
+                        Box(
+                            Modifier.fillMaxWidth().padding(top = 72.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            McpErrorRow(error = error, onRetry = onRetry)
+                        }
                     }
 
-                    state.servers.isEmpty() -> EmptyMcp()
+                    state.servers.isEmpty() -> item { EmptyMcp() }
 
-                    visibleServers.isEmpty() -> Box(
-                        Modifier.fillMaxWidth().padding(top = 72.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.search_no_match),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
+                    visibleServers.isEmpty() -> item {
+                        Box(
+                            Modifier.fillMaxWidth().padding(top = 72.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = stringResource(R.string.search_no_match),
+                                style = DdType.bodySmall,
+                                color = colors.inkTertiary,
+                            )
+                        }
                     }
 
                     else -> {
                         if (error != null) {
-                            McpErrorRow(
-                                error = error,
-                                onRetry = onRetry,
-                                modifier = Modifier.padding(top = 8.dp),
-                            )
+                            item {
+                                McpErrorRow(
+                                    error = error,
+                                    onRetry = onRetry,
+                                    modifier = Modifier.padding(top = DdSpacing.Sm),
+                                )
+                            }
                         }
-                        visibleServers.forEachIndexed { index, entry ->
-                            if (index > 0) DdHairline()
-                            McpServerRow(
-                                entry = entry,
-                                probeResult = state.probes[entry.name],
-                                switchEnabled = state.toggleEnabled,
-                                onOpen = { onOpen(entry) },
-                                onToggle = { enabled -> onToggle(entry, enabled) },
-                            )
+                        itemsIndexed(visibleServers, key = { _, entry -> entry.name }) { index, entry ->
+                            Column {
+                                if (index > 0) DdHairline()
+                                McpServerRow(
+                                    entry = entry,
+                                    probeResult = state.probes[entry.name],
+                                    switchEnabled = state.toggleEnabled,
+                                    onOpen = { onOpen(entry) },
+                                    onToggle = { enabled -> onToggle(entry, enabled) },
+                                )
+                            }
                         }
-                        Spacer(Modifier.height(32.dp))
+                        item { Spacer(Modifier.height(DdSpacing.Xxxl)) }
                     }
                 }
             }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -326,7 +334,7 @@ private fun McpErrorRow(
     val title = stringResource(error.titleRes)
     val message = error.messageRes?.let { stringResource(it) }
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -353,7 +361,7 @@ private fun EmptyMcp() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DdIcon(icon = DdIcons.Plug, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         Text(
             text = stringResource(R.string.mcp_empty_title),
             style = DdType.label,

@@ -31,6 +31,8 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.common.scan.ScanDecision
@@ -50,7 +52,7 @@ internal fun ScanResultCard(
     val colors = deepDeepColors()
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(DdShapes.Row)
             .background(colors.raised),
     ) {
         decisions.take(MAX_ROWS).forEachIndexed { index, decision ->
@@ -113,7 +115,7 @@ private fun ScanRowContent(
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         contentDescription = title,
     ) {
         Row(
@@ -133,7 +135,7 @@ private fun ScanRowContent(
             } else if (ddIcon != null) {
                 DdIcon(icon = ddIcon, tint = colors.inkSecondary, size = 20.dp)
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
@@ -153,7 +155,7 @@ private fun ScanRowContent(
                 }
             }
             if (chevron) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(DdSpacing.Sm))
                 DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 16.dp)
             }
         }

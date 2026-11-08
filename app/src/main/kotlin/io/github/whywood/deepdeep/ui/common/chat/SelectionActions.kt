@@ -45,6 +45,8 @@ import androidx.compose.ui.window.PopupProperties
 import io.github.whywood.deepdeep.R
 import androidx.compose.material3.Text
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlin.math.roundToInt
@@ -193,13 +195,13 @@ private fun SelectionActionsMenu(
         properties = PopupProperties(focusable = false),
         onDismissRequest = { close() },
     ) {
-        val shape = RoundedCornerShape(12.dp)
+        val shape = DdShapes.Medium
         Row(
             modifier = Modifier
                 .clip(shape)
                 .background(colors.raised)
                 .border(1.dp, colors.hairline.copy(alpha = 0.65f), shape)
-                .padding(horizontal = 2.dp, vertical = 2.dp),
+                .padding(horizontal = DdSpacing.Xxs, vertical = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SelectionTextAction(
@@ -254,7 +256,7 @@ private fun SelectionTextAction(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.padding(horizontal = DdSpacing.Md),
             style = DdType.label,
             color = colors.inkSecondary,
             maxLines = 1,

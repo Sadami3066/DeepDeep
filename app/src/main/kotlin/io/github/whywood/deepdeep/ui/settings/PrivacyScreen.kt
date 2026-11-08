@@ -23,6 +23,7 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -40,7 +41,7 @@ fun PrivacyScreen(
             .navigationBarsPadding(),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -55,14 +56,14 @@ fun PrivacyScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_privacy),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SettingsGroup {
                 DdListRow(
                     icon = DdIcons.Database,
@@ -99,7 +100,7 @@ fun PrivacyScreen(
                     subtitleMaxLines = 3,
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }

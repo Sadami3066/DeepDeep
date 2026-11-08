@@ -52,6 +52,8 @@ import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -125,17 +127,17 @@ fun ScanSettingsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.scan_settings_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             val loaded = snapshot
             if (loaded == null) {
-                Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xxl), contentAlignment = Alignment.Center) {
                     DdSpinner()
                 }
             } else {
@@ -168,7 +170,7 @@ fun ScanSettingsScreen(
                     )
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(DdSpacing.Card))
                 DdSectionLabel(stringResource(R.string.scan_settings_custom))
                 Spacer(Modifier.height(6.dp))
                 DdGroupCard {
@@ -202,7 +204,7 @@ fun ScanSettingsScreen(
                     )
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(DdSpacing.Card))
                 DdSectionLabel(stringResource(R.string.scan_settings_file_section))
                 Spacer(Modifier.height(6.dp))
                 DdGroupCard {
@@ -243,7 +245,7 @@ fun ScanSettingsScreen(
                         modifier = Modifier.testTag("scan_settings_export"),
                     )
                 }
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(DdSpacing.Huge))
             }
         }
     }
@@ -393,7 +395,7 @@ private fun OfficialStrategyDialog(strategy: ScanStrategy, onDismiss: () -> Unit
 private fun DetailLine(label: String, value: String) {
     val colors = deepDeepColors()
     Text(text = label, style = DdType.bodySmall, color = colors.inkTertiary)
-    Spacer(Modifier.height(2.dp))
+    Spacer(Modifier.height(DdSpacing.Xxs))
     Text(text = value, style = DdType.bodySmall, color = colors.ink)
     Spacer(Modifier.height(10.dp))
 }
@@ -501,7 +503,7 @@ private fun StrategyEditorDialog(
                     onClick = { pickerOpen = true },
                     modifier = Modifier.testTag("scan_settings_pick_app"),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 FormField(stringResource(R.string.scan_settings_field_host), hosts, { hosts = it }, "example.com, example.cn")
                 FormField(stringResource(R.string.scan_settings_field_scheme), schemes, { schemes = it }, "example")
                 FormField(stringResource(R.string.scan_settings_field_contains), contains, { contains = it }, "brand")
@@ -512,7 +514,7 @@ private fun StrategyEditorDialog(
                         onClick = { uriKind = true },
                         selected = uriKind,
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(DdSpacing.Sm))
                     DdChip(
                         text = stringResource(R.string.scan_settings_kind_component),
                         onClick = { uriKind = false },
@@ -538,7 +540,7 @@ private fun StrategyEditorDialog(
                 }
                 val currentError = error
                 if (currentError != null) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     Text(
                         text = editorErrorText(currentError),
                         style = DdType.bodySmall,
@@ -641,7 +643,7 @@ private fun AppPickerDialog(onSelect: (String) -> Unit, onDismiss: () -> Unit) {
                     placeholder = stringResource(R.string.scan_settings_app_search),
                     clearContentDescription = stringResource(R.string.scan_settings_cancel),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
                     items(filtered, key = { it.packageName }) { app ->
                         AppPickerRow(
@@ -678,7 +680,7 @@ private fun AppPickerRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = DdSpacing.Sm, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (icon != null) {
@@ -689,7 +691,7 @@ private fun AppPickerRow(
                     modifier = Modifier.size(28.dp),
                 )
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(text = app.label, style = DdType.body, color = colors.ink, maxLines = 1)
                 Text(text = app.packageName, style = DdType.bodySmall, color = colors.inkTertiary, maxLines = 1)
@@ -707,7 +709,7 @@ private fun DdPressableRow(
     io.github.whywood.deepdeep.design.DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        shape = DdShapes.Segmented,
         contentDescription = contentDescription,
     ) {
         content()

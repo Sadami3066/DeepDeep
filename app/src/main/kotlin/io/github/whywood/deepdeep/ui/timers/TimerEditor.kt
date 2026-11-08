@@ -37,6 +37,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
@@ -91,7 +92,7 @@ internal fun TimerEditor(
     DdSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).testTag("timer_editor")) {
             DdSheetHeader(stringResource(if (isEditing) R.string.timers_edit_title else R.string.timers_new_title), onDismiss)
-            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = DdSpacing.Xxl)) {
                 FieldLabel(stringResource(R.string.timers_name_label))
                 DdTextField(draft.name, { draft = draft.copy(name = it); validationError = null }, stringResource(R.string.timers_name_hint))
                 FieldLabel(stringResource(R.string.timers_prompt_label))
@@ -103,7 +104,7 @@ internal fun TimerEditor(
                 )
                 RepeatRow(draft.repeat) { draft = draft.copy(repeat = it); validationError = null }
                 if (draft.repeat) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                     DdTextField(
                         draft.cronExpression,
                         { draft = draft.copy(cronExpression = it); validationError = null },
@@ -137,25 +138,25 @@ internal fun TimerEditor(
                         R.string.timers_next_run_line,
                         nextRun?.format(instantFormatter) ?: stringResource(R.string.timers_never),
                     ),
-                    Modifier.padding(top = 16.dp).testTag("timer_next_run"),
+                    Modifier.padding(top = DdSpacing.Lg).testTag("timer_next_run"),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
                 validationError?.let { ErrorText(stringResource(it)) }
                 externalError?.let { ErrorText(it) }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Sm)) {
                 if (isEditing) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         DdTextAction(stringResource(R.string.timers_run_now), { onRunNow(draft) }, Modifier.testTag("timer_run_now"), enabled = !saving)
                         Spacer(Modifier.weight(1f))
                         DdTextAction(stringResource(R.string.timers_delete), { showDeleteConfirm = true }, Modifier.testTag("timer_delete"), colors.danger, !saving)
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                 }
                 DdPrimaryButton(stringResource(R.string.timers_save), { submit() }, Modifier.fillMaxWidth().testTag("timer_save"), enabled = !saving)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
             }
         }
     }
@@ -200,7 +201,7 @@ internal fun TimerEditor(
 
 @Composable
 private fun FieldLabel(text: String) {
-    Text(text, Modifier.padding(top = 20.dp, bottom = 8.dp), style = DdType.micro, color = deepDeepColors().inkTertiary)
+    Text(text, Modifier.padding(top = DdSpacing.Xl, bottom = DdSpacing.Sm), style = DdType.micro, color = deepDeepColors().inkTertiary)
 }
 
 @Composable
@@ -223,11 +224,11 @@ private fun EditorRow(
 ) {
     val colors = deepDeepColors()
     Row(
-        modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 52.dp).padding(top = topPadding, bottom = 12.dp),
+        modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 52.dp).padding(top = topPadding, bottom = DdSpacing.Md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = DdType.body, color = colors.ink, maxLines = 1)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(DdSpacing.Md))
         Text(
             value,
             Modifier.weight(1f),
@@ -237,14 +238,14 @@ private fun EditorRow(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
         )
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(DdSpacing.Xs))
         DdIcon(DdIcons.ChevronRight, colors.inkTertiary, size = 14.dp)
     }
 }
 
 @Composable
 private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = DdSpacing.Md), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.timers_enabled_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
         DdSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
@@ -252,7 +253,7 @@ private fun EnableRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 
 @Composable
 private fun RepeatRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = DdSpacing.Md), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.timers_repeat_label), Modifier.weight(1f), style = DdType.body, color = deepDeepColors().ink)
         DdSwitch(checked = checked, onCheckedChange = onCheckedChange)
     }
@@ -260,7 +261,7 @@ private fun RepeatRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 
 @Composable
 private fun ErrorText(text: String) {
-    Text(text, Modifier.padding(top = 12.dp), style = DdType.bodySmall, color = deepDeepColors().danger)
+    Text(text, Modifier.padding(top = DdSpacing.Md), style = DdType.bodySmall, color = deepDeepColors().danger)
 }
 
 @Composable
@@ -299,7 +300,7 @@ private fun ConversationPickerSheet(
                     Text(stringResource(R.string.timers_conversation_empty), style = DdType.bodySmall, color = colors.inkTertiary)
                 }
             } else {
-                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
+                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = DdSpacing.Xxl)) {
                     conversations.forEachIndexed { index, session ->
                         val workspaceName = workspaceNames[session.cwd].orEmpty()
                         Row(
@@ -316,7 +317,7 @@ private fun ConversationPickerSheet(
                         }
                         if (index != conversations.lastIndex) DdHairline()
                     }
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(DdSpacing.Xxl))
                 }
             }
         }

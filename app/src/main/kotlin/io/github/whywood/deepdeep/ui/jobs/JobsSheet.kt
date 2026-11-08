@@ -37,8 +37,10 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -92,9 +94,9 @@ fun JobsSheet(
             Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.Xxl),
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             if (ordered.isEmpty()) {
                 EmptyJobs()
             } else {
@@ -120,7 +122,7 @@ fun JobsSheet(
                     }
                 }
                 if (settled.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                     DdTextAction(
                         text = stringResource(R.string.jobs_clear_settled),
                         onClick = onClearSettled,
@@ -142,14 +144,14 @@ private fun EmptyJobs() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 22.dp)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(DdSpacing.Md))
         Text(
             text = stringResource(R.string.jobs_empty_title),
             style = DdType.body,
             color = colors.inkSecondary,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(DdSpacing.Xs))
         Text(
             text = stringResource(R.string.jobs_empty_hint),
             style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
@@ -189,7 +191,7 @@ private fun JobRow(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
-                .padding(horizontal = 2.dp),
+                .padding(horizontal = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
@@ -225,7 +227,7 @@ private fun JobRow(
                 maxLines = 1,
             )
             if (running) {
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(DdSpacing.Xs))
                 DdTextAction(
                     text = stringResource(
                         if (confirmingKill) R.string.jobs_kill_confirm else R.string.jobs_kill,
@@ -266,10 +268,10 @@ private fun JobOutput(output: String?, onCloseOutput: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .heightIn(max = JOBS_OUTPUT_MAX_HEIGHT_DP.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(DdShapes.Medium)
                 .background(colors.codeBackground)
                 .verticalScroll(rememberScrollState())
-                .padding(12.dp),
+                .padding(DdSpacing.Md),
         ) {
             Text(
                 text = body,

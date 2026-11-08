@@ -33,9 +33,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantStep
@@ -77,12 +79,12 @@ internal fun ReasoningCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = DdSpacing.Xs)
                 .heightIn(min = 32.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = DdSpacing.Sm)
                 .testTag("reasoning_toggle_${step.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -106,7 +108,7 @@ internal fun ReasoningCard(
                 )
             }
             if (!expanded && preview.isNotEmpty()) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(DdSpacing.Sm))
                 Text(
                     text = preview,
                     modifier = Modifier.weight(1f),
@@ -119,14 +121,14 @@ internal fun ReasoningCard(
             } else {
                 Spacer(Modifier.weight(1f))
             }
-            Spacer(Modifier.size(2.dp))
+            Spacer(Modifier.size(DdSpacing.Xxs))
             DdIcon(
                 icon = DdIcons.ChevronRight,
                 modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
-                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
                 size = 12.dp,
             )
-            Spacer(Modifier.width(2.dp))
+            Spacer(Modifier.width(DdSpacing.Xxs))
         }
         AnimatedVisibility(
             visible = expanded,
@@ -141,7 +143,7 @@ internal fun ReasoningCard(
         ) {
             Text(
                 text = step.text.trim().ifEmpty { "…" },
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 2.dp, bottom = 6.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = DdSpacing.Md, top = DdSpacing.Xxs, bottom = 6.dp),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
                 color = colors.inkTertiary,
             )

@@ -30,6 +30,8 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdLoadingBlock
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.memory.MemoryStatus
@@ -74,7 +76,7 @@ internal fun MemoryScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = if (preview != null) preview.title else stringResource(R.string.memory_title),
                 modifier = Modifier.weight(1f),
@@ -121,9 +123,9 @@ private fun MemoryWorkbench(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = DdSpacing.Xxl),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         if (status == null) {
             DdLoadingBlock()
             return@Column
@@ -143,7 +145,7 @@ private fun MemoryWorkbench(
                 )
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         val timeline = listOf(
             MemoryOpenRequest(stringResource(R.string.memory_today), "today") to status.todayChars,
             MemoryOpenRequest(stringResource(R.string.memory_month), "month") to status.monthChars,
@@ -160,9 +162,9 @@ private fun MemoryWorkbench(
             }
         }
         if (recentDays.isNotEmpty()) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(DdSpacing.Xxl))
             DdSectionLabel(stringResource(R.string.memory_recent_days))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             DdGroupCard {
                 recentDays.forEach { day ->
                     DdListRow(
@@ -173,7 +175,7 @@ private fun MemoryWorkbench(
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         DdGroupCard {
             DdListRow(
                 title = stringResource(R.string.memory_summarize),
@@ -191,7 +193,7 @@ private fun MemoryWorkbench(
                 enabled = !busy,
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         Text(
             text = stringResource(
                 R.string.memory_footer,
@@ -209,7 +211,7 @@ private fun MemoryWorkbench(
                 color = colors.inkTertiary,
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
 }
 
@@ -220,23 +222,23 @@ private fun MemoryPreviewPanel(preview: MemoryPreview, modifier: Modifier = Modi
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = DdSpacing.Xxl),
     ) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         when {
             preview.loading -> DdLoadingBlock()
             preview.content != null -> Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(DdShapes.Large)
                     .background(colors.surface)
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                    .padding(horizontal = 18.dp, vertical = DdSpacing.Lg),
             ) {
                 ChatMarkdown(text = preview.content!!)
             }
             else -> DdEmptyState(stringResource(R.string.memory_empty))
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
 }
 

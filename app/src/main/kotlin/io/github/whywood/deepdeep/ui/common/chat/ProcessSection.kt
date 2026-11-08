@@ -43,10 +43,13 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -165,7 +168,7 @@ internal fun ProcessSection(
                 .heightIn(min = 30.dp)
                 .semantics { stateDescription = state }
                 .testTag("process_toggle_${message.id}"),
-            shape = RoundedCornerShape(8.dp),
+            shape = DdShapes.Small,
             contentDescription = summary,
         ) {
             Row(
@@ -182,14 +185,14 @@ internal fun ProcessSection(
                     color = statusColor.copy(alpha = textAlpha),
                 )
                 Spacer(Modifier.weight(1f))
-                Spacer(Modifier.size(2.dp))
+                Spacer(Modifier.size(DdSpacing.Xxs))
                 DdIcon(
                     icon = DdIcons.ChevronRight,
                     modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
-                    tint = colors.inkTertiary.copy(alpha = 0.7f),
+                    tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
                     size = 13.dp,
                 )
-                Spacer(Modifier.width(2.dp))
+                Spacer(Modifier.width(DdSpacing.Xxs))
             }
         }
         AnimatedVisibility(
@@ -204,8 +207,8 @@ internal fun ProcessSection(
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, bottom = DdSpacing.Xs),
+                verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
             ) {
                 message.steps.filter { step -> step.id != excludedStepId }.forEach { step ->
                     when (step) {
@@ -225,7 +228,7 @@ internal fun ProcessSection(
 
                         is AssistantStep.Text -> ChatMarkdown(
                             text = step.text.trim(),
-                            modifier = Modifier.padding(start = 2.dp, top = 2.dp, bottom = 4.dp),
+                            modifier = Modifier.padding(start = DdSpacing.Xxs, top = DdSpacing.Xxs, bottom = DdSpacing.Xs),
                             onFileClick = onFileClick,
                         )
                     }
@@ -286,8 +289,8 @@ private fun CollapsedPluginResults(steps: List<AssistantStep>, excludedStepId: L
         .filter { trace -> trace.id != excludedStepId && trace.pluginSlotResult() is PluginToolResult.Rich }
     if (results.isEmpty()) return
     Column(
-        Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, bottom = DdSpacing.Xxs),
+        verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
     ) {
         results.forEach { trace ->
             key(trace.id) {

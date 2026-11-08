@@ -54,6 +54,8 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -121,7 +123,7 @@ fun SessionSearchScreen(
             .testTag("session_search"),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -132,12 +134,12 @@ fun SessionSearchScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             DdSearchField(
                 query = query,
                 onQueryChange = { query = it },
                 placeholder = stringResource(R.string.search_placeholder),
-                modifier = Modifier.weight(1f).padding(end = 4.dp),
+                modifier = Modifier.weight(1f).padding(end = DdSpacing.Xs),
                 focusRequester = focusRequester,
                 clearContentDescription = stringResource(R.string.search_clear),
                 onEscape = onBack,
@@ -176,13 +178,13 @@ fun SessionSearchScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 18.dp),
+                        contentPadding = PaddingValues(start = DdSpacing.Md, end = DdSpacing.Md, top = DdSpacing.Xs, bottom = 18.dp),
                     ) {
                         groups.forEach { (workspaceName, hits) ->
                             item(key = "workspace_$workspaceName") {
                                 DdSectionLabel(
                                     text = workspaceName,
-                                    modifier = Modifier.padding(start = 12.dp, top = 14.dp, bottom = 6.dp),
+                                    modifier = Modifier.padding(start = DdSpacing.Md, top = 14.dp, bottom = 6.dp),
                                 )
                             }
                             items(hits, key = { hit -> hit.conversation.id }) { hit ->
@@ -225,7 +227,7 @@ private fun SearchSessionRow(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 60.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(DdShapes.Medium)
             .background(colors.ink.copy(alpha = wash))
             .clickable(
                 interactionSource = interaction,
@@ -233,7 +235,7 @@ private fun SearchSessionRow(
                 onClick = onClick,
             )
             .testTag("search_result_${hit.conversation.id}")
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .padding(horizontal = DdSpacing.Md, vertical = 9.dp),
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
@@ -243,7 +245,7 @@ private fun SearchSessionRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(DdSpacing.Xxs))
         Text(
             text = subtitle,
             style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),

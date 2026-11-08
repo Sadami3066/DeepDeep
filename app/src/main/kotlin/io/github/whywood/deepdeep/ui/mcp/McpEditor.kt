@@ -42,6 +42,7 @@ import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextArea
@@ -173,9 +174,9 @@ internal fun McpEditorSheet(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = DdSpacing.Xxl),
             ) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 if (missing) {
                     Text(
                         text = stringResource(R.string.mcp_error_load_failed),
@@ -200,19 +201,19 @@ internal fun McpEditorSheet(
                     error?.let { message ->
                         Text(
                             text = message,
-                            modifier = Modifier.padding(top = 12.dp),
+                            modifier = Modifier.padding(top = DdSpacing.Md),
                             style = DdType.bodySmall,
                             color = colors.danger,
                         )
                     }
                     testResult?.let { result ->
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(DdSpacing.Md))
                         TestResultLine(result)
                     }
                     if (http != null && !hasAuthorization) {
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(DdSpacing.Xxl))
                         DdHairline()
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(DdSpacing.Lg))
                         OAuthSection(
                             serverName = target.name,
                             config = http,
@@ -226,9 +227,9 @@ internal fun McpEditorSheet(
                         )
                     }
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Sm)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     DdTextAction(
                         text = stringResource(R.string.mcp_test),
@@ -237,7 +238,7 @@ internal fun McpEditorSheet(
                         enabled = !testing && !saving && loaded && !missing,
                     )
                     if (testing) {
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(DdSpacing.Sm))
                         DdSpinner(size = 16.dp, strokeWidth = 2.dp)
                     }
                     Spacer(Modifier.weight(1f))
@@ -249,7 +250,7 @@ internal fun McpEditorSheet(
                         enabled = !saving,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 DdPrimaryButton(
                     text = stringResource(R.string.mcp_save),
                     onClick = { save() },
@@ -382,7 +383,7 @@ private fun OAuthSection(
 
     Column(Modifier.fillMaxWidth()) {
         DdSectionLabel(stringResource(R.string.mcp_oauth_label))
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         when {
             busy -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -402,13 +403,13 @@ private fun OAuthSection(
                     )
                 }
                 if (ui.manualPrompt) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     Text(
                         text = stringResource(R.string.mcp_oauth_manual_hint),
                         style = DdType.bodySmall,
                         color = colors.inkTertiary,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     DdTextField(
                         value = callbackDraft,
                         onValueChange = { callbackDraft = it },
@@ -423,12 +424,12 @@ private fun OAuthSection(
                     if (ui.error == McpOAuthError.INVALID_CALLBACK) {
                         Text(
                             text = stringResource(R.string.mcp_oauth_callback_invalid),
-                            modifier = Modifier.padding(top = 8.dp),
+                            modifier = Modifier.padding(top = DdSpacing.Sm),
                             style = DdType.bodySmall,
                             color = colors.danger,
                         )
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(DdSpacing.Xs))
                     DdTextAction(
                         text = stringResource(R.string.mcp_oauth_manual_submit),
                         onClick = { submitCallback() },
@@ -472,7 +473,7 @@ private fun OAuthSection(
         failure?.takeIf { it.isNotBlank() }?.let { detail ->
             Text(
                 text = stringResource(R.string.mcp_oauth_failed, detail),
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = DdSpacing.Sm),
                 style = DdType.bodySmall,
                 color = colors.danger,
             )

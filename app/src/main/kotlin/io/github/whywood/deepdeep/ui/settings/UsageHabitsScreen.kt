@@ -32,6 +32,8 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -59,18 +61,18 @@ fun UsageHabitsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_usage_habits),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             DdGroupCard {
                 EntryModeRow(mode = mode, onModeChange = onModeChange)
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }
@@ -89,14 +91,14 @@ private fun EntryModeRow(
             DdPressable(
                 onClick = { expanded = true },
                 modifier = Modifier.fillMaxWidth().testTag("usage_habits_entry_mode"),
-                shape = RoundedCornerShape(20.dp),
+                shape = DdShapes.Row,
                 contentDescription = stringResource(R.string.usage_habits_entry_mode),
             ) {
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 60.dp)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     DdIcon(icon = DdIcons.HandClick, tint = colors.inkSecondary, size = 20.dp)

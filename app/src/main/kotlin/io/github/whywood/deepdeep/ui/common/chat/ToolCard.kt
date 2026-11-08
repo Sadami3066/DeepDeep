@@ -38,10 +38,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -103,12 +106,12 @@ internal fun ToolCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = DdSpacing.Xs)
                 .heightIn(min = 32.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = DdSpacing.Sm)
                 .testTag("tool_toggle_${tool.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -122,7 +125,7 @@ internal fun ToolCard(
                 color = colors.inkSecondary,
             )
             if (preview.isNotEmpty()) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(DdSpacing.Sm))
                 Text(
                     text = preview,
                     modifier = Modifier.weight(1f),
@@ -138,7 +141,7 @@ internal fun ToolCard(
             } else {
                 Spacer(Modifier.weight(1f))
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Text(
                 text = statusText,
                 style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
@@ -156,14 +159,14 @@ internal fun ToolCard(
                     color = colors.inkTertiary,
                 )
             }
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             DdIcon(
                 icon = DdIcons.ChevronRight,
                 modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
-                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
                 size = 12.dp,
             )
-            Spacer(Modifier.width(2.dp))
+            Spacer(Modifier.width(DdSpacing.Xxs))
         }
         AnimatedVisibility(
             visible = tool.expanded,
@@ -204,14 +207,14 @@ private fun ToolCardDefaultBody(
     val rawArguments = tool.rawArguments
     val argumentsText = remember(rawArguments, tool.arguments) { formatToolArguments(rawArguments, tool.arguments) }
     val fileRefs = remember(tool.resultPayload) { tool.resultPayload.fileRefs() }
-    Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 6.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, bottom = 6.dp)) {
         if (argumentsText.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.assistant_tool_args),
                 style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                 color = colors.inkTertiary,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(DdSpacing.Xxs))
             Text(
                 text = argumentsText,
                 style = DdType.bodySmall.copy(
@@ -223,7 +226,7 @@ private fun ToolCardDefaultBody(
             )
         }
         if (output != null) {
-            if (argumentsText.isNotEmpty()) Spacer(Modifier.height(8.dp))
+            if (argumentsText.isNotEmpty()) Spacer(Modifier.height(DdSpacing.Sm))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -243,7 +246,7 @@ private fun ToolCardDefaultBody(
                     DdIcon(icon = DdIcons.Copy, tint = colors.inkTertiary, size = 13.dp)
                 }
             }
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(DdSpacing.Xxs))
             Text(
                 text = output.trim(),
                 modifier = Modifier
@@ -259,8 +262,8 @@ private fun ToolCardDefaultBody(
             )
         }
         if (fileRefs.isNotEmpty()) {
-            if (argumentsText.isNotEmpty() || output != null) Spacer(Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (argumentsText.isNotEmpty() || output != null) Spacer(Modifier.height(DdSpacing.Sm))
+            Column(verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs)) {
                 fileRefs.forEachIndexed { index, fileRef ->
                     ToolFileRefRow(
                         fileRef = fileRef,
@@ -283,14 +286,14 @@ private fun ToolFileRefRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(DdShapes.Small)
             .then(if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClick = onClick))
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = DdSpacing.Sm, vertical = 6.dp)
             .testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DdIcon(icon = DdIcons.File, tint = colors.inkTertiary, size = 14.dp)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(DdSpacing.Sm))
         Text(
             text = fileRef.path,
             modifier = Modifier.weight(1f),
@@ -304,7 +307,7 @@ private fun ToolFileRefRow(
             overflow = TextOverflow.Ellipsis,
         )
         fileRef.mimeType?.takeIf { it.isNotBlank() }?.let { mimeType ->
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Text(
                 text = mimeType,
                 style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),

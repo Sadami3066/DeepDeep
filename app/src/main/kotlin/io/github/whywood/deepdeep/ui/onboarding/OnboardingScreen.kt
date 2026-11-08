@@ -59,6 +59,7 @@ import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.TonePreset
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
@@ -434,7 +435,7 @@ private fun OnboardingFooter(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = DdSpacing.Xxl)
             .padding(top = 6.dp, bottom = 10.dp),
     ) {
         OnboardingPrimaryButton(

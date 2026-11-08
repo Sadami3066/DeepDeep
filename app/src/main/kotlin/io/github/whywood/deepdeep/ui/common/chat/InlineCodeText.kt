@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +17,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.takeOrElse
+import io.github.whywood.deepdeep.design.DdText
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 internal data class RenderedInline(
@@ -34,7 +34,7 @@ internal fun InlineCodeText(
 ) {
     val colors = deepDeepColors()
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    Text(
+    DdText(
         text = rendered.text,
         modifier = modifier.drawBehind {
             val textLayout = layout ?: return@drawBehind

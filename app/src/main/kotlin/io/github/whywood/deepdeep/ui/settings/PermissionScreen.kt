@@ -45,6 +45,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -81,7 +82,7 @@ fun PermissionScreen(
             .testTag("permission_settings"),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -97,14 +98,14 @@ fun PermissionScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.permission_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SettingsGroup {
                 PrivilegeLevelRow(
                     level = PrivilegeLevel.NORMAL,
@@ -130,7 +131,7 @@ fun PermissionScreen(
                     testTag = "permission_level_root",
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
             PrivilegeLevelAction(
                 state = state,
                 onPair = {
@@ -141,7 +142,7 @@ fun PermissionScreen(
                 onOpenWirelessDebugging = onOpenWirelessDebugging,
                 onProbeRoot = onProbeRoot,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(DdSpacing.Xxl))
             SettingsGroup {
                 DdListRow(
                     title = stringResource(R.string.permission_effective),
@@ -150,14 +151,14 @@ fun PermissionScreen(
                 )
             }
             if (state.effective != state.selected) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DdSpacing.Sm))
                 Text(
                     text = stringResource(R.string.permission_effective_fallback, levelLabel(state.effective)),
                     style = DdType.bodySmall,
                     color = colors.danger,
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
     if (showPairingDialog) {
@@ -359,14 +360,14 @@ private fun PairingCodeDialog(
                 testTag = "permission_pairing_code",
             )
             if (adb.busy) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(DdSpacing.Md))
                 Text(
                     text = stringResource(R.string.adb_pairing_dialog_waiting),
                     style = DdType.bodySmall,
                     color = colors.inkSecondary,
                 )
             } else if (adb.error != null) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(DdSpacing.Md))
                 Text(
                     text = adbErrorLabel(adb.error),
                     style = DdType.bodySmall,

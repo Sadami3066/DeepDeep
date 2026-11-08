@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
@@ -132,7 +133,7 @@ internal fun ChatTopBar(
                 ) {
                     if (state.reloading) {
                         DdSpinner(
-                            modifier = Modifier.padding(end = 4.dp).testTag("assistant_reloading"),
+                            modifier = Modifier.padding(end = DdSpacing.Xs).testTag("assistant_reloading"),
                             size = 16.dp,
                             strokeWidth = 1.5.dp,
                         )

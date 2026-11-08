@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextArea
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -78,7 +79,7 @@ internal fun McpImportSheet(
                     .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = DdSpacing.Xxl),
             ) {
                 DdTextArea(
                     value = text,
@@ -87,7 +88,7 @@ internal fun McpImportSheet(
                         error = null
                     },
                     placeholder = template,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = DdSpacing.Sm),
                     minHeight = 260.dp,
                     maxHeight = 360.dp,
                     testTag = "mcp_import_json",
@@ -95,14 +96,14 @@ internal fun McpImportSheet(
                 error?.let { message ->
                     Text(
                         text = message,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = DdSpacing.Md),
                         style = DdType.bodySmall,
                         color = colors.danger,
                     )
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Sm)) {
                 DdPrimaryButton(
                     text = stringResource(R.string.mcp_import_save),
                     onClick = { submit() },

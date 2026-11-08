@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -53,9 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdText
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -88,7 +90,7 @@ internal fun ChatMarkdown(
     val blocks = ArrayList<MarkdownBlock>(plan.chunks.size)
     plan.chunks.forEach { chunk -> blocks += rememberChunkBlocks(chunk) }
     val fileClick = rememberFileClickHandler(onFileClick)
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(DdSpacing.Md)) {
         MarkdownBlocks(blocks, document, colors, fileClick, live)
         if (document.footnotes.isNotEmpty()) {
             FootnoteList(document.footnotes, document, colors, fileClick)
@@ -122,7 +124,7 @@ private fun MarkdownBlocks(
     live: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(DdSpacing.Md)) {
         blocks.forEach { block -> MarkdownBlockItem(block, document, colors, onFileClick, live) }
     }
 }
@@ -172,7 +174,7 @@ private fun MarkdownBlockItem(
         is MarkdownBlock.Table -> TableBlock(block, document, colors, onFileClick, live)
 
         is MarkdownBlock.Math -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
+            DdText(
                 text = block.text,
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
@@ -188,7 +190,7 @@ private fun MarkdownBlockItem(
             )
         }
 
-        MarkdownBlock.Rule -> DdHairline(Modifier.padding(vertical = 2.dp))
+        MarkdownBlock.Rule -> DdHairline(Modifier.padding(vertical = DdSpacing.Xxs))
     }
 }
 
@@ -239,7 +241,7 @@ private fun FootnoteList(
         ) {
             footnotes.forEach { footnote ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Text(
+                    DdText(
                         text = "${footnote.number}.",
                         modifier = Modifier.width(22.dp),
                         style = DdType.bodySmall,
@@ -271,12 +273,12 @@ private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, l
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(DdShapes.Medium)
             .background(colors.wash)
-            .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 12.dp),
+            .padding(start = DdSpacing.Md, end = DdSpacing.Sm, top = 6.dp, bottom = DdSpacing.Md),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            DdText(
                 text = language?.uppercase().orEmpty().ifBlank { "CODE" },
                 modifier = Modifier.weight(1f),
                 style = DdType.micro,
@@ -297,7 +299,7 @@ private fun CodeBlock(language: String?, code: String, colors: DeepDeepColors, l
             )
         }
         Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-            Text(
+            DdText(
                 text = highlighted,
                 style = DdType.bodySmall.copy(
                     fontFamily = FontFamily.Monospace,
@@ -319,7 +321,7 @@ private fun ListBlockBody(
     onFileClick: ((String) -> Unit)?,
     depth: Int,
 ) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs)) {
         items.forEach { item -> ListItemBody(item, document, colors, onFileClick, depth) }
     }
 }
@@ -337,7 +339,7 @@ private fun ListItemBody(
             ListMarker(item.marker, colors, depth)
             InlineCodeText(
                 rendered = rememberedInline(item.text, document, colors, onFileClick),
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
+                modifier = Modifier.weight(1f).padding(start = DdSpacing.Xs),
                 style = DdType.body,
                 color = if (item.marker is MarkdownMarker.Task && item.marker.checked) {
                     colors.inkTertiary
@@ -347,7 +349,7 @@ private fun ListItemBody(
             )
         }
         if (item.children.isNotEmpty()) {
-            Column(Modifier.fillMaxWidth().padding(start = 20.dp, top = 2.dp)) {
+            Column(Modifier.fillMaxWidth().padding(start = DdSpacing.Xl, top = DdSpacing.Xxs)) {
                 ListBlockBody(item.children, document, colors, onFileClick, depth + 1)
             }
         }
@@ -357,14 +359,14 @@ private fun ListItemBody(
 @Composable
 private fun ListMarker(marker: MarkdownMarker, colors: DeepDeepColors, depth: Int) {
     when (marker) {
-        MarkdownMarker.Bullet -> Text(
+        MarkdownMarker.Bullet -> DdText(
             text = if (depth == 0) "•" else "◦",
             modifier = Modifier.width(24.dp),
             style = DdType.body,
             color = colors.inkTertiary.copy(alpha = if (depth == 0) 1f else 0.72f),
         )
 
-        is MarkdownMarker.Ordered -> Text(
+        is MarkdownMarker.Ordered -> DdText(
             text = "${marker.number}.",
             modifier = Modifier.width(24.dp),
             style = DdType.body,
@@ -450,8 +452,8 @@ private fun TableBlock(
             Column(
                 Modifier
                     .width(with(density) { totalPx.toDp() })
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, colors.hairline, RoundedCornerShape(12.dp)),
+                    .clip(DdShapes.Medium)
+                    .border(1.dp, colors.hairline, DdShapes.Medium),
             ) {
                 TableRow(
                     block.header,

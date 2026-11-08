@@ -36,6 +36,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPageScaffold
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -78,16 +79,16 @@ fun AndroidSettingsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_android),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SectionLabel(R.string.floating_settings_title)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             DdGroupCard {
                 DdListRow(
                     title = stringResource(R.string.floating_settings_enable),
@@ -128,9 +129,9 @@ fun AndroidSettingsScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(DdSpacing.Xxl))
             SectionLabel(R.string.assistant_settings_title)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             DdGroupCard {
                 DdListRow(
                     title = stringResource(R.string.assistant_settings_role),
@@ -163,7 +164,7 @@ fun AndroidSettingsScreen(
                     modifier = Modifier.testTag("assistant_power_settings"),
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }
@@ -175,7 +176,7 @@ private fun SectionLabel(titleRes: Int) {
         text = stringResource(titleRes),
         style = DdType.bodySmall,
         color = colors.inkTertiary,
-        modifier = Modifier.padding(horizontal = 4.dp),
+        modifier = Modifier.padding(horizontal = DdSpacing.Xs),
     )
 }
 

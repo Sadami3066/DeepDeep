@@ -26,6 +26,7 @@ import io.github.whywood.deepdeep.data.StorageMount
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.shell.LinuxInstallState
@@ -59,7 +60,7 @@ fun RuntimeSettingsScreen(
             .testTag("runtime_settings"),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -75,14 +76,14 @@ fun RuntimeSettingsScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_environment),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SettingsGroup {
                 LinuxEnvironmentSection(
                     state = linuxState,
@@ -98,14 +99,14 @@ fun RuntimeSettingsScreen(
                     onRemoveMount = onRemoveMount,
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(DdSpacing.Xxl))
             DevPackagesSection(
                 state = devPackages,
                 linuxInstalled = linuxState is LinuxInstallState.Installed,
                 onInstallBundle = onInstallBundle,
                 onRefresh = onRefreshPackages,
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }

@@ -41,6 +41,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
@@ -144,7 +145,7 @@ fun MiniappViewerScreen(
             .testTag("miniapp_viewer"),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -154,7 +155,7 @@ fun MiniappViewerScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = name ?: stringResource(R.string.miniapp_loading),
                 modifier = Modifier.weight(1f),
@@ -335,7 +336,7 @@ private fun PageErrorOverlay(message: String, onRetry: () -> Unit) {
             .fillMaxSize()
             .background(colors.paper)
             .pointerInput(Unit) { detectTapGestures { } }
-            .padding(horizontal = 32.dp),
+            .padding(horizontal = DdSpacing.Xxxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -344,7 +345,7 @@ private fun PageErrorOverlay(message: String, onRetry: () -> Unit) {
             style = DdType.label,
             color = colors.ink,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         Text(
             text = message,
             style = DdType.bodySmall,
@@ -353,7 +354,7 @@ private fun PageErrorOverlay(message: String, onRetry: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         DdPrimaryButton(
             text = stringResource(R.string.miniapp_page_retry),
             onClick = onRetry,
@@ -368,7 +369,7 @@ private fun UnsupportedWebView() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = stringResource(R.string.miniapp_webview_unsupported),
-            modifier = Modifier.padding(horizontal = 32.dp),
+            modifier = Modifier.padding(horizontal = DdSpacing.Xxxl),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
             textAlign = TextAlign.Center,
@@ -380,7 +381,7 @@ private fun UnsupportedWebView() {
 private fun InvalidEntry(onRetry: () -> Unit) {
     val colors = deepDeepColors()
     Column(
-        modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } }.padding(horizontal = 32.dp),
+        modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } }.padding(horizontal = DdSpacing.Xxxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -389,7 +390,7 @@ private fun InvalidEntry(onRetry: () -> Unit) {
             style = DdType.label,
             color = colors.ink,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
         DdPrimaryButton(
             text = stringResource(R.string.miniapp_page_retry),
             onClick = onRetry,

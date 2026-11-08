@@ -40,6 +40,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -117,7 +118,7 @@ fun FileBrowserScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.files_title),
                 modifier = Modifier.weight(1f),
@@ -132,14 +133,14 @@ fun FileBrowserScreen(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.Xxl),
         ) {
             PathRow(
                 label = label,
                 canGoUp = canGoUp,
                 onUp = goUp,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(DdSpacing.Xs))
             DdHairline()
             Column(
                 Modifier
@@ -147,7 +148,7 @@ fun FileBrowserScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
             ) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(DdSpacing.Xs))
                 when (val current = listing) {
                     FileBrowserListing.Loading -> BrowserLoading()
 
@@ -179,7 +180,7 @@ fun FileBrowserScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(DdSpacing.Xxl))
             }
         }
     }
@@ -211,7 +212,7 @@ private fun PathRow(
                 tint = if (canGoUp) colors.inkSecondary else colors.inkTertiary,
                 size = 14.dp,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
@@ -265,7 +266,7 @@ private fun FileRow(entry: FileBrowserEntry, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
             if (entry.directory) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(DdSpacing.Sm))
                 DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
             } else {
                 Spacer(Modifier.width(10.dp))
@@ -306,7 +307,7 @@ private fun BrowserMessage(icon: DdIcon, text: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DdIcon(icon = icon, tint = colors.inkTertiary, size = 22.dp)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(DdSpacing.Md))
         Text(
             text = text,
             style = DdType.bodySmall,

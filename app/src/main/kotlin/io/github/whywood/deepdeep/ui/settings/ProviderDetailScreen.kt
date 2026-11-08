@@ -41,6 +41,7 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -115,7 +116,7 @@ fun ProviderDetailScreen(
             .imePadding(),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -130,7 +131,7 @@ fun ProviderDetailScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_provider_title),
@@ -139,7 +140,7 @@ fun ProviderDetailScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             ProviderOverview(provider = provider, configured = configured)
             Spacer(Modifier.height(28.dp))
             SettingsGroup {
@@ -204,7 +205,7 @@ private fun OAuthSection(
         showChevron = !signedIn,
     )
     if (signedIn) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg)) {
             DdTextAction(
                 text = stringResource(R.string.settings_oauth_sign_out),
                 onClick = onLogout,
@@ -225,10 +226,10 @@ private fun ProviderOverview(
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(colors.surface)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = DdSpacing.Lg),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 14.dp),
+            Modifier.fillMaxWidth().padding(top = DdSpacing.Card, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ProviderIcon(provider.id, provider.name, size = 52.dp, iconSize = 30.dp)
@@ -322,21 +323,21 @@ private fun ApiKeySection(
         }
     }
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm)) {
         if (oauthSignedIn) {
             Text(
                 text = stringResource(R.string.settings_oauth_api_key_notice),
                 style = DdType.bodySmall,
                 color = colors.inkTertiary,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
         }
         Text(
             text = stringResource(R.string.settings_provider_api_key),
             style = DdType.micro,
             color = colors.inkTertiary,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(DdSpacing.Sm))
         DdTextField(
             value = draft,
             onValueChange = {
@@ -357,7 +358,7 @@ private fun ApiKeySection(
             onDone = { submit() },
         )
         if (showRequired) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             Text(
                 text = stringResource(R.string.settings_provider_api_key_required),
                 style = DdType.bodySmall,
@@ -365,7 +366,7 @@ private fun ApiKeySection(
             )
         }
         outcome?.let { current ->
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             Text(
                 text = stringResource(
                     when (current) {

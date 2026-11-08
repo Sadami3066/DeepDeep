@@ -66,6 +66,7 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -221,7 +222,7 @@ private fun ViewerTitleBar(
 ) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
+        modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = DdSpacing.Xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DdIconButton(
@@ -404,7 +405,7 @@ private fun MarkdownBody(text: String) {
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 16.dp),
+            .padding(horizontal = DdSpacing.Card, vertical = DdSpacing.Lg),
     ) {
         if (text.isEmpty()) {
             Text(
@@ -433,7 +434,7 @@ internal fun CodeSourceView(text: String, language: String?, truncated: Boolean 
     }
     Column(Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = DdSpacing.Xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (truncated) {
@@ -474,7 +475,7 @@ internal fun CodeSourceView(text: String, language: String?, truncated: Boolean 
             Row(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 Text(
                     text = lineNumbers,
-                    modifier = Modifier.width(gutterWidth).padding(start = 8.dp, top = 8.dp, bottom = 8.dp),
+                    modifier = Modifier.width(gutterWidth).padding(start = DdSpacing.Sm, top = DdSpacing.Sm, bottom = DdSpacing.Sm),
                     style = codeSourceStyle,
                     color = colors.inkTertiary,
                     textAlign = TextAlign.End,
@@ -483,7 +484,7 @@ internal fun CodeSourceView(text: String, language: String?, truncated: Boolean 
                 Box(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
                     Text(
                         text = highlighted,
-                        modifier = Modifier.padding(start = 10.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                        modifier = Modifier.padding(start = 10.dp, end = DdSpacing.Lg, top = DdSpacing.Sm, bottom = DdSpacing.Sm),
                         style = codeSourceStyle,
                         color = colors.inkSecondary,
                         softWrap = false,
@@ -568,12 +569,12 @@ private fun MessageFileBody(
 ) {
     val colors = deepDeepColors()
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = DdSpacing.Xxxl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         DdIcon(icon = icon, tint = colors.inkTertiary, size = 48.dp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         Text(
             text = name,
             style = DdType.label,
@@ -588,7 +589,7 @@ private fun MessageFileBody(
             style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(DdSpacing.Xs))
         Text(
             text = message,
             style = DdType.bodySmall,

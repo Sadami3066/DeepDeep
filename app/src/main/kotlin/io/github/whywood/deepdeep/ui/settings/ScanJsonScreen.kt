@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -64,7 +65,7 @@ fun ScanJsonScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.scan_settings_json_title),
@@ -107,7 +108,7 @@ fun ScanJsonScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(DdSpacing.Lg))
             DdPrimaryButton(
                 text = stringResource(R.string.scan_settings_save),
                 onClick = {
@@ -127,7 +128,7 @@ fun ScanJsonScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = text != null,
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }

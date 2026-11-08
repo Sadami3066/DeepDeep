@@ -503,3 +503,12 @@ UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透�
 - 范围：本轮只做技能 + 插件；MCP 关闭留到下轮（需会话级 MCP 配置注入或 SDK 支持）。
 - 依赖升级：App 使用 pi2kotlin 0.5.3（GitHub Release `v0.5.3`，asset `pi2kotlin-0.5.3-m2.zip`，sha256 见 `gradle/pi-sdk.sha256`）。
 
+## 138. 交互审计 P2 修复
+
+按审计报告 `tmp/ui-interaction-audit.md` 与用户要求，全部跟进：
+
+- P2-4：市场/技能/插件/MCP 列表由 `Column + verticalScroll` 改为 `LazyColumn`（稳定 key、contentPadding，行间发丝线保留）。
+- P2-11：`DdText` 增加 `softWrap/onTextLayout` 与 `AnnotatedString + inlineContent` 重载，聊天 Markdown/InlineCodeText 改走 `DdText`。
+- P2-12：界面层硬编码 dp/sp 改为 `DdSpacing`/`DdShapes` 等 token（三线共约 760 处，等值替换，不改语义）。
+- P2-14：字体切换不再 `recreate()`，`MainActivity` 用 `remember { mutableStateOf(fontStyle) }` 直接重组。
+- 约束：撤销「不再扩张组件库」；此后新增公共组件或全局约束前，必须先向用户汇报理由并获同意。

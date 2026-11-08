@@ -21,6 +21,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -51,7 +52,7 @@ fun GoalBar(
                 tint = colors.inkTertiary,
                 size = 16.dp,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Text(
                 text = goal.objective.ifBlank { stringResource(R.string.goal_untitled) },
                 modifier = Modifier.weight(1f),

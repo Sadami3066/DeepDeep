@@ -52,6 +52,7 @@ import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.TonePreset
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdGroupCard
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdListRow
@@ -160,7 +161,7 @@ fun PersonalizationScreen(
             .imePadding(),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -175,18 +176,18 @@ fun PersonalizationScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_personalization),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
 
             DdGroupCard {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
@@ -246,14 +247,14 @@ fun PersonalizationScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             DdSectionLabel(
                 stringResource(R.string.personalization_nickname_title),
-                Modifier.padding(start = 4.dp),
+                Modifier.padding(start = DdSpacing.Xs),
             )
             Spacer(Modifier.height(10.dp))
             SettingsGroup {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(DdSpacing.Lg)) {
                     DdTextField(
                         value = nickname,
                         onValueChange = {
@@ -263,7 +264,7 @@ fun PersonalizationScreen(
                         placeholder = stringResource(R.string.personalization_nickname_hint),
                         testTag = "personalization_nickname",
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     Text(
                         text = stringResource(R.string.personalization_nickname_description),
                         style = DdType.bodySmall,
@@ -272,14 +273,14 @@ fun PersonalizationScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             DdSectionLabel(
                 stringResource(R.string.personalization_interaction_title),
-                Modifier.padding(start = 4.dp),
+                Modifier.padding(start = DdSpacing.Xs),
             )
             Spacer(Modifier.height(10.dp))
             SettingsGroup {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(DdSpacing.Lg)) {
                     DdSegmentedControl(
                         options = InteractionStyle.entries,
                         selected = interaction,
@@ -300,14 +301,14 @@ fun PersonalizationScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             DdSectionLabel(
                 stringResource(R.string.personalization_tone_title),
-                Modifier.padding(start = 4.dp),
+                Modifier.padding(start = DdSpacing.Xs),
             )
             Spacer(Modifier.height(10.dp))
             SettingsGroup {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().padding(DdSpacing.Lg)) {
                     DdSegmentedControl(
                         options = TonePreset.entries,
                         selected = tone,
@@ -322,7 +323,7 @@ fun PersonalizationScreen(
                         modifier = Modifier.fillMaxWidth().testTag("personalization_tone"),
                         label = { toneLabel(it) },
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                     DdTextArea(
                         value = instruction,
                         onValueChange = { next ->
@@ -335,7 +336,7 @@ fun PersonalizationScreen(
                         placeholder = stringResource(R.string.personalization_instruction_hint),
                         testTag = "personalization_instruction",
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = stringResource(R.string.personalization_preset_hint),
@@ -354,7 +355,7 @@ fun PersonalizationScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }

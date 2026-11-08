@@ -47,7 +47,9 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -150,7 +152,7 @@ internal fun LinuxEnvironmentSection(
         if (!supported) {
             Text(
                 text = stringResource(R.string.settings_linux_unsupported),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
                 style = DdType.bodySmall,
                 color = colors.inkTertiary,
             )
@@ -204,7 +206,7 @@ internal fun LinuxEnvironmentSection(
         if (available) {
             DdHairline()
             Row(
-                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp),
+                Modifier.fillMaxWidth().padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = 14.dp, bottom = DdSpacing.Xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 DdSectionLabel(
@@ -222,7 +224,7 @@ internal fun LinuxEnvironmentSection(
             if (mounts.isEmpty()) {
                 Text(
                     text = stringResource(R.string.settings_linux_mounts_empty),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Xs),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
@@ -303,7 +305,7 @@ internal fun LinuxEnvironmentSection(
                 Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(start = 24.dp, end = 24.dp),
+                    .padding(horizontal = DdSpacing.ScreenHorizontal),
             ) {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -330,23 +332,23 @@ internal fun LinuxEnvironmentSection(
                 )
                 Text(
                     text = stringResource(R.string.settings_linux_mount_subtitle),
-                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
+                    modifier = Modifier.padding(top = DdSpacing.Xs, bottom = DdSpacing.Xl),
                     style = DdType.bodySmall,
                     color = colors.inkSecondary,
                 )
                 Text(
                     text = stringResource(R.string.settings_linux_mount_section),
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = DdSpacing.Sm),
                     style = DdType.label,
                     color = colors.ink,
                 )
-                val cardShape = RoundedCornerShape(16.dp)
+                val cardShape = DdShapes.Large
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .clip(cardShape)
                         .border(1.dp, colors.hairline, cardShape)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = DdSpacing.Lg, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     DdIcon(icon = DdIcons.Folder, tint = colors.accent, size = 26.dp)
@@ -382,7 +384,7 @@ internal fun LinuxEnvironmentSection(
                 }
                 Text(
                     text = stringResource(R.string.settings_linux_mount_name_label),
-                    modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
+                    modifier = Modifier.padding(top = DdSpacing.Xl, bottom = DdSpacing.Sm),
                     style = DdType.label,
                     color = colors.ink,
                 )
@@ -394,7 +396,7 @@ internal fun LinuxEnvironmentSection(
                     testTag = "linux_mount_name",
                 )
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp),
+                    Modifier.fillMaxWidth().padding(top = DdSpacing.Xl, bottom = DdSpacing.Sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -425,7 +427,7 @@ internal fun LinuxEnvironmentSection(
                         color = colors.danger,
                     )
                 }
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(DdSpacing.Xl))
                 DdPrimaryButton(
                     text = stringResource(
                         if (editingMount == null) {
@@ -439,7 +441,7 @@ internal fun LinuxEnvironmentSection(
                     enabled = draftName.isNotBlank() && draftPath.isNotBlank(),
                 )
                 if (editingMount != null) {
-                    Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().padding(top = DdSpacing.Xs), contentAlignment = Alignment.Center) {
                         DdTextAction(
                             text = stringResource(R.string.settings_linux_mount_remove),
                             onClick = {
@@ -450,7 +452,7 @@ internal fun LinuxEnvironmentSection(
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(DdSpacing.Md))
             }
         }
     }

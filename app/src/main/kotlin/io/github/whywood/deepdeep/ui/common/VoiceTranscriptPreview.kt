@@ -24,6 +24,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import io.github.whywood.deepdeep.design.DdAlpha
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -39,7 +42,7 @@ internal fun VoiceTranscriptPreview(
     val pending = partial.trim()
     if (committed.isEmpty() && pending.isEmpty()) return
     val colors = deepDeepColors()
-    val shape = RoundedCornerShape(18.dp)
+    val shape = DdShapes.Card
     val scroll = rememberScrollState()
     val text = remember(committed, pending, colors.ink, colors.inkTertiary) {
         buildAnnotatedString {
@@ -72,8 +75,8 @@ internal fun VoiceTranscriptPreview(
                     ),
                 ),
             )
-            .border(1.dp, colors.hairline.copy(alpha = 0.6f), shape)
-            .padding(horizontal = 12.dp, vertical = 9.dp)
+            .border(1.dp, colors.hairline.copy(alpha = DdAlpha.Border), shape)
+            .padding(horizontal = DdSpacing.Md, vertical = 9.dp)
             .testTag("composer_voice_preview"),
     ) {
         Text(

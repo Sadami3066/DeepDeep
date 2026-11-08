@@ -20,6 +20,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.ui.common.shareChooser
 import java.io.File
 
@@ -34,8 +35,8 @@ internal fun SaveToDownloadsSheet(
 ) {
     DdSheet(onDismiss = onDismiss) {
         DdSheetHeader(title = name, onClose = onDismiss)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-            Spacer(Modifier.height(8.dp))
+        Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl)) {
+            Spacer(Modifier.height(DdSpacing.Sm))
             DdListRow(
                 title = stringResource(R.string.files_save_to_downloads),
                 icon = DdIcons.Download,

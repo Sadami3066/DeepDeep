@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -115,76 +118,87 @@ internal fun MarketTab(
         }
     }
 
-    Column(
+    LazyColumn(
         modifier = modifier.fillMaxWidth().testTag("${testTagPrefix}_market"),
+        contentPadding = PaddingValues(bottom = DdSpacing.Xxl),
     ) {
         when (current) {
-            MarketState.Loading -> DdLoadingBlock(
-                modifier = Modifier.padding(top = 48.dp),
-                text = stringResource(R.string.market_loading),
-            )
+            MarketState.Loading -> item {
+                DdLoadingBlock(
+                    modifier = Modifier.padding(top = DdSpacing.Huge + DdSpacing.Sm),
+                    text = stringResource(R.string.market_loading),
+                )
+            }
 
-            is MarketState.Failed -> Box(
-                modifier = Modifier.fillMaxWidth().padding(top = 56.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (retrying) {
-                        DdLoadingBlock(text = stringResource(R.string.market_loading))
-                    } else {
-                        Text(
-                            text = current.message,
-                            style = DdType.bodySmall,
-                            color = colors.inkSecondary,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        DdTextAction(
-                            text = stringResource(R.string.market_retry),
-                            onClick = {
-                                if (retrying) return@DdTextAction
-                                retrying = true
-                                scope.launch {
-                                    try {
-                                        repository.refresh(force = true)
-                                    } finally {
-                                        retrying = false
+            is MarketState.Failed -> item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = DdSpacing.Huge + DdSpacing.Lg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (retrying) {
+                            DdLoadingBlock(text = stringResource(R.string.market_loading))
+                        } else {
+                            Text(
+                                text = current.message,
+                                style = DdType.bodySmall,
+                                color = colors.inkSecondary,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(Modifier.height(DdSpacing.Sm))
+                            DdTextAction(
+                                text = stringResource(R.string.market_retry),
+                                onClick = {
+                                    if (retrying) return@DdTextAction
+                                    retrying = true
+                                    scope.launch {
+                                        try {
+                                            repository.refresh(force = true)
+                                        } finally {
+                                            retrying = false
+                                        }
                                     }
-                                }
-                            },
-                            modifier = Modifier.testTag("${testTagPrefix}_market_retry"),
-                        )
+                                },
+                                modifier = Modifier.testTag("${testTagPrefix}_market_retry"),
+                            )
+                        }
                     }
                 }
             }
 
             is MarketState.Ready -> {
                 if (current.source != MarketSource.Network) {
-                    Text(
-                        text = stringResource(R.string.market_offline_notice),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm)
-                            .testTag("${testTagPrefix}_market_offline"),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
+                    item {
+                        Text(
+                            text = stringResource(R.string.market_offline_notice),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm)
+                                .testTag("${testTagPrefix}_market_offline"),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                    }
                 }
                 when {
-                    entries.isEmpty() -> DdEmptyState(
-                        text = stringResource(R.string.market_empty),
-                        icon = marketPlaceholderIcon(type),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
-                    )
+                    entries.isEmpty() -> item {
+                        DdEmptyState(
+                            text = stringResource(R.string.market_empty),
+                            icon = marketPlaceholderIcon(type),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
+                        )
+                    }
 
-                    visible.isEmpty() -> DdEmptyState(
-                        text = stringResource(R.string.search_no_match),
-                        icon = DdIcons.Search,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
-                    )
+                    visible.isEmpty() -> item {
+                        DdEmptyState(
+                            text = stringResource(R.string.search_no_match),
+                            icon = DdIcons.Search,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
+                        )
+                    }
 
-                    else -> Column(Modifier.padding(horizontal = DdSpacing.Lg)) {
-                        visible.forEachIndexed { index, entry ->
+                    else -> itemsIndexed(visible, key = { _, entry -> entry.id }) { index, entry ->
+                        Column(Modifier.padding(horizontal = DdSpacing.Lg)) {
                             if (index > 0) DdHairline(Modifier.padding(start = DdSpacing.Xl))
                             val installState = installStates[entry.id]
                             MarketRow(
@@ -199,7 +213,6 @@ internal fun MarketTab(
                         }
                     }
                 }
-                Spacer(Modifier.height(24.dp))
             }
         }
     }

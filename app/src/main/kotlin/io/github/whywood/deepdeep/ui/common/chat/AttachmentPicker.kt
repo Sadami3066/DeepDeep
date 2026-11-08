@@ -28,8 +28,10 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.common.chat.state.MAX_ATTACHMENTS
@@ -52,7 +54,7 @@ internal fun AttachmentSourceSheet(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 6.dp),
+                .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             AttachmentSourceItem(
@@ -83,7 +85,7 @@ internal fun AttachmentSourceSheet(
                 modifier = Modifier.weight(1f),
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DdSpacing.Xxl))
     }
 }
 
@@ -98,14 +100,14 @@ private fun AttachmentSourceItem(
     DdPressable(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
+        shape = DdShapes.Card,
         background = colors.raised,
         contentDescription = label,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 18.dp),
+                .padding(vertical = DdSpacing.Card),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(

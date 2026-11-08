@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlin.math.roundToInt
@@ -46,7 +47,7 @@ fun ContextMeter(
         modifier = modifier
             .sizeIn(minWidth = 31.dp, minHeight = 31.dp)
             .testTag("context_meter"),
-        shape = RoundedCornerShape(8.dp),
+        shape = DdShapes.Small,
         contentDescription = description,
     ) {
         Row(

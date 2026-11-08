@@ -47,11 +47,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextArea
 import io.github.whywood.deepdeep.design.DdTextField
@@ -242,12 +245,12 @@ fun AskQuestionCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = DdSpacing.Xs)
                 .heightIn(min = 32.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(DdShapes.Small)
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button) { expanded = !expanded }
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = DdSpacing.Sm)
                 .testTag("ask_toggle"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -270,10 +273,10 @@ fun AskQuestionCard(
             DdIcon(
                 icon = DdIcons.ChevronRight,
                 modifier = Modifier.rotate(rotation),
-                tint = colors.inkTertiary.copy(alpha = 0.7f),
+                tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
                 size = 13.dp,
             )
-            Spacer(Modifier.width(2.dp))
+            Spacer(Modifier.width(DdSpacing.Xxs))
         }
         AnimatedVisibility(
             visible = expanded,
@@ -286,10 +289,10 @@ fun AskQuestionCard(
                 shrinkTowards = Alignment.Top,
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
-            Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(top = DdSpacing.Sm)) {
                 ProgressLine(progress)
                 if (answers == null) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                     question.header?.takeIf { it.isNotBlank() }?.let { header ->
                         Text(
                             text = header,
@@ -304,7 +307,7 @@ fun AskQuestionCard(
                         color = colors.ink,
                     )
                     if (question.multiSelect) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(DdSpacing.Xs))
                         Text(
                             text = stringResource(R.string.ask_multi_hint),
                             style = DdType.bodySmall,
@@ -326,7 +329,7 @@ fun AskQuestionCard(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(DdSpacing.Md))
                         DdTextField(
                             value = custom,
                             onValueChange = { updateCustom(it) },
@@ -335,7 +338,7 @@ fun AskQuestionCard(
                             testTag = "ask_custom",
                         )
                     } else {
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(DdSpacing.Md))
                         DdTextArea(
                             value = custom,
                             onValueChange = { updateCustom(it) },
@@ -383,7 +386,7 @@ fun AskQuestionCard(
                                     modifier = Modifier.testTag("ask_previous"),
                                     color = colors.inkSecondary,
                                 )
-                                Spacer(Modifier.width(4.dp))
+                                Spacer(Modifier.width(DdSpacing.Xs))
                             }
                             DdPrimaryButton(
                                 text = stringResource(if (last) R.string.ask_submit else R.string.ask_next),
@@ -396,7 +399,7 @@ fun AskQuestionCard(
                         }
                     }
                 } else {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(DdSpacing.Md))
                     questions.forEachIndexed { index, item ->
                         if (index > 0) Spacer(Modifier.height(14.dp))
                         val text = answerText(answerById?.get(item.id))
@@ -406,14 +409,14 @@ fun AskQuestionCard(
                                 style = DdType.micro,
                                 color = colors.inkTertiary,
                             )
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(DdSpacing.Xs))
                         }
                         Text(
                             text = item.question,
                             style = DdType.body,
                             color = colors.ink,
                         )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(DdSpacing.Xs))
                         Text(
                             text = text ?: stringResource(R.string.ask_card_skipped),
                             style = DdType.bodySmall,
@@ -434,7 +437,7 @@ private fun ProgressLine(progress: Float) {
             .fillMaxWidth()
             .height(1.dp)
             .clip(RoundedCornerShape(1.dp))
-            .background(colors.hairline.copy(alpha = 0.45f)),
+            .background(colors.hairline.copy(alpha = DdAlpha.Hairline)),
     ) {
         Box(
             Modifier
@@ -456,7 +459,7 @@ private fun OptionRow(
     testTag: String,
 ) {
     val colors = deepDeepColors()
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     val suffix = recommendedSuffix(option.label)
     val label = displayLabel(option.label)
     DdPressable(
@@ -472,10 +475,10 @@ private fun OptionRow(
                 .fillMaxWidth()
                 .border(
                     width = 1.dp,
-                    color = if (selected) colors.accent else colors.hairline.copy(alpha = 0.6f),
+                    color = if (selected) colors.accent else colors.hairline.copy(alpha = DdAlpha.Border),
                     shape = shape,
                 )
-                .padding(horizontal = 12.dp, vertical = 9.dp),
+                .padding(horizontal = DdSpacing.Md, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.width(18.dp)) {
@@ -491,7 +494,7 @@ private fun OptionRow(
                     )
                 }
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DdSpacing.Sm))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(

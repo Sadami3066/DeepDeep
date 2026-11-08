@@ -34,6 +34,8 @@ import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ProviderSummary
@@ -84,14 +86,14 @@ fun ProviderListScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_provider_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(DdSpacing.Lg))
             DdSearchField(
                 query = query,
                 onQueryChange = { query = it },
@@ -99,14 +101,14 @@ fun ProviderListScreen(
                 clearContentDescription = stringResource(R.string.search_clear),
                 fieldTestTag = "provider_search_field",
             )
-            Spacer(Modifier.height(16.dp))
-            DdSectionLabel(countLabel, Modifier.padding(start = 4.dp))
+            Spacer(Modifier.height(DdSpacing.Lg))
+            DdSectionLabel(countLabel, Modifier.padding(start = DdSpacing.Xs))
             Spacer(Modifier.height(10.dp))
             DdGroupCard {
                 if (filtered.isEmpty()) {
                     DdEmptyState(
                         text = stringResource(R.string.settings_provider_no_result),
-                        modifier = Modifier.padding(vertical = 20.dp),
+                        modifier = Modifier.padding(vertical = DdSpacing.Xl),
                     )
                 } else {
                     filtered.forEachIndexed { index, provider ->
@@ -119,7 +121,7 @@ fun ProviderListScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }
@@ -134,14 +136,14 @@ private fun ProviderRow(
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         contentDescription = provider.name,
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 68.dp)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ProviderIcon(provider.id, provider.name)

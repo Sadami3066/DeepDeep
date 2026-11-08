@@ -39,6 +39,8 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -86,7 +88,7 @@ fun SlashPalette(
         label = "slash-palette-enter",
     )
     val paletteDescription = stringResource(R.string.cmd_palette_description)
-    val shape = RoundedCornerShape(20.dp)
+    val shape = DdShapes.Row
     Column(
         modifier
             .widthIn(max = 780.dp)
@@ -101,7 +103,7 @@ fun SlashPalette(
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+                .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Md, bottom = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -135,7 +137,7 @@ fun SlashPalette(
                             .fillMaxWidth()
                             .height(SLASH_ROW_HEIGHT_DP.dp)
                             .alpha(if (item.enabled) 1f else SLASH_DISABLED_ALPHA)
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = DdSpacing.Lg),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -170,7 +172,7 @@ fun SlashPalette(
                     }
                 }
                 if (index != filtered.lastIndex) {
-                    DdHairline(Modifier.padding(start = 16.dp, end = 16.dp))
+                    DdHairline(Modifier.padding(start = DdSpacing.Lg, end = DdSpacing.Lg))
                 }
             }
         }

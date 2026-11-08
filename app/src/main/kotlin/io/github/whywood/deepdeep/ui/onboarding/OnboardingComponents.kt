@@ -62,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
@@ -71,8 +72,11 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdRadius
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ProviderSummary
@@ -92,7 +96,7 @@ internal fun OnboardingHeader(step: Int, onBack: () -> Unit) {
         step + 1,
         ONBOARDING_STEP_COUNT,
     )
-    Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)) {
+    Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = DdSpacing.Lg)) {
         if (step > 0) {
             DdIconButton(
                 icon = DdIcons.ArrowLeft,
@@ -151,7 +155,7 @@ internal fun OnboardingCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(Modifier.fillMaxWidth().border(1.dp, deepDeepColors().hairline, RoundedCornerShape(18.dp))) {
+    Box(Modifier.fillMaxWidth().border(1.dp, deepDeepColors().hairline, DdShapes.Card)) {
         DdGroupCard(modifier = modifier, content = content)
     }
 }
@@ -209,11 +213,11 @@ internal fun UnderlineField(
                 },
             )
             if (trailing != null) {
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(DdSpacing.Md))
                 trailing()
             }
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(DdSpacing.Xs))
         Box(Modifier.fillMaxWidth().height(1.dp).background(underline))
     }
 }
@@ -227,12 +231,12 @@ internal fun SegmentedControl(
     testTags: List<String>? = null,
 ) {
     val colors = deepDeepColors()
-    val segmentShape = RoundedCornerShape(11.dp)
+    val segmentShape = RoundedCornerShape(DdRadius.Indicator)
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(DdShapes.Segmented)
             .background(colors.wash),
     ) {
         val segmentWidth = maxWidth / options.size
@@ -251,7 +255,7 @@ internal fun SegmentedControl(
                 .offset(x = segmentWidth * animatedIndex)
                 .width(segmentWidth)
                 .fillMaxHeight()
-                .padding(4.dp),
+                .padding(DdSpacing.Xs),
         ) {
             Box(
                 Modifier
@@ -312,8 +316,8 @@ internal fun SettingRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(text = text, modifier = Modifier.weight(1f), style = DdType.body, color = colors.ink)
-                Spacer(Modifier.width(8.dp))
-                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary.copy(alpha = 0.7f), size = 16.dp)
+                Spacer(Modifier.width(DdSpacing.Sm))
+                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary), size = 16.dp)
             }
         }
         DdHairline()
@@ -333,14 +337,14 @@ internal fun OnboardingPrimaryButton(
     DdPressable(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().height(54.dp),
-        shape = RoundedCornerShape(15.dp),
+        shape = DdShapes.Button,
         background = background,
         enabled = enabled,
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = text,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xl),
                 style = DdType.button,
                 color = contentColor,
                 maxLines = 1,
@@ -446,7 +450,7 @@ internal fun ProviderPickerSheet(
     }
     DdSheet(onDismiss = onDismiss) {
         DdSheetHeader(title = stringResource(R.string.onboarding_provider_sheet_title), onClose = onDismiss)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl)) {
             DdSearchField(
                 query = query,
                 onQueryChange = { query = it },
@@ -454,16 +458,16 @@ internal fun ProviderPickerSheet(
                 clearContentDescription = stringResource(R.string.onboarding_search_clear),
                 fieldTestTag = "onboarding_provider_search",
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
             if (filtered.isEmpty()) {
                 DdEmptyState(
                     text = stringResource(R.string.onboarding_provider_no_result),
-                    modifier = Modifier.padding(vertical = 24.dp),
+                    modifier = Modifier.padding(vertical = DdSpacing.Xxl),
                 )
             } else {
                 LazyColumn(
                     Modifier.fillMaxWidth().heightIn(max = 440.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
                 ) {
                     items(filtered, key = { it.id }) { provider ->
                         ProviderPickerRow(
@@ -474,7 +478,7 @@ internal fun ProviderPickerSheet(
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
         }
     }
 }
@@ -489,18 +493,18 @@ private fun ProviderPickerRow(
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().testTag("onboarding_provider_${provider.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         contentDescription = provider.name,
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 60.dp)
-                .padding(vertical = 12.dp),
+                .padding(vertical = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ProviderIcon(provider.id, provider.name, size = 34.dp, iconSize = 21.dp)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = provider.name,
@@ -517,7 +521,7 @@ private fun ProviderPickerRow(
                 )
             }
             if (selected) {
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(DdSpacing.Md))
                 DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
             }
         }

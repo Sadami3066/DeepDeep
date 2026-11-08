@@ -75,6 +75,8 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -253,7 +255,7 @@ internal fun ChatComposer(
     )
     val shape = RoundedCornerShape(cornerRadius)
 
-    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+    Column(modifier.fillMaxWidth().padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier
@@ -343,7 +345,7 @@ internal fun ChatComposer(
                     modifier = Modifier
                         .widthIn(max = 780.dp)
                         .fillMaxWidth()
-                        .padding(top = 8.dp, start = 6.dp, end = 6.dp),
+                        .padding(top = DdSpacing.Sm, start = 6.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -446,7 +448,7 @@ private fun ChatComposerCollapsedContent(
                 indication = null,
                 onClick = onExpand,
             )
-            .padding(start = 8.dp, end = 8.dp)
+            .padding(start = DdSpacing.Sm, end = DdSpacing.Sm)
             .testTag("assistant_collapsed"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -463,7 +465,7 @@ private fun ChatComposerCollapsedContent(
             text = placeholder,
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = DdSpacing.Sm)
                 .testTag("assistant_collapsed_hint"),
             style = DdType.body,
             color = colors.inkTertiary,
@@ -505,7 +507,7 @@ private fun ChatComposerExpandedContent(
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 2.dp),
+            .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Md, bottom = DdSpacing.Xxs),
     ) {
         Column {
             if (state.queuedInputs.isNotEmpty()) {
@@ -519,7 +521,7 @@ private fun ChatComposerExpandedContent(
             if (state.importingAttachment) {
                 Text(
                     text = stringResource(R.string.assistant_importing_image),
-                    modifier = Modifier.padding(bottom = 8.dp).testTag("assistant_importing"),
+                    modifier = Modifier.padding(bottom = DdSpacing.Sm).testTag("assistant_importing"),
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                     color = colors.inkTertiary,
                 )
@@ -540,7 +542,7 @@ private fun ChatComposerExpandedContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = DdSpacing.Md)
                         .testTag("assistant_quote_preview"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -615,7 +617,7 @@ private fun ChatComposerExpandedContent(
                     Text(
                         text = voiceFailureText(failure),
                         modifier = Modifier
-                            .padding(top = 2.dp, bottom = 2.dp)
+                            .padding(top = DdSpacing.Xxs, bottom = DdSpacing.Xxs)
                             .testTag("assistant_voice_status"),
                         style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
                         color = colors.danger,
@@ -626,10 +628,10 @@ private fun ChatComposerExpandedContent(
     }
     PluginComposerActionRow(
         onOpenPluginPage = actions.onOpenPluginPage,
-        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 2.dp),
+        modifier = Modifier.padding(start = DdSpacing.Sm, end = DdSpacing.Sm, bottom = DdSpacing.Xxs),
     )
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = DdSpacing.Sm, end = DdSpacing.Sm, bottom = DdSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DdIconButton(
@@ -789,14 +791,14 @@ internal fun QueuedInputBuffer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("assistant_queue_item")
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(DdShapes.Medium)
                     .background(colors.wash)
-                    .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = 10.dp, end = DdSpacing.Xs, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = input.text.trim(),
-                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    modifier = Modifier.weight(1f).padding(end = DdSpacing.Xs),
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
                     color = colors.inkSecondary,
                     maxLines = 2,
@@ -841,7 +843,7 @@ internal fun ComposerChip(
         contentDescription = contentDescription,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp).widthIn(max = maxWidth),
+            modifier = Modifier.padding(horizontal = DdSpacing.Sm).widthIn(max = maxWidth),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp),
         ) {

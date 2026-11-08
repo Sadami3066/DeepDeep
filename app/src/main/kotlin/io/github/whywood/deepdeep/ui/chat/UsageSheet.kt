@@ -23,6 +23,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.SessionUsage
@@ -48,9 +49,9 @@ fun UsageSheet(usage: SessionUsage, onDismiss: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.Xxl),
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.usage_context),
@@ -86,7 +87,7 @@ fun UsageSheet(usage: SessionUsage, onDismiss: () -> Unit) {
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             Text(
                 text = stringResource(
                     R.string.usage_compact_threshold,
@@ -95,13 +96,13 @@ fun UsageSheet(usage: SessionUsage, onDismiss: () -> Unit) {
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
                 color = colors.inkTertiary,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             Text(
                 text = stringResource(R.string.usage_cumulative),
                 style = DdType.micro,
                 color = colors.inkTertiary,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             UsageStatRow(
                 label = stringResource(R.string.usage_input),
                 value = formatTokens(usage.inputTokens),
@@ -126,7 +127,7 @@ fun UsageSheet(usage: SessionUsage, onDismiss: () -> Unit) {
                 label = stringResource(R.string.usage_cost),
                 value = stringResource(R.string.usage_cost_value, formatCost(usage.cost)),
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             Text(
                 text = stringResource(R.string.usage_footnote),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),

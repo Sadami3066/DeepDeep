@@ -41,6 +41,8 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -101,7 +103,7 @@ internal fun MiniappContent(
             .testTag("miniapp_screen"),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -111,7 +113,7 @@ internal fun MiniappContent(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.miniapp_title),
                 modifier = Modifier.weight(1f),
@@ -139,7 +141,7 @@ internal fun MiniappContent(
             query = state.query,
             onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.miniapp_search_placeholder),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "miniapp_search_field",
             clearTestTag = "miniapp_search_clear",
@@ -149,7 +151,7 @@ internal fun MiniappContent(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = DdSpacing.Lg),
         ) {
             state.error?.let { error ->
                 MiniappErrorRow(
@@ -176,7 +178,7 @@ internal fun MiniappContent(
                 }
 
                 else -> {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(DdSpacing.Sm))
                     var first = true
                     state.filtered.creations.forEach { creation ->
                         if (!first) DdHairline()
@@ -198,10 +200,10 @@ internal fun MiniappContent(
                             modifier = Modifier.testTag("miniapp_invalid_${item.id}"),
                         )
                     }
-                    Spacer(Modifier.height(32.dp))
+                    Spacer(Modifier.height(DdSpacing.Xxxl))
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(DdSpacing.Xxl))
         }
     }
 
@@ -225,7 +227,7 @@ private fun MiniappErrorRow(
 ) {
     val colors = deepDeepColors()
     Row(
-        Modifier.fillMaxWidth().padding(top = 8.dp),
+        Modifier.fillMaxWidth().padding(top = DdSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -252,7 +254,7 @@ private fun MiniappEmpty() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         DdIcon(icon = DdIcons.Apps, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
         Text(
             text = stringResource(R.string.miniapp_empty_title),
             style = DdType.label,
@@ -297,14 +299,14 @@ private fun MiniappRow(
     DdPressable(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         contentDescription = title,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 60.dp)
-                .padding(vertical = 12.dp),
+                .padding(vertical = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (icon != null) {

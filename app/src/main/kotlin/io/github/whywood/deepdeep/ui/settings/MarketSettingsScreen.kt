@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdRowDivider
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.market.MarketDefaults
@@ -68,7 +69,7 @@ fun MarketSettingsScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.market_settings_title),
                 style = DdType.heading,
@@ -81,9 +82,9 @@ fun MarketSettingsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(DdSpacing.Lg))
             DdGroupCard {
                 DdListRow(
                     icon = DdIcons.Globe,
@@ -121,7 +122,7 @@ fun MarketSettingsScreen(
                     modifier = Modifier.testTag("market_settings_updated_at"),
                 )
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }

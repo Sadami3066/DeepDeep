@@ -34,6 +34,8 @@ import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
@@ -54,7 +56,7 @@ fun FontScreen(
             .testTag("font_settings"),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -70,14 +72,14 @@ fun FontScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.settings_font_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             SettingsGroup {
                 DdFontStyle.entries.forEachIndexed { index, style ->
                     if (index > 0) {
@@ -95,7 +97,7 @@ fun FontScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
 }
@@ -113,18 +115,18 @@ private fun FontPreviewRow(
     DdPressable(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         contentDescription = if (selected) "$label $currentLabel" else label,
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 104.dp)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = DdSpacing.Lg, vertical = 14.dp),
             verticalAlignment = Alignment.Top,
         ) {
             Row(
-                modifier = Modifier.weight(1f).padding(top = 2.dp),
+                modifier = Modifier.weight(1f).padding(top = DdSpacing.Xxs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -135,22 +137,22 @@ private fun FontPreviewRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (selected) {
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(DdSpacing.Sm))
                     Text(
                         text = currentLabel,
                         style = DdType.chip,
                         color = colors.accent,
                         maxLines = 1,
                     )
-                    Spacer(Modifier.width(2.dp))
+                    Spacer(Modifier.width(DdSpacing.Xxs))
                     DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 16.dp)
                 }
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(
-                modifier = Modifier.widthIn(max = 168.dp).padding(top = 12.dp),
+                modifier = Modifier.widthIn(max = 168.dp).padding(top = DdSpacing.Md),
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
             ) {
                 Text(
                     text = "我思故我在",

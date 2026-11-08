@@ -38,7 +38,9 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -91,7 +93,7 @@ internal fun DevPackagesSection(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             DdSectionLabel(
                 text = stringResource(R.string.dev_bundles_title),
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
+                modifier = Modifier.weight(1f).padding(start = DdSpacing.Xs),
             )
             DdTextAction(
                 text = stringResource(R.string.dev_refresh),
@@ -104,7 +106,7 @@ internal fun DevPackagesSection(
             if (!linuxInstalled) {
                 Text(
                     text = stringResource(R.string.dev_linux_required),
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(DdSpacing.Lg),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
@@ -132,7 +134,7 @@ internal fun DevPackagesSection(
                             installing -> {
                                 Column(
                                     horizontalAlignment = Alignment.End,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
                                 ) {
                                     DdSpinner(size = 16.dp, strokeWidth = 2.dp)
                                     operation?.stage?.let {
@@ -159,10 +161,10 @@ internal fun DevPackagesSection(
             }
         }
         if (state.error != null) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
             Text(
                 text = stringResource(R.string.dev_error, state.error),
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier.padding(horizontal = DdSpacing.Xs),
                 style = DdType.bodySmall,
                 color = colors.danger,
             )
@@ -178,7 +180,7 @@ internal fun DevPackagesSection(
             Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (sheetMode != DevSheetMode.DETAIL) {
@@ -232,7 +234,7 @@ internal fun DevPackagesSection(
                     },
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(DdSpacing.Md))
         }
     }
 }
@@ -269,12 +271,12 @@ private fun BundleForm(
     bundle.bodyRes?.let {
         Text(
             text = stringResource(it),
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = DdSpacing.Xs),
             style = DdType.bodySmall,
             color = colors.inkSecondary,
         )
     }
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(DdSpacing.Xl))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = stringResource(R.string.dev_bundle_form_packages),
@@ -288,14 +290,14 @@ private fun BundleForm(
             color = colors.inkTertiary,
         )
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(DdSpacing.Sm))
     Text(
         text = composed.packageIds
             .mapNotNull { DevPackageCatalog.packageById(it)?.label(context) }
             .joinToString(" · "),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(DdShapes.Segmented)
             .background(colors.wash)
             .padding(14.dp),
         style = DdType.bodySmall,
@@ -313,13 +315,13 @@ private fun BundleForm(
     if (composed.downloads.isNotEmpty()) {
         Text(
             text = stringResource(R.string.dev_bundle_form_downloads),
-            modifier = Modifier.padding(top = 20.dp),
+            modifier = Modifier.padding(top = DdSpacing.Xl),
             style = DdType.label,
             color = colors.ink,
         )
         Text(
             text = stringResource(R.string.dev_bundle_form_downloads_body),
-            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+            modifier = Modifier.padding(top = DdSpacing.Xxs, bottom = 6.dp),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
@@ -331,11 +333,11 @@ private fun BundleForm(
             )
         }
     }
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(DdSpacing.Xl))
     if (installing && stage != null) {
         Text(
             text = stage,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = DdSpacing.Sm),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
         )
@@ -391,7 +393,7 @@ private fun MirrorPicker(
     )
     Text(
         text = stringResource(R.string.dev_mirror_sheet_subtitle),
-        modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+        modifier = Modifier.padding(top = DdSpacing.Xs, bottom = DdSpacing.Md),
         style = DdType.bodySmall,
         color = colors.inkSecondary,
     )
@@ -417,12 +419,12 @@ private fun MirrorPicker(
     if (error) {
         Text(
             text = stringResource(R.string.dev_mirror_required),
-            modifier = Modifier.padding(top = 8.dp),
+            modifier = Modifier.padding(top = DdSpacing.Sm),
             style = DdType.bodySmall,
             color = colors.danger,
         )
     }
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(DdSpacing.Lg))
     if (!linuxInstalled) {
         Text(
             text = stringResource(R.string.dev_linux_required),

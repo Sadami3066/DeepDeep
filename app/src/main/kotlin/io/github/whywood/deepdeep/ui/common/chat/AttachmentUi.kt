@@ -42,9 +42,12 @@ import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.attachmentFile
 import io.github.whywood.deepdeep.data.formatAttachmentSize
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import java.io.File
@@ -93,7 +96,7 @@ private fun ImageAttachmentCard(
         modifier = Modifier
             .size(140.dp)
             .testTag("attachment_${attachment.id}"),
-        shape = RoundedCornerShape(12.dp),
+        shape = DdShapes.Medium,
         background = colors.wash,
         contentDescription = stringResource(R.string.assistant_attach_open),
     ) {
@@ -118,7 +121,7 @@ private fun FileAttachmentCard(
     onOpen: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     val extension = attachment.name.substringAfterLast('.', "").uppercase(Locale.US).take(4)
     DdPressable(
         onClick = { onOpen(attachment) },
@@ -132,7 +135,7 @@ private fun FileAttachmentCard(
         Box(
             Modifier
                 .fillMaxSize()
-                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape)
+                .border(1.dp, colors.hairline.copy(alpha = DdAlpha.Secondary), shape)
                 .padding(10.dp),
         ) {
             Column(
@@ -143,7 +146,7 @@ private fun FileAttachmentCard(
                     Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .border(1.dp, colors.hairline, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .padding(horizontal = 6.dp, vertical = DdSpacing.Xxs),
                 ) {
                     Text(
                         text = extension.ifEmpty { "FILE" },
@@ -183,7 +186,7 @@ internal fun AttachmentChips(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         attachments.forEach { attachment ->
@@ -210,7 +213,7 @@ private fun AttachmentPreviewCard(
         modifier = Modifier
             .width(cardWidth)
             .height(104.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(DdShapes.Medium)
             .background(colors.surface)
             .clickable(onClick = onOpen)
             .testTag("attachment_${attachment.id}"),
@@ -251,7 +254,7 @@ private fun AttachmentPreviewCard(
                 }
                 Text(
                     text = snippet.ifBlank { attachment.name },
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = DdSpacing.Sm),
                     style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
                     color = colors.inkTertiary,
                     maxLines = 7,
@@ -275,7 +278,7 @@ private fun AttachmentPreviewCard(
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(DdSpacing.Xxs))
                     Text(
                         text = formatAttachmentSize(attachment.size),
                         style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
@@ -291,7 +294,7 @@ private fun AttachmentPreviewCard(
                 .padding(5.dp)
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(colors.ink.copy(alpha = 0.55f))
+                .background(colors.ink.copy(alpha = DdAlpha.Muted))
                 .clickable(onClick = onRemove)
                 .testTag("attachment_remove_${attachment.id}"),
             contentAlignment = Alignment.Center,

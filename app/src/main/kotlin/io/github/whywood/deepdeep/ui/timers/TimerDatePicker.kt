@@ -34,6 +34,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import java.time.DayOfWeek
@@ -64,7 +65,7 @@ fun DdDatePicker(
     DdSheet(onDismiss = onDismiss) {
         TimerPickerHeader(title = stringResource(R.string.timers_date_label), onDismiss = onDismiss)
         Row(
-            modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -90,7 +91,7 @@ fun DdDatePicker(
                 iconSize = 18.dp,
             )
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Md)) {
             weekdayNames.forEach { name ->
                 Text(
                     text = name,
@@ -101,7 +102,7 @@ fun DdDatePicker(
                 )
             }
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(DdSpacing.Xs))
         Crossfade(
             targetState = month,
             animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
@@ -115,7 +116,7 @@ fun DdDatePicker(
                 onDismiss = onDismiss,
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(DdSpacing.Lg))
     }
 }
 
@@ -123,7 +124,7 @@ fun DdDatePicker(
 internal fun TimerPickerHeader(title: String, onDismiss: () -> Unit) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = 24.dp, end = 12.dp),
+        modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = DdSpacing.Xxl, end = DdSpacing.Md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -157,7 +158,7 @@ private fun MonthGrid(
         val dayOfMonth = index - leadingBlanks + 1
         if (dayOfMonth in 1..daysInMonth) month.atDay(dayOfMonth) else null
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Md)) {
         dates.chunked(7).forEach { week ->
             Row(Modifier.fillMaxWidth()) {
                 week.forEach { date ->

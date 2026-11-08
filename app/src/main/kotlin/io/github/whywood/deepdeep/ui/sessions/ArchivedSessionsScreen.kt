@@ -47,6 +47,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -86,7 +87,7 @@ fun ArchivedSessionsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(
@@ -96,7 +97,7 @@ fun ArchivedSessionsScreen(
                 modifier = Modifier.testTag("archived_back"),
                 tint = colors.ink,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(
                 text = stringResource(R.string.drawer_archived_title),
                 modifier = Modifier.weight(1f),
@@ -106,7 +107,7 @@ fun ArchivedSessionsScreen(
             if (ordered.isNotEmpty()) {
                 Text(
                     text = "${ordered.size}",
-                    modifier = Modifier.padding(end = 16.dp),
+                    modifier = Modifier.padding(end = DdSpacing.Lg),
                     style = DdType.numeric,
                     color = colors.inkTertiary,
                 )
@@ -115,7 +116,7 @@ fun ArchivedSessionsScreen(
         if (ordered.isEmpty()) {
             Text(
                 text = stringResource(R.string.drawer_archived_empty),
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp),
+                modifier = Modifier.padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Xxxl),
                 style = DdType.body,
                 color = colors.inkTertiary,
             )
@@ -125,7 +126,7 @@ fun ArchivedSessionsScreen(
                 onQueryChange = { query = it },
                 placeholder = stringResource(R.string.drawer_search_archived_placeholder),
                 modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Xs)
                     .testTag("archived_search"),
                 clearContentDescription = stringResource(R.string.drawer_search_clear),
                 fieldTestTag = "archived_search_field",
@@ -134,14 +135,14 @@ fun ArchivedSessionsScreen(
             if (filtered.isEmpty()) {
                 Text(
                     text = stringResource(R.string.drawer_search_empty),
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
+                    modifier = Modifier.padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Xxl),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                 )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
                 ) {
                     items(filtered, key = { it.id }) { session ->
                         ArchivedSessionRow(
@@ -238,7 +239,7 @@ private fun ArchivedSessionRow(
                     )
                 }
                 .testTag(testTag)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(

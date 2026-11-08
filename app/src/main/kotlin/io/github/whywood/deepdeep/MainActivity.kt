@@ -13,7 +13,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
@@ -55,9 +57,10 @@ class MainActivity : ComponentActivity() {
         startAgentService()
         graph.processRuntime.startAsync()
         requestNotificationPermission()
-        val fontStyle = graph.fontPreferences.read()
+        val initialFontStyle = graph.fontPreferences.read()
         setContent {
             val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(initialValue = ThemePreset.SYSTEM)
+            var fontStyle by remember { mutableStateOf(initialFontStyle) }
             val scope = rememberCoroutineScope()
             DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
@@ -74,7 +77,7 @@ class MainActivity : ComponentActivity() {
                         onActiveSessionChanged = { graph.activeSessionId.value = it },
                         onFontStyleChange = { style ->
                             graph.fontPreferences.save(style)
-                            recreate()
+                            fontStyle = style
                         },
                         onThemePresetChange = { value -> scope.launch { graph.themePreferences.setPreset(value) } },
                     )

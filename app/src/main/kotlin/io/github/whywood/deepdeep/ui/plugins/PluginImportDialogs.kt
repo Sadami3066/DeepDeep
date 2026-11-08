@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
@@ -61,7 +62,7 @@ internal fun PluginImportDialog(
                         text = inspection.error,
                         style = DdType.bodySmall,
                         color = colors.danger,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Sm),
                     )
                 } else {
                     PluginGroup {
@@ -113,7 +114,7 @@ internal fun PluginImportDialog(
                                     DdSwitch(
                                         checked = trustPublisher,
                                         onCheckedChange = onTrustChange,
-                                        modifier = Modifier.padding(start = 8.dp),
+                                        modifier = Modifier.padding(start = DdSpacing.Sm),
                                     )
                                 },
                             )
@@ -125,7 +126,7 @@ internal fun PluginImportDialog(
                             text = message,
                             style = DdType.bodySmall,
                             color = colors.danger,
-                            modifier = Modifier.padding(horizontal = 4.dp),
+                            modifier = Modifier.padding(horizontal = DdSpacing.Xs),
                         )
                     }
                 }
@@ -174,14 +175,14 @@ internal fun PluginUpdatesDialog(
                         text = stringResource(R.string.plugins_updates_empty),
                         style = DdType.bodySmall,
                         color = colors.inkSecondary,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Sm),
                     )
                 } else {
                     PluginGroup {
                         updates.forEachIndexed { index, update ->
                             if (index > 0) DdHairline()
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
@@ -225,7 +226,7 @@ internal fun PluginUpdatesDialog(
                             text = message,
                             style = DdType.bodySmall,
                             color = colors.danger,
-                            modifier = Modifier.padding(horizontal = 4.dp),
+                            modifier = Modifier.padding(horizontal = DdSpacing.Xs),
                         )
                     }
                 }
@@ -259,17 +260,17 @@ internal fun PluginRepositoryDialog(
                     text = stringResource(R.string.plugins_source_hint),
                     style = DdType.bodySmall,
                     color = colors.inkSecondary,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Xs),
                 )
                 DdTextField(
                     value = url,
                     onValueChange = { url = it },
                     placeholder = stringResource(R.string.plugins_source_url),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xs),
                     testTag = "plugins_source_url",
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(

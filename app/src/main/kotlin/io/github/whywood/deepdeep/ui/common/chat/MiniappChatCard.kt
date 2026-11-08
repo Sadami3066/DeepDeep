@@ -22,9 +22,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ToolTrace
@@ -80,7 +83,7 @@ fun MiniappChatCard(
     subtitle: String? = null,
 ) {
     val colors = deepDeepColors()
-    val shape = RoundedCornerShape(12.dp)
+    val shape = DdShapes.Medium
     DdPressable(
         onClick = { onOpen(app.id) },
         modifier = modifier.fillMaxWidth().testTag("miniapp_chat_card"),
@@ -91,7 +94,7 @@ fun MiniappChatCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.hairline.copy(alpha = 0.7f), shape),
+                .border(1.dp, colors.hairline.copy(alpha = DdAlpha.Secondary), shape),
         ) {
             val context = LocalContext.current
             val preview = remember(context, app.id, app.entryPath) {
@@ -113,11 +116,11 @@ fun MiniappChatCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = 14.dp, vertical = DdSpacing.Md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             Text(text = app.icon.ifBlank { ICON_FALLBACK }, fontSize = 22.sp)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = app.name,
@@ -126,7 +129,7 @@ fun MiniappChatCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(DdSpacing.Xxs))
                 Text(
                     text = subtitle ?: stringResource(R.string.miniapp_chat_card_created),
                     style = DdType.bodySmall,

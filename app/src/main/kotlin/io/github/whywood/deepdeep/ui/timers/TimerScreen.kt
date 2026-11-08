@@ -36,6 +36,8 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -128,11 +130,11 @@ internal fun TimersContent(
             .testTag("timers_screen"),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 8.dp),
+            Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIconButton(DdIcons.ArrowLeft, onBack, stringResource(R.string.timers_back), tint = colors.ink, iconSize = 21.dp)
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(DdSpacing.Xs))
             Text(stringResource(R.string.timers_title), Modifier.weight(1f), style = DdType.heading, color = colors.ink)
             DdIconButton(
                 DdIcons.Plus, { onNew() }, stringResource(R.string.timers_new),
@@ -143,14 +145,14 @@ internal fun TimersContent(
             query = state.query,
             onQueryChange = onQueryChange,
             placeholder = stringResource(R.string.timers_search_placeholder),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Sm),
             clearContentDescription = stringResource(R.string.search_clear),
             fieldTestTag = "timers_search_field",
             clearTestTag = "timers_search_clear",
         )
         state.errorRes?.let { message ->
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -171,7 +173,7 @@ internal fun TimersContent(
                 Text(stringResource(R.string.search_no_match), style = DdType.bodySmall, color = colors.inkTertiary)
             }
 
-            else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
+            else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = DdSpacing.Xxl)) {
                 if (state.active.isNotEmpty()) {
                     TimerGroup(
                         stringResource(R.string.timers_group_active),
@@ -182,7 +184,7 @@ internal fun TimersContent(
                     )
                 }
                 if (state.inactive.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(DdSpacing.Lg))
                     TimerGroup(
                         stringResource(R.string.timers_group_inactive),
                         state.inactive,
@@ -191,7 +193,7 @@ internal fun TimersContent(
                         onToggle,
                     )
                 }
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(DdSpacing.Huge))
             }
         }
     }
@@ -221,7 +223,7 @@ private fun TimerGroup(
     onOpen: (Timer) -> Unit,
     onToggle: (Timer, Boolean) -> Unit,
 ) {
-    Text(label, Modifier.padding(top = 24.dp, bottom = 4.dp), style = DdType.micro, color = deepDeepColors().inkTertiary)
+    Text(label, Modifier.padding(top = DdSpacing.Xxl, bottom = DdSpacing.Xs), style = DdType.micro, color = deepDeepColors().inkTertiary)
     timers.forEachIndexed { index, timer ->
         val conversationText = when {
             timer.sessionId.isBlank() -> null
@@ -246,16 +248,16 @@ private fun TimerRow(timer: Timer, conversationText: String?, onOpen: () -> Unit
     DdPressable(
         onClick = onOpen,
         modifier = Modifier.fillMaxWidth().testTag("timer_row_${timer.id}"),
-        shape = RoundedCornerShape(12.dp),
+        shape = DdShapes.Medium,
         contentDescription = timer.name,
     ) {
         Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).alpha(if (timer.enabled) 1f else 0.55f)) {
                 Text(timer.name, style = DdType.body, color = colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(DdSpacing.Xxs))
                 Text(subtitle, style = DdType.bodySmall, color = colors.inkTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(DdSpacing.Md))
             DdSwitch(timer.enabled, onToggle, Modifier.testTag("timer_switch_${timer.id}"))
         }
     }

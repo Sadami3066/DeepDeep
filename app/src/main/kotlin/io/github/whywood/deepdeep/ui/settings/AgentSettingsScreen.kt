@@ -39,6 +39,8 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
+import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -80,16 +82,16 @@ fun AgentSettingsScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
                 text = stringResource(R.string.agent_settings_title),
                 style = DdType.pageTitle,
                 color = colors.ink,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(DdSpacing.Xl))
             DdSectionLabel(stringResource(R.string.agent_section_capabilities))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             val needsPermission = screenOps && !screenOpsReady
             SettingsGroup {
                 AgentRow(
@@ -114,12 +116,12 @@ fun AgentSettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onOpenPermission)
-                            .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 8.dp),
+                            .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = DdSpacing.Sm),
                         style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
                         color = colors.danger,
                     )
                 }
-                DdHairline(Modifier.padding(horizontal = 16.dp))
+                DdHairline(Modifier.padding(horizontal = DdSpacing.Lg))
                 AgentRow(
                     title = stringResource(R.string.agent_web_search),
                     value = stringResource(R.string.agent_web_search_value),
@@ -129,7 +131,7 @@ fun AgentSettingsScreen(
             }
             Spacer(Modifier.height(28.dp))
             DdSectionLabel(stringResource(R.string.agent_section_metadata))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(DdSpacing.Sm))
             SettingsGroup {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     AgentRow(
@@ -170,7 +172,7 @@ fun AgentSettingsScreen(
                     }
                 }
                 if (metadataMode == SessionNamingMode.MANUAL) {
-                    DdHairline(Modifier.padding(horizontal = 16.dp))
+                    DdHairline(Modifier.padding(horizontal = DdSpacing.Lg))
                     AgentRow(
                         title = stringResource(R.string.agent_metadata_model),
                         value = metadataModelLabel ?: stringResource(R.string.agent_metadata_model_pick),
@@ -179,7 +181,7 @@ fun AgentSettingsScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
     if (modelPicker) {
@@ -240,7 +242,7 @@ private fun AgentRow(
         modifier = modifier.fillMaxWidth().then(
             if (testTag == null) Modifier else Modifier.testTag(testTag),
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = DdShapes.Row,
         enabled = onClick != null,
         contentDescription = title,
     ) {
@@ -261,7 +263,7 @@ private fun AgentRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (subtitle != null) {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(DdSpacing.Xs))
                     Text(
                         text = subtitle,
                         style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
@@ -272,10 +274,10 @@ private fun AgentRow(
                 }
             }
             if (trailing != null) {
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(DdSpacing.Md))
                 trailing()
             } else if (value != null) {
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(DdSpacing.Md))
                 Text(
                     text = value,
                     style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
