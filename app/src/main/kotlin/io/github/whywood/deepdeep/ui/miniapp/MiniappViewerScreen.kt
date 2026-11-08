@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.miniapp
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -63,6 +65,7 @@ fun MiniappViewerScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var entry by remember(creationId) { mutableStateOf<MiniappEntry?>(null) }
     var loadKey by remember(creationId) { mutableIntStateOf(0) }
@@ -73,6 +76,8 @@ fun MiniappViewerScreen(
     var renameOpen by remember { mutableStateOf(false) }
     var deleteOpen by remember { mutableStateOf(false) }
     var dialogError by remember { mutableStateOf(false) }
+    var shortcutHintOpen by remember { mutableStateOf(false) }
+    var shortcutHintShown by remember { mutableStateOf(false) }
     var renameName by remember(creationId) { mutableStateOf("") }
     var working by remember { mutableStateOf(false) }
     val webViewState = remember(creationId) { MiniappWebViewState() }
@@ -93,6 +98,7 @@ fun MiniappViewerScreen(
     }
     LaunchedEffect(entry) {
         if (entry == MiniappEntry.Missing) {
+            Toast.makeText(context, R.string.miniapp_missing, Toast.LENGTH_SHORT).show()
             delay(120)
             onBack()
         }
@@ -187,6 +193,55 @@ fun MiniappViewerScreen(
                             reloadKey++
                         },
                         testTag = "miniapp_reload",
+                    )
+                    DdMenuItem(
+                        text = stringResource(R.string.miniapp_add_to_desktop),
+                        icon = DdIcons.Pin,
+                        onClick = {
+                            if (creation == null) return@DdMenuItem
+                            menuOpen = false
+                            val manifest = creation.manifest
+                            val wasPinned = MiniappShortcut.isPinned(context, manifest)
+                            scope.launch {
+                                when (MiniappShortcut.request(context, manifest)) {
+                                    MiniappShortcutResult.Unsupported -> Toast.makeText(
+                                        context,
+                                        R.string.miniapp_shortcut_unsupported,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+
+                                    MiniappShortcutResult.Requested -> {
+                                        delay(SHORTCUT_PIN_CHECK_DELAY_MS)
+                                        val pinned = MiniappShortcut.isPinned(context, manifest)
+                                        when {
+                                            pinned && wasPinned -> Toast.makeText(
+                                                context,
+                                                R.string.miniapp_shortcut_exists,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+
+                                            pinned -> Toast.makeText(
+                                                context,
+                                                R.string.miniapp_shortcut_added,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+
+                                            shortcutHintShown -> Toast.makeText(
+                                                context,
+                                                R.string.miniapp_shortcut_failed,
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+
+                                            else -> {
+                                                shortcutHintShown = true
+                                                shortcutHintOpen = true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        testTag = "miniapp_add_to_desktop",
                     )
                     DdMenuItem(
                         text = stringResource(R.string.miniapp_rename),
@@ -326,7 +381,38 @@ fun MiniappViewerScreen(
             },
         )
     }
+
+    if (shortcutHintOpen) {
+        DdDialog(
+            onDismissRequest = { shortcutHintOpen = false },
+            title = stringResource(R.string.miniapp_shortcut_hint_title),
+            content = {
+                Text(
+                    text = stringResource(R.string.miniapp_shortcut_hint_message),
+                    style = DdType.bodySmall,
+                    color = colors.inkSecondary,
+                )
+            },
+            actions = {
+                DdTextAction(
+                    text = stringResource(R.string.miniapp_invalid_close),
+                    onClick = { shortcutHintOpen = false },
+                    color = colors.inkSecondary,
+                )
+                DdTextAction(
+                    text = stringResource(R.string.miniapp_shortcut_open_settings),
+                    onClick = {
+                        shortcutHintOpen = false
+                        MiniappShortcut.openSettings(context)
+                    },
+                    modifier = Modifier.testTag("miniapp_shortcut_settings"),
+                )
+            },
+        )
+    }
 }
+
+private const val SHORTCUT_PIN_CHECK_DELAY_MS = 1_200L
 
 @Composable
 private fun PageErrorOverlay(message: String, onRetry: () -> Unit) {

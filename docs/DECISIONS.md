@@ -564,3 +564,10 @@ Milo Modern 图标从 semibold 换成 regular 档（256 画布、线宽约 1.75d
 - JitPack 构建通过：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.0`（其余 `pi-ai`/`pi-agent`/`pi-mcp` 及 `-jvm` 变体同组）。
 - App 删除 `SyncPiSdk` zip 同步任务与 `gradle/pi-sdk.sha256`，改用 JitPack 依赖；`settings.gradle.kts` 去掉 `dev.pi` 专用仓库与本地 m2 仓库。
 - plugins 仓库移除 `interop`/`template`/`deepdeep-memory` 三个边界插件及相关文档/脚本引用；该仓库无远端，仅本地提交。
+
+## 148. 小程序支持桌面快捷方式（不做桌面组件）
+
+- 需求是把小程序变成桌面图标一键打开；桌面组件（AppWidget）方案评估后不做（用户结论：只做快捷方式，类似应用图标），避免常驻渲染与多实例状态。
+- 查看页「⋯ → 添加到桌面」用 `ShortcutManagerCompat.requestPinShortcut` 建 pinned shortcut，ID 为 `miniapp_<id>`，图标由小程序 emoji 画成 192px 圆角方图；点击走 `deepdeep://miniapp/<id>` 深链直达查看页（Manifest 已有 intent-filter），不新增页面。
+- 交互按结果区分：已存在只提示；请求后复查 pinned 状态，成功提示「已添加到桌面」，未生效提示「去设置」（打开系统应用详情页）；同一查看页会话只弹一次权限引导，避免反复打扰。
+- 边界：快捷方式由桌面临管，删除小程序不会自动移除；点击失效条目时提示「小程序不存在，可能已被删除」并返回列表。

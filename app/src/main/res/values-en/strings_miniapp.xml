@@ -20,4 +20,13 @@
     <string name="miniapp_retry">Retry</string>
     <string name="miniapp_error_scan_failed">Scan failed. Try again.</string>
     <string name="miniapp_error_delete_failed">Delete failed. Try again.</string>
+    <string name="miniapp_add_to_desktop">Add to Home screen</string>
+    <string name="miniapp_shortcut_exists">This shortcut is already on your Home screen</string>
+    <string name="miniapp_shortcut_added">Added to Home screen</string>
+    <string name="miniapp_shortcut_failed">Couldn\'t add. Allow “Home screen shortcuts” in system settings.</string>
+    <string name="miniapp_shortcut_unsupported">This Home screen can\'t add shortcuts</string>
+    <string name="miniapp_shortcut_hint_title">Add shortcut</string>
+    <string name="miniapp_shortcut_hint_message">If the icon doesn\'t appear, allow “Home screen shortcuts” in system settings and try again.</string>
+    <string name="miniapp_shortcut_open_settings">Open settings</string>
+    <string name="miniapp_missing">This mini app no longer exists</string>
 </resources>

@@ -20,4 +20,13 @@
     <string name="miniapp_retry">重试</string>
     <string name="miniapp_error_scan_failed">扫描失败，请重试。</string>
     <string name="miniapp_error_delete_failed">删除失败，请重试。</string>
+    <string name="miniapp_add_to_desktop">添加到桌面</string>
+    <string name="miniapp_shortcut_exists">桌面已有这个快捷方式</string>
+    <string name="miniapp_shortcut_added">已添加到桌面</string>
+    <string name="miniapp_shortcut_failed">未能添加，请在系统设置里允许「桌面快捷方式」</string>
+    <string name="miniapp_shortcut_unsupported">当前桌面不支持添加快捷方式</string>
+    <string name="miniapp_shortcut_hint_title">添加快捷方式</string>
+    <string name="miniapp_shortcut_hint_message">如果桌面没有出现图标，请检查系统设置是否允许添加桌面快捷方式，然后重试。</string>
+    <string name="miniapp_shortcut_open_settings">去设置</string>
+    <string name="miniapp_missing">小程序不存在，可能已被删除</string>
 </resources>
