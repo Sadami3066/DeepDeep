@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepDeep 图标目录</title>
+<style>
+:root{color-scheme:light dark;--bg:#f7f6f3;--card:#ffffff;--ink:#273140;--muted:#6b7280;--line:#e3e0da;--chip:#f1efe9;--accent:#3b6ea5}
+.dark{color-scheme:dark;--bg:#111316;--card:#191c21;--ink:#e7e9ec;--muted:#9aa1ab;--line:#2a2e35;--chip:#22262c;--accent:#7aa7d8}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;padding:40px 32px 72px;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
+h1{font-size:26px;margin:0 0 8px}
+h2{font-size:16px;margin:0 0 6px}
+code,pre,.id,.res,.cat-id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.page{display:flex;gap:24px;justify-content:space-between;flex-wrap:wrap;align-items:flex-start;max-width:1200px;margin:0 auto 24px}
+.lead{max-width:680px;color:var(--muted);margin:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+input[type=search]{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--ink);min-width:260px;font:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;color:var(--ink);cursor:pointer;font:inherit}
+button:hover{border-color:var(--accent)}
+main,footer{max-width:1200px;margin:0 auto}
+.stats{color:var(--muted);margin:0 0 22px}
+.category{margin:0 0 30px}
+.cat-head{display:flex;align-items:baseline;gap:10px}
+.cat-id{font-size:12px;color:var(--muted)}
+.count{font-size:12px;color:var(--muted)}
+.desc{color:var(--muted);margin:2px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 12px 12px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.icon{width:46px;height:46px;display:flex;align-items:center;justify-content:center;color:var(--ink);background:var(--chip);border-radius:12px;padding:9px;margin-bottom:8px}
+.icon .pic{width:100%;height:100%;object-fit:contain;display:block}.dark .icon .pic{filter:invert(1) hue-rotate(180deg)}
+.icon svg{width:100%;height:100%}
+.zh{font-weight:600}
+.id{font-size:12px;color:var(--muted);margin-top:1px}
+.res{font-size:11px;color:var(--muted);word-break:break-all;margin-top:1px}
+.kind{font-size:10px;color:var(--muted);margin-top:5px}
+.badges{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:6px}
+.val{font-size:10px;color:var(--muted);background:var(--chip);border-radius:6px;padding:1px 6px}
+footer{margin-top:44px;border-top:1px solid var(--line);padding-top:26px}
+footer section{margin-bottom:30px}
+pre{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow:auto;font-size:12px;line-height:1.7;margin:0}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:500}
+a{color:var(--accent)}
+ol{margin:8px 0 0;padding-left:20px}
+@media (max-width:640px){body{padding:24px 16px}.page{gap:12px}input[type=search]{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<header class="page">
+  <div>
+    <h1>DeepDeep 图标目录</h1>
+    <p class="lead">应用内通用 UI 图标单源：<code>design/icons/</code> 分类源经 <code>design/icons/gen.mjs</code> 生成运行时资源与 <code>DdIcons.kt</code>；本页同为生成产物，图标直接读取同目录源文件。</p>
+  </div>
+  <div class="tools">
+    <input id="q" type="search" placeholder="搜索名称 / id / 资源 / DdIcons" autocomplete="off">
+    <button id="theme" type="button">切换明暗</button>
+  </div>
+</header>
+<main>
+  <div class="stats" id="stats">70 个图标 · 7 类 · 62 位图 · 8 矢量 · 71 个 DdIcons 成员</div>
+<section class="category" data-category="navigation">
+  <div class="cat-head"><h2>导航与方向</h2><span class="cat-id">navigation</span><span class="count">9</span></div>
+  <p class="desc">菜单、返回、展开与方向指示</p>
+  <div class="grid"><article class="card" data-search="上箭头 arrow_up navigation ic_navigation_arrow_up 矢量 · 手绘 arrowup " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12,19.5 L12,4.8 M5.6,11.2 L12,4.8 L18.4,11.2" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">上箭头</div>
+  <div class="id">arrow_up</div>
+  <div class="res">ic_navigation_arrow_up</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">ArrowUp</span></div>
+</article>
+<article class="card" data-search="返回 back navigation ic_navigation_back 位图 · semibold arrowleft semibold/02_navigation_chat/ic_milo_back.png" title="上游：semibold/02_navigation_chat/ic_milo_back.png">
+  <div class="icon"><img class="pic" src="navigation/back.png" alt=""></div>
+  <div class="zh">返回</div>
+  <div class="id">back</div>
+  <div class="res">ic_navigation_back</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">ArrowLeft</span></div>
+</article>
+<article class="card" data-search="下箭头 chevron_down navigation ic_navigation_chevron_down 矢量 · 手绘 chevrondown " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">下箭头</div>
+  <div class="id">chevron_down</div>
+  <div class="res">ic_navigation_chevron_down</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">ChevronDown</span></div>
+</article>
+<article class="card" data-search="右箭头 chevron_right navigation ic_navigation_chevron_right 矢量 · 手绘 chevronright " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">右箭头</div>
+  <div class="id">chevron_right</div>
+  <div class="res">ic_navigation_chevron_right</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">ChevronRight</span></div>
+</article>
+<article class="card" data-search="关闭 close navigation ic_navigation_close 位图 · semibold close semibold/02_navigation_chat/ic_milo_close.png" title="上游：semibold/02_navigation_chat/ic_milo_close.png">
+  <div class="icon"><img class="pic" src="navigation/close.png" alt=""></div>
+  <div class="zh">关闭</div>
+  <div class="id">close</div>
+  <div class="res">ic_navigation_close</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Close</span></div>
+</article>
+<article class="card" data-search="展开 expand navigation ic_navigation_expand 位图 · semibold expand semibold/02_navigation_chat/ic_milo_expand.png" title="上游：semibold/02_navigation_chat/ic_milo_expand.png">
+  <div class="icon"><img class="pic" src="navigation/expand.png" alt=""></div>
+  <div class="zh">展开</div>
+  <div class="id">expand</div>
+  <div class="res">ic_navigation_expand</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Expand</span></div>
+</article>
+<article class="card" data-search="外部链接 external_link navigation ic_navigation_external_link 位图 · semibold external semibold/08_tools_layout/ic_milo_external_link.png" title="上游：semibold/08_tools_layout/ic_milo_external_link.png">
+  <div class="icon"><img class="pic" src="navigation/external_link.png" alt=""></div>
+  <div class="zh">外部链接</div>
+  <div class="id">external_link</div>
+  <div class="res">ic_navigation_external_link</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">External</span></div>
+</article>
+<article class="card" data-search="菜单 menu navigation ic_navigation_menu 位图 · semibold menu semibold/02_navigation_chat/ic_milo_menu.png" title="上游：semibold/02_navigation_chat/ic_milo_menu.png">
+  <div class="icon"><img class="pic" src="navigation/menu.png" alt=""></div>
+  <div class="zh">菜单</div>
+  <div class="id">menu</div>
+  <div class="res">ic_navigation_menu</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Menu</span></div>
+</article>
+<article class="card" data-search="更多 more navigation ic_navigation_more 位图 · semibold dotsvertical more semibold/02_navigation_chat/ic_milo_more.png" title="上游：semibold/02_navigation_chat/ic_milo_more.png">
+  <div class="icon"><img class="pic" src="navigation/more.png" alt=""></div>
+  <div class="zh">更多</div>
+  <div class="id">more</div>
+  <div class="res">ic_navigation_more</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">DotsVertical</span><span class="val">More</span></div>
+</article></div>
+</section>
+<section class="category" data-category="action">
+  <div class="cat-head"><h2>操作</h2><span class="cat-id">action</span><span class="count">16</span></div>
+  <p class="desc">添加、分享、下载与编辑操作</p>
+  <div class="grid"><article class="card" data-search="添加 add action ic_action_add 位图 · semibold plus semibold/02_navigation_chat/ic_milo_add.png" title="上游：semibold/02_navigation_chat/ic_milo_add.png">
+  <div class="icon"><img class="pic" src="action/add.png" alt=""></div>
+  <div class="zh">添加</div>
+  <div class="id">add</div>
+  <div class="res">ic_action_add</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Plus</span></div>
+</article>
+<article class="card" data-search="归档 archive action ic_action_archive 位图 · semibold archive semibold/01_core/ic_milo_archive.png" title="上游：semibold/01_core/ic_milo_archive.png">
+  <div class="icon"><img class="pic" src="action/archive.png" alt=""></div>
+  <div class="zh">归档</div>
+  <div class="id">archive</div>
+  <div class="res">ic_action_archive</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Archive</span></div>
+</article>
+<article class="card" data-search="复制 copy action ic_action_copy 位图 · semibold copy semibold/02_navigation_chat/ic_milo_copy.png" title="上游：semibold/02_navigation_chat/ic_milo_copy.png">
+  <div class="icon"><img class="pic" src="action/copy.png" alt=""></div>
+  <div class="zh">复制</div>
+  <div class="id">copy</div>
+  <div class="res">ic_action_copy</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Copy</span></div>
+</article>
+<article class="card" data-search="删除 delete action ic_action_delete 位图 · semibold trash semibold/03_memory_files/ic_milo_delete.png" title="上游：semibold/03_memory_files/ic_milo_delete.png">
+  <div class="icon"><img class="pic" src="action/delete.png" alt=""></div>
+  <div class="zh">删除</div>
+  <div class="id">delete</div>
+  <div class="res">ic_action_delete</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Trash</span></div>
+</article>
+<article class="card" data-search="下载 download action ic_action_download 位图 · semibold download semibold/03_memory_files/ic_milo_download.png" title="上游：semibold/03_memory_files/ic_milo_download.png">
+  <div class="icon"><img class="pic" src="action/download.png" alt=""></div>
+  <div class="zh">下载</div>
+  <div class="id">download</div>
+  <div class="res">ic_action_download</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Download</span></div>
+</article>
+<article class="card" data-search="预览 eye action ic_action_eye 矢量 · 手绘 eye " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5 -6 9.5 -6s9.5 6 9.5 6s-3.5 6 -9.5 6s-9.5 -6 -9.5 -6z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 9.25a2.75 2.75 0 1 0 0 5.5a2.75 2.75 0 1 0 0 -5.5z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">预览</div>
+  <div class="id">eye</div>
+  <div class="res">ic_action_eye</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">Eye</span></div>
+</article>
+<article class="card" data-search="置顶 pin action ic_action_pin 位图 · semibold pin semibold/03_memory_files/ic_milo_pin.png" title="上游：semibold/03_memory_files/ic_milo_pin.png">
+  <div class="icon"><img class="pic" src="action/pin.png" alt=""></div>
+  <div class="zh">置顶</div>
+  <div class="id">pin</div>
+  <div class="res">ic_action_pin</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Pin</span></div>
+</article>
+<article class="card" data-search="运行 play action ic_action_play 位图 · semibold play semibold/04_automation_device/ic_milo_play.png" title="上游：semibold/04_automation_device/ic_milo_play.png">
+  <div class="icon"><img class="pic" src="action/play.png" alt=""></div>
+  <div class="zh">运行</div>
+  <div class="id">play</div>
+  <div class="res">ic_action_play</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Play</span></div>
+</article>
+<article class="card" data-search="引用 quote action ic_action_quote 矢量 · 手绘 quote " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 11h-4a1 1 0 0 1 -1 -1v-3a1 1 0 0 1 1 -1h3a1 1 0 0 1 1 1v6c0 2.667 -1.333 4.333 -4 5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">引用</div>
+  <div class="id">quote</div>
+  <div class="res">ic_action_quote</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">Quote</span></div>
+</article>
+<article class="card" data-search="重试 retry action ic_action_retry 位图 · semibold refresh semibold/02_navigation_chat/ic_milo_retry.png" title="上游：semibold/02_navigation_chat/ic_milo_retry.png">
+  <div class="icon"><img class="pic" src="action/retry.png" alt=""></div>
+  <div class="zh">重试</div>
+  <div class="id">retry</div>
+  <div class="res">ic_action_retry</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Refresh</span></div>
+</article>
+<article class="card" data-search="扫一扫 scan action ic_action_scan 位图 · semibold scan semibold/01_core/ic_milo_scan.png" title="上游：semibold/01_core/ic_milo_scan.png">
+  <div class="icon"><img class="pic" src="action/scan.png" alt=""></div>
+  <div class="zh">扫一扫</div>
+  <div class="id">scan</div>
+  <div class="res">ic_action_scan</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Scan</span></div>
+</article>
+<article class="card" data-search="搜索 search action ic_action_search 位图 · semibold search semibold/01_core/ic_milo_search.png" title="上游：semibold/01_core/ic_milo_search.png">
+  <div class="icon"><img class="pic" src="action/search.png" alt=""></div>
+  <div class="zh">搜索</div>
+  <div class="id">search</div>
+  <div class="res">ic_action_search</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Search</span></div>
+</article>
+<article class="card" data-search="全选 select_all action ic_action_select_all 矢量 · 手绘 selectall " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1l0 -6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 20v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 20v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 20v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 20v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 8v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 4v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 4v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 4v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 4v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 4v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 8v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 12v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 16v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 20v.01" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">全选</div>
+  <div class="id">select_all</div>
+  <div class="res">ic_action_select_all</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">SelectAll</span></div>
+</article>
+<article class="card" data-search="分享 share action ic_action_share 位图 · semibold share semibold/02_navigation_chat/ic_milo_share.png" title="上游：semibold/02_navigation_chat/ic_milo_share.png">
+  <div class="icon"><img class="pic" src="action/share.png" alt=""></div>
+  <div class="zh">分享</div>
+  <div class="id">share</div>
+  <div class="res">ic_action_share</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Share</span></div>
+</article>
+<article class="card" data-search="停止 stop action ic_action_stop 位图 · semibold stop semibold/02_navigation_chat/ic_milo_stop.png" title="上游：semibold/02_navigation_chat/ic_milo_stop.png">
+  <div class="icon"><img class="pic" src="action/stop.png" alt=""></div>
+  <div class="zh">停止</div>
+  <div class="id">stop</div>
+  <div class="res">ic_action_stop</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Stop</span></div>
+</article>
+<article class="card" data-search="同步 sync action ic_action_sync 位图 · semibold sync semibold/04_automation_device/ic_milo_sync.png" title="上游：semibold/04_automation_device/ic_milo_sync.png">
+  <div class="icon"><img class="pic" src="action/sync.png" alt=""></div>
+  <div class="zh">同步</div>
+  <div class="id">sync</div>
+  <div class="res">ic_action_sync</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Sync</span></div>
+</article></div>
+</section>
+<section class="category" data-category="status">
+  <div class="cat-head"><h2>状态与反馈</h2><span class="cat-id">status</span><span class="count">3</span></div>
+  <p class="desc">确认、提示与通知</p>
+  <div class="grid"><article class="card" data-search="确认 confirm status ic_status_confirm 位图 · semibold check semibold/02_navigation_chat/ic_milo_confirm.png" title="上游：semibold/02_navigation_chat/ic_milo_confirm.png">
+  <div class="icon"><img class="pic" src="status/confirm.png" alt=""></div>
+  <div class="zh">确认</div>
+  <div class="id">confirm</div>
+  <div class="res">ic_status_confirm</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Check</span></div>
+</article>
+<article class="card" data-search="信息 info status ic_status_info 位图 · semibold info semibold/04_automation_device/ic_milo_info.png" title="上游：semibold/04_automation_device/ic_milo_info.png">
+  <div class="icon"><img class="pic" src="status/info.png" alt=""></div>
+  <div class="zh">信息</div>
+  <div class="id">info</div>
+  <div class="res">ic_status_info</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Info</span></div>
+</article>
+<article class="card" data-search="通知 notifications status ic_status_notifications 位图 · semibold notifications semibold/01_core/ic_milo_notifications.png" title="上游：semibold/01_core/ic_milo_notifications.png">
+  <div class="icon"><img class="pic" src="status/notifications.png" alt=""></div>
+  <div class="zh">通知</div>
+  <div class="id">notifications</div>
+  <div class="res">ic_status_notifications</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Notifications</span></div>
+</article></div>
+</section>
+<section class="category" data-category="file">
+  <div class="cat-head"><h2>文件与数据</h2><span class="cat-id">file</span><span class="count">10</span></div>
+  <p class="desc">文件、文件夹、附件与数据类型</p>
+  <div class="grid"><article class="card" data-search="附件 attachment file ic_file_attachment 位图 · semibold paperclip semibold/02_navigation_chat/ic_milo_attachment.png" title="上游：semibold/02_navigation_chat/ic_milo_attachment.png">
+  <div class="icon"><img class="pic" src="file/attachment.png" alt=""></div>
+  <div class="zh">附件</div>
+  <div class="id">attachment</div>
+  <div class="res">ic_file_attachment</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Paperclip</span></div>
+</article>
+<article class="card" data-search="相机 camera file ic_file_camera 位图 · semibold camera semibold/02_navigation_chat/ic_milo_camera.png" title="上游：semibold/02_navigation_chat/ic_milo_camera.png">
+  <div class="icon"><img class="pic" src="file/camera.png" alt=""></div>
+  <div class="zh">相机</div>
+  <div class="id">camera</div>
+  <div class="res">ic_file_camera</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Camera</span></div>
+</article>
+<article class="card" data-search="代码 code file ic_file_code 位图 · semibold raw semibold/04_automation_device/ic_milo_code.png" title="上游：semibold/04_automation_device/ic_milo_code.png">
+  <div class="icon"><img class="pic" src="file/code.png" alt=""></div>
+  <div class="zh">代码</div>
+  <div class="id">code</div>
+  <div class="res">ic_file_code</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Raw</span></div>
+</article>
+<article class="card" data-search="数据库 database file ic_file_database 位图 · semibold database semibold/04_automation_device/ic_milo_database.png" title="上游：semibold/04_automation_device/ic_milo_database.png">
+  <div class="icon"><img class="pic" src="file/database.png" alt=""></div>
+  <div class="zh">数据库</div>
+  <div class="id">database</div>
+  <div class="res">ic_file_database</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Database</span></div>
+</article>
+<article class="card" data-search="普通文件 plain file ic_file_plain 位图 · semibold file semibold/05_file_states/ic_milo_file_plain.png" title="上游：semibold/05_file_states/ic_milo_file_plain.png">
+  <div class="icon"><img class="pic" src="file/plain.png" alt=""></div>
+  <div class="zh">普通文件</div>
+  <div class="id">plain</div>
+  <div class="res">ic_file_plain</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">File</span></div>
+</article>
+<article class="card" data-search="文件夹关闭 folder_closed file ic_file_folder_closed 位图 · semibold folder semibold/05_file_states/ic_milo_folder_closed.png" title="上游：semibold/05_file_states/ic_milo_folder_closed.png">
+  <div class="icon"><img class="pic" src="file/folder_closed.png" alt=""></div>
+  <div class="zh">文件夹关闭</div>
+  <div class="id">folder_closed</div>
+  <div class="res">ic_file_folder_closed</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Folder</span></div>
+</article>
+<article class="card" data-search="文件夹打开 folder_open file ic_file_folder_open 位图 · semibold folderopen semibold/05_file_states/ic_milo_folder_open.png" title="上游：semibold/05_file_states/ic_milo_folder_open.png">
+  <div class="icon"><img class="pic" src="file/folder_open.png" alt=""></div>
+  <div class="zh">文件夹打开</div>
+  <div class="id">folder_open</div>
+  <div class="res">ic_file_folder_open</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">FolderOpen</span></div>
+</article>
+<article class="card" data-search="图片 image file ic_file_image 位图 · semibold image semibold/02_navigation_chat/ic_milo_image.png" title="上游：semibold/02_navigation_chat/ic_milo_image.png">
+  <div class="icon"><img class="pic" src="file/image.png" alt=""></div>
+  <div class="zh">图片</div>
+  <div class="id">image</div>
+  <div class="res">ic_file_image</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Image</span></div>
+</article>
+<article class="card" data-search="资源包 package_box file ic_file_package_box 位图 · semibold package semibold/08_tools_layout/ic_milo_package_box.png" title="上游：semibold/08_tools_layout/ic_milo_package_box.png">
+  <div class="icon"><img class="pic" src="file/package_box.png" alt=""></div>
+  <div class="zh">资源包</div>
+  <div class="id">package_box</div>
+  <div class="res">ic_file_package_box</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Package</span></div>
+</article>
+<article class="card" data-search="工作区 workspace file ic_file_workspace 位图 · semibold workspace semibold/01_core/ic_milo_workspace.png" title="上游：semibold/01_core/ic_milo_workspace.png">
+  <div class="icon"><img class="pic" src="file/workspace.png" alt=""></div>
+  <div class="zh">工作区</div>
+  <div class="id">workspace</div>
+  <div class="res">ic_file_workspace</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Workspace</span></div>
+</article></div>
+</section>
+<section class="category" data-category="chat">
+  <div class="cat-head"><h2>对话与语音</h2><span class="cat-id">chat</span><span class="count">7</span></div>
+  <p class="desc">对话、语音与消息</p>
+  <div class="grid"><article class="card" data-search="高音量 audio_high chat ic_chat_audio_high 位图 · semibold volume semibold/06_control_chat_states/ic_milo_audio_high.png" title="上游：semibold/06_control_chat_states/ic_milo_audio_high.png">
+  <div class="icon"><img class="pic" src="chat/audio_high.png" alt=""></div>
+  <div class="zh">高音量</div>
+  <div class="id">audio_high</div>
+  <div class="res">ic_chat_audio_high</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Volume</span></div>
+</article>
+<article class="card" data-search="声音关闭 audio_muted chat ic_chat_audio_muted 位图 · semibold volumex semibold/06_control_chat_states/ic_milo_audio_muted.png" title="上游：semibold/06_control_chat_states/ic_milo_audio_muted.png">
+  <div class="icon"><img class="pic" src="chat/audio_muted.png" alt=""></div>
+  <div class="zh">声音关闭</div>
+  <div class="id">audio_muted</div>
+  <div class="res">ic_chat_audio_muted</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">VolumeX</span></div>
+</article>
+<article class="card" data-search="聊天设置 preferences chat ic_chat_preferences 位图 · semibold chatpreferences semibold/01_core/ic_milo_chat_preferences.png" title="上游：semibold/01_core/ic_milo_chat_preferences.png">
+  <div class="icon"><img class="pic" src="chat/preferences.png" alt=""></div>
+  <div class="zh">聊天设置</div>
+  <div class="id">preferences</div>
+  <div class="res">ic_chat_preferences</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">ChatPreferences</span></div>
+</article>
+<article class="card" data-search="消息未读 unread chat ic_chat_unread 位图 · semibold message semibold/06_control_chat_states/ic_milo_chat_unread.png" title="上游：semibold/06_control_chat_states/ic_milo_chat_unread.png">
+  <div class="icon"><img class="pic" src="chat/unread.png" alt=""></div>
+  <div class="zh">消息未读</div>
+  <div class="id">unread</div>
+  <div class="res">ic_chat_unread</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Message</span></div>
+</article>
+<article class="card" data-search="麦克风 microphone chat ic_chat_microphone 位图 · semibold mic semibold/02_navigation_chat/ic_milo_microphone.png" title="上游：semibold/02_navigation_chat/ic_milo_microphone.png">
+  <div class="icon"><img class="pic" src="chat/microphone.png" alt=""></div>
+  <div class="zh">麦克风</div>
+  <div class="id">microphone</div>
+  <div class="res">ic_chat_microphone</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Mic</span></div>
+</article>
+<article class="card" data-search="新对话 new_chat chat ic_chat_new_chat 位图 · semibold compose semibold/01_core/ic_milo_new_chat.png" title="上游：semibold/01_core/ic_milo_new_chat.png">
+  <div class="icon"><img class="pic" src="chat/new_chat.png" alt=""></div>
+  <div class="zh">新对话</div>
+  <div class="id">new_chat</div>
+  <div class="res">ic_chat_new_chat</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Compose</span></div>
+</article>
+<article class="card" data-search="语音 voice_wave chat ic_chat_voice_wave 位图 · semibold audiolines semibold/02_navigation_chat/ic_milo_voice_wave.png" title="上游：semibold/02_navigation_chat/ic_milo_voice_wave.png">
+  <div class="icon"><img class="pic" src="chat/voice_wave.png" alt=""></div>
+  <div class="zh">语音</div>
+  <div class="id">voice_wave</div>
+  <div class="res">ic_chat_voice_wave</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">AudioLines</span></div>
+</article></div>
+</section>
+<section class="category" data-category="ai">
+  <div class="cat-head"><h2>智能与集成</h2><span class="cat-id">ai</span><span class="count">9</span></div>
+  <p class="desc">智能体、模型与扩展能力</p>
+  <div class="grid"><article class="card" data-search="智能体 agent ai ic_ai_agent 位图 · semibold sparkles semibold/01_core/ic_milo_agent.png" title="上游：semibold/01_core/ic_milo_agent.png">
+  <div class="icon"><img class="pic" src="ai/agent.png" alt=""></div>
+  <div class="zh">智能体</div>
+  <div class="id">agent</div>
+  <div class="res">ic_ai_agent</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Sparkles</span></div>
+</article>
+<article class="card" data-search="连接器 connectors ai ic_ai_connectors 位图 · semibold plug semibold/01_core/ic_milo_connectors.png" title="上游：semibold/01_core/ic_milo_connectors.png">
+  <div class="icon"><img class="pic" src="ai/connectors.png" alt=""></div>
+  <div class="zh">连接器</div>
+  <div class="id">connectors</div>
+  <div class="res">ic_ai_connectors</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Plug</span></div>
+</article>
+<article class="card" data-search="目标 goal ai ic_ai_goal 位图 · semibold target semibold/03_memory_files/ic_milo_goal.png" title="上游：semibold/03_memory_files/ic_milo_goal.png">
+  <div class="icon"><img class="pic" src="ai/goal.png" alt=""></div>
+  <div class="zh">目标</div>
+  <div class="id">goal</div>
+  <div class="res">ic_ai_goal</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Target</span></div>
+</article>
+<article class="card" data-search="交互 interaction ai ic_ai_interaction 位图 · semibold handclick semibold/01_core/ic_milo_interaction.png" title="上游：semibold/01_core/ic_milo_interaction.png">
+  <div class="icon"><img class="pic" src="ai/interaction.png" alt=""></div>
+  <div class="zh">交互</div>
+  <div class="id">interaction</div>
+  <div class="res">ic_ai_interaction</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">HandClick</span></div>
+</article>
+<article class="card" data-search="记忆 memory ai ic_ai_memory 位图 · semibold brain semibold/01_core/ic_milo_memory.png" title="上游：semibold/01_core/ic_milo_memory.png">
+  <div class="icon"><img class="pic" src="ai/memory.png" alt=""></div>
+  <div class="zh">记忆</div>
+  <div class="id">memory</div>
+  <div class="res">ic_ai_memory</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Brain</span></div>
+</article>
+<article class="card" data-search="小程序 mini_apps ai ic_ai_mini_apps 位图 · semibold apps semibold/01_core/ic_milo_mini_apps.png" title="上游：semibold/01_core/ic_milo_mini_apps.png">
+  <div class="icon"><img class="pic" src="ai/mini_apps.png" alt=""></div>
+  <div class="zh">小程序</div>
+  <div class="id">mini_apps</div>
+  <div class="res">ic_ai_mini_apps</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Apps</span></div>
+</article>
+<article class="card" data-search="模型厂商 model_provider ai ic_ai_model_provider 位图 · semibold cloud semibold/01_core/ic_milo_model_provider.png" title="上游：semibold/01_core/ic_milo_model_provider.png">
+  <div class="icon"><img class="pic" src="ai/model_provider.png" alt=""></div>
+  <div class="zh">模型厂商</div>
+  <div class="id">model_provider</div>
+  <div class="res">ic_ai_model_provider</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Cloud</span></div>
+</article>
+<article class="card" data-search="插件 plugins ai ic_ai_plugins 位图 · semibold puzzle semibold/01_core/ic_milo_plugins.png" title="上游：semibold/01_core/ic_milo_plugins.png">
+  <div class="icon"><img class="pic" src="ai/plugins.png" alt=""></div>
+  <div class="zh">插件</div>
+  <div class="id">plugins</div>
+  <div class="res">ic_ai_plugins</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Puzzle</span></div>
+</article>
+<article class="card" data-search="技能 skills ai ic_ai_skills 位图 · semibold book semibold/01_core/ic_milo_skills.png" title="上游：semibold/01_core/ic_milo_skills.png">
+  <div class="icon"><img class="pic" src="ai/skills.png" alt=""></div>
+  <div class="zh">技能</div>
+  <div class="id">skills</div>
+  <div class="res">ic_ai_skills</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Book</span></div>
+</article></div>
+</section>
+<section class="category" data-category="system">
+  <div class="cat-head"><h2>系统与设备</h2><span class="cat-id">system</span><span class="count">16</span></div>
+  <p class="desc">设置、外观、设备与工具</p>
+  <div class="grid"><article class="card" data-search="外观 appearance system ic_system_appearance 位图 · semibold moon semibold/01_core/ic_milo_appearance.png" title="上游：semibold/01_core/ic_milo_appearance.png">
+  <div class="icon"><img class="pic" src="system/appearance.png" alt=""></div>
+  <div class="zh">外观</div>
+  <div class="id">appearance</div>
+  <div class="res">ic_system_appearance</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Moon</span></div>
+</article>
+<article class="card" data-search="桌面 desktop system ic_system_desktop 矢量 · 手绘 desktop " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5,5h13a1.5,1.5 0,0 1,1.5 1.5v8a1.5,1.5 0,0 1,-1.5 1.5h-13a1.5,1.5 0,0 1,-1.5 -1.5v-8a1.5,1.5 0,0 1,1.5 -1.5z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M12,16.5v2.2M8.6,18.7h6.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">桌面</div>
+  <div class="id">desktop</div>
+  <div class="res">ic_system_desktop</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">Desktop</span></div>
+</article>
+<article class="card" data-search="设备 device system ic_system_device 位图 · semibold monitor semibold/01_core/ic_milo_device.png" title="上游：semibold/01_core/ic_milo_device.png">
+  <div class="icon"><img class="pic" src="system/device.png" alt=""></div>
+  <div class="zh">设备</div>
+  <div class="id">device</div>
+  <div class="res">ic_system_device</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Monitor</span></div>
+</article>
+<article class="card" data-search="设备已连接 device_connected system ic_system_device_connected 位图 · semibold phone semibold/07_connection_task_states/ic_milo_device_connected.png" title="上游：semibold/07_connection_task_states/ic_milo_device_connected.png">
+  <div class="icon"><img class="pic" src="system/device_connected.png" alt=""></div>
+  <div class="zh">设备已连接</div>
+  <div class="id">device_connected</div>
+  <div class="res">ic_system_device_connected</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Phone</span></div>
+</article>
+<article class="card" data-search="悬浮窗口 floating_window system ic_system_floating_window 位图 · semibold floatingwindow semibold/08_tools_layout/ic_milo_floating_window.png" title="上游：semibold/08_tools_layout/ic_milo_floating_window.png">
+  <div class="icon"><img class="pic" src="system/floating_window.png" alt=""></div>
+  <div class="zh">悬浮窗口</div>
+  <div class="id">floating_window</div>
+  <div class="res">ic_system_floating_window</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">FloatingWindow</span></div>
+</article>
+<article class="card" data-search="版本分支 git_branch system ic_system_git_branch 位图 · semibold gitfork semibold/08_tools_layout/ic_milo_git_branch.png" title="上游：semibold/08_tools_layout/ic_milo_git_branch.png">
+  <div class="icon"><img class="pic" src="system/git_branch.png" alt=""></div>
+  <div class="zh">版本分支</div>
+  <div class="id">git_branch</div>
+  <div class="res">ic_system_git_branch</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">GitFork</span></div>
+</article>
+<article class="card" data-search="语言 language system ic_system_language 位图 · semibold globe semibold/01_core/ic_milo_language.png" title="上游：semibold/01_core/ic_milo_language.png">
+  <div class="icon"><img class="pic" src="system/language.png" alt=""></div>
+  <div class="zh">语言</div>
+  <div class="id">language</div>
+  <div class="res">ic_system_language</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Globe</span></div>
+</article>
+<article class="card" data-search="许可 license system ic_system_license 位图 · semibold license semibold/01_core/ic_milo_license.png" title="上游：semibold/01_core/ic_milo_license.png">
+  <div class="icon"><img class="pic" src="system/license.png" alt=""></div>
+  <div class="zh">许可</div>
+  <div class="id">license</div>
+  <div class="res">ic_system_license</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">License</span></div>
+</article>
+<article class="card" data-search="权限 permissions system ic_system_permissions 位图 · semibold shield semibold/01_core/ic_milo_permissions.png" title="上游：semibold/01_core/ic_milo_permissions.png">
+  <div class="icon"><img class="pic" src="system/permissions.png" alt=""></div>
+  <div class="zh">权限</div>
+  <div class="id">permissions</div>
+  <div class="res">ic_system_permissions</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Shield</span></div>
+</article>
+<article class="card" data-search="隐私 privacy system ic_system_privacy 位图 · semibold privacy semibold/01_core/ic_milo_privacy.png" title="上游：semibold/01_core/ic_milo_privacy.png">
+  <div class="icon"><img class="pic" src="system/privacy.png" alt=""></div>
+  <div class="zh">隐私</div>
+  <div class="id">privacy</div>
+  <div class="res">ic_system_privacy</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Privacy</span></div>
+</article>
+<article class="card" data-search="设置 settings system ic_system_settings 位图 · semibold settings semibold/01_core/ic_milo_settings.png" title="上游：semibold/01_core/ic_milo_settings.png">
+  <div class="icon"><img class="pic" src="system/settings.png" alt=""></div>
+  <div class="zh">设置</div>
+  <div class="id">settings</div>
+  <div class="res">ic_system_settings</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Settings</span></div>
+</article>
+<article class="card" data-search="终端 terminal system ic_system_terminal 位图 · semibold terminal semibold/01_core/ic_milo_terminal.png" title="上游：semibold/01_core/ic_milo_terminal.png">
+  <div class="icon"><img class="pic" src="system/terminal.png" alt=""></div>
+  <div class="zh">终端</div>
+  <div class="id">terminal</div>
+  <div class="res">ic_system_terminal</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Terminal</span></div>
+</article>
+<article class="card" data-search="主题 theme system ic_system_theme 矢量 · 手绘 theme " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12,4 A8,8 0 1,1 12,20 A8,8 0 1,1 12,4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><path d="M12,6.4 A5.6,5.6 0 0 1 12,17.6 Z" fill="currentColor"/></svg></div>
+  <div class="zh">主题</div>
+  <div class="id">theme</div>
+  <div class="res">ic_system_theme</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">Theme</span></div>
+</article>
+<article class="card" data-search="倒计时 timer system ic_system_timer 位图 · semibold clock semibold/04_automation_device/ic_milo_timer.png" title="上游：semibold/04_automation_device/ic_milo_timer.png">
+  <div class="icon"><img class="pic" src="system/timer.png" alt=""></div>
+  <div class="zh">倒计时</div>
+  <div class="id">timer</div>
+  <div class="res">ic_system_timer</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Clock</span></div>
+</article>
+<article class="card" data-search="今天 today system ic_system_today 位图 · semibold sun semibold/03_memory_files/ic_milo_today.png" title="上游：semibold/03_memory_files/ic_milo_today.png">
+  <div class="icon"><img class="pic" src="system/today.png" alt=""></div>
+  <div class="zh">今天</div>
+  <div class="id">today</div>
+  <div class="res">ic_system_today</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Sun</span></div>
+</article>
+<article class="card" data-search="字体 typography system ic_system_typography 位图 · semibold font semibold/01_core/ic_milo_typography.png" title="上游：semibold/01_core/ic_milo_typography.png">
+  <div class="icon"><img class="pic" src="system/typography.png" alt=""></div>
+  <div class="zh">字体</div>
+  <div class="id">typography</div>
+  <div class="res">ic_system_typography</div>
+  <div class="kind">位图 · semibold</div>
+  <div class="badges"><span class="val">Font</span></div>
+</article></div>
+</section>
+</main>
+<footer>
+  <section>
+    <h2>目录结构</h2>
+    <pre>design/icons/
+  catalog.json
+  gen.mjs
+  preview.html
+  navigation/
+    arrow_up.xml  back.png  chevron_down.xml  chevron_right.xml  close.png  expand.png
+    external_link.png  menu.png  more.png
+  action/
+    add.png  archive.png  copy.png  delete.png  download.png  eye.xml  pin.png  play.png
+    quote.xml  retry.png  scan.png  search.png  select_all.xml  share.png  stop.png  sync.png
+  status/
+    confirm.png  info.png  notifications.png
+  file/
+    attachment.png  camera.png  code.png  database.png  plain.png  folder_closed.png
+    folder_open.png  image.png  package_box.png  workspace.png
+  chat/
+    audio_high.png  audio_muted.png  preferences.png  unread.png  microphone.png  new_chat.png
+    voice_wave.png
+  ai/
+    agent.png  connectors.png  goal.png  interaction.png  memory.png  mini_apps.png
+    model_provider.png  plugins.png  skills.png
+  system/
+    appearance.png  desktop.xml  device.png  device_connected.png  floating_window.png
+    git_branch.png  language.png  license.png  permissions.png  privacy.png  settings.png
+    terminal.png  theme.xml  timer.png  today.png  typography.png</pre>
+  </section>
+  <section>
+    <h2>生成命令</h2>
+    <p class="lead">在仓库根目录（<code>app/</code>）执行；<code>--check</code> 只校验漂移不写文件，可直接用于 CI。</p>
+    <pre>node design/icons/gen.mjs
+node design/icons/gen.mjs --check</pre>
+  </section>
+  <section>
+    <h2>分类与命名</h2>
+    <table>
+      <thead><tr><th>项</th><th>位置 / 值</th><th>说明</th></tr></thead>
+      <tbody>
+<tr><td>图标源</td><td>design/icons/&lt;category&gt;/&lt;id&gt;.png|.xml</td><td>唯一手改入口</td></tr>
+<tr><td>登记表</td><td>design/icons/catalog.json</td><td>id / 分类 / 中文名 / DdIcons 成员 / 上游路径</td></tr>
+<tr><td>生成入口</td><td>design/icons/gen.mjs</td><td>写出运行时资源、DdIcons.kt、本预览页</td></tr>
+<tr><td>运行时资源</td><td>design/src/main/res/drawable-nodpi/ic_&lt;category&gt;_&lt;id&gt;.png|.xml</td><td>只读，由脚本覆盖</td></tr>
+<tr><td>预览页</td><td>design/icons/preview.html</td><td>本页，图标读同目录源文件</td></tr>
+      </tbody>
+    </table>
+    <p class="lead">源文件与 id 用 snake_case；生成资源名 = <code>ic_&lt;category&gt;_&lt;id&gt;</code>；<code>DdIcons</code> 成员名保持历史命名，调用点无需改动。</p>
+  </section>
+  <section>
+    <h2>新增或替换图标</h2>
+    <ol>
+      <li>把 PNG 放进对应分类目录（或手写 vector XML），文件名即 id；</li>
+      <li>在 <code>catalog.json</code> 的 <code>icons</code> 中登记 id / 分类 / 中文名 / DdIcons 成员 / 上游路径；</li>
+      <li>运行生成命令并编译；未登记或未使用的源文件会让生成失败，避免留下死资源。</li>
+    </ol>
+  </section>
+  <section>
+    <h2>品牌与平台素材</h2>
+    <table>
+      <thead><tr><th>素材</th><th>位置</th><th>范围</th><th>状态</th></tr></thead>
+      <tbody>
+<tr><td>Provider 图标</td><td><a href="../../assets/pi-provider-logos/">assets/pi-provider-logos/</a></td><td>42 个厂商（31 份不同图形）</td><td>运行时 `provider_*`，位于 app 的 drawable-nodpi 与 drawable-night-nodpi</td></tr>
+<tr><td>厂商图标</td><td><a href="../../assets/vendor-logos/">assets/vendor-logos/</a></td><td>10 个厂商（7 份已入库）</td><td>源素材，当前未随包发布</td></tr>
+<tr><td>应用标识 / 启动图标</td><td><a href="../../assets/branding/">assets/branding/</a></td><td>品牌字母 d</td><td>不走 DdIcon 体系</td></tr>
+<tr><td>鲸鱼娘素材</td><td><a href="../../assets/ui-kit/whale-flat-v1/">assets/ui-kit/whale-flat-v1/</a></td><td>mascot_* / whale_*</td><td>动画与表情素材，非通用图标</td></tr>
+<tr><td>上游 Milo 素材包</td><td><a href="../../assets/milo-modern-icons-200-revised/">assets/milo-modern-icons-200-revised/</a></td><td>200 枚 × regular/semibold</td><td>只读参考，本仓库取 semibold 档</td></tr>
+      </tbody>
+    </table>
+    <p class="lead">这些素材各自带 manifest、来源与许可，跨目录被市场与通知使用，因此留在 <code>assets/</code>，不并入通用图标目录。</p>
+  </section>
+</footer>
+<script>
+const input = document.getElementById('q');
+const stats = document.getElementById('stats');
+const cards = [...document.querySelectorAll('.card')];
+const sections = [...document.querySelectorAll('.category')];
+const root = document.documentElement;
+const themeButton = document.getElementById('theme');
+const setTheme = (dark) => {
+  root.classList.toggle('dark', dark);
+  themeButton.textContent = dark ? '浅色' : '深色';
+};
+setTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+themeButton.addEventListener('click', () => setTheme(!root.classList.contains('dark')));
+const update = () => {
+  const query = input.value.trim().toLowerCase();
+  let visible = 0;
+  for (const card of cards) {
+    const show = query.length === 0 || card.dataset.search.includes(query);
+    card.hidden = !show;
+    if (show) visible += 1;
+  }
+  for (const section of sections) {
+    section.hidden = ![...section.querySelectorAll('.card')].some((card) => !card.hidden);
+  }
+  const categoryCount = sections.filter((section) => !section.hidden).length;
+  stats.textContent = query.length === 0 ? '70 个图标 · 7 类 · 62 位图 · 8 矢量 · 71 个 DdIcons 成员' : `${visible} / ${cards.length} 个图标 · ${categoryCount} 类`;
+};
+input.addEventListener('input', update);
+</script>
+</body>
+</html>

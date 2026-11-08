@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,12 +44,71 @@ fun DdSearchField(
     fieldTestTag: String? = null,
     clearTestTag: String? = null,
 ) {
+    DdSearchFieldCore(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = placeholder,
+        modifier = modifier,
+        focusRequester = focusRequester,
+        clearContentDescription = clearContentDescription,
+        onEscape = onEscape,
+        fieldTestTag = fieldTestTag,
+        clearTestTag = clearTestTag,
+        onSearch = null,
+        trailing = null,
+    )
+}
+
+@Composable
+fun DdSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String,
+    onSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    clearContentDescription: String,
+    onEscape: (() -> Unit)? = null,
+    fieldTestTag: String? = null,
+    clearTestTag: String? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+) {
+    DdSearchFieldCore(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = placeholder,
+        modifier = modifier,
+        focusRequester = focusRequester,
+        clearContentDescription = clearContentDescription,
+        onEscape = onEscape,
+        fieldTestTag = fieldTestTag,
+        clearTestTag = clearTestTag,
+        onSearch = onSearch,
+        trailing = trailing,
+    )
+}
+
+@Composable
+private fun DdSearchFieldCore(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier,
+    focusRequester: FocusRequester?,
+    clearContentDescription: String,
+    onEscape: (() -> Unit)?,
+    fieldTestTag: String?,
+    clearTestTag: String?,
+    onSearch: (() -> Unit)?,
+    trailing: (@Composable RowScope.() -> Unit)?,
+) {
     val colors = deepDeepColors()
     val shape = RoundedCornerShape(14.dp)
     val focus = focusRequester
     val escape = onEscape
     val fieldTag = fieldTestTag
     val clearTag = clearTestTag
+    val search = onSearch
     val textStyle = DdType.bodySmall.copy(fontSize = 15.sp, lineHeight = 22.sp, color = colors.ink)
     Row(
         modifier
@@ -55,7 +116,7 @@ fun DdSearchField(
             .height(44.dp)
             .clip(shape)
             .background(colors.raised)
-            .border(1.dp, colors.hairline.copy(alpha = 0.6f), shape)
+            .border(1.dp, colors.hairline.copy(alpha = DdAlpha.Border), shape)
             .padding(start = 12.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -73,7 +134,7 @@ fun DdSearchField(
                     } else {
                         Modifier.onPreviewKeyEvent { event ->
                             if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
-                                escape?.invoke()
+                                escape.invoke()
                                 true
                             } else {
                                 false
@@ -86,6 +147,7 @@ fun DdSearchField(
             cursorBrush = SolidColor(colors.accent),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { search?.invoke() }),
             decorationBox = { inner ->
                 Box {
                     if (query.isEmpty()) {
@@ -99,6 +161,10 @@ fun DdSearchField(
                 }
             },
         )
+        if (trailing != null) {
+            Spacer(Modifier.width(4.dp))
+            trailing.invoke(this)
+        }
         if (query.isNotEmpty()) {
             DdIconButton(
                 icon = DdIcons.Close,

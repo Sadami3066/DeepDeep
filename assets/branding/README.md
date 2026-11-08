@@ -20,7 +20,8 @@
 
 ## 图标
 
-- 应用内矢量图标来自 [Tabler Icons](https://github.com/tabler/tabler-icons)（MIT，快照 v3.50.0），转换后位于 `design/src/main/res/drawable/`；许可全文 `design/src/main/assets/licenses/tabler-MIT.txt`，随 APK 打包。
+- 应用内通用 UI 图标上游为 [Milo Modern 图标素材包](../milo-modern-icons-200-revised/README.md)（App 取 semibold 档），分类源、命名与生成流程见 `design/icons/`，生成到 `design/src/main/res/drawable-nodpi/`。
+- 无 Milo 对应语义的少数线稿为手绘 vector（源自 [Tabler Icons](https://github.com/tabler/tabler-icons)，MIT，快照 v3.50.0）；许可全文 `design/src/main/assets/licenses/tabler-MIT.txt`，随 APK 打包。
 - 厂商/服务图标素材见 `assets/pi-provider-logos/` 与 `assets/vendor-logos/`，来源、许可与替换说明见各自 README 与仓库根目录 `THIRD_PARTY_NOTICES.md`。
 
 ## 未进入仓库的参考素材

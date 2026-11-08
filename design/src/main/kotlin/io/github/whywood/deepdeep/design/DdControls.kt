@@ -20,6 +20,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,11 +31,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -114,27 +118,92 @@ fun DdSwitch(
 @Composable
 fun <T> DdSegmentedControl(
     options: List<T>,
+    selected: T?,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    item: @Composable (T, Boolean) -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdSegmentedCore(
+        options = options,
+        selected = selected,
+        onSelect = onSelect,
+        modifier = modifier,
+        enabled = enabled,
+        height = 44.dp,
+        shape = RoundedCornerShape(DdRadius.Segmented),
+        indicatorShape = RoundedCornerShape(DdRadius.Indicator),
+        indicatorPadding = 3.dp,
+        indicatorColor = if (colors.dark) colors.ink.copy(alpha = DdAlpha.IndicatorDark) else colors.surface,
+        testTags = null,
+        item = item,
+    )
+}
+
+@Composable
+fun <T> DdSegmentedControl(
+    options: List<T>,
     selected: T,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     label: @Composable (T) -> String,
 ) {
+    val colors = deepDeepColors()
+    DdSegmentedCore(
+        options = options,
+        selected = selected,
+        onSelect = onSelect,
+        modifier = modifier,
+        enabled = enabled,
+        height = 36.dp,
+        shape = CircleShape,
+        indicatorShape = CircleShape,
+        indicatorPadding = 3.dp,
+        indicatorColor = if (colors.dark) colors.ink.copy(alpha = DdAlpha.IndicatorDark) else colors.surface,
+        testTags = null,
+    ) { option, isSelected ->
+        Text(
+            text = label(option),
+            style = DdType.chip,
+            color = if (isSelected) colors.ink else colors.inkTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+internal fun <T> DdSegmentedCore(
+    options: List<T>,
+    selected: T?,
+    onSelect: (T) -> Unit,
+    modifier: Modifier,
+    enabled: Boolean,
+    height: Dp,
+    shape: Shape,
+    indicatorShape: Shape,
+    indicatorPadding: Dp,
+    indicatorColor: Color,
+    testTags: List<String>?,
+    item: @Composable (T, Boolean) -> Unit,
+) {
     if (options.isEmpty()) return
     val colors = deepDeepColors()
-    val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
+    val selectedIndex = if (selected == null) -1 else options.indexOf(selected).coerceAtLeast(0)
     val animatedIndex by animateFloatAsState(
-        targetValue = selectedIndex.toFloat(),
+        targetValue = if (selectedIndex >= 0) selectedIndex.toFloat() else 0f,
         animationSpec = DdMotion.SegmentedSpring,
         label = "segment-index",
     )
-    val indicatorColor = if (colors.dark) colors.ink.copy(alpha = 0.16f) else colors.surface
+    val indicatorAlpha = if (selectedIndex >= 0) 1f else 0f
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .height(36.dp)
-            .alpha(if (enabled) 1f else 0.4f)
-            .clip(CircleShape)
+            .height(height)
+            .alpha(if (enabled) 1f else DdAlpha.Disabled)
+            .clip(shape)
             .background(colors.wash),
     ) {
         val segmentWidth = maxWidth / options.size.toFloat()
@@ -143,9 +212,10 @@ fun <T> DdSegmentedControl(
                 .offset(x = segmentWidth * animatedIndex)
                 .width(segmentWidth)
                 .fillMaxHeight()
-                .padding(3.dp)
-                .shadow(elevation = 2.dp, shape = CircleShape, clip = false)
-                .clip(CircleShape)
+                .padding(indicatorPadding)
+                .graphicsLayer { alpha = indicatorAlpha }
+                .shadow(elevation = DdElevation.Indicator, shape = indicatorShape, clip = false)
+                .clip(indicatorShape)
                 .background(indicatorColor),
         )
         Row(
@@ -156,28 +226,23 @@ fun <T> DdSegmentedControl(
         ) {
             options.forEachIndexed { index, option ->
                 val isSelected = index == selectedIndex
-                val interaction = remember { MutableInteractionSource() }
+                val tag = testTags?.getOrNull(index)
                 Box(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .then(if (tag == null) Modifier else Modifier.testTag(tag))
                         .selectable(
                             selected = isSelected,
                             enabled = enabled,
                             role = Role.RadioButton,
                             onClick = { if (!isSelected) onSelect(option) },
-                            interactionSource = interaction,
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = label(option),
-                        style = DdType.chip,
-                        color = if (isSelected) colors.ink else colors.inkTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    item(option, isSelected)
                 }
             }
         }

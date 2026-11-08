@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
@@ -109,6 +110,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val languagePreferences = remember(context) { LanguagePreferences(context) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showDesignSystem by remember { mutableStateOf(false) }
     var language by remember { mutableStateOf(languagePreferences.read()) }
     val activeModel = listOfNotNull(
         providerName?.takeIf { it.isNotBlank() },
@@ -299,6 +301,17 @@ fun SettingsScreen(
 
             SettingsSectionLabel(stringResource(R.string.settings_group_about))
             DdGroupCard {
+                if (BuildConfig.DEBUG) {
+                    DdListRow(
+                        icon = DdIcons.Theme,
+                        title = "设计系统",
+                        subtitle = "Design System · Debug",
+                        onClick = { showDesignSystem = true },
+                        showChevron = true,
+                        modifier = Modifier.testTag("settings_design_system"),
+                    )
+                    DdRowDivider(leadingInset = SettingsDividerInset)
+                }
                 DdListRow(
                     icon = DdIcons.License,
                     title = stringResource(R.string.settings_license),
@@ -322,6 +335,10 @@ fun SettingsScreen(
 
     if (showLicenses) {
         LicenseSheet(onClose = { showLicenses = false })
+    }
+
+    if (showDesignSystem) {
+        DesignSystemScreen(onClose = { showDesignSystem = false })
     }
 }
 

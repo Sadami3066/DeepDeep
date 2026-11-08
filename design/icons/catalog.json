@@ -1,0 +1,672 @@
+{
+  "categories": [
+    {
+      "id": "navigation",
+      "name_zh": "导航与方向",
+      "description": "菜单、返回、展开与方向指示"
+    },
+    {
+      "id": "action",
+      "name_zh": "操作",
+      "description": "添加、分享、下载与编辑操作"
+    },
+    {
+      "id": "status",
+      "name_zh": "状态与反馈",
+      "description": "确认、提示与通知"
+    },
+    {
+      "id": "file",
+      "name_zh": "文件与数据",
+      "description": "文件、文件夹、附件与数据类型"
+    },
+    {
+      "id": "chat",
+      "name_zh": "对话与语音",
+      "description": "对话、语音与消息"
+    },
+    {
+      "id": "ai",
+      "name_zh": "智能与集成",
+      "description": "智能体、模型与扩展能力"
+    },
+    {
+      "id": "system",
+      "name_zh": "系统与设备",
+      "description": "设置、外观、设备与工具"
+    }
+  ],
+  "icons": [
+    {
+      "id": "arrow_up",
+      "category": "navigation",
+      "name_zh": "上箭头",
+      "dd": [
+        "ArrowUp"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "back",
+      "category": "navigation",
+      "name_zh": "返回",
+      "dd": [
+        "ArrowLeft"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_back.png"
+    },
+    {
+      "id": "chevron_down",
+      "category": "navigation",
+      "name_zh": "下箭头",
+      "dd": [
+        "ChevronDown"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "chevron_right",
+      "category": "navigation",
+      "name_zh": "右箭头",
+      "dd": [
+        "ChevronRight"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "close",
+      "category": "navigation",
+      "name_zh": "关闭",
+      "dd": [
+        "Close"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_close.png"
+    },
+    {
+      "id": "expand",
+      "category": "navigation",
+      "name_zh": "展开",
+      "dd": [
+        "Expand"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_expand.png"
+    },
+    {
+      "id": "external_link",
+      "category": "navigation",
+      "name_zh": "外部链接",
+      "dd": [
+        "External"
+      ],
+      "upstream": "semibold/08_tools_layout/ic_milo_external_link.png"
+    },
+    {
+      "id": "menu",
+      "category": "navigation",
+      "name_zh": "菜单",
+      "dd": [
+        "Menu"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_menu.png"
+    },
+    {
+      "id": "more",
+      "category": "navigation",
+      "name_zh": "更多",
+      "dd": [
+        "DotsVertical",
+        "More"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_more.png"
+    },
+    {
+      "id": "add",
+      "category": "action",
+      "name_zh": "添加",
+      "dd": [
+        "Plus"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_add.png"
+    },
+    {
+      "id": "archive",
+      "category": "action",
+      "name_zh": "归档",
+      "dd": [
+        "Archive"
+      ],
+      "upstream": "semibold/01_core/ic_milo_archive.png"
+    },
+    {
+      "id": "copy",
+      "category": "action",
+      "name_zh": "复制",
+      "dd": [
+        "Copy"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_copy.png"
+    },
+    {
+      "id": "delete",
+      "category": "action",
+      "name_zh": "删除",
+      "dd": [
+        "Trash"
+      ],
+      "upstream": "semibold/03_memory_files/ic_milo_delete.png"
+    },
+    {
+      "id": "download",
+      "category": "action",
+      "name_zh": "下载",
+      "dd": [
+        "Download"
+      ],
+      "upstream": "semibold/03_memory_files/ic_milo_download.png"
+    },
+    {
+      "id": "eye",
+      "category": "action",
+      "name_zh": "预览",
+      "dd": [
+        "Eye"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "pin",
+      "category": "action",
+      "name_zh": "置顶",
+      "dd": [
+        "Pin"
+      ],
+      "upstream": "semibold/03_memory_files/ic_milo_pin.png"
+    },
+    {
+      "id": "play",
+      "category": "action",
+      "name_zh": "运行",
+      "dd": [
+        "Play"
+      ],
+      "upstream": "semibold/04_automation_device/ic_milo_play.png"
+    },
+    {
+      "id": "quote",
+      "category": "action",
+      "name_zh": "引用",
+      "dd": [
+        "Quote"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "retry",
+      "category": "action",
+      "name_zh": "重试",
+      "dd": [
+        "Refresh"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_retry.png"
+    },
+    {
+      "id": "scan",
+      "category": "action",
+      "name_zh": "扫一扫",
+      "dd": [
+        "Scan"
+      ],
+      "upstream": "semibold/01_core/ic_milo_scan.png"
+    },
+    {
+      "id": "search",
+      "category": "action",
+      "name_zh": "搜索",
+      "dd": [
+        "Search"
+      ],
+      "upstream": "semibold/01_core/ic_milo_search.png"
+    },
+    {
+      "id": "select_all",
+      "category": "action",
+      "name_zh": "全选",
+      "dd": [
+        "SelectAll"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "share",
+      "category": "action",
+      "name_zh": "分享",
+      "dd": [
+        "Share"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_share.png"
+    },
+    {
+      "id": "stop",
+      "category": "action",
+      "name_zh": "停止",
+      "dd": [
+        "Stop"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_stop.png"
+    },
+    {
+      "id": "sync",
+      "category": "action",
+      "name_zh": "同步",
+      "dd": [
+        "Sync"
+      ],
+      "upstream": "semibold/04_automation_device/ic_milo_sync.png"
+    },
+    {
+      "id": "confirm",
+      "category": "status",
+      "name_zh": "确认",
+      "dd": [
+        "Check"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_confirm.png"
+    },
+    {
+      "id": "info",
+      "category": "status",
+      "name_zh": "信息",
+      "dd": [
+        "Info"
+      ],
+      "upstream": "semibold/04_automation_device/ic_milo_info.png"
+    },
+    {
+      "id": "notifications",
+      "category": "status",
+      "name_zh": "通知",
+      "dd": [
+        "Notifications"
+      ],
+      "upstream": "semibold/01_core/ic_milo_notifications.png"
+    },
+    {
+      "id": "attachment",
+      "category": "file",
+      "name_zh": "附件",
+      "dd": [
+        "Paperclip"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_attachment.png"
+    },
+    {
+      "id": "camera",
+      "category": "file",
+      "name_zh": "相机",
+      "dd": [
+        "Camera"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_camera.png"
+    },
+    {
+      "id": "code",
+      "category": "file",
+      "name_zh": "代码",
+      "dd": [
+        "Raw"
+      ],
+      "upstream": "semibold/04_automation_device/ic_milo_code.png"
+    },
+    {
+      "id": "database",
+      "category": "file",
+      "name_zh": "数据库",
+      "dd": [
+        "Database"
+      ],
+      "upstream": "semibold/04_automation_device/ic_milo_database.png"
+    },
+    {
+      "id": "plain",
+      "category": "file",
+      "name_zh": "普通文件",
+      "dd": [
+        "File"
+      ],
+      "upstream": "semibold/05_file_states/ic_milo_file_plain.png"
+    },
+    {
+      "id": "folder_closed",
+      "category": "file",
+      "name_zh": "文件夹关闭",
+      "dd": [
+        "Folder"
+      ],
+      "upstream": "semibold/05_file_states/ic_milo_folder_closed.png"
+    },
+    {
+      "id": "folder_open",
+      "category": "file",
+      "name_zh": "文件夹打开",
+      "dd": [
+        "FolderOpen"
+      ],
+      "upstream": "semibold/05_file_states/ic_milo_folder_open.png"
+    },
+    {
+      "id": "image",
+      "category": "file",
+      "name_zh": "图片",
+      "dd": [
+        "Image"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_image.png"
+    },
+    {
+      "id": "package_box",
+      "category": "file",
+      "name_zh": "资源包",
+      "dd": [
+        "Package"
+      ],
+      "upstream": "semibold/08_tools_layout/ic_milo_package_box.png"
+    },
+    {
+      "id": "workspace",
+      "category": "file",
+      "name_zh": "工作区",
+      "dd": [
+        "Workspace"
+      ],
+      "upstream": "semibold/01_core/ic_milo_workspace.png"
+    },
+    {
+      "id": "audio_high",
+      "category": "chat",
+      "name_zh": "高音量",
+      "dd": [
+        "Volume"
+      ],
+      "upstream": "semibold/06_control_chat_states/ic_milo_audio_high.png"
+    },
+    {
+      "id": "audio_muted",
+      "category": "chat",
+      "name_zh": "声音关闭",
+      "dd": [
+        "VolumeX"
+      ],
+      "upstream": "semibold/06_control_chat_states/ic_milo_audio_muted.png"
+    },
+    {
+      "id": "preferences",
+      "category": "chat",
+      "name_zh": "聊天设置",
+      "dd": [
+        "ChatPreferences"
+      ],
+      "upstream": "semibold/01_core/ic_milo_chat_preferences.png"
+    },
+    {
+      "id": "unread",
+      "category": "chat",
+      "name_zh": "消息未读",
+      "dd": [
+        "Message"
+      ],
+      "upstream": "semibold/06_control_chat_states/ic_milo_chat_unread.png"
+    },
+    {
+      "id": "microphone",
+      "category": "chat",
+      "name_zh": "麦克风",
+      "dd": [
+        "Mic"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_microphone.png"
+    },
+    {
+      "id": "new_chat",
+      "category": "chat",
+      "name_zh": "新对话",
+      "dd": [
+        "Compose"
+      ],
+      "upstream": "semibold/01_core/ic_milo_new_chat.png"
+    },
+    {
+      "id": "voice_wave",
+      "category": "chat",
+      "name_zh": "语音",
+      "dd": [
+        "AudioLines"
+      ],
+      "upstream": "semibold/02_navigation_chat/ic_milo_voice_wave.png"
+    },
+    {
+      "id": "agent",
+      "category": "ai",
+      "name_zh": "智能体",
+      "dd": [
+        "Sparkles"
+      ],
+      "upstream": "semibold/01_core/ic_milo_agent.png"
+    },
+    {
+      "id": "connectors",
+      "category": "ai",
+      "name_zh": "连接器",
+      "dd": [
+        "Plug"
+      ],
+      "upstream": "semibold/01_core/ic_milo_connectors.png"
+    },
+    {
+      "id": "goal",
+      "category": "ai",
+      "name_zh": "目标",
+      "dd": [
+        "Target"
+      ],
+      "upstream": "semibold/03_memory_files/ic_milo_goal.png"
+    },
+    {
+      "id": "interaction",
+      "category": "ai",
+      "name_zh": "交互",
+      "dd": [
+        "HandClick"
+      ],
+      "upstream": "semibold/01_core/ic_milo_interaction.png"
+    },
+    {
+      "id": "memory",
+      "category": "ai",
+      "name_zh": "记忆",
+      "dd": [
+        "Brain"
+      ],
+      "upstream": "semibold/01_core/ic_milo_memory.png"
+    },
+    {
+      "id": "mini_apps",
+      "category": "ai",
+      "name_zh": "小程序",
+      "dd": [
+        "Apps"
+      ],
+      "upstream": "semibold/01_core/ic_milo_mini_apps.png"
+    },
+    {
+      "id": "model_provider",
+      "category": "ai",
+      "name_zh": "模型厂商",
+      "dd": [
+        "Cloud"
+      ],
+      "upstream": "semibold/01_core/ic_milo_model_provider.png"
+    },
+    {
+      "id": "plugins",
+      "category": "ai",
+      "name_zh": "插件",
+      "dd": [
+        "Puzzle"
+      ],
+      "upstream": "semibold/01_core/ic_milo_plugins.png"
+    },
+    {
+      "id": "skills",
+      "category": "ai",
+      "name_zh": "技能",
+      "dd": [
+        "Book"
+      ],
+      "upstream": "semibold/01_core/ic_milo_skills.png"
+    },
+    {
+      "id": "appearance",
+      "category": "system",
+      "name_zh": "外观",
+      "dd": [
+        "Moon"
+      ],
+      "upstream": "semibold/01_core/ic_milo_appearance.png"
+    },
+    {
+      "id": "desktop",
+      "category": "system",
+      "name_zh": "桌面",
+      "dd": [
+        "Desktop"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "device",
+      "category": "system",
+      "name_zh": "设备",
+      "dd": [
+        "Monitor"
+      ],
+      "upstream": "semibold/01_core/ic_milo_device.png"
+    },
+    {
+      "id": "device_connected",
+      "category": "system",
+      "name_zh": "设备已连接",
+      "dd": [
+        "Phone"
+      ],
+      "upstream": "semibold/07_connection_task_states/ic_milo_device_connected.png"
+    },
+    {
+      "id": "floating_window",
+      "category": "system",
+      "name_zh": "悬浮窗口",
+      "dd": [
+        "FloatingWindow"
+      ],
+      "upstream": "semibold/08_tools_layout/ic_milo_floating_window.png"
+    },
+    {
+      "id": "git_branch",
+      "category": "system",
+      "name_zh": "版本分支",
+      "dd": [
+        "GitFork"
+      ],
+      "upstream": "semibold/08_tools_layout/ic_milo_git_branch.png"
+    },
+    {
+      "id": "language",
+      "category": "system",
+      "name_zh": "语言",
+      "dd": [
+        "Globe"
+      ],
+      "upstream": "semibold/01_core/ic_milo_language.png"
+    },
+    {
+      "id": "license",
+      "category": "system",
+      "name_zh": "许可",
+      "dd": [
+        "License"
+      ],
+      "upstream": "semibold/01_core/ic_milo_license.png"
+    },
+    {
+      "id": "permissions",
+      "category": "system",
+      "name_zh": "权限",
+      "dd": [
+        "Shield"
+      ],
+      "upstream": "semibold/01_core/ic_milo_permissions.png"
+    },
+    {
+      "id": "privacy",
+      "category": "system",
+      "name_zh": "隐私",
+      "dd": [
+        "Privacy"
+      ],
+      "upstream": "semibold/01_core/ic_milo_privacy.png"
+    },
+    {
+      "id": "settings",
+      "category": "system",
+      "name_zh": "设置",
+      "dd": [
+        "Settings"
+      ],
+      "upstream": "semibold/01_core/ic_milo_settings.png"
+    },
+    {
+      "id": "terminal",
+      "category": "system",
+      "name_zh": "终端",
+      "dd": [
+        "Terminal"
+      ],
+      "upstream": "semibold/01_core/ic_milo_terminal.png"
+    },
+    {
+      "id": "theme",
+      "category": "system",
+      "name_zh": "主题",
+      "dd": [
+        "Theme"
+      ],
+      "upstream": null
+    },
+    {
+      "id": "timer",
+      "category": "system",
+      "name_zh": "倒计时",
+      "dd": [
+        "Clock"
+      ],
+      "upstream": "semibold/04_automation_device/ic_milo_timer.png"
+    },
+    {
+      "id": "today",
+      "category": "system",
+      "name_zh": "今天",
+      "dd": [
+        "Sun"
+      ],
+      "upstream": "semibold/03_memory_files/ic_milo_today.png"
+    },
+    {
+      "id": "typography",
+      "category": "system",
+      "name_zh": "字体",
+      "dd": [
+        "Font"
+      ],
+      "upstream": "semibold/01_core/ic_milo_typography.png"
+    }
+  ]
+}

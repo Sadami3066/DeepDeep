@@ -29,4 +29,13 @@ object DdMotion {
 
     fun <T> spec(duration: Int = BASE, delayMillis: Int = 0, easing: Easing = EaseOut): TweenSpec<T> =
         tween(durationMillis = duration, delayMillis = delayMillis, easing = easing)
+
+    const val SPATIAL = BASE
+    const val EFFECTS = FAST
+
+    fun <T> spatial(duration: Int = SPATIAL, delayMillis: Int = 0): TweenSpec<T> =
+        tween(durationMillis = duration, delayMillis = delayMillis, easing = EaseInOut)
+
+    fun <T> effects(duration: Int = EFFECTS, delayMillis: Int = 0): TweenSpec<T> =
+        tween(durationMillis = duration, delayMillis = delayMillis, easing = EaseOut)
 }

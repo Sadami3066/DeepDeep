@@ -407,3 +407,30 @@ Linux 不再作为「推荐安装」的附加组件，而是 App 自带能力：
 - CI：`validate.yml` 在 PR 上做 schema 校验并评论失败原因；`release.yml` 在 master 上发布条目、下载并校验全部制品 size/sha256、用仓库 secret 签名、部署 GitHub Pages；Pages source 切到 GitHub Actions。
 
 限制不变：固定官方源、index ≤ 512 条 / 2MB、插件 ≤ 50MB、技能 ≤ 20MB、图标 ≤ 128KB、MCP 仅 http；community 投稿走 PR + 人工审核。
+
+## 127. 图标改为「分类单源 + 生成」
+
+原先图标资源与手绘 vector 混放在 `design/src/main/res/drawable-nodpi`，命名靠人记，新增/替换要同时改资源与 `DdIcons.kt` 两处，分类也不统一。
+
+现在：
+
+- 单源目录 `design/icons/`：7 个语义分类（navigation / action / status / file / chat / ai / system），源文件 `<id>.png|xml`，`catalog.json` 是唯一登记表（id / 分类 / 中文名 / DdIcons 成员 / 上游路径）。
+- 生成命令 `node design/icons/gen.mjs`：输出 `res/drawable-nodpi/ic_<category>_<id>.png|xml`、`DdIcons.kt` 与分类预览页 `design/icons/preview.html`；`--check` 只校验不写，可进 CI。运行时资源与 `DdIcons.kt` 都是生成物，不再手改。
+- 位图沿用 Milo Modern semibold 档（256 画布、线宽约 2.15dp、#273140 线稿、图形约占画布 85%），手写矢量沿用 24 viewport / 2.1dp 圆头描边；`DdIcons` 71 个成员名保持不变，所有调用点零改动。旧命名资源在迁移时删除。
+- 品牌/平台/鲸鱼素材（pi-provider-logos、vendor-logos、branding、ui-kit）仍留在 `assets/`，各自保留 manifest 与生成脚本，由 README 与预览页统一索引。
+
+代价：改图标要改 `design/icons/` 并重跑生成脚本；忘记 `--check` 时 CI 会拦生成物不一致。
+
+## 129. UI 库 Phase 0：token 层、基础组件与圣托里尼日光主题
+
+UI 审计（`tmp/ui-design-audit.md`）指出 token 缺间距/圆角/阴影/透明度四类对象，App 层有 1830 处 dp/sp 字面量与 91 处 `DdType.copy`；调研（`tmp/ui-library-research.md`）建议把 `:design` 分成 tokens/primitives/components/patterns/motion 五层，旧 API 全部保留 facade。
+
+先落 Phase 0：
+
+- token：新增 `DdSpacing`、`DdShapes`/`DdRadius`、`DdElevation`、`DdAlpha`；`DdMotion` 只追加 `SPATIAL/EFFECTS` 语义别名，旧字段与 `spec()` 不动。
+- primitives：新增 `DdText`、`DdIconBox`、`DdAvatar`，`DdPressable` 新增支持外部 `interactionSource` 与可选触感的重载（旧签名委托，视觉不变）。
+- 组件扩展：`DdListRow` 40dp 图标容器版、`DdGroupCard` header/footer slot 版、泛型 `DdSegmentedControl`、`DdSearchField` onSearch/trailing 版、`DdEmptyState` icon/action 版；旧签名全部保留，插件 ABI 不破。
+- 主题：新增 `DdTheme.lightSantorini()`（白 #FFFFFF、主蓝 #0078D7、浅天蓝 #E3F2FD、正文深青灰 #1E3A47、浅蓝灰 #C9D6E3、浅灰 #E5E5E5；高明度低饱和、大留白、轻阴影），默认主题与 App 现有页面配色不变。
+- 验收：App 侧新增 debug 展示页（设置 → 关于 → 设计系统，仅 `BuildConfig.DEBUG`），默认用圣托里尼主题展示 tokens 与组件状态矩阵，可切回默认主题。
+
+后续按调研分段推进：先替换低风险设置/引导/市场页，再记忆/文件/小程序，聊天最后且禁止重写；`:design` 签名变化集中到 Phase 3，并同步 plugin-api ABI、PLUGIN_DEV 文档与 plugins/ 重编译。

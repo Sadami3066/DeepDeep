@@ -6,6 +6,7 @@
 
 | 文件 | 职责 |
 |---|---|
+| `DesignSystemScreen.kt` | debug-only 设计系统展示页（tokens 与组件状态矩阵，圣托里尼日光主题），入口仅在 BuildConfig.DEBUG |
 | `SettingsScreen.kt` | 设置首页：账户卡、功能入口（Provider/权限/Agent 设置/Linux 设置/Android 设置）、主题/字体/语言、通知、版本与许可 |
 | `ChatSettingsScreen.kt` | 聊天设置：正文字号、过程折叠、运行中发送（插话/排队）、自动重试、后台唤醒、自动朗读 |
 | `AgentSettingsScreen.kt` | Agent 设置：屏幕操作开关与未生效提示（点提示进权限页）、权限级别行（进权限页） |

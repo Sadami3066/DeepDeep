@@ -42,6 +42,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -65,14 +67,39 @@ fun DdPressable(
     contentDescription: String? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    DdPressable(
+        onClick = onClick,
+        interactionSource = remember { MutableInteractionSource() },
+        modifier = modifier,
+        shape = shape,
+        background = background,
+        enabled = enabled,
+        contentDescription = contentDescription,
+        content = content,
+    )
+}
+
+@Composable
+fun DdPressable(
+    onClick: () -> Unit,
+    interactionSource: MutableInteractionSource,
+    modifier: Modifier = Modifier,
+    shape: Shape = CircleShape,
+    background: Color = Color.Transparent,
+    enabled: Boolean = true,
+    hapticFeedbackType: HapticFeedbackType? = null,
+    contentDescription: String? = null,
+    content: @Composable BoxScope.() -> Unit,
+) {
     val colors = deepDeepColors()
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
     val wash = animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.07f else 0f,
+        targetValue = if (pressed && enabled) DdAlpha.Press else 0f,
         animationSpec = if (pressed) snap() else tween(DdMotion.PRESS_OUT, easing = DdMotion.EaseOut),
         label = "press-wash",
     )
+    val haptics = LocalHapticFeedback.current
+    val hapticType = hapticFeedbackType
     val semantics = if (contentDescription == null) {
         Modifier
     } else {
@@ -84,11 +111,16 @@ fun DdPressable(
             .clip(shape)
             .background(background)
             .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = colors.ink.copy(alpha = 0.035f)),
+                interactionSource = interactionSource,
+                indication = ripple(color = colors.ink.copy(alpha = DdAlpha.Ripple)),
                 enabled = enabled,
                 role = Role.Button,
-                onClick = onClick,
+                onClick = {
+                    if (hapticType != null) {
+                        haptics.performHapticFeedback(hapticType)
+                    }
+                    onClick()
+                },
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -275,6 +307,76 @@ fun DdListRow(
                 DdIcon(
                     icon = DdIcons.ChevronRight,
                     tint = colors.inkTertiary.copy(alpha = 0.55f * alpha),
+                    size = 15.dp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DdListRow(
+    title: String,
+    leadingIcon: DdIcon,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    showChevron: Boolean = false,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+    iconContainerColor: Color = deepDeepColors().wash,
+    iconTint: Color = deepDeepColors().inkSecondary,
+) {
+    val colors = deepDeepColors()
+    val alpha = if (enabled) 1f else DdAlpha.Disabled
+    DdPressable(
+        onClick = onClick ?: {},
+        modifier = modifier.fillMaxWidth(),
+        shape = DdShapes.Row,
+        enabled = onClick != null && enabled,
+        contentDescription = title,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp)
+                .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIconBox(
+                icon = leadingIcon,
+                size = 40.dp,
+                iconSize = 20.dp,
+                containerColor = iconContainerColor,
+                tint = iconTint.copy(alpha = alpha),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = title,
+                    style = DdType.body,
+                    color = colors.ink.copy(alpha = alpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary.copy(alpha = alpha),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (trailing != null) {
+                trailing()
+            }
+            if (showChevron) {
+                Spacer(Modifier.width(6.dp))
+                DdIcon(
+                    icon = DdIcons.ChevronRight,
+                    tint = colors.inkTertiary.copy(alpha = DdAlpha.Muted * alpha),
                     size = 15.dp,
                 )
             }
