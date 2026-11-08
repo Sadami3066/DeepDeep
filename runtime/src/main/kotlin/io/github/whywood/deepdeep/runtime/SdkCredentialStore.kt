@@ -1,14 +1,14 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.PiJson
-import dev.pi.ai.auth.ApiKeyCredential
-import dev.pi.ai.auth.Credential
-import dev.pi.ai.auth.CredentialInfo
-import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.auth.OAuthCredential
-import dev.pi.ai.auth.oauth.OAuthCredential as OAuthToken
-import dev.pi.ai.auth.oauth.oauthCredentialFromJson
-import dev.pi.ai.auth.oauth.toJsonObject
+import io.github.whywood.deepdeep.sdk.ai.PiJson
+import io.github.whywood.deepdeep.sdk.ai.auth.ApiKeyCredential
+import io.github.whywood.deepdeep.sdk.ai.auth.Credential
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
+import io.github.whywood.deepdeep.sdk.ai.auth.OAuthCredential
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCredential as OAuthToken
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.oauthCredentialFromJson
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.toJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

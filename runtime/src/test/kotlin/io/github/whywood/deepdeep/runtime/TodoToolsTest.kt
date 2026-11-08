@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.TextContent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

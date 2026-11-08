@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.ui.mcp
 
-import dev.pi.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

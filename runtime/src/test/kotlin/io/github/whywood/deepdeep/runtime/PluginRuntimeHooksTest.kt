@@ -1,16 +1,16 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AfterToolCallContext
-import dev.pi.agent.AgentToolResult
-import dev.pi.agent.BeforeToolCallContext
-import dev.pi.ai.TextContent
-import dev.pi.ai.auth.Credential
-import dev.pi.ai.auth.CredentialInfo
-import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.http.HttpRequest
-import dev.pi.ai.http.HttpResponse
-import dev.pi.ai.http.HttpTransport
-import dev.pi.coding.session.CodingHooks
+import io.github.whywood.deepdeep.sdk.agent.AfterToolCallContext
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.agent.BeforeToolCallContext
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.auth.Credential
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
+import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
+import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.coding.session.CodingHooks
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
@@ -49,33 +49,33 @@ class PluginRuntimeHooksTest {
         override fun readRaw(): Map<String, JsonElement> = emptyMap()
     }
 
-    private fun assistantMessage(): dev.pi.ai.AssistantMessage = dev.pi.ai.AssistantMessage(
+    private fun assistantMessage(): io.github.whywood.deepdeep.sdk.ai.AssistantMessage = io.github.whywood.deepdeep.sdk.ai.AssistantMessage(
         content = mutableListOf(),
         api = "test",
         provider = "test",
         model = "test",
-        usage = dev.pi.ai.Usage.empty(),
-        stopReason = dev.pi.ai.StopReason.Stop,
+        usage = io.github.whywood.deepdeep.sdk.ai.Usage.empty(),
+        stopReason = io.github.whywood.deepdeep.sdk.ai.StopReason.Stop,
         timestamp = 1L,
     )
 
     private fun beforeContext(args: JsonObject = buildJsonObject { put("x", 1) }): BeforeToolCallContext =
         BeforeToolCallContext(
             assistantMessage = assistantMessage(),
-            toolCall = dev.pi.ai.ToolCall("call-1", "demo", args),
+            toolCall = io.github.whywood.deepdeep.sdk.ai.ToolCall("call-1", "demo", args),
             args = LinkedHashMap(args),
-            context = dev.pi.agent.AgentContext(emptyList(), emptyList()),
+            context = io.github.whywood.deepdeep.sdk.agent.AgentContext(emptyList(), emptyList()),
         )
 
     private fun afterContext(
         result: AgentToolResult = AgentToolResult(content = listOf(TextContent("raw"))),
     ): AfterToolCallContext = AfterToolCallContext(
         assistantMessage = assistantMessage(),
-        toolCall = dev.pi.ai.ToolCall("call-1", "demo", buildJsonObject { put("x", 1) }),
+        toolCall = io.github.whywood.deepdeep.sdk.ai.ToolCall("call-1", "demo", buildJsonObject { put("x", 1) }),
         args = LinkedHashMap(buildJsonObject { put("x", 1) }),
         result = result,
         isError = false,
-        context = dev.pi.agent.AgentContext(emptyList(), emptyList()),
+        context = io.github.whywood.deepdeep.sdk.agent.AgentContext(emptyList(), emptyList()),
     )
 
     private fun AgentToolResult.text(): String =
@@ -137,7 +137,7 @@ class PluginRuntimeHooksTest {
     fun afterBridgeKeepsChainedResult() = runTest {
         val bridge = bridgeAfterToolCall(
             object : ToolExecutionHooks {},
-            chained = { _, _ -> dev.pi.agent.AfterToolCallResult(content = listOf(TextContent("normalized"))) },
+            chained = { _, _ -> io.github.whywood.deepdeep.sdk.agent.AfterToolCallResult(content = listOf(TextContent("normalized"))) },
         )
         val result = bridge(afterContext(), null)
         assertEquals("normalized", (result?.content?.first() as TextContent).text)
@@ -155,7 +155,7 @@ class PluginRuntimeHooksTest {
                     )
                 }
             },
-            chained = { _, _ -> dev.pi.agent.AfterToolCallResult(content = listOf(TextContent("normalized"))) },
+            chained = { _, _ -> io.github.whywood.deepdeep.sdk.agent.AfterToolCallResult(content = listOf(TextContent("normalized"))) },
         )
         val result = bridge(afterContext(), null)
         assertEquals(listOf("normalized"), seen)

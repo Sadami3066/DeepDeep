@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.textResult
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

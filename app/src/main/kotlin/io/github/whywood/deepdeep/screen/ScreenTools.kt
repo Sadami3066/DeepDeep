@@ -1,10 +1,10 @@
 package io.github.whywood.deepdeep.screen
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.RequestAbortedException
-import dev.pi.ai.TextContent
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.textResult
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async

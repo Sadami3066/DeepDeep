@@ -1,17 +1,17 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.Context
-import dev.pi.ai.Model
-import dev.pi.ai.Models
-import dev.pi.ai.PlainTextContent
-import dev.pi.ai.Provider
-import dev.pi.ai.StreamOptions
-import dev.pi.ai.TextContent
-import dev.pi.ai.UserMessage
-import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.auth.oauth.bundledOAuthFlows
-import dev.pi.ai.http.HttpTransport
-import dev.pi.ai.providers.builtinProviders
+import io.github.whywood.deepdeep.sdk.ai.Context
+import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.Models
+import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
+import io.github.whywood.deepdeep.sdk.ai.Provider
+import io.github.whywood.deepdeep.sdk.ai.StreamOptions
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.UserMessage
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.bundledOAuthFlows
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.ai.providers.builtinProviders
 import java.util.UUID
 
 class ProviderCatalog(

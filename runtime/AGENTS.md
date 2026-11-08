@@ -1,6 +1,6 @@
 # runtime · Agent 运行时
 
-dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/凭据、MCP、定时与目标、后台任务、小程序、工作区。会话以 pi JSONL 为唯一权威，目标与任务只在进程内；测试在 `src/test/kotlin`（JUnit4 + coroutines-test）。
+DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：会话与事件流、工具、Provider/凭据、MCP、定时与目标、后台任务、小程序、工作区。系统提示词由 SDK `buildSystemPrompt` 生成（不再维护 `SYSTEM.md` 与工具规则段）；会话以 pi JSONL 为唯一权威，目标与任务只在进程内；测试在 `src/test/kotlin`（JUnit4 + coroutines-test）。
 
 ## 文件
 
@@ -32,7 +32,6 @@ dev.pi SDK 之上的 agent 运行时：会话与事件流、工具、Provider/�
 | `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
 | `SessionCloseReason.kt` | 句柄关闭原因（Idle/Reload/Reconfigure/Deleted/Closed）与 `SessionClosure` 事件模型 |
 | `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
-| `SystemPrompt.kt` | 系统提示词文件、全局规则与工具规则合并 |
 | `Personalization.kt` | 称呼、交互风格与语气等提示词分节 |
 | `PromptPaths.kt` | 提示词 paths 段：Skills / App data / Shared storage / Mounted directories（挂载目录名称、路径与说明） |
 | `SkillCatalog.kt` | 发现技能并渲染为提示词块 |

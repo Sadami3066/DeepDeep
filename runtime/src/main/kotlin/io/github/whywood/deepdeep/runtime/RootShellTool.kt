@@ -1,13 +1,13 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.RequestAbortedException
-import dev.pi.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.ShellExecutor
-import dev.pi.coding.tools.ShellResult
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray

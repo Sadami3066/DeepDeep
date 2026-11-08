@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.RequestAbortedException
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.textResult
+import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.CancellationException

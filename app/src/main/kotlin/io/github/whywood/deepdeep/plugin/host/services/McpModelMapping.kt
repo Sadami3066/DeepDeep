@@ -9,13 +9,13 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 internal object McpModelMapping {
-    fun tool(tool: dev.pi.mcp.protocol.McpTool): McpTool = McpTool(
+    fun tool(tool: io.github.whywood.deepdeep.sdk.mcp.protocol.McpTool): McpTool = McpTool(
         name = tool.name,
         description = tool.description,
         inputSchema = tool.inputSchema,
     )
 
-    fun result(result: dev.pi.mcp.protocol.McpCallResult): McpCallResult = McpCallResult(
+    fun result(result: io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult): McpCallResult = McpCallResult(
         blocks = result.content.map(::block),
         isError = result.isError,
     )

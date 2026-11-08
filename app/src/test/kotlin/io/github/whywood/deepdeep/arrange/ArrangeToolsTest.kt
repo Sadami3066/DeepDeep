@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.arrange
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.TextContent
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset

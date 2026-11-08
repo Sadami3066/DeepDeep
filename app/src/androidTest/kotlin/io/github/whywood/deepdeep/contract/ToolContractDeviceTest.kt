@@ -5,13 +5,13 @@ import android.provider.Settings
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import dev.pi.ai.RequestAbortedException
-import dev.pi.ai.RunSignal
-import dev.pi.ai.TextContent
-import dev.pi.ai.http.HttpRequest
-import dev.pi.ai.http.HttpResponse
-import dev.pi.ai.http.HttpTransport
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
+import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.screen.GuiAccessibilityActions
 import io.github.whywood.deepdeep.runtime.JobRegistry
@@ -59,7 +59,7 @@ class ToolContractDeviceTest {
     private fun tools(environment: LinuxEnvironment): Map<String, CodingTool> = PiSessionEngine(
         graph.homeDir, graph.agentDir, graph.credentials, transport, AppShellExecutor(environment), graph.providerCatalog as ProviderCatalog,
     ).availableTools().associateBy { it.name }
-    private fun dev.pi.agent.AgentToolResult.text() = content.filterIsInstance<TextContent>().joinToString("\n") { it.text }
+    private fun io.github.whywood.deepdeep.sdk.agent.AgentToolResult.text() = content.filterIsInstance<TextContent>().joinToString("\n") { it.text }
     private suspend fun run(tool: CodingTool, args: JsonObject = buildJsonObject {}) = tool.execute("device", args, null, null)
     private fun args(path: File) = buildJsonObject { put("path", path.absolutePath) }
 

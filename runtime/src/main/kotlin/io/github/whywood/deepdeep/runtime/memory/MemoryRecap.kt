@@ -1,11 +1,11 @@
 package io.github.whywood.deepdeep.runtime.memory
 
-import dev.pi.ai.BlockContent
-import dev.pi.ai.PlainTextContent
-import dev.pi.ai.TextContent
-import dev.pi.ai.UserMessage
-import dev.pi.coding.session.SessionEntry
-import dev.pi.coding.session.SessionMessageEntry
+import io.github.whywood.deepdeep.sdk.ai.BlockContent
+import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.UserMessage
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
+import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
 import io.github.whywood.deepdeep.runtime.AssistantMessage as UiAssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ModelOption
@@ -227,7 +227,7 @@ class MemoryRecap(
                     lines += "User: $text"
                 }
 
-                is dev.pi.ai.AssistantMessage -> {
+                is io.github.whywood.deepdeep.sdk.ai.AssistantMessage -> {
                     val text = message.content.filterIsInstance<TextContent>().joinToString("\n") { it.text }.trim()
                     if (text.isEmpty()) continue
                     lines += "Assistant: $text"

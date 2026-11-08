@@ -1,9 +1,9 @@
 package io.github.whywood.deepdeep.runtime
 
 import java.io.File
-import dev.pi.coding.tools.readTool
-import dev.pi.coding.tools.writeTool
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.sdk.coding.tools.readTool
+import io.github.whywood.deepdeep.sdk.coding.tools.writeTool
+import io.github.whywood.deepdeep.sdk.ai.TextContent
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put

@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.web
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.TextContent
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

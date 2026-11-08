@@ -2,7 +2,7 @@ package io.github.whywood.deepdeep.plugin.host.services
 
 import android.content.Context
 import android.os.Build
-import dev.pi.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.plugin.api.McpCallResult

@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.auth.ApiKeyCredential
-import dev.pi.ai.auth.OAuthCredential
+import io.github.whywood.deepdeep.sdk.ai.auth.ApiKeyCredential
+import io.github.whywood.deepdeep.sdk.ai.auth.OAuthCredential
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async

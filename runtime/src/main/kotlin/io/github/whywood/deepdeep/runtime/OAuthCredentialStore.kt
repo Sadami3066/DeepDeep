@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.PiJson
+import io.github.whywood.deepdeep.sdk.ai.PiJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonElement
 

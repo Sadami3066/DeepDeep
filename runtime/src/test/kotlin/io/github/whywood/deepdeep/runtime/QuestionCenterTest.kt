@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.ExperimentalCoroutinesApi

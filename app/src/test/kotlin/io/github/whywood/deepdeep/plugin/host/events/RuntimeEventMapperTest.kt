@@ -1,18 +1,18 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import dev.pi.agent.AgentEvent
-import dev.pi.agent.AgentMessage
-import dev.pi.agent.AgentToolResult
-import dev.pi.agent.StandardAgentMessage
-import dev.pi.ai.AssistantMessage as PiAssistantMessage
-import dev.pi.ai.TextContent
-import dev.pi.ai.TextDeltaEvent
-import dev.pi.ai.ThinkingDeltaEvent
-import dev.pi.ai.ToolCall
-import dev.pi.ai.Usage
-import dev.pi.coding.mcp.McpServerState
-import dev.pi.coding.mcp.McpServerStatus as SdkMcpStatus
-import dev.pi.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentMessage
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.agent.StandardAgentMessage
+import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.ToolCall
+import io.github.whywood.deepdeep.sdk.ai.Usage
+import io.github.whywood.deepdeep.sdk.coding.mcp.McpServerState
+import io.github.whywood.deepdeep.sdk.coding.mcp.McpServerStatus as SdkMcpStatus
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus as PluginMcpStatus
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -41,9 +41,9 @@ class RuntimeEventMapperTest {
     private fun mapper(sink: Sink): RuntimeEventMapper = RuntimeEventMapper(sink::emit)
 
     private fun assistant(
-        content: List<dev.pi.ai.Content> = emptyList(),
+        content: List<io.github.whywood.deepdeep.sdk.ai.Content> = emptyList(),
         timestamp: Long = 10L,
-        stopReason: dev.pi.ai.StopReason = dev.pi.ai.StopReason.Stop,
+        stopReason: io.github.whywood.deepdeep.sdk.ai.StopReason = io.github.whywood.deepdeep.sdk.ai.StopReason.Stop,
     ): AgentMessage = StandardAgentMessage(
         PiAssistantMessage(
             content = content.toMutableList(),
@@ -224,7 +224,7 @@ class RuntimeEventMapperTest {
         mapper.dispatchSessionEvent(
             "session-1",
             SessionEvent.AgentEventReceived(
-                AgentEvent.TurnEnd(assistant(stopReason = dev.pi.ai.StopReason.Error), emptyList()),
+                AgentEvent.TurnEnd(assistant(stopReason = io.github.whywood.deepdeep.sdk.ai.StopReason.Error), emptyList()),
             ),
         )
 

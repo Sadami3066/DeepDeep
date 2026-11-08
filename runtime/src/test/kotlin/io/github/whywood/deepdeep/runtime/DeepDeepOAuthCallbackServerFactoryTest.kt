@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.auth.oauth.OAuthCallbackServerOptions
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServerOptions
 import java.net.Socket
 import java.net.URI
 import kotlinx.coroutines.runBlocking

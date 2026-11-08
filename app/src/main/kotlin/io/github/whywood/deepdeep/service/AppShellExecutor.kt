@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.service
 
-import dev.pi.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.runtime.CommandResult
 import io.github.whywood.deepdeep.runtime.DetailedShellExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment

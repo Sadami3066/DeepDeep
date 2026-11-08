@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.coding.prompt.Skill
-import dev.pi.coding.prompt.loadSkills
-import dev.pi.coding.prompt.renderSkillPromptBlock
+import io.github.whywood.deepdeep.sdk.coding.prompt.Skill
+import io.github.whywood.deepdeep.sdk.coding.prompt.loadSkills
+import io.github.whywood.deepdeep.sdk.coding.prompt.renderSkillPromptBlock
 import java.io.File
 import okio.FileSystem
 import okio.Path.Companion.toPath

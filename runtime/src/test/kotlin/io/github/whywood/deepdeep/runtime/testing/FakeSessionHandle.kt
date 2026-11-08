@@ -1,11 +1,11 @@
 package io.github.whywood.deepdeep.runtime.testing
 
-import dev.pi.agent.AgentMessage
-import dev.pi.ai.Model
-import dev.pi.ai.ModelCost
-import dev.pi.coding.session.QueueBehavior
-import dev.pi.coding.session.SessionEvent
-import dev.pi.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.agent.AgentMessage
+import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.ModelCost
+import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.SessionCompaction

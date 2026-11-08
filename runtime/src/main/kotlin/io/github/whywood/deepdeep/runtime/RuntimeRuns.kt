@@ -1,14 +1,14 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentMessage
-import dev.pi.agent.asAssistantMessage
-import dev.pi.agent.asLlmMessage
-import dev.pi.ai.BlockContent
-import dev.pi.ai.PlainTextContent
-import dev.pi.ai.StopReason
-import dev.pi.ai.TextContent
-import dev.pi.ai.UserMessage
-import dev.pi.coding.session.QueueBehavior
+import io.github.whywood.deepdeep.sdk.agent.AgentMessage
+import io.github.whywood.deepdeep.sdk.agent.asAssistantMessage
+import io.github.whywood.deepdeep.sdk.agent.asLlmMessage
+import io.github.whywood.deepdeep.sdk.ai.BlockContent
+import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
+import io.github.whywood.deepdeep.sdk.ai.StopReason
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.UserMessage
+import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

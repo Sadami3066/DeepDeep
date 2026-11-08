@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.data
 
-import dev.pi.coding.prompt.Frontmatter
+import io.github.whywood.deepdeep.sdk.coding.prompt.Frontmatter
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException

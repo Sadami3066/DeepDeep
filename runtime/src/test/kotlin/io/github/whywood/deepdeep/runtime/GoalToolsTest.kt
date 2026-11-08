@@ -1,14 +1,14 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.TextContent
-import dev.pi.ai.auth.Credential
-import dev.pi.ai.auth.CredentialInfo
-import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.http.HttpRequest
-import dev.pi.ai.http.HttpResponse
-import dev.pi.ai.http.HttpTransport
-import dev.pi.coding.session.AgentSession
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.auth.Credential
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
+import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
+import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.coding.session.AgentSession
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
@@ -304,7 +304,7 @@ class GoalToolsTest {
         registry.finishSession("other-session")
     }
 
-    private suspend fun execute(args: JsonObject): dev.pi.agent.AgentToolResult {
+    private suspend fun execute(args: JsonObject): io.github.whywood.deepdeep.sdk.agent.AgentToolResult {
         val action = args.getValue("action").jsonPrimitive.content
         val name = when (action) { "get" -> "get_goal"; "create" -> "create_goal"; else -> "update_goal" }
         return tools.first { it.name == name }.execute("call", if (name == "update_goal") args else JsonObject(args - "action"), null, null)

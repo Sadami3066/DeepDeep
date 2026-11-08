@@ -1,11 +1,11 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentEvent
-import dev.pi.ai.TextDeltaEvent
-import dev.pi.ai.ThinkingDeltaEvent
-import dev.pi.coding.prompt.Skill
-import dev.pi.coding.session.SessionEvent
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.agent.AgentEvent
+import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
+import io.github.whywood.deepdeep.sdk.coding.prompt.Skill
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import java.io.File
 import okio.FileSystem
 import okio.ForwardingFileSystem

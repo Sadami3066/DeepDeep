@@ -1,10 +1,10 @@
 package io.github.whywood.deepdeep.plugin.host
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.agent.AgentToolUpdateCallback
-import dev.pi.ai.RequestAbortedException
-import dev.pi.ai.RunSignal
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.agent.AgentToolUpdateCallback
+import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginRunSignal
@@ -93,5 +93,5 @@ internal object PluginToolAdapter {
     }
 
     private fun toolError(message: String): AgentToolResult =
-        AgentToolResult(content = listOf(dev.pi.ai.TextContent(message)), isError = true)
+        AgentToolResult(content = listOf(io.github.whywood.deepdeep.sdk.ai.TextContent(message)), isError = true)
 }

@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.ui.common
 
-import dev.pi.ai.auth.oauth.OAuthSelectOption
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthSelectOption
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch

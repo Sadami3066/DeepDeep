@@ -1,17 +1,17 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import dev.pi.agent.AgentEvent
-import dev.pi.agent.AgentMessage
-import dev.pi.agent.asAssistantMessage
-import dev.pi.agent.asLlmMessage
-import dev.pi.ai.AssistantMessage
-import dev.pi.ai.StopReason
-import dev.pi.ai.TextDeltaEvent
-import dev.pi.ai.TextContent
-import dev.pi.ai.ThinkingDeltaEvent
-import dev.pi.ai.UserMessage
-import dev.pi.coding.mcp.McpServerState
-import dev.pi.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentMessage
+import io.github.whywood.deepdeep.sdk.agent.asAssistantMessage
+import io.github.whywood.deepdeep.sdk.agent.asLlmMessage
+import io.github.whywood.deepdeep.sdk.ai.AssistantMessage
+import io.github.whywood.deepdeep.sdk.ai.StopReason
+import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.UserMessage
+import io.github.whywood.deepdeep.sdk.coding.mcp.McpServerState
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus
 import io.github.whywood.deepdeep.plugin.api.PluginBusEvent
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
@@ -223,9 +223,9 @@ internal class RuntimeEventMapper(
         else -> null
     }
 
-    private fun dev.pi.ai.MessageContent.asText(): String = when (this) {
-        is dev.pi.ai.PlainTextContent -> text
-        is dev.pi.ai.BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
+    private fun io.github.whywood.deepdeep.sdk.ai.MessageContent.asText(): String = when (this) {
+        is io.github.whywood.deepdeep.sdk.ai.PlainTextContent -> text
+        is io.github.whywood.deepdeep.sdk.ai.BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
     }
 }
 
@@ -247,7 +247,7 @@ internal class PluginEventIds {
         turnCounts.computeIfAbsent(sessionId) { AtomicLong() }.incrementAndGet()
 }
 
-private fun dev.pi.coding.mcp.McpServerStatus.toPluginStatus(): McpServerStatus = when (state) {
+private fun io.github.whywood.deepdeep.sdk.coding.mcp.McpServerStatus.toPluginStatus(): McpServerStatus = when (state) {
     McpServerState.Connected -> McpServerStatus.OK
     McpServerState.AuthRequired -> McpServerStatus.AUTH_REQUIRED
     McpServerState.Failed -> McpServerStatus.FAILED

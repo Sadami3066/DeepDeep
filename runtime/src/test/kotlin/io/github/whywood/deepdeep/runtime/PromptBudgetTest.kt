@@ -1,10 +1,10 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.RunSignal
-import dev.pi.coding.tools.FileMutationQueue
-import dev.pi.coding.tools.ShellExecutor
-import dev.pi.coding.tools.ShellResult
-import dev.pi.coding.tools.defaultCodingTools
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.tools.FileMutationQueue
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.deepdeep.sdk.coding.tools.defaultCodingTools
 import java.io.File
 import java.nio.file.Files
 import okio.FileSystem

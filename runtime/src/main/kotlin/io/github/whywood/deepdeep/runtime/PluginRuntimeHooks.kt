@@ -1,17 +1,17 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AfterToolCall
-import dev.pi.agent.Agent
-import dev.pi.agent.AgentToolResult
-import dev.pi.agent.AgentToolUpdateCallback
-import dev.pi.agent.AfterToolCallContext
-import dev.pi.agent.AfterToolCallResult
-import dev.pi.agent.BeforeToolCall
-import dev.pi.agent.BeforeToolCallContext
-import dev.pi.agent.BeforeToolCallResult
-import dev.pi.ai.ImageContent
-import dev.pi.ai.RunSignal
-import dev.pi.coding.session.CodingHooks
+import io.github.whywood.deepdeep.sdk.agent.AfterToolCall
+import io.github.whywood.deepdeep.sdk.agent.Agent
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.agent.AgentToolUpdateCallback
+import io.github.whywood.deepdeep.sdk.agent.AfterToolCallContext
+import io.github.whywood.deepdeep.sdk.agent.AfterToolCallResult
+import io.github.whywood.deepdeep.sdk.agent.BeforeToolCall
+import io.github.whywood.deepdeep.sdk.agent.BeforeToolCallContext
+import io.github.whywood.deepdeep.sdk.agent.BeforeToolCallResult
+import io.github.whywood.deepdeep.sdk.ai.ImageContent
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.session.CodingHooks
 import kotlinx.serialization.json.JsonObject
 
 typealias PromptTransform = suspend (String) -> String

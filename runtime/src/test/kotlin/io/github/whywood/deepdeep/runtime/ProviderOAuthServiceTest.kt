@@ -1,16 +1,16 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.auth.Credential
-import dev.pi.ai.auth.CredentialInfo
-import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.auth.OAuthCredential
-import dev.pi.ai.auth.oauth.OAuthAuth
-import dev.pi.ai.auth.oauth.OAuthCredential as OAuthToken
-import dev.pi.ai.auth.oauth.OAuthInteraction
-import dev.pi.ai.auth.oauth.OAuthLoginOptions
-import dev.pi.ai.http.HttpRequest
-import dev.pi.ai.http.HttpResponse
-import dev.pi.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.ai.auth.Credential
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
+import io.github.whywood.deepdeep.sdk.ai.auth.OAuthCredential
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthAuth
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCredential as OAuthToken
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthInteraction
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthLoginOptions
+import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
+import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
@@ -64,18 +64,18 @@ class ProviderOAuthServiceTest {
         override suspend fun refresh(
             credential: OAuthToken,
             transport: HttpTransport,
-            signal: dev.pi.ai.RunSignal?,
+            signal: io.github.whywood.deepdeep.sdk.ai.RunSignal?,
         ): OAuthToken = credential
 
-        override suspend fun toAuth(credential: OAuthToken): dev.pi.ai.auth.ResolvedAuth =
-            dev.pi.ai.auth.ResolvedAuth(apiKey = credential.access, source = "oauth")
+        override suspend fun toAuth(credential: OAuthToken): io.github.whywood.deepdeep.sdk.ai.auth.ResolvedAuth =
+            io.github.whywood.deepdeep.sdk.ai.auth.ResolvedAuth(apiKey = credential.access, source = "oauth")
     }
 
     private val interaction = object : OAuthInteraction {
         override suspend fun openUrl(url: String, instructions: String?) = Unit
         override suspend fun showMessage(message: String) = Unit
         override suspend fun prompt(message: String, placeholder: String?, secret: Boolean): String = ""
-        override suspend fun select(message: String, options: List<dev.pi.ai.auth.oauth.OAuthSelectOption>): String =
+        override suspend fun select(message: String, options: List<io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthSelectOption>): String =
             options.first().id
     }
 

@@ -1,12 +1,12 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.RunSignal
-import dev.pi.coding.mcp.McpDeferredTool
-import dev.pi.coding.mcp.McpToolSearch
-import dev.pi.coding.session.AgentSession
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.tools.textResult
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.mcp.McpDeferredTool
+import io.github.whywood.deepdeep.sdk.coding.mcp.McpToolSearch
+import io.github.whywood.deepdeep.sdk.coding.session.AgentSession
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.graph
 
 import android.content.Context
-import dev.pi.ai.http.HttpTransport
-import dev.pi.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager

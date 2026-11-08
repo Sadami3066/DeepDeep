@@ -1,15 +1,15 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentEvent
-import dev.pi.agent.AgentToolResult
-import dev.pi.agent.asAgentMessage
-import dev.pi.ai.AssistantMessage
-import dev.pi.ai.Model
-import dev.pi.ai.StopReason
-import dev.pi.ai.TextDeltaEvent
-import dev.pi.ai.Usage
-import dev.pi.coding.session.QueueBehavior
-import dev.pi.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.agent.asAgentMessage
+import io.github.whywood.deepdeep.sdk.ai.AssistantMessage
+import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.StopReason
+import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.Usage
+import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.runtime.testing.FakeSessionEngine
 import io.github.whywood.deepdeep.runtime.testing.FakeSessionHandle
 import java.io.File

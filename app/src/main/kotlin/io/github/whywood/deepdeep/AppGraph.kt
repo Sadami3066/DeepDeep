@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep
 
 import android.content.Context
-import dev.pi.ai.auth.oauth.OAuthRuntime
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthRuntime
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap

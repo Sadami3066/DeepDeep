@@ -289,7 +289,7 @@ class ChatControllersTest {
 
         override fun resolveConfig(config: ModelConfig): ModelConfig = config
 
-        override fun sdkModel(providerId: String, modelId: String): dev.pi.ai.Model? = null
+        override fun sdkModel(providerId: String, modelId: String): io.github.whywood.deepdeep.sdk.ai.Model? = null
 
         override fun modelReference(providerId: String, modelId: String): String = "$providerId/$modelId"
     }

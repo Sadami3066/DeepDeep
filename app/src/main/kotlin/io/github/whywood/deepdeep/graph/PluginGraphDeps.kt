@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.graph
 
 import android.content.Context
-import dev.pi.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl

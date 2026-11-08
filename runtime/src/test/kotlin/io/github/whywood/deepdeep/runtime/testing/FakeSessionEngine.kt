@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime.testing
 
-import dev.pi.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.runtime.ModelConfig
 import io.github.whywood.deepdeep.runtime.SessionEngine
 import io.github.whywood.deepdeep.runtime.SessionHandle

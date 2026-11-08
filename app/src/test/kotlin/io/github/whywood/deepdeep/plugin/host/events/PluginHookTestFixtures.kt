@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.TextContent
 import io.github.whywood.deepdeep.plugin.api.InputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus

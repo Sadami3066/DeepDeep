@@ -33,8 +33,8 @@ class DeepLinkTest {
     @Test
     fun parsesDetailPages() {
         assertEquals(
-            DeepLink.Page(AppDestination.PluginPage("dev.pi.foo", "home")),
-            DeepLink.parse("deepdeep://plugins/dev.pi.foo/home"),
+            DeepLink.Page(AppDestination.PluginPage("io.github.whywood.deepdeep.sdk.foo", "home")),
+            DeepLink.parse("deepdeep://plugins/io.github.whywood.deepdeep.sdk.foo/home"),
         )
         assertEquals(
             DeepLink.Page(AppDestination.MiniappDetail("abc_def-123")),
@@ -53,8 +53,8 @@ class DeepLinkTest {
         assertEquals(DeepLink.Page(AppDestination.Settings), DeepLink.parse("deepdeep://settings/"))
         assertEquals(DeepLink.Page(AppDestination.Plugins), DeepLink.parse("deepdeep://plugins/"))
         assertEquals(
-            DeepLink.Page(AppDestination.PluginPage("dev.pi.foo", "home")),
-            DeepLink.parse("deepdeep://plugins/dev.pi.foo/home/"),
+            DeepLink.Page(AppDestination.PluginPage("io.github.whywood.deepdeep.sdk.foo", "home")),
+            DeepLink.parse("deepdeep://plugins/io.github.whywood.deepdeep.sdk.foo/home/"),
         )
         assertEquals(DeepLink.Session("abc"), DeepLink.parse("deepdeep://chat/abc/"))
     }

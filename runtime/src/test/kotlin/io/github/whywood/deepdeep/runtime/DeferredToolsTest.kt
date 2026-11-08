@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put

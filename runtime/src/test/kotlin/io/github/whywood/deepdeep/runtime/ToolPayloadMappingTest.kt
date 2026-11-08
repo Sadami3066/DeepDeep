@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.ImageContent
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.ImageContent
+import io.github.whywood.deepdeep.sdk.ai.TextContent
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals

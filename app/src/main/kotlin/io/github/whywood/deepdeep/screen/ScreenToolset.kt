@@ -4,7 +4,7 @@ import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.util.DisplayMetrics
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import io.github.whywood.deepdeep.vscreen.VirtualScreenRuntime
 import java.io.File

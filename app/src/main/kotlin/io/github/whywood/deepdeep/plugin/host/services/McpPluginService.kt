@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
-import dev.pi.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
 import io.github.whywood.deepdeep.plugin.api.McpProbe
 import io.github.whywood.deepdeep.plugin.api.McpServer

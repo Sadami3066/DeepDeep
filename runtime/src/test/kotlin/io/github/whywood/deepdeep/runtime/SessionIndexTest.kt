@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.coding.paths.AgentPaths
+import io.github.whywood.deepdeep.sdk.coding.paths.AgentPaths
 import java.io.File
 import java.nio.file.Files
 import java.time.OffsetDateTime

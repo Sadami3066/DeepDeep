@@ -1,20 +1,20 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.RunSignal
-import dev.pi.ai.http.HttpTransport
-import dev.pi.mcp.McpAuthRequiredException
-import dev.pi.mcp.McpClient
-import dev.pi.mcp.McpClientOptions
-import dev.pi.mcp.McpRequestOptions
-import dev.pi.mcp.config.McpServerConfig
-import dev.pi.mcp.oauth.FileMcpTokenStore
-import dev.pi.mcp.oauth.McpAuthProvider
-import dev.pi.mcp.oauth.McpOAuthInteraction
-import dev.pi.mcp.oauth.McpOAuthOptions
-import dev.pi.mcp.oauth.McpOAuthProvider
-import dev.pi.mcp.oauth.McpTokenStore
-import dev.pi.mcp.transport.StreamableHttpTransport
-import dev.pi.mcp.transport.StreamableHttpTransportOptions
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.mcp.McpAuthRequiredException
+import io.github.whywood.deepdeep.sdk.mcp.McpClient
+import io.github.whywood.deepdeep.sdk.mcp.McpClientOptions
+import io.github.whywood.deepdeep.sdk.mcp.McpRequestOptions
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.deepdeep.sdk.mcp.oauth.McpAuthProvider
+import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthInteraction
+import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthOptions
+import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthProvider
+import io.github.whywood.deepdeep.sdk.mcp.oauth.McpTokenStore
+import io.github.whywood.deepdeep.sdk.mcp.transport.StreamableHttpTransport
+import io.github.whywood.deepdeep.sdk.mcp.transport.StreamableHttpTransportOptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -91,7 +91,7 @@ class McpPluginBridge(
         name: String,
         config: McpServerConfig,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): List<dev.pi.mcp.protocol.McpTool> = withContext(Dispatchers.IO) {
+    ): List<io.github.whywood.deepdeep.sdk.mcp.protocol.McpTool> = withContext(Dispatchers.IO) {
         if (config !is McpServerConfig.Http) return@withContext emptyList()
         withClient(name, config, timeoutMs) { client ->
             client.listTools(McpRequestOptions(timeoutMs = timeoutMs))
@@ -104,9 +104,9 @@ class McpPluginBridge(
         tool: String,
         arguments: kotlinx.serialization.json.JsonObject,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): dev.pi.mcp.protocol.McpCallResult = withContext(Dispatchers.IO) {
+    ): io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult = withContext(Dispatchers.IO) {
         if (config !is McpServerConfig.Http) {
-            return@withContext dev.pi.mcp.protocol.McpCallResult(emptyList())
+            return@withContext io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult(emptyList())
         }
         withClient(name, config, timeoutMs) { client ->
             client.callTool(tool, arguments, McpRequestOptions(timeoutMs = timeoutMs))

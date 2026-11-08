@@ -1,10 +1,10 @@
 package io.github.whywood.deepdeep.shell
 
-import dev.pi.ai.RequestAbortedException
-import dev.pi.ai.RunSignal
-import dev.pi.coding.tools.ShellExecutionException
-import dev.pi.coding.tools.ShellExecutor
-import dev.pi.coding.tools.ShellResult
+import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutionException
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope

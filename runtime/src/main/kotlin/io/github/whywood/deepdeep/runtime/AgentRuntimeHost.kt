@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException

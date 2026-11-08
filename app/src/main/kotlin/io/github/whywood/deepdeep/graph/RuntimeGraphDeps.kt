@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.graph
 
 import android.content.Context
-import dev.pi.ai.http.HttpTransport
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore

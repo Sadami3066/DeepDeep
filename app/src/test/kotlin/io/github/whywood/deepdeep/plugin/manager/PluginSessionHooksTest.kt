@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.plugin.manager
 
-import dev.pi.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability

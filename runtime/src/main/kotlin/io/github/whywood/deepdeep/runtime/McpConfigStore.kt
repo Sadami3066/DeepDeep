@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.PiJson
-import dev.pi.mcp.config.McpServerConfig
-import dev.pi.mcp.config.parseMcpConfig
+import io.github.whywood.deepdeep.sdk.ai.PiJson
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.mcp.config.parseMcpConfig
 import java.io.File
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files

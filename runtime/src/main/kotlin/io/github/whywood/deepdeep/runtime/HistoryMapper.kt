@@ -1,19 +1,19 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.AssistantMessage as PiAssistantMessage
-import dev.pi.ai.BlockContent
-import dev.pi.ai.PlainTextContent
-import dev.pi.ai.StopReason
-import dev.pi.ai.TextContent
-import dev.pi.ai.ThinkingContent
-import dev.pi.ai.ToolCall
-import dev.pi.ai.ToolResultMessage
-import dev.pi.ai.UserMessage
-import dev.pi.coding.session.BranchSummaryEntry
-import dev.pi.coding.session.CompactionEntry
-import dev.pi.coding.session.CustomMessageEntry
-import dev.pi.coding.session.SessionEntry
-import dev.pi.coding.session.SessionMessageEntry
+import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
+import io.github.whywood.deepdeep.sdk.ai.BlockContent
+import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
+import io.github.whywood.deepdeep.sdk.ai.StopReason
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.ThinkingContent
+import io.github.whywood.deepdeep.sdk.ai.ToolCall
+import io.github.whywood.deepdeep.sdk.ai.ToolResultMessage
+import io.github.whywood.deepdeep.sdk.ai.UserMessage
+import io.github.whywood.deepdeep.sdk.coding.session.BranchSummaryEntry
+import io.github.whywood.deepdeep.sdk.coding.session.CompactionEntry
+import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
+import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
 
 private const val REMINDER_PREFIX = "[定时提醒]"
 
@@ -274,7 +274,7 @@ object HistoryMapper {
         else -> MessageStatus.DONE
     }
 
-    private fun dev.pi.ai.MessageContent.asText(): String = when (this) {
+    private fun io.github.whywood.deepdeep.sdk.ai.MessageContent.asText(): String = when (this) {
         is PlainTextContent -> text
         is BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
     }

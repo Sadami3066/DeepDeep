@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.graph
 
-import dev.pi.ai.http.okHttpTransport
-import dev.pi.mcp.oauth.FileMcpTokenStore
-import dev.pi.mcp.oauth.defaultMcpAuthFile
+import io.github.whywood.deepdeep.sdk.ai.http.okHttpTransport
+import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.deepdeep.sdk.mcp.oauth.defaultMcpAuthFile
 import io.github.whywood.deepdeep.core.ModelSelection
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences

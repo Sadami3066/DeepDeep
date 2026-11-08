@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
-import dev.pi.ai.http.HttpRequest
-import dev.pi.ai.http.HttpResponse
-import dev.pi.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
+import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import java.io.File
 import java.security.MessageDigest
 import kotlinx.coroutines.test.runTest

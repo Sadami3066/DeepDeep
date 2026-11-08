@@ -1,28 +1,28 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.agent.AgentEvent
-import dev.pi.agent.AgentMessage
-import dev.pi.agent.AgentToolResult
-import dev.pi.ai.AssistantMessage
-import dev.pi.ai.StopReason
-import dev.pi.ai.TextDeltaEvent
-import dev.pi.ai.ThinkingDeltaEvent
-import dev.pi.ai.Usage
-import dev.pi.ai.auth.Credential
-import dev.pi.ai.auth.CredentialInfo
-import dev.pi.ai.auth.CredentialStore
-import dev.pi.ai.http.HttpRequest
-import dev.pi.ai.http.HttpResponse
-import dev.pi.ai.http.HttpTransport
-import dev.pi.coding.prompt.Skill
-import dev.pi.coding.session.SessionEvent
-import dev.pi.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.agent.AgentEvent
+import io.github.whywood.deepdeep.sdk.agent.AgentMessage
+import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.AssistantMessage
+import io.github.whywood.deepdeep.sdk.ai.StopReason
+import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
+import io.github.whywood.deepdeep.sdk.ai.Usage
+import io.github.whywood.deepdeep.sdk.ai.auth.Credential
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
+import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
+import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
+import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
+import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.deepdeep.sdk.coding.prompt.Skill
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import java.io.File
-import dev.pi.ai.TextContent
-import dev.pi.coding.tools.ShellExecutor
-import dev.pi.coding.tools.ShellResult
-import dev.pi.ai.RunSignal
-import dev.pi.coding.tools.textResult
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
@@ -51,8 +51,8 @@ class MiniappAgentServiceTest {
     }
 
     private val credentials = object : CredentialStore {
-        override fun read(providerId: String): Credential? = dev.pi.ai.auth.ApiKeyCredential(key = "test-key")
-        override fun readAll(): Map<String, Credential> = mapOf("deepseek" to dev.pi.ai.auth.ApiKeyCredential(key = "test-key"))
+        override fun read(providerId: String): Credential? = io.github.whywood.deepdeep.sdk.ai.auth.ApiKeyCredential(key = "test-key")
+        override fun readAll(): Map<String, Credential> = mapOf("deepseek" to io.github.whywood.deepdeep.sdk.ai.auth.ApiKeyCredential(key = "test-key"))
         override fun readApiKey(providerId: String): String? = "test-key"
         override fun readEnv(providerId: String): Map<String, String>? = null
         override fun list(): List<CredentialInfo> = emptyList()

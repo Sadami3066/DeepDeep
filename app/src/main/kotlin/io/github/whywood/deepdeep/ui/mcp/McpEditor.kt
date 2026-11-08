@@ -53,8 +53,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.pi.ai.auth.oauth.OAuthCallbackServer
-import dev.pi.mcp.config.McpServerConfig
+import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServer
+import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdGroupCard

@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.graph
 
-import dev.pi.coding.tools.CodingTool
-import dev.pi.coding.session.SessionEvent
+import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.arrange.AndroidArrangeCalendarGateway
 import io.github.whywood.deepdeep.arrange.arrangeTools
 import io.github.whywood.deepdeep.conversation.ConversationStore

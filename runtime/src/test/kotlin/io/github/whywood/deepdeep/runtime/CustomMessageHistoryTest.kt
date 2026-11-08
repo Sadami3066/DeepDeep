@@ -1,7 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.PlainTextContent
-import dev.pi.coding.session.CustomMessageEntry
+import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
+import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals

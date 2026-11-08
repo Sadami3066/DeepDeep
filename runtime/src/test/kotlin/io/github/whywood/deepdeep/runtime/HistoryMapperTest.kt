@@ -1,24 +1,24 @@
 package io.github.whywood.deepdeep.runtime
 
-import dev.pi.ai.AssistantMessage as PiAssistantMessage
-import dev.pi.ai.Content
-import dev.pi.ai.Message
-import dev.pi.ai.PlainTextContent
-import dev.pi.ai.StopReason
-import dev.pi.ai.TextContent
-import dev.pi.ai.ToolCall
-import dev.pi.ai.ToolResultMessage
-import dev.pi.ai.Usage
-import dev.pi.ai.UserMessage
-import dev.pi.coding.paths.AgentPaths
-import dev.pi.coding.session.BranchSummaryEntry
-import dev.pi.coding.session.CompactionEntry
-import dev.pi.coding.session.ContextEditEntry
-import dev.pi.coding.session.CustomMessageEntry
-import dev.pi.coding.session.ModelChangeEntry
-import dev.pi.coding.session.SessionEntry
-import dev.pi.coding.session.SessionManager
-import dev.pi.coding.session.SessionMessageEntry
+import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
+import io.github.whywood.deepdeep.sdk.ai.Content
+import io.github.whywood.deepdeep.sdk.ai.Message
+import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
+import io.github.whywood.deepdeep.sdk.ai.StopReason
+import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.ToolCall
+import io.github.whywood.deepdeep.sdk.ai.ToolResultMessage
+import io.github.whywood.deepdeep.sdk.ai.Usage
+import io.github.whywood.deepdeep.sdk.ai.UserMessage
+import io.github.whywood.deepdeep.sdk.coding.paths.AgentPaths
+import io.github.whywood.deepdeep.sdk.coding.session.BranchSummaryEntry
+import io.github.whywood.deepdeep.sdk.coding.session.CompactionEntry
+import io.github.whywood.deepdeep.sdk.coding.session.ContextEditEntry
+import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
+import io.github.whywood.deepdeep.sdk.coding.session.ModelChangeEntry
+import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
+import io.github.whywood.deepdeep.sdk.coding.session.SessionManager
+import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
@@ -261,7 +261,7 @@ class HistoryMapperTest {
                     ToolResultMessage(
                         toolCallId = "call-1",
                         toolName = "screenshot",
-                        content = listOf(TextContent("took one"), dev.pi.ai.ImageContent("aGVsbG8=", "image/png")),
+                        content = listOf(TextContent("took one"), io.github.whywood.deepdeep.sdk.ai.ImageContent("aGVsbG8=", "image/png")),
                         isError = false,
                         timestamp = 2L,
                     ),

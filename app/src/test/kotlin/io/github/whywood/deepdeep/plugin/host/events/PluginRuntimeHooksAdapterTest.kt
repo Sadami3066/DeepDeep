@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import dev.pi.ai.TextContent
+import io.github.whywood.deepdeep.sdk.ai.TextContent
 import io.github.whywood.deepdeep.plugin.api.InputDecision as PluginInputDecision
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
