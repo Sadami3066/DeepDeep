@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OverlayHostTest {
-    private val workspaceCreate = ShellOverlay.WorkspaceCreate(listOf("home"))
+    private val workspaceCreate = ShellOverlay.WorkspaceCreate(listOf("home"), "/data/workspaces")
     private val workspaceRename = ShellOverlay.WorkspaceRename("w1", "home", listOf("home"))
     private val workspaceDelete = ShellOverlay.WorkspaceDelete("w1", "home", 2)
     private val attachment = ShellOverlay.AttachmentPreview(
@@ -61,8 +61,14 @@ class OverlayHostTest {
 
     @Test
     fun lowerPriorityOverlaysStayRenderedUnderTopmost() {
-        val state = ShellOverlayState(workspaceCreate = ShellOverlay.WorkspaceCreate(emptyList()), usage = usage)
-        assertEquals(listOf(ShellOverlay.WorkspaceCreate(emptyList()), usage), resolveOverlays(state))
+        val state = ShellOverlayState(
+            workspaceCreate = ShellOverlay.WorkspaceCreate(emptyList(), "/data/workspaces"),
+            usage = usage,
+        )
+        assertEquals(
+            listOf(ShellOverlay.WorkspaceCreate(emptyList(), "/data/workspaces"), usage),
+            resolveOverlays(state),
+        )
         assertEquals(usage, resolveOverlay(state))
     }
 }

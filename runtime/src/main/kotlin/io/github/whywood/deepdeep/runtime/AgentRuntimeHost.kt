@@ -197,7 +197,8 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun workspaces(): List<RuntimeWorkspace> = workspaceAdmin.list()
 
-    override suspend fun createWorkspace(name: String): RuntimeWorkspace = workspaceAdmin.create(name)
+    override suspend fun createWorkspace(name: String, directory: String?): RuntimeWorkspace =
+        workspaceAdmin.create(name, directory)
 
     override suspend fun renameWorkspace(id: String, name: String) = workspaceAdmin.rename(id, name)
 

@@ -98,13 +98,32 @@ class ChatControllersTest {
         assertNotNull(selected)
         assertTrue(state.workspaces.any { it.name == "Team" })
         assertEquals(0, refreshed)
+        assertEquals(listOf<String?>(null), runtime.createdWorkspaceDirectories)
+    }
+
+    @Test
+    fun workspaceCreatePassesCustomDirectory() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val runtime = FakeAgentRuntime()
+        val controller = WorkspaceController(
+            runtime = runtime, queries = runtime, ioDispatcher = dispatcher, scope = this,
+            state = { state }, update = ::update,
+            selectWorkspace = {}, refreshSessions = {},
+            userFacingError = { it }, createWorkspaceFailedText = { "failed" },
+        )
+
+        controller.create("Docs", "/storage/emulated/0/Docs")
+        advanceUntilIdle()
+
+        assertEquals(listOf<String?>("/storage/emulated/0/Docs"), runtime.createdWorkspaceDirectories)
+        assertTrue(state.workspaces.any { it.name == "Docs" && it.cwd == "/storage/emulated/0/Docs" })
     }
 
     @Test
     fun workspaceDeleteLastActiveSelectsHome() = runTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val runtime = FakeAgentRuntime()
-        val created = runtime.createWorkspace("Team")
+        val created = runtime.createWorkspace("Team", null)
         state = state.copy(currentWorkspaceId = created.id)
         var selected: String? = null
         val controller = WorkspaceController(

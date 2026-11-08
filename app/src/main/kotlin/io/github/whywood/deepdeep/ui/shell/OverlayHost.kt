@@ -40,14 +40,14 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.jobs.JobsSheet
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.workspaces.DeleteWorkspaceDialog
+import io.github.whywood.deepdeep.ui.workspaces.WorkspaceCreateDialog
 import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameDialog
-import io.github.whywood.deepdeep.ui.workspaces.WorkspaceNameMode
 import java.io.File
 
 
 
 sealed interface ShellOverlay {
-    data class WorkspaceCreate(val existingNames: List<String>) : ShellOverlay
+    data class WorkspaceCreate(val existingNames: List<String>, val privateDirectory: String) : ShellOverlay
     data class WorkspaceRename(val workspaceId: String, val initial: String, val existingNames: List<String>) : ShellOverlay
     data class WorkspaceDelete(val workspaceId: String, val name: String, val sessionCount: Int) : ShellOverlay
     data class AttachmentPreview(val attachment: AttachmentRef, val file: File) : ShellOverlay
@@ -65,7 +65,7 @@ data class ShellOverlayState(
 )
 
 data class ShellOverlayActions(
-    val onConfirmWorkspaceCreate: (String) -> Unit, val onDismissWorkspaceCreate: () -> Unit,
+    val onConfirmWorkspaceCreate: (String, String?) -> Unit, val onDismissWorkspaceCreate: () -> Unit,
     val onConfirmWorkspaceRename: (String) -> Unit, val onDismissWorkspaceRename: () -> Unit,
     val onConfirmWorkspaceDelete: () -> Unit, val onDismissWorkspaceDelete: () -> Unit,
     val onDismissAttachmentPreview: () -> Unit, val onShareAttachmentPreview: () -> Unit,
@@ -117,14 +117,15 @@ internal fun OverlayHost(
     resolveOverlays(overlays).forEach { overlay ->
         key(overlay::class) {
             when (overlay) {
-                is ShellOverlay.WorkspaceCreate -> WorkspaceNameDialog(
-                    WorkspaceNameMode.CREATE, existingNames = overlay.existingNames,
+                is ShellOverlay.WorkspaceCreate -> WorkspaceCreateDialog(
+                    existingNames = overlay.existingNames,
+                    privateDirectory = overlay.privateDirectory,
                     onConfirm = overlayActions.onConfirmWorkspaceCreate,
                     onDismiss = overlayActions.onDismissWorkspaceCreate,
                 )
 
                 is ShellOverlay.WorkspaceRename -> WorkspaceNameDialog(
-                    WorkspaceNameMode.RENAME, initial = overlay.initial, existingNames = overlay.existingNames,
+                    initial = overlay.initial, existingNames = overlay.existingNames,
                     onConfirm = overlayActions.onConfirmWorkspaceRename,
                     onDismiss = overlayActions.onDismissWorkspaceRename,
                 )
@@ -213,6 +214,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 onOpenPlugins = { actions.onNavigate(AppDestination.Plugins) },
                 onOpenTimers = { actions.onNavigate(AppDestination.Timers) },
                 onOpenMemory = { actions.onNavigate(AppDestination.Memory) },
+                onOpenRemote = { actions.onNavigate(AppDestination.Remote) },
                 onCreateWorkspace = actions.onCreateWorkspace,
                 onToggleWorkspaceExpanded = actions.onToggleWorkspaceExpanded,
                 onToggleWorkspacePinned = actions.onToggleWorkspacePinned,

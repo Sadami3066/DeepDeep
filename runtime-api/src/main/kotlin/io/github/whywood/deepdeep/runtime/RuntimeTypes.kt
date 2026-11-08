@@ -388,7 +388,7 @@ interface ConversationQueries {
 }
 
 interface WorkspaceAdmin {
-    suspend fun createWorkspace(name: String): RuntimeWorkspace
+    suspend fun createWorkspace(name: String, directory: String? = null): RuntimeWorkspace
 
     suspend fun renameWorkspace(id: String, name: String)
 

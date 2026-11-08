@@ -22,15 +22,21 @@ internal class RuntimeWorkspaces(
         addAll(directories.read().filter { it.id != AgentRuntimeHost.HOME_ID })
     }
 
-    suspend fun create(name: String): RuntimeWorkspace = mutex.withLock {
+    suspend fun create(name: String, directory: String? = null): RuntimeWorkspace = mutex.withLock {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty()) { "工作区名称不能为空" }
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
-        val directory = File(workspacesDir, id).apply { mkdirs() }
+        val target = directory?.trim()?.takeIf { it.isNotEmpty() }?.let(::File) ?: File(workspacesDir, id)
+        require(target.isAbsolute) { "工作区目录需要绝对路径" }
+        val cwd = target.absolutePath
+        require(cwd != homeDir.absolutePath) { "工作区目录不能是 Home 目录" }
+        require(directories.read().none { it.cwd == cwd }) { "该目录已被其他工作区使用" }
+        if (!target.isDirectory) target.mkdirs()
+        require(target.isDirectory) { "无法创建工作区目录" }
         val workspace = RuntimeWorkspace(
             id = id,
             name = trimmed,
-            cwd = directory.absolutePath,
+            cwd = cwd,
             createdAt = System.currentTimeMillis(),
         )
         directories.add(workspace)
@@ -61,7 +67,9 @@ internal class RuntimeWorkspaces(
             catalog.removeMeta(session.id)
             emitRemoved(session.id)
         }
-        runCatching { File(workspace.cwd).deleteRecursively() }
+        if (ownsDirectory(workspace.cwd)) {
+            runCatching { File(workspace.cwd).deleteRecursively() }
+        }
         directories.remove(id)
         emitListChanged()
     }
@@ -75,6 +83,12 @@ internal class RuntimeWorkspaces(
 
     suspend fun sessionCount(workspaceId: String): Int =
         catalog.list(find(workspaceId).cwd).size
+
+    private fun ownsDirectory(cwd: String): Boolean {
+        val root = runCatching { workspacesDir.canonicalPath }.getOrElse { workspacesDir.absolutePath }
+        val directory = runCatching { File(cwd).canonicalPath }.getOrElse { return false }
+        return directory.startsWith(root + File.separator)
+    }
 
     private fun homeWorkspace(): RuntimeWorkspace = RuntimeWorkspace(
         id = AgentRuntimeHost.HOME_ID,

@@ -582,7 +582,8 @@ class ChatViewModel(
         sessionOpener.selectWorkspace(workspaceId)
     }
 
-    fun createWorkspace(name: String) = workspaceController.create(name)
+    fun createWorkspace(name: String, directory: String? = null) =
+        workspaceController.create(name, directory)
 
     fun renameWorkspace(workspaceId: String, name: String) = workspaceController.rename(workspaceId, name)
 

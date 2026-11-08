@@ -10,6 +10,13 @@
     <string name="workspace_settings_agents_unset">未设置</string>
     <string name="workspace_settings_loading">…</string>
 
+    <string name="workspace_directory_label">工作区目录</string>
+    <string name="workspace_directory_private">应用私有目录</string>
+    <string name="workspace_directory_public">公共存储目录</string>
+    <string name="workspace_directory_choose">选择目录</string>
+    <string name="workspace_directory_permission">需要「所有文件访问权限」</string>
+    <string name="workspace_directory_invalid">只能选择手机存储里的目录</string>
+
     <string name="project_skills_title">项目技能</string>
     <string name="project_skills_note">保存后，新会话生效。</string>
     <string name="project_skills_save">保存</string>

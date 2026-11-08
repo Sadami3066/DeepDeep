@@ -23,10 +23,10 @@ internal class WorkspaceController(
     private val userFacingError: (String) -> String,
     private val createWorkspaceFailedText: () -> String,
 ) {
-    fun create(name: String) {
+    fun create(name: String, directory: String? = null) {
         scope.launch {
             try {
-                val workspace = withContext(ioDispatcher) { runtime.createWorkspace(name) }
+                val workspace = withContext(ioDispatcher) { runtime.createWorkspace(name, directory) }
                 val workspaces = withContext(ioDispatcher) { queries.workspaces() }
                 update { it.copy(workspaces = workspaces) }
                 selectWorkspace(workspace.id)

@@ -53,7 +53,7 @@ class FakeAgentRuntime : AgentRuntime {
 
     override suspend fun workspaces(): List<RuntimeWorkspace> = emptyList()
 
-    override suspend fun createWorkspace(name: String): RuntimeWorkspace = error("unused")
+    override suspend fun createWorkspace(name: String, directory: String?): RuntimeWorkspace = error("unused")
 
     override suspend fun renameWorkspace(id: String, name: String) = Unit
 

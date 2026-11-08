@@ -83,6 +83,7 @@ internal fun AppOverlays(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val privateWorkspacesDir = remember(context) { File(context.filesDir, "workspaces").absolutePath }
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
     val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
     LaunchedEffect(overlays.jobsSheetOpen, overlays.selectedJobId) {
@@ -97,8 +98,10 @@ internal fun AppOverlays(
     }
     OverlayHost(
         overlays = ShellOverlayState(
-            workspaceCreate = ShellOverlay.WorkspaceCreate(state.workspaces.map { it.name })
-                .takeIf { overlays.workspaceCreateOpen },
+            workspaceCreate = ShellOverlay.WorkspaceCreate(
+                state.workspaces.map { it.name },
+                privateWorkspacesDir,
+            ).takeIf { overlays.workspaceCreateOpen },
             workspaceRename = overlays.workspaceRenameId
                 ?.let { id -> state.workspaces.firstOrNull { it.id == id } }
                 ?.let { target ->
@@ -118,7 +121,10 @@ internal fun AppOverlays(
             jobs = ShellOverlay.Jobs(activeJobs, overlays.selectedJobId, overlays.jobOutput).takeIf { overlays.jobsSheetOpen },
         ),
         overlayActions = ShellOverlayActions(
-            onConfirmWorkspaceCreate = { name -> overlays.workspaceCreateOpen = false; chatViewModel.createWorkspace(name) },
+            onConfirmWorkspaceCreate = { name, directory ->
+                overlays.workspaceCreateOpen = false
+                chatViewModel.createWorkspace(name, directory)
+            },
             onDismissWorkspaceCreate = { overlays.workspaceCreateOpen = false },
             onConfirmWorkspaceRename = { name ->
                 val id = overlays.workspaceRenameId

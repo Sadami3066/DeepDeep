@@ -10,6 +10,13 @@
     <string name="workspace_settings_agents_unset">Not set</string>
     <string name="workspace_settings_loading">…</string>
 
+    <string name="workspace_directory_label">Workspace folder</string>
+    <string name="workspace_directory_private">App private storage</string>
+    <string name="workspace_directory_public">Shared storage</string>
+    <string name="workspace_directory_choose">Choose folder</string>
+    <string name="workspace_directory_permission">Needs all-files access</string>
+    <string name="workspace_directory_invalid">Only folders in shared storage can be used</string>
+
     <string name="project_skills_title">Project skills</string>
     <string name="project_skills_note">Changes apply to new sessions.</string>
     <string name="project_skills_save">Save</string>
