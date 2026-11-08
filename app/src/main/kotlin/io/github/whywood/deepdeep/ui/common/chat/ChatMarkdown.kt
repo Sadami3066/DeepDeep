@@ -378,15 +378,15 @@ private fun ListMarker(marker: MarkdownMarker, colors: DeepDeepColors, depth: In
         MarkdownMarker.Bullet -> DdText(
             text = if (depth == 0) "•" else "◦",
             modifier = Modifier.width(24.dp),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary.copy(alpha = if (depth == 0) 0.9f else 0.72f),
+            style = DdType.body,
+            color = colors.inkSecondary.copy(alpha = if (depth == 0) 1f else 0.72f),
         )
 
         is MarkdownMarker.Ordered -> DdText(
             text = "${marker.number}.",
             modifier = Modifier.width(24.dp),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
+            style = DdType.body,
+            color = colors.inkSecondary,
         )
 
         is MarkdownMarker.Task -> Box(Modifier.width(24.dp)) {
