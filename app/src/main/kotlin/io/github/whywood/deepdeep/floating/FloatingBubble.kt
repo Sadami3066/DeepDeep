@@ -149,8 +149,10 @@ private fun FloatingLongPressRing(ring: FloatingBubbleRing) {
 
 @DrawableRes
 internal fun FloatingWhaleMood.drawable(): Int = when (this) {
-    FloatingWhaleMood.IDLE -> R.drawable.whale_idle
-    FloatingWhaleMood.WAVE -> R.drawable.whale_wave
-    FloatingWhaleMood.THINKING -> R.drawable.whale_thinking
-    FloatingWhaleMood.SLEEPY -> R.drawable.whale_sleepy
+    FloatingWhaleMood.IDLE -> R.drawable.v2_wave
+    FloatingWhaleMood.THINKING -> R.drawable.v2_thinking
+    FloatingWhaleMood.SLEEPY -> R.drawable.v2_waiting
+    FloatingWhaleMood.WAITING -> R.drawable.v2_confused
+    FloatingWhaleMood.DONE -> R.drawable.v2_done
+    FloatingWhaleMood.ALERT -> R.drawable.v2_alert
 }

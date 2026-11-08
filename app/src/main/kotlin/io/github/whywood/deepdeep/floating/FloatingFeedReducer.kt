@@ -12,9 +12,11 @@ const val FLOATING_DISMISSED_LIMIT = 50
 
 enum class FloatingWhaleMood {
     IDLE,
-    WAVE,
     THINKING,
     SLEEPY,
+    WAITING,
+    DONE,
+    ALERT,
 }
 
 data class FloatingRun(
@@ -355,7 +357,13 @@ fun floatingPendingCount(state: FloatingFeedState): Int =
 
 fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = when {
     state.runs.isNotEmpty() -> FloatingWhaleMood.THINKING
-    state.questions.isNotEmpty() || floatingVisibleCompletions(state).isNotEmpty() -> FloatingWhaleMood.WAVE
+    state.questions.isNotEmpty() -> FloatingWhaleMood.WAITING
+    floatingVisibleCompletions(state).isNotEmpty() ->
+        if (floatingVisibleCompletions(state).any { it.status == RunStatus.FAILED || it.error != null }) {
+            FloatingWhaleMood.ALERT
+        } else {
+            FloatingWhaleMood.DONE
+        }
     now - state.lastEventAt >= FLOATING_SLEEPY_AFTER_MS -> FloatingWhaleMood.SLEEPY
     else -> FloatingWhaleMood.IDLE
 }
