@@ -79,7 +79,7 @@ private const val STEP_WELCOME = 0
 private const val STEP_ACCOUNT = 1
 private const val STEP_PROVIDER = 2
 private const val STEP_PERMISSIONS = 3
-private const val STEP_LINUX = 4
+private const val STEP_ENVIRONMENT = 4
 private const val STEP_PRIVILEGE = 5
 private const val LAST_STEP = STEP_PRIVILEGE
 
@@ -114,12 +114,17 @@ fun OnboardingScreen(
     val deepseek = remember(providers) { providers.firstOrNull { it.id == ProviderCatalog.DEFAULT_PROVIDER_ID } }
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val packagesState by graph.devPackageManager.state.collectAsStateWithLifecycle()
-    val baseBundle = remember { DevPackageCatalog.bundleById("base") }
-    val linuxInstalled = linuxState is LinuxInstallState.Installed
-    val basicsInstalled = baseBundle?.let { bundle -> bundle.packageIds.all { it in packagesState.installed } } ?: true
-    val linuxReady = !graph.linuxEnvironment.isSupported || (linuxInstalled && basicsInstalled)
-    var basicsPrepared by rememberSaveable { mutableStateOf(false) }
-    var basicsStarted by rememberSaveable { mutableStateOf(false) }
+    val environmentBundles = remember { DevPackageCatalog.bundles }
+    var environmentSelection by rememberSaveable { mutableIntStateOf(1) }
+    var environmentScanned by rememberSaveable { mutableStateOf(false) }
+    val selectedEnvironment = remember(environmentBundles, environmentSelection) {
+        environmentBundles.filterIndexed { index, _ -> (environmentSelection shr index) and 1 == 1 }
+    }
+    val installedEnvironment = remember(environmentBundles, packagesState.installed) {
+        environmentBundles
+            .filter { bundle -> bundle.packageIds.isNotEmpty() && bundle.packageIds.all { it in packagesState.installed } }
+            .mapTo(mutableSetOf()) { it.id }
+    }
     val authKinds by graph.credentials.authKinds.collectAsStateWithLifecycle()
     val oauthSignedIn = provider?.let { authKinds[it.id] == ProviderAuthKind.OAUTH } == true
     var oauthSession by remember(providerId) { mutableStateOf<OAuthLoginSession?>(null) }
@@ -140,38 +145,11 @@ fun OnboardingScreen(
         }
     }
 
-    LaunchedEffect(step) {
-        if (step != STEP_LINUX) return@LaunchedEffect
-        val refreshed = graph.linuxEnvironment.refreshState()
-        if (!graph.linuxEnvironment.isSupported) return@LaunchedEffect
-        if (refreshed is LinuxInstallState.Installed) {
-            graph.linuxSettings.setEnabled(true)
-            return@LaunchedEffect
-        }
-        if (refreshed is LinuxInstallState.NotInstalled) {
-            val result = runCatching { graph.linuxEnvironment.install() }.getOrNull()
-            if (result is LinuxInstallState.Installed) {
-                graph.linuxSettings.setEnabled(true)
-                graph.linuxEnvironment.refreshState()
-            }
-        }
-    }
-
-    LaunchedEffect(step, linuxInstalled) {
-        if (step != STEP_LINUX || !linuxInstalled) return@LaunchedEffect
-        scope.launch {
-            graph.devPackageManager.refreshAndAwait()
-            basicsPrepared = true
-        }
-    }
-
-    LaunchedEffect(step, linuxInstalled, basicsPrepared, packagesState.checking, packagesState.busy, packagesState.installed) {
-        if (step != STEP_LINUX || !linuxInstalled || !basicsPrepared || basicsStarted) return@LaunchedEffect
-        if (packagesState.checking || packagesState.busy) return@LaunchedEffect
-        val bundle = baseBundle ?: return@LaunchedEffect
-        if (bundle.packageIds.all { it in packagesState.installed }) return@LaunchedEffect
-        basicsStarted = true
-        graph.devPackageManager.installBundle(bundle)
+    LaunchedEffect(step, linuxState) {
+        if (step != STEP_ENVIRONMENT || environmentScanned) return@LaunchedEffect
+        if (graph.linuxEnvironment.isSupported && linuxState !is LinuxInstallState.Installed) return@LaunchedEffect
+        graph.devPackageManager.refresh()
+        environmentScanned = true
     }
 
     LaunchedEffect(Unit) {
@@ -217,20 +195,10 @@ fun OnboardingScreen(
         scope.launch { graph.privilege.select(level) }
     }
 
-    fun installLinux() {
-        scope.launch {
-            val result = runCatching { graph.linuxEnvironment.install() }.getOrNull()
-            if (result !is LinuxInstallState.Installed) return@launch
-            graph.linuxSettings.setEnabled(true)
-            graph.linuxEnvironment.refreshState()
-        }
-    }
-
-    fun installBasics() {
-        val bundle = baseBundle ?: return
-        basicsStarted = true
-        graph.devPackageManager.clearError()
-        graph.devPackageManager.installBundle(bundle)
+    fun enqueueEnvironment() {
+        val pending = selectedEnvironment.filter { it.id !in installedEnvironment }
+        if (pending.isEmpty()) return
+        OnboardingEnvironmentInstaller.enqueue(graph.devPackageManager, graph.linuxEnvironment, pending)
     }
 
     fun saveKeyThenAdvance() {
@@ -305,7 +273,10 @@ fun OnboardingScreen(
             }
 
             STEP_PROVIDER -> saveKeyThenAdvance()
-            STEP_LINUX -> if (linuxReady) goNext()
+            STEP_ENVIRONMENT -> {
+                enqueueEnvironment()
+                goNext()
+            }
             STEP_PRIVILEGE -> finish()
             else -> goNext()
         }
@@ -314,28 +285,24 @@ fun OnboardingScreen(
     val primaryLabel = when (step) {
         STEP_WELCOME -> stringResource(R.string.onboarding_primary_start)
         STEP_PROVIDER -> stringResource(R.string.onboarding_primary_connect)
+        STEP_ENVIRONMENT -> stringResource(R.string.onboarding_primary_start_use)
         STEP_PRIVILEGE -> stringResource(R.string.onboarding_primary_done)
         else -> stringResource(R.string.onboarding_primary_continue)
     }
     val hint = when (step) {
         STEP_WELCOME -> stringResource(R.string.onboarding_welcome_note)
         STEP_PRIVILEGE -> stringResource(R.string.onboarding_privilege_note)
-        STEP_LINUX -> if (!linuxReady && graph.linuxEnvironment.isSupported) {
-            stringResource(R.string.settings_linux_bootstrap_hint)
-        } else {
-            null
-        }
         else -> null
     }
     val secondaryLabel = when (step) {
         STEP_PROVIDER -> stringResource(R.string.onboarding_skip)
         STEP_PERMISSIONS -> stringResource(R.string.onboarding_later)
+        STEP_ENVIRONMENT -> stringResource(R.string.onboarding_later)
         else -> null
     }
     val savingKey = step == STEP_PROVIDER && keyState == KEY_STATE_SAVING
     val primaryEnabled = !savingKey &&
-        (step != STEP_ACCOUNT || nickname.isNotBlank()) &&
-        (step != STEP_LINUX || linuxReady)
+        (step != STEP_ACCOUNT || nickname.isNotBlank())
     val secondaryEnabled = !savingKey
 
     BackHandler(onBack = ::back)
@@ -414,14 +381,14 @@ fun OnboardingScreen(
                 )
 
                 STEP_PERMISSIONS -> PermissionsStep()
-                STEP_LINUX -> LinuxStep(
-                    state = linuxState,
-                    supported = graph.linuxEnvironment.isSupported,
-                    packages = packagesState,
-                    basePackageIds = baseBundle?.packageIds.orEmpty(),
-                    basicsInstalled = basicsInstalled,
-                    onInstall = ::installLinux,
-                    onInstallBasics = ::installBasics,
+                STEP_ENVIRONMENT -> EnvironmentStep(
+                    bundles = environmentBundles,
+                    installedIds = installedEnvironment,
+                    selectedIds = selectedEnvironment.mapTo(mutableSetOf()) { it.id },
+                    onToggle = { id ->
+                        val index = environmentBundles.indexOfFirst { it.id == id }
+                        if (index >= 0) environmentSelection = environmentSelection xor (1 shl index)
+                    },
                 )
 
                 else -> PrivilegeStep(selected = privilege, onSelect = ::selectPrivilege)

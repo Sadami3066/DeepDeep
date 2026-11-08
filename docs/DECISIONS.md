@@ -366,3 +366,15 @@ MCP 的 deferred 工具原本由 SDK 的 `tool_search` 搜索后 `addTools` 全�
 `MiCloudPlugin` 的 `contributions` 改为仅在 `MiCloudSessionState.VERIFIED/UNVERIFIED` 时注入 `mi_cloud_*` 工具；状态探测、登录、退出、清空、过期时调用 `host.requestContributionsRefresh()`，启动时首次物化拿不到登录态，靠探测完成后的刷新补上。插件版本升到 1.0.1（同版本重装升级会卡在导入对话框，升版本可正常升级，旧 cookie/secrets 保留）。
 
 验证：真机装 1.0.1 后，未登录/未知状态的新会话没有 `mi_cloud_*` 工具，提示「登录状态未知」；登录成功后的注入路径未在本机验证（无账号）。代价：贡献物化与登录探测存在一个刷新周期，登录后立即开新会话可能仍看到无工具，下一次刷新后恢复。
+
+## 122. Linux 环境内置化
+
+Linux 不再作为「推荐安装」的附加组件，而是 App 自带能力：rootfs（alpine-minirootfs，约 4 MB）随 APK 内置，启动后由 `AppGraph` 在 IO 线程静默解压安装（`shouldAutoInstallLinux(supported, state)` 只在 `supported && NotInstalled` 时触发，失败仅记日志、下次启动重试）。设置页 Linux 状态行改为「内置环境」（已内置 / 正在准备 / 待准备 / 准备失败可点重试），不再出现安装按钮；新装用户「允许运行 Linux 命令」默认开启（`LinuxSettingsStore.enabled` 默认 true，已存值优先），共享存储与 Root 仍默认关闭。基础工具（apk 包）仍需联网按需下载，由安装组合提供。
+
+代价：失败时只有日志与设置页重试，没有全局提示；默认开启对从未保存过开关值的新用户生效。
+
+## 123. 引导页「选择工作环境」取代 Linux 安装步骤
+
+引导第 4 步原本是安装 Linux 与环境基础；内置化后改为「选择工作环境」：列出开发组合（环境基础 / 日常办公 / 开发编程 / APK 开发组合），显示名称、说明与体积，多选，环境基础默认选中，已安装组合显示「已安装」不可重复选。点「开始使用」后把选中组合合并成一个队列交给 `OnboardingEnvironmentInstaller`：后台等待 rootfs 就绪（最多 10 分钟）→ 合并为单个 `DevBundle`（packageIds 按目录顺序去重、postInstall 换行合并、downloads 去重）→ 调一次 `DevPackageManager.installBundle`，不阻塞进入 App；「稍后」直接下一步。引导顺序变为：欢迎 → 称呼 → 模型 → 权限 → 工作环境 → 权限等级。
+
+代价：下载进度只在系统通知与设置页可见，引导内没有进度条；10 分钟内 rootfs 未就绪时队列静默放弃；不支持 Linux 的设备上组合可选但不会安装。

@@ -6,6 +6,7 @@
     <string name="onboarding_primary_continue">Continue</string>
     <string name="onboarding_primary_connect">Connect and continue</string>
     <string name="onboarding_primary_done">Start chatting</string>
+    <string name="onboarding_primary_start_use">Get started</string>
     <string name="onboarding_skip">Set up later</string>
     <string name="onboarding_later">Later</string>
 
@@ -63,17 +64,9 @@
     <string name="onboarding_permission_granted">On</string>
     <string name="onboarding_permission_missing">Off</string>
 
-    <string name="onboarding_linux_title">Linux environment</string>
-    <string name="onboarding_linux_subtitle">Provides bash, common commands and dev tools. About 4 MB.</string>
-    <string name="onboarding_linux_status">Status</string>
-    <string name="onboarding_linux_not_installed">Not installed</string>
-    <string name="onboarding_linux_installing">Installing…</string>
-    <string name="onboarding_linux_installed">Installed</string>
-    <string name="onboarding_linux_failed">Installation failed. You can try again later.</string>
-    <string name="onboarding_linux_used">Uses %1$s</string>
-    <string name="onboarding_linux_size_hint">About 4 MB</string>
-    <string name="onboarding_linux_install">Install on device</string>
-    <string name="onboarding_linux_unsupported">Linux isn\'t supported on this device. You can skip this step.</string>
+    <string name="onboarding_environment_title">Choose your environment</string>
+    <string name="onboarding_environment_subtitle">Pick the tool bundles you\'ll use. You can add more later.</string>
+    <string name="onboarding_environment_install_label">Work environment</string>
 
     <string name="onboarding_privilege_title">How much access?</string>
     <string name="onboarding_privilege_subtitle">Normal mode is enough for everyday use. If you need more later, you can adjust it in Settings.</string>

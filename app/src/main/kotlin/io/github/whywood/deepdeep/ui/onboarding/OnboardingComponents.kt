@@ -2,12 +2,8 @@ package io.github.whywood.deepdeep.ui.onboarding
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -63,7 +59,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -427,33 +422,6 @@ internal fun RadioMark(checked: Boolean) {
                 }
                 .clip(CircleShape)
                 .background(colors.accent),
-        )
-    }
-}
-
-@Composable
-internal fun IndeterminateBar(modifier: Modifier = Modifier) {
-    val colors = deepDeepColors()
-    val transition = rememberInfiniteTransition(label = "onboarding-indeterminate")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = DdMotion.EaseInOut),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "onboarding-indeterminate-progress",
-    )
-    BoxWithConstraints(
-        modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(colors.wash),
-    ) {
-        val barWidth = maxWidth * 0.38f
-        Box(
-            Modifier
-                .offset { IntOffset(((maxWidth - barWidth) * progress).roundToPx(), 0) }
-                .width(barWidth)
-                .fillMaxHeight()
-                .background(colors.accent.copy(alpha = 0.85f)),
         )
     }
 }

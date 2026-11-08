@@ -6,6 +6,7 @@
     <string name="onboarding_primary_continue">继续</string>
     <string name="onboarding_primary_connect">连接并继续</string>
     <string name="onboarding_primary_done">开始聊天</string>
+    <string name="onboarding_primary_start_use">开始使用</string>
     <string name="onboarding_skip">稍后设置</string>
     <string name="onboarding_later">稍后</string>
 
@@ -63,17 +64,9 @@
     <string name="onboarding_permission_granted">已开启</string>
     <string name="onboarding_permission_missing">未开启</string>
 
-    <string name="onboarding_linux_title">Linux 运行环境</string>
-    <string name="onboarding_linux_subtitle">提供 bash、常用命令与开发工具，约 4 MB。</string>
-    <string name="onboarding_linux_status">状态</string>
-    <string name="onboarding_linux_not_installed">未安装</string>
-    <string name="onboarding_linux_installing">正在安装…</string>
-    <string name="onboarding_linux_installed">已安装</string>
-    <string name="onboarding_linux_failed">安装失败，你可以稍后重试</string>
-    <string name="onboarding_linux_used">已占用 %1$s</string>
-    <string name="onboarding_linux_size_hint">约 4 MB</string>
-    <string name="onboarding_linux_install">安装到本机</string>
-    <string name="onboarding_linux_unsupported">当前设备暂不支持 Linux 环境，你可以跳过这一步。</string>
+    <string name="onboarding_environment_title">选择工作环境</string>
+    <string name="onboarding_environment_subtitle">挑几个常用的组合，之后也可以再添加。</string>
+    <string name="onboarding_environment_install_label">工作环境</string>
 
     <string name="onboarding_privilege_title">给它多少权限</string>
     <string name="onboarding_privilege_subtitle">普通模式即可满足日常使用；如果之后需要更高权限，可以在设置中调整。</string>

@@ -10,20 +10,15 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -73,7 +68,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AssistantRole
 import io.github.whywood.deepdeep.data.AppLanguage
-import io.github.whywood.deepdeep.data.DevPackagesState
+import io.github.whywood.deepdeep.data.DevBundle
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.data.TonePreset
 import io.github.whywood.deepdeep.design.DdHairline
@@ -92,7 +87,6 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.ProviderSummary
-import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.ui.common.ProviderIcon
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -509,180 +503,122 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun LinuxStep(
-    state: LinuxInstallState,
-    supported: Boolean,
-    packages: DevPackagesState,
-    basePackageIds: List<String>,
-    basicsInstalled: Boolean,
-    onInstall: () -> Unit,
-    onInstallBasics: () -> Unit,
+internal fun EnvironmentStep(
+    bundles: List<DevBundle>,
+    installedIds: Set<String>,
+    selectedIds: Set<String>,
+    onToggle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = deepDeepColors()
-    val context = LocalContext.current
     Column(
         modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
-            .testTag("onboarding_step_linux"),
+            .testTag("onboarding_step_environment"),
     ) {
         Spacer(Modifier.height(8.dp))
         StepHeading(
-            title = stringResource(R.string.onboarding_linux_title),
-            subtitle = stringResource(R.string.onboarding_linux_subtitle),
+            title = stringResource(R.string.onboarding_environment_title),
+            subtitle = stringResource(R.string.onboarding_environment_subtitle),
         )
         Spacer(Modifier.height(24.dp))
         OnboardingCard {
-            DdListRow(
-                icon = DdIcons.Terminal,
-                title = stringResource(R.string.onboarding_linux_status),
-                modifier = Modifier.testTag("onboarding_linux_status"),
-                trailing = { LinuxStatus(state) },
-            )
-            if (supported) {
-                when (state) {
-                    LinuxInstallState.NotInstalled -> {
-                        DdHairline()
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-                            Text(
-                                text = stringResource(R.string.settings_linux_bootstrap_time),
-                                style = DdType.bodySmall,
-                                color = colors.inkSecondary,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            DdTextAction(
-                                text = stringResource(R.string.onboarding_linux_install),
-                                onClick = onInstall,
-                            )
-                        }
-                    }
-
-                    LinuxInstallState.Installing -> {
-                        DdHairline()
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-                            IndeterminateBar()
-                            Spacer(Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                DdSpinner(size = 14.dp, strokeWidth = 1.5.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.onboarding_linux_installing),
-                                    style = DdType.bodySmall,
-                                    color = colors.inkSecondary,
-                                )
-                            }
-                        }
-                    }
-
-                    is LinuxInstallState.Installed -> {
-                        val sizeBytes = state.sizeBytes
-                        if (sizeBytes != null && sizeBytes > 0) {
-                            val text = android.text.format.Formatter.formatShortFileSize(context, sizeBytes)
-                            DdHairline()
-                            DdListRow(
-                                title = stringResource(R.string.onboarding_linux_used, text),
-                                icon = DdIcons.Folder,
-                            )
-                        }
-                        DdHairline()
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = stringResource(R.string.settings_linux_bootstrap_title),
-                                    style = DdType.body,
-                                    color = colors.ink,
-                                )
-                                Spacer(Modifier.weight(1f))
-                                Text(
-                                    text = if (basicsInstalled) {
-                                        stringResource(R.string.dev_installed)
-                                    } else {
-                                        "${basePackageIds.count { it in packages.installed }}/${basePackageIds.size}"
-                                    },
-                                    style = DdType.bodySmall,
-                                    color = if (basicsInstalled) colors.accent else colors.inkSecondary,
-                                )
-                            }
-                            val operation = packages.operation
-                            when {
-                                operation != null -> {
-                                    Spacer(Modifier.height(12.dp))
-                                    IndeterminateBar()
-                                    Spacer(Modifier.height(12.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        DdSpinner(size = 14.dp, strokeWidth = 1.5.dp)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = operation.stage
-                                                ?: stringResource(R.string.onboarding_linux_installing),
-                                            style = DdType.bodySmall,
-                                            color = colors.inkSecondary,
-                                        )
-                                    }
-                                }
-
-                                basicsInstalled -> Unit
-
-                                packages.error != null -> {
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.dev_error, packages.error.orEmpty()),
-                                        style = DdType.bodySmall,
-                                        color = colors.danger,
-                                    )
-                                    Spacer(Modifier.height(12.dp))
-                                    DdTextAction(
-                                        text = stringResource(R.string.dev_continue),
-                                        onClick = onInstallBasics,
-                                    )
-                                }
-
-                                else -> {
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.settings_linux_bootstrap_time),
-                                        style = DdType.bodySmall,
-                                        color = colors.inkSecondary,
-                                    )
-                                    Spacer(Modifier.height(12.dp))
-                                    DdTextAction(
-                                        text = stringResource(R.string.dev_continue),
-                                        onClick = onInstallBasics,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    is LinuxInstallState.Failed -> {
-                        DdHairline()
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-                            Text(
-                                text = stringResource(R.string.onboarding_linux_failed),
-                                style = DdType.bodySmall,
-                                color = colors.danger,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            DdTextAction(
-                                text = stringResource(R.string.onboarding_linux_install),
-                                onClick = onInstall,
-                            )
-                        }
-                    }
-                }
+            bundles.forEachIndexed { index, bundle ->
+                if (index > 0) DdHairline()
+                EnvironmentRow(
+                    bundle = bundle,
+                    installed = bundle.id in installedIds,
+                    selected = bundle.id in selectedIds,
+                    onToggle = { onToggle(bundle.id) },
+                )
             }
         }
-        if (!supported) {
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = stringResource(R.string.onboarding_linux_unsupported),
-                style = DdType.bodySmall,
-                color = colors.warning,
-            )
-        }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun EnvironmentRow(
+    bundle: DevBundle,
+    installed: Boolean,
+    selected: Boolean,
+    onToggle: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onToggle,
+        enabled = !installed,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("onboarding_environment_${bundle.id}")
+            .semantics { this.selected = selected && !installed },
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(bundle.titleRes),
+                        style = DdType.body,
+                        color = colors.ink,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = bundle.sizeLabel,
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                    )
+                }
+                bundle.bodyRes?.let { body ->
+                    Text(
+                        text = stringResource(body),
+                        style = DdType.bodySmall,
+                        color = colors.inkTertiary,
+                        maxLines = 2,
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            if (installed) {
+                Text(
+                    text = stringResource(R.string.dev_installed),
+                    style = DdType.bodySmall,
+                    color = colors.success,
+                )
+            } else {
+                SelectionMark(selected = selected)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectionMark(selected: Boolean) {
+    val colors = deepDeepColors()
+    Box(
+        Modifier
+            .size(20.dp)
+            .clip(CircleShape)
+            .border(1.5.dp, if (selected) colors.accent else colors.hairline, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(colors.accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                DdIcon(icon = DdIcons.Check, tint = colors.onAccent, size = 13.dp)
+            }
+        }
     }
 }
 
@@ -897,52 +833,6 @@ private fun PermissionRow(
         modifier = Modifier.testTag(testTag),
         trailing = { GrantStatus(granted = granted) },
     )
-}
-
-@Composable
-private fun LinuxStatus(state: LinuxInstallState) {
-    val colors = deepDeepColors()
-    AnimatedContent(
-        targetState = state,
-        transitionSpec = {
-            fadeIn(tween(DdMotion.FAST, easing = DdMotion.EaseOut)) togetherWith fadeOut(tween(120))
-        },
-        label = "onboarding-linux-status",
-    ) { current ->
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            when (current) {
-                LinuxInstallState.NotInstalled -> Text(
-                    text = stringResource(R.string.onboarding_linux_not_installed),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-
-                LinuxInstallState.Installing -> {
-                    DdSpinner(size = 14.dp, strokeWidth = 1.5.dp)
-                    Text(
-                        text = stringResource(R.string.onboarding_linux_installing),
-                        style = DdType.bodySmall,
-                        color = colors.inkSecondary,
-                    )
-                }
-
-                is LinuxInstallState.Installed -> {
-                    DdIcon(icon = DdIcons.Check, tint = colors.success, size = 15.dp)
-                    Text(
-                        text = stringResource(R.string.onboarding_linux_installed),
-                        style = DdType.bodySmall,
-                        color = colors.success,
-                    )
-                }
-
-                is LinuxInstallState.Failed -> Text(
-                    text = stringResource(R.string.onboarding_linux_failed),
-                    style = DdType.bodySmall,
-                    color = colors.danger,
-                )
-            }
-        }
-    }
 }
 
 @Composable
