@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.MarketPresets
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
@@ -53,6 +55,7 @@ import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
@@ -67,6 +70,8 @@ import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
+import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MarketPresetSection
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -100,6 +105,8 @@ internal fun PluginsScreen(
     var sourceSettings by remember { mutableStateOf<PluginRepositorySettings?>(null) }
     var uninstallTarget by remember { mutableStateOf<PluginSnapshot?>(null) }
     var detailPluginId by remember { mutableStateOf<String?>(null) }
+    var tab by rememberSaveable { mutableStateOf(MARKET_TAB_MARKET) }
+    var marketQuery by rememberSaveable { mutableStateOf("") }
 
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -124,6 +131,10 @@ internal fun PluginsScreen(
         pluginsRoot = resolvedPluginsRoot,
         updateBusy = updateBusy,
         onBack = onBack,
+        tab = tab,
+        onTabSelect = { tab = it },
+        marketQuery = marketQuery,
+        onMarketQueryChange = { marketQuery = it },
         onQueryChange = holder::setQuery,
         onRefresh = holder::refresh,
         onOpenPluginPage = onOpenPluginPage,
@@ -261,6 +272,10 @@ private fun PluginsContent(
     pluginsRoot: File?,
     updateBusy: Boolean,
     onBack: () -> Unit,
+    tab: Int,
+    onTabSelect: (Int) -> Unit,
+    marketQuery: String,
+    onMarketQueryChange: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onOpenPluginPage: (String, String) -> Unit,
@@ -279,6 +294,7 @@ private fun PluginsContent(
     val visible = filterPlugins(state.plugins, query)
     val interactive = pluginListInteractive(state)
     var topMenuOpen by remember { mutableStateOf(false) }
+    val showMarket = tab == MARKET_TAB_MARKET
 
     Column(
         modifier
@@ -306,67 +322,81 @@ private fun PluginsContent(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            DdIconButton(
-                icon = DdIcons.Plus,
-                onClick = onImport,
-                contentDescription = stringResource(R.string.plugins_import_title),
-                modifier = Modifier.testTag("plugins_import"),
-                tint = colors.ink,
-                iconSize = 21.dp,
-            )
-            if (updateBusy) {
-                Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                    DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                }
-            } else {
-                Box {
-                    DdIconButton(
-                        icon = DdIcons.DotsVertical,
-                        onClick = { topMenuOpen = true },
-                        contentDescription = stringResource(R.string.plugins_menu_more),
-                        modifier = Modifier.testTag("plugins_more"),
-                        tint = colors.ink,
-                        iconSize = 21.dp,
-                    )
-                    DdMenu(
-                        expanded = topMenuOpen,
-                        onDismissRequest = { topMenuOpen = false },
-                        menuWidth = 152.dp,
-                    ) {
-                        DdMenuItem(
-                            text = stringResource(R.string.plugins_check_updates),
-                            onClick = {
-                                topMenuOpen = false
-                                onCheckUpdates()
-                            },
-                            icon = DdIcons.Download,
-                            testTag = "plugins_check_updates",
+            if (!showMarket) {
+                DdIconButton(
+                    icon = DdIcons.Plus,
+                    onClick = onImport,
+                    contentDescription = stringResource(R.string.plugins_import_title),
+                    modifier = Modifier.testTag("plugins_import"),
+                    tint = colors.ink,
+                    iconSize = 21.dp,
+                )
+                if (updateBusy) {
+                    Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                        DdSpinner(size = 18.dp, strokeWidth = 2.dp)
+                    }
+                } else {
+                    Box {
+                        DdIconButton(
+                            icon = DdIcons.DotsVertical,
+                            onClick = { topMenuOpen = true },
+                            contentDescription = stringResource(R.string.plugins_menu_more),
+                            modifier = Modifier.testTag("plugins_more"),
+                            tint = colors.ink,
+                            iconSize = 21.dp,
                         )
-                        DdMenuItem(
-                            text = stringResource(R.string.plugins_source_row),
-                            onClick = {
-                                topMenuOpen = false
-                                onOpenSource()
-                            },
-                            icon = DdIcons.Globe,
-                            testTag = "plugins_source",
-                        )
-                        DdMenuItem(
-                            text = stringResource(R.string.plugins_refresh),
-                            onClick = {
-                                topMenuOpen = false
-                                onRefresh()
-                            },
-                            icon = DdIcons.Refresh,
-                            testTag = "plugins_refresh",
-                        )
+                        DdMenu(
+                            expanded = topMenuOpen,
+                            onDismissRequest = { topMenuOpen = false },
+                            menuWidth = 152.dp,
+                        ) {
+                            DdMenuItem(
+                                text = stringResource(R.string.plugins_check_updates),
+                                onClick = {
+                                    topMenuOpen = false
+                                    onCheckUpdates()
+                                },
+                                icon = DdIcons.Download,
+                                testTag = "plugins_check_updates",
+                            )
+                            DdMenuItem(
+                                text = stringResource(R.string.plugins_source_row),
+                                onClick = {
+                                    topMenuOpen = false
+                                    onOpenSource()
+                                },
+                                icon = DdIcons.Globe,
+                                testTag = "plugins_source",
+                            )
+                            DdMenuItem(
+                                text = stringResource(R.string.plugins_refresh),
+                                onClick = {
+                                    topMenuOpen = false
+                                    onRefresh()
+                                },
+                                icon = DdIcons.Refresh,
+                                testTag = "plugins_refresh",
+                            )
+                        }
                     }
                 }
             }
         }
+        DdSegmented(
+            options = listOf(
+                stringResource(R.string.market_tab_market),
+                stringResource(R.string.market_tab_mine),
+            ),
+            selectedIndex = tab,
+            onSelect = onTabSelect,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+            testTags = listOf("plugins_tab_market", "plugins_tab_mine"),
+        )
         DdSearchField(
-            query = query,
-            onQueryChange = onQueryChange,
+            query = if (showMarket) marketQuery else query,
+            onQueryChange = if (showMarket) onMarketQueryChange else onQueryChange,
             placeholder = stringResource(R.string.plugins_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
@@ -380,73 +410,82 @@ private fun PluginsContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            Spacer(Modifier.height(8.dp))
-            if (state.availableUpdates.isNotEmpty()) {
-                UpdatesBanner(
-                    count = state.availableUpdates.size,
-                    onClick = onShowUpdates,
+            if (showMarket) {
+                MarketPresetSection(
+                    presets = MarketPresets.plugins,
+                    query = marketQuery,
+                    icon = DdIcons.Puzzle,
+                    testTagPrefix = "plugins",
                 )
+            } else {
                 Spacer(Modifier.height(8.dp))
-            }
-            when {
-                state.loading && state.plugins.isEmpty() -> Unit
+                if (state.availableUpdates.isNotEmpty()) {
+                    UpdatesBanner(
+                        count = state.availableUpdates.size,
+                        onClick = onShowUpdates,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                when {
+                    state.loading && state.plugins.isEmpty() -> Unit
 
-                visible.isEmpty() -> {
-                    if (state.plugins.isEmpty()) {
-                        EmptyPlugins()
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 48.dp)
-                                .testTag("plugins_search_empty"),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.search_no_match),
-                                style = DdType.bodySmall,
-                                color = colors.inkTertiary,
-                            )
+                    visible.isEmpty() -> {
+                        if (state.plugins.isEmpty()) {
+                            EmptyPlugins()
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 48.dp)
+                                    .testTag("plugins_search_empty"),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.search_no_match),
+                                    style = DdType.bodySmall,
+                                    color = colors.inkTertiary,
+                                )
+                            }
                         }
                     }
-                }
 
-                else -> visible.forEachIndexed { index, snapshot ->
-                    if (index > 0) DdHairline()
-                    PluginRow(
-                        snapshot = snapshot,
-                        pluginsRoot = pluginsRoot,
-                        interactive = interactive && snapshot.id !in togglingIds,
-                        onOpenPage = {
-                            snapshot.pages.firstOrNull()?.let { page ->
-                                onOpenPluginPage(snapshot.id, page.id)
-                            }
-                        },
-                        onToggle = { enabled -> onToggle(snapshot.id, enabled) },
-                        onOpenDetail = { onOpenDetail(snapshot) },
-                        onRetryActivation = { onRetryActivation(snapshot) },
-                        onRollback = { onRollback(snapshot) },
-                        onUninstall = { onUninstall(snapshot) },
-                    )
+                    else -> visible.forEachIndexed { index, snapshot ->
+                        if (index > 0) DdHairline()
+                        PluginRow(
+                            snapshot = snapshot,
+                            pluginsRoot = pluginsRoot,
+                            interactive = interactive && snapshot.id !in togglingIds,
+                            onOpenPage = {
+                                snapshot.pages.firstOrNull()?.let { page ->
+                                    onOpenPluginPage(snapshot.id, page.id)
+                                }
+                            },
+                            onToggle = { enabled -> onToggle(snapshot.id, enabled) },
+                            onOpenDetail = { onOpenDetail(snapshot) },
+                            onRetryActivation = { onRetryActivation(snapshot) },
+                            onRollback = { onRollback(snapshot) },
+                            onUninstall = { onUninstall(snapshot) },
+                        )
+                    }
                 }
-            }
-            state.error?.let { error ->
-                Spacer(Modifier.height(14.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.weight(1f).testTag("plugins_error"),
-                        style = DdType.bodySmall,
-                        color = colors.danger,
-                    )
-                    DdTextAction(
-                        text = stringResource(R.string.assistant_retry),
-                        onClick = onRefresh,
-                        modifier = Modifier.testTag("plugins_error_retry"),
-                    )
+                state.error?.let { error ->
+                    Spacer(Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = error,
+                            modifier = Modifier.weight(1f).testTag("plugins_error"),
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                        )
+                        DdTextAction(
+                            text = stringResource(R.string.assistant_retry),
+                            onClick = onRefresh,
+                            modifier = Modifier.testTag("plugins_error_retry"),
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(40.dp))

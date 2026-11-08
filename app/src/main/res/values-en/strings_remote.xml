@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="remote_title">Remote Connection</string>
+    <string name="remote_back">Back</string>
+    <string name="remote_empty_title">Remote connections coming soon</string>
+    <string name="remote_empty_hint">You will be able to connect to and control another device here.</string>
+</resources>

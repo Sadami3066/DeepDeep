@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.InstalledSkill
+import io.github.whywood.deepdeep.data.MarketPresets
 import io.github.whywood.deepdeep.data.SkillArchiveResult
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.design.DdDialog
@@ -57,6 +59,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
@@ -64,6 +67,8 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.LocalDdRowHorizontalPadding
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MarketPresetSection
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -87,6 +92,8 @@ fun SkillsScreen(
     val installSuccessTemplate = stringResource(R.string.skills_install_success)
     val holder = remember(repository) { SkillsStateHolder(repository, scope) }
     val state by holder.state.collectAsStateWithLifecycle()
+    var tab by rememberSaveable { mutableStateOf(MARKET_TAB_MARKET) }
+    var marketQuery by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(holder) {
         holder.start()
@@ -123,6 +130,10 @@ fun SkillsScreen(
     SkillsContent(
         state = state,
         onBack = onBack,
+        tab = tab,
+        onTabSelect = { tab = it },
+        marketQuery = marketQuery,
+        onMarketQueryChange = { marketQuery = it },
         onQueryChange = holder::setQuery,
         onRetry = holder::retry,
         onToggle = holder::toggle,
@@ -138,6 +149,10 @@ fun SkillsScreen(
 private fun SkillsContent(
     state: SkillsUiState,
     onBack: () -> Unit,
+    tab: Int,
+    onTabSelect: (Int) -> Unit,
+    marketQuery: String,
+    onMarketQueryChange: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onRetry: () -> Unit,
     onToggle: (InstalledSkill, Boolean) -> Unit,
@@ -150,6 +165,7 @@ private fun SkillsContent(
     val colors = deepDeepColors()
     var selected by remember { mutableStateOf<InstalledSkill?>(null) }
     var deleteTarget by remember { mutableStateOf<InstalledSkill?>(null) }
+    val showMarket = tab == MARKET_TAB_MARKET
 
     Column(
         modifier
@@ -177,24 +193,38 @@ private fun SkillsContent(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            if (state.installing) {
-                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                    DdSpinner(size = 20.dp)
+            if (!showMarket) {
+                if (state.installing) {
+                    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                        DdSpinner(size = 20.dp)
+                    }
+                } else {
+                    DdIconButton(
+                        icon = DdIcons.Plus,
+                        onClick = onInstall,
+                        contentDescription = stringResource(R.string.skills_install),
+                        modifier = Modifier.testTag("skills_install"),
+                        tint = colors.ink,
+                        iconSize = 21.dp,
+                    )
                 }
-            } else {
-                DdIconButton(
-                    icon = DdIcons.Plus,
-                    onClick = onInstall,
-                    contentDescription = stringResource(R.string.skills_install),
-                    modifier = Modifier.testTag("skills_install"),
-                    tint = colors.ink,
-                    iconSize = 21.dp,
-                )
             }
         }
+        DdSegmented(
+            options = listOf(
+                stringResource(R.string.market_tab_market),
+                stringResource(R.string.market_tab_mine),
+            ),
+            selectedIndex = tab,
+            onSelect = onTabSelect,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+            testTags = listOf("skills_tab_market", "skills_tab_mine"),
+        )
         DdSearchField(
-            query = state.searchQuery,
-            onQueryChange = onQueryChange,
+            query = if (showMarket) marketQuery else state.searchQuery,
+            onQueryChange = if (showMarket) onMarketQueryChange else onQueryChange,
             placeholder = stringResource(R.string.skills_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
@@ -208,7 +238,14 @@ private fun SkillsContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            when {
+            if (showMarket) {
+                MarketPresetSection(
+                    presets = MarketPresets.skills,
+                    query = marketQuery,
+                    icon = DdIcons.Sparkles,
+                    testTagPrefix = "skills",
+                )
+            } else when {
                 state.loading && state.items.isEmpty() -> Unit
 
                 state.items.isEmpty() && state.error != null -> Box(

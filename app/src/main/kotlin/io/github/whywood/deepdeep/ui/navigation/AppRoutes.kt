@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.PluginPageRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProvidersRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.RemoteRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.RuntimeSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanJsonRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanSettingsRoute
@@ -178,6 +179,8 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             conversationId = host.chat.conversationId,
             onBack = onBack,
         )
+
+        AppDestination.Remote -> RemoteRoute(onBack = onBack)
 
         is AppDestination.WorkspaceSettings -> WorkspaceSettingsRoute(
             dependencies = dependencies,

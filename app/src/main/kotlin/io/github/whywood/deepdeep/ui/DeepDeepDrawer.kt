@@ -155,6 +155,7 @@ fun DeepDeepDrawer(
     onOpenPlugins: () -> Unit,
     onOpenTimers: () -> Unit,
     onOpenMemory: () -> Unit,
+    onOpenRemote: () -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
     onToggleWorkspacePinned: (String) -> Unit,
@@ -190,6 +191,7 @@ fun DeepDeepDrawer(
     var expandedSessionWorkspaceIds by rememberSaveable(stateSaver = expandedSessionsSaver) {
         mutableStateOf(emptySet<String>())
     }
+    var moreExpanded by rememberSaveable { mutableStateOf(false) }
     val entries = remember(
         orderedWorkspaces,
         sessionsByCwd,
@@ -252,22 +254,10 @@ fun DeepDeepDrawer(
                 testTag = "drawer_skills",
             )
             DrawerNavItem(
-                icon = DdIcons.Plug,
-                label = stringResource(R.string.drawer_nav_mcp),
-                onClick = onOpenMcp,
-                testTag = "drawer_mcp",
-            )
-            DrawerNavItem(
                 icon = DdIcons.Puzzle,
                 label = stringResource(R.string.drawer_nav_plugins),
                 onClick = onOpenPlugins,
                 testTag = "drawer_plugins",
-            )
-            DrawerNavItem(
-                icon = DdIcons.Clock,
-                label = stringResource(R.string.drawer_nav_timer),
-                onClick = onOpenTimers,
-                testTag = "drawer_timer",
             )
             DrawerNavItem(
                 icon = DdIcons.Brain,
@@ -275,6 +265,35 @@ fun DeepDeepDrawer(
                 onClick = onOpenMemory,
                 testTag = "drawer_memory",
             )
+            DrawerNavItem(
+                icon = DdIcons.Desktop,
+                label = stringResource(R.string.drawer_nav_remote),
+                onClick = onOpenRemote,
+                testTag = "drawer_remote",
+            )
+            DrawerNavItem(
+                icon = DdIcons.DotsVertical,
+                label = stringResource(if (moreExpanded) R.string.drawer_nav_less else R.string.drawer_nav_more),
+                onClick = { moreExpanded = !moreExpanded },
+                testTag = "drawer_more",
+                trailing = { DrawerMoreChevron(expanded = moreExpanded) },
+            )
+            if (moreExpanded) {
+                DrawerNavItem(
+                    icon = DdIcons.Plug,
+                    label = stringResource(R.string.drawer_nav_mcp),
+                    onClick = onOpenMcp,
+                    testTag = "drawer_mcp",
+                    modifier = Modifier.padding(start = 14.dp),
+                )
+                DrawerNavItem(
+                    icon = DdIcons.Clock,
+                    label = stringResource(R.string.drawer_nav_timer),
+                    onClick = onOpenTimers,
+                    testTag = "drawer_timer",
+                    modifier = Modifier.padding(start = 14.dp),
+                )
+            }
         }
         Spacer(Modifier.height(14.dp))
         DdHairline(color = colors.hairline.copy(alpha = 0.45f))
@@ -633,16 +652,33 @@ private fun DrawerWorkspaceEmptyRow(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun DrawerMoreChevron(expanded: Boolean) {
+    val colors = deepDeepColors()
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+        label = "drawer-more-chevron",
+    )
+    DdIcon(
+        icon = DdIcons.ChevronDown,
+        tint = colors.inkTertiary,
+        size = 16.dp,
+        modifier = Modifier.graphicsLayer { rotationZ = rotation },
+    )
+}
+
+@Composable
 private fun DrawerNavItem(
     icon: DdIcon,
     label: String,
     onClick: () -> Unit,
     testTag: String,
+    modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = deepDeepColors()
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(12.dp))

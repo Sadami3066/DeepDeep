@@ -131,6 +131,11 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Remote : AppDestination {
+        override val routeKey: String = "remote"
+        override val depth: Int = 1
+    }
+
     data object Miniapp : AppDestination {
         override val routeKey: String = "miniapp"
         override val depth: Int = 1
@@ -196,6 +201,7 @@ sealed interface AppDestination {
             routeKey == Timers.routeKey -> Timers
             routeKey == Memory.routeKey -> Memory
             routeKey == Plugins.routeKey -> Plugins
+            routeKey == Remote.routeKey -> Remote
             routeKey == Miniapp.routeKey -> Miniapp
             routeKey.startsWith(MINIAPP_DETAIL_PREFIX) -> {
                 val id = routeKey.removePrefix(MINIAPP_DETAIL_PREFIX)

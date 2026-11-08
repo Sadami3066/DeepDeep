@@ -52,6 +52,7 @@ object DdIcons {
     val Message = DdIcon(R.drawable.ic_milo_chat_unread)
     val Compose = DdIcon(R.drawable.ic_milo_new_chat)
     val Phone = DdIcon(R.drawable.ic_milo_device_connected)
+    val Desktop = DdIcon(R.drawable.ic_dd_desktop)
     val Info = DdIcon(R.drawable.ic_milo_info)
     val External = DdIcon(R.drawable.ic_milo_external_link)
     val Expand = DdIcon(R.drawable.ic_milo_expand)

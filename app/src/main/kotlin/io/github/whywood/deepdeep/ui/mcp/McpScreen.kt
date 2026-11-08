@@ -39,15 +39,19 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSearchField
+import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.data.MarketPresets
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpOAuthService
 import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
 import io.github.whywood.deepdeep.runtime.McpServerProbe
+import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MarketPresetSection
 import java.net.URI
 import kotlinx.coroutines.launch
 
@@ -72,6 +76,8 @@ fun McpScreen(
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     var editorName by rememberSaveable { mutableStateOf("") }
     var importing by rememberSaveable { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(MARKET_TAB_MARKET) }
+    var marketQuery by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(holder) {
         holder.load()
@@ -80,6 +86,10 @@ fun McpScreen(
     McpScreenContent(
         state = state,
         onBack = onBack,
+        tab = tab,
+        onTabSelect = { tab = it },
+        marketQuery = marketQuery,
+        onMarketQueryChange = { marketQuery = it },
         onQueryChange = holder::setQuery,
         onRefresh = { scope.launch { holder.refresh() } },
         onRetry = holder::retry,
@@ -129,6 +139,10 @@ fun McpScreen(
 private fun McpScreenContent(
     state: McpUiState,
     onBack: () -> Unit,
+    tab: Int,
+    onTabSelect: (Int) -> Unit,
+    marketQuery: String,
+    onMarketQueryChange: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
@@ -140,6 +154,7 @@ private fun McpScreenContent(
     val colors = deepDeepColors()
     val error = state.error
     val visibleServers = state.visibleServers
+    val showMarket = tab == MARKET_TAB_MARKET
     Column(
         modifier
             .fillMaxSize()
@@ -166,26 +181,40 @@ private fun McpScreenContent(
                 style = DdType.heading,
                 color = colors.ink,
             )
-            DdIconButton(
-                icon = DdIcons.Refresh,
-                onClick = onRefresh,
-                contentDescription = stringResource(R.string.mcp_refresh),
-                modifier = Modifier.testTag("mcp_probe_refresh"),
-                tint = colors.ink,
-                iconSize = 21.dp,
-            )
-            DdIconButton(
-                icon = DdIcons.Plus,
-                onClick = onAdd,
-                contentDescription = stringResource(R.string.mcp_add),
-                modifier = Modifier.testTag("mcp_add"),
-                tint = colors.ink,
-                iconSize = 21.dp,
-            )
+            if (!showMarket) {
+                DdIconButton(
+                    icon = DdIcons.Refresh,
+                    onClick = onRefresh,
+                    contentDescription = stringResource(R.string.mcp_refresh),
+                    modifier = Modifier.testTag("mcp_probe_refresh"),
+                    tint = colors.ink,
+                    iconSize = 21.dp,
+                )
+                DdIconButton(
+                    icon = DdIcons.Plus,
+                    onClick = onAdd,
+                    contentDescription = stringResource(R.string.mcp_add),
+                    modifier = Modifier.testTag("mcp_add"),
+                    tint = colors.ink,
+                    iconSize = 21.dp,
+                )
+            }
         }
+        DdSegmented(
+            options = listOf(
+                stringResource(R.string.market_tab_market),
+                stringResource(R.string.market_tab_mine),
+            ),
+            selectedIndex = tab,
+            onSelect = onTabSelect,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp),
+            testTags = listOf("mcp_tab_market", "mcp_tab_mine"),
+        )
         DdSearchField(
-            query = state.searchQuery,
-            onQueryChange = onQueryChange,
+            query = if (showMarket) marketQuery else state.searchQuery,
+            onQueryChange = if (showMarket) onMarketQueryChange else onQueryChange,
             placeholder = stringResource(R.string.mcp_search_placeholder),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             clearContentDescription = stringResource(R.string.search_clear),
@@ -199,57 +228,66 @@ private fun McpScreenContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            if (state.notices.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = state.notices.joinToString("\n"),
-                    modifier = Modifier.padding(horizontal = 4.dp).testTag("mcp_errors"),
-                    style = DdType.bodySmall,
-                    color = colors.danger,
+            if (showMarket) {
+                MarketPresetSection(
+                    presets = MarketPresets.mcp,
+                    query = marketQuery,
+                    icon = DdIcons.Plug,
+                    testTagPrefix = "mcp",
                 )
-            }
-            when {
-                state.loading && state.servers.isEmpty() -> Unit
-
-                state.servers.isEmpty() && error != null -> Box(
-                    Modifier.fillMaxWidth().padding(top = 72.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    McpErrorRow(error = error, onRetry = onRetry)
-                }
-
-                state.servers.isEmpty() -> EmptyMcp()
-
-                visibleServers.isEmpty() -> Box(
-                    Modifier.fillMaxWidth().padding(top = 72.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
+            } else {
+                if (state.notices.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = stringResource(R.string.search_no_match),
+                        text = state.notices.joinToString("\n"),
+                        modifier = Modifier.padding(horizontal = 4.dp).testTag("mcp_errors"),
                         style = DdType.bodySmall,
-                        color = colors.inkTertiary,
+                        color = colors.danger,
                     )
                 }
+                when {
+                    state.loading && state.servers.isEmpty() -> Unit
 
-                else -> {
-                    if (error != null) {
-                        McpErrorRow(
-                            error = error,
-                            onRetry = onRetry,
-                            modifier = Modifier.padding(top = 8.dp),
+                    state.servers.isEmpty() && error != null -> Box(
+                        Modifier.fillMaxWidth().padding(top = 72.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        McpErrorRow(error = error, onRetry = onRetry)
+                    }
+
+                    state.servers.isEmpty() -> EmptyMcp()
+
+                    visibleServers.isEmpty() -> Box(
+                        Modifier.fillMaxWidth().padding(top = 72.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.search_no_match),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
                         )
                     }
-                    visibleServers.forEachIndexed { index, entry ->
-                        if (index > 0) DdHairline()
-                        McpServerRow(
-                            entry = entry,
-                            probeResult = state.probes[entry.name],
-                            switchEnabled = state.toggleEnabled,
-                            onOpen = { onOpen(entry) },
-                            onToggle = { enabled -> onToggle(entry, enabled) },
-                        )
+
+                    else -> {
+                        if (error != null) {
+                            McpErrorRow(
+                                error = error,
+                                onRetry = onRetry,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
+                        visibleServers.forEachIndexed { index, entry ->
+                            if (index > 0) DdHairline()
+                            McpServerRow(
+                                entry = entry,
+                                probeResult = state.probes[entry.name],
+                                switchEnabled = state.toggleEnabled,
+                                onOpen = { onOpen(entry) },
+                                onToggle = { enabled -> onToggle(entry, enabled) },
+                            )
+                        }
+                        Spacer(Modifier.height(32.dp))
                     }
-                    Spacer(Modifier.height(32.dp))
                 }
             }
             Spacer(Modifier.height(24.dp))

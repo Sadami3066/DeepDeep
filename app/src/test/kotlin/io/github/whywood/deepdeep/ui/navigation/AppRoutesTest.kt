@@ -27,6 +27,7 @@ class AppRoutesTest {
         AppDestination.Skills,
         AppDestination.Timers,
         AppDestination.Plugins,
+        AppDestination.Remote,
         AppDestination.Miniapp,
         AppDestination.MiniappDetail("demo-miniapp"),
         AppDestination.PluginPage("demo-plugin", "home"),
@@ -39,7 +40,7 @@ class AppRoutesTest {
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(23, allDestinations.size)
+        assertEquals(24, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 

@@ -36,7 +36,7 @@
     <string name="assistant_loading">正在载入…</string>
     <string name="assistant_menu">打开菜单</string>
     <string name="assistant_model_chip">切换模型，当前 %1$s</string>
-    <string name="assistant_model_manage_providers">管理厂商</string>
+    <string name="assistant_model_manage_providers">管理服务商</string>
     <string name="assistant_model_sheet">选择模型</string>
     <string name="assistant_model_unconfigured">未配置模型</string>
     <string name="assistant_more">更多操作</string>
@@ -106,7 +106,7 @@
     <string name="assistant_reminders">定时提醒</string>
     <string name="assistant_retry">重试</string>
     <string name="chat_error_with_code">%1$s（%2$s）</string>
-    <string name="assistant_model_provider">厂商</string>
+    <string name="assistant_model_provider">服务商</string>
     <string name="chat_error_insufficient_balance">余额不足，请充值后重试</string>
     <string name="chat_error_model_unavailable">模型不可用，请切换模型</string>
     <string name="chat_compact_none">没有可压缩的上下文</string>

@@ -6,6 +6,9 @@
     <string name="drawer_nav_plugins">Plugins</string>
     <string name="drawer_nav_timer">Timer</string>
     <string name="drawer_nav_memory">Memory</string>
+    <string name="drawer_nav_remote">Remote Connection</string>
+    <string name="drawer_nav_more">Show more</string>
+    <string name="drawer_nav_less">Show less</string>
     <string name="drawer_account_hint">Account</string>
     <string name="drawer_archived_title">Archived</string>
     <string name="drawer_archived_empty">No archived conversations yet</string>

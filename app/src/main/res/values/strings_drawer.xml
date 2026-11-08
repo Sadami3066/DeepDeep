@@ -6,6 +6,9 @@
     <string name="drawer_nav_plugins">插件</string>
     <string name="drawer_nav_timer">定时任务</string>
     <string name="drawer_nav_memory">记忆</string>
+    <string name="drawer_nav_remote">远程连接</string>
+    <string name="drawer_nav_more">展开更多</string>
+    <string name="drawer_nav_less">收起</string>
     <string name="drawer_account_hint">个人账户</string>
     <string name="drawer_archived_title">已归档</string>
     <string name="drawer_archived_empty">还没有已归档的对话</string>
