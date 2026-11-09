@@ -57,21 +57,21 @@
     <string name="onboarding_provider_sheet_title">选择服务商</string>
 
     <string name="onboarding_permissions_title">通知与权限</string>
-    <string name="onboarding_permissions_subtitle">你可以按需开启以下权限，之后也可以在设置中调整。</string>
+    <string name="onboarding_permissions_subtitle">按需开启，之后可随时调整。</string>
     <string name="onboarding_permission_notification">通知</string>
     <string name="onboarding_permission_notification_hint">任务完成和提醒</string>
     <string name="onboarding_permission_overlay">悬浮窗</string>
-    <string name="onboarding_permission_overlay_hint">任意界面唤起助手</string>
+    <string name="onboarding_permission_overlay_hint">任意界面唤起 DeepDeep</string>
     <string name="onboarding_permission_assistant">系统助手</string>
     <string name="onboarding_permission_assistant_hint">作为默认助手被唤起</string>
     <string name="onboarding_permission_shortcut">桌面快捷方式</string>
     <string name="onboarding_permission_shortcut_hint">在桌面放一个入口</string>
     <string name="onboarding_permission_storage">共享存储</string>
-    <string name="onboarding_permission_storage_hint">让助手访问手机文件</string>
+    <string name="onboarding_permission_storage_hint">让 DeepDeep 访问手机文件</string>
     <string name="onboarding_permission_calendar">日历</string>
-    <string name="onboarding_permission_calendar_hint">让助手读写日程</string>
+    <string name="onboarding_permission_calendar_hint">让 DeepDeep 读写日程</string>
     <string name="onboarding_permission_camera">相机</string>
-    <string name="onboarding_permission_camera_hint">拍照发给助手</string>
+    <string name="onboarding_permission_camera_hint">拍照发给 DeepDeep</string>
     <string name="onboarding_permission_microphone">麦克风</string>
     <string name="onboarding_permission_microphone_hint">说话代替打字</string>
     <string name="onboarding_permission_battery">电池优化</string>

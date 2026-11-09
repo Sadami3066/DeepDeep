@@ -602,7 +602,7 @@ internal fun PermissionsStep(
                 onClick = { openBatteryOptimizationSettings(context) },
             )
         }
-        Spacer(Modifier.height(DdSpacing.Xxl))
+        Spacer(Modifier.height(DdSpacing.Huge))
     }
 }
 

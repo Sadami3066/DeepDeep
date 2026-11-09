@@ -57,7 +57,7 @@
     <string name="onboarding_provider_sheet_title">Choose a provider</string>
 
     <string name="onboarding_permissions_title">Notifications &amp; permissions</string>
-    <string name="onboarding_permissions_subtitle">Turn on what you need now; you can adjust these later in Settings.</string>
+    <string name="onboarding_permissions_subtitle">Turn on what you need; adjust anytime.</string>
     <string name="onboarding_permission_notification">Notifications</string>
     <string name="onboarding_permission_notification_hint">Task updates and reminders</string>
     <string name="onboarding_permission_overlay">Floating window</string>
@@ -65,13 +65,13 @@
     <string name="onboarding_permission_assistant">System assistant</string>
     <string name="onboarding_permission_assistant_hint">Launch as the default assistant</string>
     <string name="onboarding_permission_shortcut">Home shortcut</string>
-    <string name="onboarding_permission_shortcut_hint">Add the assistant to your home screen</string>
+    <string name="onboarding_permission_shortcut_hint">Add DeepDeep to your home screen</string>
     <string name="onboarding_permission_storage">Shared storage</string>
     <string name="onboarding_permission_storage_hint">Read files on your phone</string>
     <string name="onboarding_permission_calendar">Calendar</string>
     <string name="onboarding_permission_calendar_hint">Read and write your schedule</string>
     <string name="onboarding_permission_camera">Camera</string>
-    <string name="onboarding_permission_camera_hint">Take photos for the assistant</string>
+    <string name="onboarding_permission_camera_hint">Take photos for DeepDeep</string>
     <string name="onboarding_permission_microphone">Microphone</string>
     <string name="onboarding_permission_microphone_hint">Talk instead of typing</string>
     <string name="onboarding_permission_battery">Battery optimization</string>
