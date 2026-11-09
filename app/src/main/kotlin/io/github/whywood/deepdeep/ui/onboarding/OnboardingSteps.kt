@@ -442,18 +442,50 @@ internal fun ProviderStep(
 }
 
 @Composable
-internal fun PermissionsStep(modifier: Modifier = Modifier) {
+internal fun PermissionsStep(
+    onSharedStorageGranted: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     var notifications by remember { mutableStateOf(notificationsEnabled(context)) }
     var overlay by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var assistant by remember { mutableStateOf(AssistantRole.isHeld(context)) }
-    val permissionLauncher = rememberLauncherForActivityResult(
+    var shortcut by remember { mutableStateOf(assistantShortcutPinned(context)) }
+    var storage by remember { mutableStateOf(storageAccessGranted(context)) }
+    var calendar by remember { mutableStateOf(calendarAccessGranted(context)) }
+    var camera by remember { mutableStateOf(cameraAccessGranted(context)) }
+    var microphone by remember { mutableStateOf(microphoneAccessGranted(context)) }
+    var battery by remember { mutableStateOf(batteryOptimizationIgnored(context)) }
+    val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> notifications = granted }
+    val storageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        storage = granted
+        if (granted) onSharedStorageGranted()
+    }
+    val calendarLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { calendar = calendarAccessGranted(context) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> camera = granted }
+    val microphoneLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> microphone = granted }
     LifecycleResumeEffect(Unit) {
+        val hadStorage = storage
         notifications = notificationsEnabled(context)
         overlay = Settings.canDrawOverlays(context)
         assistant = AssistantRole.isHeld(context)
+        shortcut = assistantShortcutPinned(context)
+        storage = storageAccessGranted(context)
+        if (!hadStorage && storage) onSharedStorageGranted()
+        calendar = calendarAccessGranted(context)
+        camera = cameraAccessGranted(context)
+        microphone = microphoneAccessGranted(context)
+        battery = batteryOptimizationIgnored(context)
         onPauseOrDispose {}
     }
     Column(
@@ -473,11 +505,12 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
             PermissionRow(
                 icon = DdIcons.Notifications,
                 title = stringResource(R.string.onboarding_permission_notification),
+                subtitle = stringResource(R.string.onboarding_permission_notification_hint),
                 granted = notifications,
                 testTag = "onboarding_permission_notification",
                 onClick = {
                     if (Build.VERSION.SDK_INT >= 33 && !notifications) {
-                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else {
                         openNotificationSettings(context)
                     }
@@ -487,6 +520,7 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
             PermissionRow(
                 icon = DdIcons.FloatingWindow,
                 title = stringResource(R.string.onboarding_permission_overlay),
+                subtitle = stringResource(R.string.onboarding_permission_overlay_hint),
                 granted = overlay,
                 testTag = "onboarding_permission_overlay",
                 onClick = { openOverlaySettings(context) },
@@ -495,9 +529,77 @@ internal fun PermissionsStep(modifier: Modifier = Modifier) {
             PermissionRow(
                 icon = DdIcons.Sparkles,
                 title = stringResource(R.string.onboarding_permission_assistant),
+                subtitle = stringResource(R.string.onboarding_permission_assistant_hint),
                 granted = assistant,
                 testTag = "onboarding_permission_assistant",
                 onClick = { openAssistantSettings(context) },
+            )
+            DdHairline()
+            PermissionRow(
+                icon = DdIcons.Apps,
+                title = stringResource(R.string.onboarding_permission_shortcut),
+                subtitle = stringResource(R.string.onboarding_permission_shortcut_hint),
+                granted = shortcut,
+                testTag = "onboarding_permission_shortcut",
+                onClick = { shortcut = pinAssistantShortcut(context) },
+            )
+            DdHairline()
+            PermissionRow(
+                icon = DdIcons.Folder,
+                title = stringResource(R.string.onboarding_permission_storage),
+                subtitle = stringResource(R.string.onboarding_permission_storage_hint),
+                granted = storage,
+                testTag = "onboarding_permission_storage",
+                onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        openAllFilesSettings(context)
+                    } else {
+                        storageLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    }
+                },
+            )
+            DdHairline()
+            PermissionRow(
+                icon = DdIcons.Sun,
+                title = stringResource(R.string.onboarding_permission_calendar),
+                subtitle = stringResource(R.string.onboarding_permission_calendar_hint),
+                granted = calendar,
+                testTag = "onboarding_permission_calendar",
+                onClick = {
+                    calendarLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.READ_CALENDAR,
+                            Manifest.permission.WRITE_CALENDAR,
+                        ),
+                    )
+                },
+            )
+            DdHairline()
+            PermissionRow(
+                icon = DdIcons.Camera,
+                title = stringResource(R.string.onboarding_permission_camera),
+                subtitle = stringResource(R.string.onboarding_permission_camera_hint),
+                granted = camera,
+                testTag = "onboarding_permission_camera",
+                onClick = { cameraLauncher.launch(Manifest.permission.CAMERA) },
+            )
+            DdHairline()
+            PermissionRow(
+                icon = DdIcons.Mic,
+                title = stringResource(R.string.onboarding_permission_microphone),
+                subtitle = stringResource(R.string.onboarding_permission_microphone_hint),
+                granted = microphone,
+                testTag = "onboarding_permission_microphone",
+                onClick = { microphoneLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+            )
+            DdHairline()
+            PermissionRow(
+                icon = DdIcons.Shield,
+                title = stringResource(R.string.onboarding_permission_battery),
+                subtitle = stringResource(R.string.onboarding_permission_battery_hint),
+                granted = battery,
+                testTag = "onboarding_permission_battery",
+                onClick = { openBatteryOptimizationSettings(context) },
             )
         }
         Spacer(Modifier.height(DdSpacing.Xxl))
@@ -823,6 +925,7 @@ private fun OAuthOptionRow(
 private fun PermissionRow(
     icon: DdIcon,
     title: String,
+    subtitle: String,
     granted: Boolean,
     testTag: String,
     onClick: () -> Unit,
@@ -830,6 +933,8 @@ private fun PermissionRow(
     DdListRow(
         icon = icon,
         title = title,
+        subtitle = subtitle,
+        subtitleMaxLines = 1,
         onClick = onClick,
         showChevron = true,
         modifier = Modifier.testTag(testTag),

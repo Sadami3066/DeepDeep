@@ -381,7 +381,11 @@ fun OnboardingScreen(
                     onSignOutOAuth = ::signOutOAuth,
                 )
 
-                STEP_PERMISSIONS -> PermissionsStep()
+                STEP_PERMISSIONS -> PermissionsStep(
+                    onSharedStorageGranted = {
+                        scope.launch { graph.linuxSettings.setSharedStorageEnabled(true) }
+                    },
+                )
                 STEP_ENVIRONMENT -> EnvironmentStep(
                     bundles = environmentBundles,
                     installedIds = installedEnvironment,
