@@ -305,7 +305,6 @@ private fun PluginsContent(
     val colors = deepDeepColors()
     val visible = filterPlugins(state.plugins, query)
     val interactive = pluginListInteractive(state)
-    var topMenuOpen by remember { mutableStateOf(false) }
     val showMarket = tab == MARKET_TAB_MARKET
 
     Column(
@@ -343,55 +342,6 @@ private fun PluginsContent(
                     tint = colors.ink,
                     iconSize = 21.dp,
                 )
-                if (updateBusy) {
-                    Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                        DdSpinner(size = 18.dp, strokeWidth = 2.dp)
-                    }
-                } else {
-                    Box {
-                        DdIconButton(
-                            icon = DdIcons.DotsVertical,
-                            onClick = { topMenuOpen = true },
-                            contentDescription = stringResource(R.string.plugins_menu_more),
-                            modifier = Modifier.testTag("plugins_more"),
-                            tint = colors.ink,
-                            iconSize = 21.dp,
-                        )
-                        DdMenu(
-                            expanded = topMenuOpen,
-                            onDismissRequest = { topMenuOpen = false },
-                            menuWidth = 152.dp,
-                        ) {
-                            DdMenuItem(
-                                text = stringResource(R.string.plugins_check_updates),
-                                onClick = {
-                                    topMenuOpen = false
-                                    onCheckUpdates()
-                                },
-                                icon = DdIcons.Download,
-                                testTag = "plugins_check_updates",
-                            )
-                            DdMenuItem(
-                                text = stringResource(R.string.plugins_source_row),
-                                onClick = {
-                                    topMenuOpen = false
-                                    onOpenSource()
-                                },
-                                icon = DdIcons.Globe,
-                                testTag = "plugins_source",
-                            )
-                            DdMenuItem(
-                                text = stringResource(R.string.plugins_refresh),
-                                onClick = {
-                                    topMenuOpen = false
-                                    onRefresh()
-                                },
-                                icon = DdIcons.Refresh,
-                                testTag = "plugins_refresh",
-                            )
-                        }
-                    }
-                }
             } else {
                 MarketRefreshButton(repository = marketRepository)
             }

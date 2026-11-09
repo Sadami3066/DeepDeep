@@ -137,7 +137,7 @@ fun FileBrowserScreen(
             )
             if (canSwitchRoot) {
                 DdIconButton(
-                    icon = if (onSharedRoot) DdIcons.Folder else DdIcons.Phone,
+                    icon = if (onSharedRoot) DdIcons.Folder else DdIcons.Smartphone,
                     onClick = switchRoot,
                     contentDescription = stringResource(R.string.files_root_switch),
                     modifier = Modifier.testTag("files_root_switch"),

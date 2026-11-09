@@ -40,6 +40,7 @@ object DdIcons {
     val Message = DdIcon(R.drawable.ic_chat_unread)
     val Mic = DdIcon(R.drawable.ic_chat_microphone)
     val Monitor = DdIcon(R.drawable.ic_system_device)
+    val Smartphone = DdIcon(R.drawable.ic_system_device)
     val Moon = DdIcon(R.drawable.ic_system_appearance)
     val More = DdIcon(R.drawable.ic_navigation_more)
     val Notifications = DdIcon(R.drawable.ic_status_notifications)
