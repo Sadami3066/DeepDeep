@@ -10,7 +10,7 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-<a href="https://github.com/Sadami3066/DeepDeep/releases/latest"><img src="https://img.shields.io/badge/下载-最新版本-2EA043?style=for-the-badge&logo=github&logoColor=white" alt="下载最新版本" /></a>
+<a href="https://github.com/Sadami3066/DeepDeep/releases"><img src="https://img.shields.io/badge/下载-最新版本-2EA043?style=for-the-badge&logo=github&logoColor=white" alt="下载最新版本" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
@@ -33,7 +33,7 @@ DeepDeep 面向需要在手机上完成实际任务的用户。它将 Agent 运�
 
 适合需要在手机上处理文件、检索资料、操作应用、运行脚本，或把手机作为随身 Linux 环境的用户。
 
-当前版本为 1.0.0，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest)；源码暂未公开。
+当前版本为 1.0.0，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases)；源码暂未公开。
 
 ## 预览
 
@@ -94,7 +94,7 @@ https://github.com/user-attachments/assets/99a8fa59-0e0b-404d-a56f-f00015c5647d
 
 ## 快速开始
 
-1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest) 下载最新 `DeepDeep-1.0.0.apk`。
+1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载最新 `DeepDeep-1.0.0.apk`。
 2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入 6 屏引导；可以跳过，之后在设置中逐项完成。
 3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。模型与思考档按会话独立选择。
 4. **初始化 Linux。** 进入「设置 → Linux 设置」完成 Alpine 初始化；之后可以在对话中直接使用 `bash`。
@@ -113,7 +113,7 @@ adb install -r DeepDeep-1.0.0.apk
 | 项目 | 说明 |
 |---|---|
 | 系统 | Android 10 及以上 |
-| 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest) 下载 APK |
+| 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载 APK |
 | 账号 | 没有账号系统；模型 Key 仅保存在本机 |
 | 升级 | 使用同一签名覆盖安装；更换签名需要先卸载，卸载会删除本机会话与凭据 |
 | 网络 | 对话内容只发送给已配置的模型厂商；市场与更新检查访问 GitHub |

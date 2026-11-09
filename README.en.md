@@ -10,7 +10,7 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-<a href="https://github.com/Sadami3066/DeepDeep/releases/latest"><img src="https://img.shields.io/badge/Download-Latest-2EA043?style=for-the-badge&logo=github&logoColor=white" alt="Download latest release" /></a>
+<a href="https://github.com/Sadami3066/DeepDeep/releases"><img src="https://img.shields.io/badge/Download-Latest-2EA043?style=for-the-badge&logo=github&logoColor=white" alt="Download latest release" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
@@ -33,7 +33,7 @@ DeepDeep is a personal agent that runs on Android. It combines an agent runtime,
 
 It is intended for users who need to finish real tasks on a phone: handling files, looking up information, operating other apps, running scripts, or carrying a Linux environment in their pocket.
 
-Version 1.0.0 is distributed through [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest). The source code is not public yet.
+Version 1.0.0 is distributed through [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The source code is not public yet.
 
 ## Preview
 
@@ -94,7 +94,7 @@ https://github.com/user-attachments/assets/99a8fa59-0e0b-404d-a56f-f00015c5647d
 
 ## Getting Started
 
-1. **Download the APK.** Get the latest `DeepDeep-1.0.0.apk` from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest).
+1. **Download the APK.** Get the latest `DeepDeep-1.0.0.apk` from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases).
 2. **Install and open.** Android 10 or later is required. The first launch runs a six-screen setup; it can be skipped and completed later in Settings.
 3. **Connect a model.** Open **Settings → Providers**, choose a provider, and enter an API key or sign in with OAuth. Model and reasoning settings are selected per conversation.
 4. **Initialize Linux.** Open **Settings → Linux Settings** and initialize Alpine. After that, `bash` is available in conversations.
@@ -113,7 +113,7 @@ adb install -r DeepDeep-1.0.0.apk
 | Item | Description |
 |---|---|
 | System | Android 10 or later |
-| Package | APK from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest) |
+| Package | APK from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) |
 | Account | No account system; model keys are stored only on the device |
 | Upgrade | Install over the same signing key. Changing keys requires uninstalling, which removes local sessions and credentials |
 | Network | Conversations go only to the configured model provider; the market and update checks access GitHub |
