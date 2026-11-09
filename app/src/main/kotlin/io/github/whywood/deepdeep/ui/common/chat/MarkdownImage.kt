@@ -28,14 +28,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -69,9 +68,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 
 
 
@@ -239,6 +236,7 @@ private fun LoadedImage(
             source.startsWith("https://", ignoreCase = true) -> ({ shareMediaUrl(context, source) })
         else -> null
     }
+    val qrTarget = remember(source, saveFile) { markdownImageQrTarget(context, source, saveFile) }
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Image(
             bitmap = imageBitmap,
@@ -266,7 +264,8 @@ private fun LoadedImage(
                 { saveMediaToDownloads(context, file, guessMime(file.name)) }
             },
             onShare = share,
-            saveName = saveFile?.name ?: label,
+            qrTarget = qrTarget,
+            saveName = saveFile?.name ?: label.ifBlank { stringResource(R.string.assistant_image_preview) },
         )
     }
 }
@@ -279,18 +278,17 @@ private fun MarkdownImagePreview(
     onDismiss: () -> Unit,
     onSave: (() -> Unit)?,
     onShare: (() -> Unit)?,
+    qrTarget: QrScanTarget?,
     saveName: String,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        val context = LocalContext.current
         var revealed by remember { mutableStateOf(false) }
-        var saveSheet by remember { mutableStateOf(false) }
-        var qrSheet by remember { mutableStateOf(false) }
-        var qrCodes by remember { mutableStateOf(emptyList<String>()) }
-        val scope = rememberCoroutineScope()
+        var saveSheet by rememberSaveable { mutableStateOf(false) }
+        var qrSheet by rememberSaveable { mutableStateOf(false) }
+        val qrScanner = rememberQrScanner(qrTarget)
         LaunchedEffect(Unit) { revealed = true }
         val fade by animateFloatAsState(
             targetValue = if (revealed) 1f else 0f,
@@ -302,22 +300,12 @@ private fun MarkdownImagePreview(
             .background(colors.scrim)
             .graphicsLayer { alpha = fade }
         Box(
-            surface.pointerInput(onSave, qrCodes.isEmpty()) {
+            surface.pointerInput(qrTarget) {
                 detectTapGestures(
                     onTap = { onDismiss() },
                     onLongPress = {
-                        if (onSave != null) {
-                            saveSheet = true
-                            if (qrCodes.isEmpty()) {
-                                scope.launch {
-                                    qrCodes = try {
-                                        withTimeout(10_000) { readQrCodes(bitmap.asAndroidBitmap()) }
-                                    } catch (_: Exception) {
-                                        emptyList()
-                                    }
-                                }
-                            }
-                        }
+                        saveSheet = true
+                        if (qrTarget != null) qrScanner.requestScan(qrTarget)
                     },
                 )
             },
@@ -330,29 +318,36 @@ private fun MarkdownImagePreview(
                 contentScale = ContentScale.Fit,
             )
         }
-        if (saveSheet && onSave != null) {
+        if (saveSheet) {
             SaveToDownloadsSheet(
                 name = saveName,
                 onDismiss = { saveSheet = false },
-                onSave = {
-                    saveSheet = false
-                    onSave()
-                },
-                onShare = onShare,
-                onScanQr = if (qrCodes.isNotEmpty()) {
+                onSave = onSave?.let { save ->
                     {
                         saveSheet = false
-                        qrSheet = true
+                        save()
                     }
-                } else {
-                    null
                 },
+                onShare = onShare,
+                qrStatus = qrScanner.state.status,
+                onOpenQr = {
+                    saveSheet = false
+                    qrSheet = true
+                },
+                onRetryQr = qrScanner::retry,
             )
         }
         if (qrSheet) {
-            QrCodeResultSheet(codes = qrCodes, onDismiss = { qrSheet = false })
+            QrCodeResultSheet(codes = qrScanner.state.codes, onDismiss = { qrSheet = false })
         }
     }
+}
+
+private fun markdownImageQrTarget(context: Context, source: String, saveFile: File?): QrScanTarget? {
+    if (saveFile != null) return QrScanTarget.LocalFile(saveFile.absolutePath)
+    val remote = remoteImageUrl(source) ?: return null
+    val cached = MarkdownImageLoader.cachedFile(context, source)
+    return cached?.let { QrScanTarget.LocalFile(it.absolutePath) } ?: QrScanTarget.RemoteUrl(remote)
 }
 
 @Composable
@@ -391,6 +386,9 @@ private object MarkdownImageLoader {
     private val memory = object : LruCache<String, Bitmap>(MemoryCacheBytes) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
+
+    fun cachedFile(context: Context, source: String): File? =
+        diskFile(context, source).takeIf { it.isFile && it.length() > 0L }
 
     fun load(context: Context, source: String, targetWidthPx: Int): MarkdownImageState {
         memory.get(source)?.let { return MarkdownImageState.Ready(it) }

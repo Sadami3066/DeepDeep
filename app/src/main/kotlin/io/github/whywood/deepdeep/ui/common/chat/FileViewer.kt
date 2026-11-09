@@ -35,7 +35,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,9 +65,6 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdListRow
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
@@ -81,9 +77,7 @@ import io.github.whywood.deepdeep.ui.common.chat.copyToClipboard
 import io.github.whywood.deepdeep.ui.common.chat.highlightedCode
 import java.io.File
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 
 
 
@@ -126,8 +120,7 @@ internal fun FileViewerDialog(
     var showSource by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var saveSheet by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
     var qrSheet by rememberSaveable(file.absolutePath) { mutableStateOf(false) }
-    var qrCodes by remember(file.absolutePath) { mutableStateOf(emptyList<String>()) }
-    val scope = rememberCoroutineScope()
+    val qrScanner = rememberQrScanner(file.absolutePath)
     val openFailed = stringResource(R.string.present_open_failed)
     val openExternal = {
         val intent = fileViewIntent(context, file, mime)
@@ -164,17 +157,9 @@ internal fun FileViewerDialog(
                             file = file,
                             name = name,
                             onOpenExternal = openExternal,
-                            onLongPress = { bitmap ->
+                            onLongPress = {
                                 saveSheet = true
-                                if (qrCodes.isEmpty() && bitmap != null) {
-                                    scope.launch {
-                                        qrCodes = try {
-                                            withTimeout(10_000) { readQrCodes(bitmap) }
-                                        } catch (e: Exception) {
-                                            emptyList()
-                                        }
-                                    }
-                                }
+                                qrScanner.requestScan(QrScanTarget.LocalFile(file.absolutePath))
                             },
                         )
 
@@ -224,18 +209,16 @@ internal fun FileViewerDialog(
                         saveSheet = false
                         if (onShare != null) onShare() else shareMediaFile(context, file, mime)
                     },
-                    onScanQr = if (qrCodes.isNotEmpty()) {
-                        {
-                            saveSheet = false
-                            qrSheet = true
-                        }
-                    } else {
-                        null
+                    qrStatus = qrScanner.state.status,
+                    onOpenQr = {
+                        saveSheet = false
+                        qrSheet = true
                     },
+                    onRetryQr = qrScanner::retry,
                 )
             }
             if (qrSheet) {
-                QrCodeResultSheet(codes = qrCodes, onDismiss = { qrSheet = false })
+                QrCodeResultSheet(codes = qrScanner.state.codes, onDismiss = { qrSheet = false })
             }
         }
     }
@@ -326,48 +309,17 @@ private fun rememberTextReadState(file: File): State<TextReadState> =
     }
 
 @Composable
-internal fun QrCodeResultSheet(codes: List<String>, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val copied = stringResource(R.string.files_copied)
-    DdSheet(onDismiss = onDismiss) {
-        DdSheetHeader(title = stringResource(R.string.files_qr_result_title), onClose = onDismiss)
-        Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl)) {
-            Spacer(Modifier.height(DdSpacing.Sm))
-            codes.forEachIndexed { index, raw ->
-                DdListRow(
-                    title = if (codes.size > 1) {
-                        stringResource(R.string.files_qr_copy_index, index + 1)
-                    } else {
-                        stringResource(R.string.files_qr_copy)
-                    },
-                    subtitle = raw,
-                    subtitleMaxLines = 2,
-                    icon = DdIcons.Copy,
-                    onClick = {
-                        copyToClipboard(context, raw)
-                        Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
-                        onDismiss()
-                    },
-                )
-                if (index != codes.lastIndex) DdHairline()
-            }
-            Spacer(Modifier.height(28.dp))
-        }
-    }
-}
-
-@Composable
 private fun ImageFileBody(
     file: File,
     name: String,
     onOpenExternal: () -> Unit,
-    onLongPress: (Bitmap?) -> Unit,
+    onLongPress: () -> Unit,
 ) {
     if (animatedImageFile(file.absolutePath) != null) {
         AnimatedImage(
             file = file,
             modifier = Modifier.fillMaxSize(),
-            onLongPress = { onLongPress(null) },
+            onLongPress = onLongPress,
         )
         return
     }
@@ -390,7 +342,7 @@ private fun ImageFileBody(
             contentDescription = name,
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(file.absolutePath) { detectTapGestures(onLongPress = { onLongPress(current.bitmap) }) },
+                .pointerInput(file.absolutePath) { detectTapGestures(onLongPress = { onLongPress() }) },
             contentScale = ContentScale.Fit,
         )
     }

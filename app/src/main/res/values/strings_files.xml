@@ -12,6 +12,7 @@
     <string name="files_unplayable">无法播放此视频</string>
     <string name="files_copy_source">复制源码</string>
     <string name="files_copied">已复制</string>
+    <string name="files_copy_failed">复制失败</string>
     <string name="files_empty_file">空文件</string>
     <string name="files_read_failed">无法读取此文件</string>
     <string name="files_unsupported">暂不支持预览</string>
@@ -21,7 +22,9 @@
     <string name="files_share_failed">无法分享</string>
     <string name="files_saved">已保存到「下载」</string>
     <string name="files_save_failed">保存失败</string>
+    <string name="files_qr_scanning">识别中…</string>
     <string name="files_qr_action">识别二维码</string>
+    <string name="files_qr_failed">二维码识别失败</string>
     <string name="files_qr_result_title">二维码</string>
     <string name="files_qr_copy">复制二维码内容</string>
     <string name="files_qr_copy_index">复制二维码内容 %1$d</string>

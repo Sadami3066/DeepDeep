@@ -6,30 +6,29 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-internal suspend fun readQrCodes(bitmap: Bitmap): List<String> = try {
+internal fun normalizeQrCodes(rawValues: List<String?>): List<String> =
+    rawValues.mapNotNull { value -> value?.takeIf(String::isNotBlank) }.distinct()
+
+internal suspend fun readQrCodes(bitmap: Bitmap): List<String> =
     suspendCancellableCoroutine { continuation ->
-    val scanner = BarcodeScanning.getClient(
-        BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build(),
-    )
-    scanner.process(InputImage.fromBitmap(bitmap, 0))
-        .addOnSuccessListener { barcodes ->
-            if (continuation.isActive) {
-                continuation.resume(
-                    barcodes.mapNotNull { barcode -> barcode.rawValue?.takeIf(String::isNotBlank) }.distinct(),
-                )
+        val scanner = BarcodeScanning.getClient(
+            BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build(),
+        )
+        scanner.process(InputImage.fromBitmap(bitmap, 0))
+            .addOnSuccessListener { barcodes ->
+                if (continuation.isActive) {
+                    continuation.resume(normalizeQrCodes(barcodes.map { barcode -> barcode.rawValue }))
+                }
             }
-        }
-        .addOnFailureListener {
-            if (continuation.isActive) continuation.resume(emptyList())
-        }
-        .addOnCompleteListener {
-            scanner.close()
-        }
+            .addOnFailureListener { error ->
+                if (continuation.isActive) continuation.resumeWithException(error)
+            }
+            .addOnCompleteListener {
+                scanner.close()
+            }
     }
-} catch (t: Throwable) {
-    emptyList()
-}

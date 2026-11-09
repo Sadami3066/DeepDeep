@@ -21,28 +21,31 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdSpacing
+import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.ui.common.shareChooser
 import java.io.File
-
-
 
 @Composable
 internal fun SaveToDownloadsSheet(
     name: String,
     onDismiss: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (() -> Unit)?,
     onShare: (() -> Unit)? = null,
-    onScanQr: (() -> Unit)? = null,
+    qrStatus: QrScanStatus = QrScanStatus.Idle,
+    onOpenQr: () -> Unit = {},
+    onRetryQr: () -> Unit = {},
 ) {
     DdSheet(onDismiss = onDismiss) {
         DdSheetHeader(title = name, onClose = onDismiss)
         Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xxl)) {
             Spacer(Modifier.height(DdSpacing.Sm))
-            DdListRow(
-                title = stringResource(R.string.files_save_to_downloads),
-                icon = DdIcons.Download,
-                onClick = onSave,
-            )
+            if (onSave != null) {
+                DdListRow(
+                    title = stringResource(R.string.files_save_to_downloads),
+                    icon = DdIcons.Download,
+                    onClick = onSave,
+                )
+            }
             if (onShare != null) {
                 DdListRow(
                     title = stringResource(R.string.files_share),
@@ -50,21 +53,39 @@ internal fun SaveToDownloadsSheet(
                     onClick = onShare,
                 )
             }
-            if (onScanQr != null) {
-                DdListRow(
+            when (qrStatus) {
+                QrScanStatus.Scanning -> DdListRow(
+                    title = stringResource(R.string.files_qr_scanning),
+                    icon = DdIcons.Scan,
+                    trailing = { DdSpinner(size = 16.dp, strokeWidth = 1.5.dp) },
+                )
+
+                QrScanStatus.Found -> DdListRow(
                     title = stringResource(R.string.files_qr_action),
                     icon = DdIcons.Scan,
-                    onClick = onScanQr,
+                    onClick = onOpenQr,
                 )
+
+                QrScanStatus.Failed -> DdListRow(
+                    title = stringResource(R.string.files_qr_action),
+                    subtitle = stringResource(R.string.files_qr_failed),
+                    icon = DdIcons.Scan,
+                    onClick = onRetryQr,
+                )
+
+                QrScanStatus.Idle, QrScanStatus.Empty -> Unit
             }
             Spacer(Modifier.height(28.dp))
         }
     }
 }
 
+internal fun mediaFileProviderAuthority(packageName: String): String = "$packageName.files"
+
 internal fun shareMediaFile(context: Context, file: File, mime: String?) {
     val shared = runCatching {
-        val uri = FileProvider.getUriForFile(context, "${'$'}{context.packageName}.files", file)
+        val authority = mediaFileProviderAuthority(context.packageName)
+        val uri = FileProvider.getUriForFile(context, authority, file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = mime?.takeIf { it.isNotBlank() } ?: guessMime(file.name)
             putExtra(Intent.EXTRA_STREAM, uri)
