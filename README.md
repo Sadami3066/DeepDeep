@@ -129,24 +129,24 @@ https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a
 <td width="33%" valign="top" align="center">
 <img src="docs/media/shots/personalization.jpg" width="100%" alt="DeepDeep 个性化设置" /><br />
 <b>记忆</b><br />
-<sub>分层记忆自动沉淀，可搜索并注入当前会话。</sub>
+<sub>分层记忆自动沉淀，可搜索并注入会话。</sub>
 </td>
 </tr>
 <tr>
 <td width="33%" valign="top" align="center">
 <img src="docs/media/shots/drawer.jpg" width="100%" alt="DeepDeep 抽屉" /><br />
 <b>插件与市场</b><br />
-<sub>插件、技能与远程 MCP 从市场安装，能力清单在安装前展示。</sub>
+<sub>插件、技能与 MCP 从市场安装，安装前展示能力。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 <img src="docs/media/shots/settings.jpg" width="100%" alt="DeepDeep 权限与运行环境设置" /><br />
 <b>权限与设置</b><br />
-<sub>普通 / 无线调试 / Root 三档，屏幕操作按需开启。</sub>
+<sub>普通 / 无线调试 / Root 三档权限。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 <img src="docs/media/shots/providers.jpg" width="100%" alt="DeepDeep 模型服务商列表" /><br />
 <b>模型与对话</b><br />
-<sub>42 家 Provider，API Key 或 OAuth；模型与思考档按会话独立。</sub>
+<sub>42 家 Provider，模型与思考档按会话独立。</sub>
 </td>
 </tr>
 </table>
@@ -156,7 +156,7 @@ https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a
 <table>
 <tr>
 <td width="58%"><img src="docs/media/terminal.svg" width="100%" alt="在手机内执行构建命令" /></td>
-<td width="42%" valign="middle">Alpine 通过 proot 运行，不依赖 root。初始化后可以直接使用 <code>bash</code>，并按需安装 Node、Python、数据库客户端和 Android 编译工具链。工作文件默认位于 App 工作区；文件工具使用绝对路径。</td>
+<td width="42%" valign="middle">Alpine 通过 proot 运行，不依赖 root；初始化后可直接使用 <code>bash</code>，并按需安装 Node、Python、数据库客户端和 Android 编译工具链。工作文件默认位于 App 工作区，文件工具使用绝对路径。</td>
 </tr>
 </table>
 
