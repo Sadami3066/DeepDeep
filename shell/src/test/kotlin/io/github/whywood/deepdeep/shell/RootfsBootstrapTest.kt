@@ -4,6 +4,7 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -23,6 +24,8 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("DEEPDEEP_READY"))
         assertTrue(script.contains(".deepdeep-ready"))
         assertTrue(script.contains("cp -a"))
+        assertTrue(script.contains("ln -s /storage/emulated/0"))
+        assertTrue(script.contains("cp \"\$RUN_SCRIPT\" \"\$LINUX/run.sh\""))
     }
 
     @Test
@@ -33,7 +36,10 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("mount --make-rprivate /"))
         assertTrue(script.contains("mount -t proc proc"))
         assertTrue(script.contains("mount --rbind /data"))
-        assertTrue(script.contains("mount --bind /data/data"))
+        assertTrue(script.contains("mount --rbind /data/data"))
+        assertTrue(script.contains("mkdir -p \"\$ROOT/data/data\""))
+        assertFalse(script.contains("android/data/user/0"))
+        assertTrue(script.contains("getprop persist.sys.timezone"))
         assertTrue(script.contains("mount --rbind /system"))
         assertTrue(script.contains("chroot"))
         assertTrue(script.contains("/bin/bash -ls"))
@@ -46,6 +52,8 @@ class RootfsBootstrapTest {
 
         assertTrue(script.contains("export PATH="))
         assertTrue(script.contains("export HOME=/root"))
+        assertFalse(script.contains("export TZ=UTC"))
+        assertTrue(script.contains("export TZ"))
         assertTrue(script.contains("cd /work"))
     }
 
