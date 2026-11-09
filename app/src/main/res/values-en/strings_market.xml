@@ -102,6 +102,8 @@
     <string name="market_cancel">Cancel</string>
     <string name="market_detail_about">About</string>
     <string name="market_detail_info">Details</string>
+    <string name="market_detail_previews">Preview</string>
+    <string name="market_preview_close">Close</string>
     <string name="market_type_mcp">Connector</string>
     <string name="market_auth_type_apikey">Access token</string>
     <string name="market_auth_type_oauth">Account authorization</string>

@@ -528,26 +528,7 @@ private fun MarketDetailSheet(
                 .padding(horizontal = 24.dp)
                 .testTag("${testTagPrefix}_market_detail"),
         ) {
-            val previews = entry.plugin?.previewUrls.orEmpty()
-            if (previews.isNotEmpty()) {
-                Spacer(Modifier.height(DdSpacing.Md))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
-                ) {
-                    previews.forEach { url ->
-                        MarketPreviewImage(
-                            url = url,
-                            modifier = Modifier
-                                .width(260.dp)
-                                .height(150.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                        )
-                    }
-                }
-            }
+            var previewViewerUrl by rememberSaveable { mutableStateOf<String?>(null) }
             DdSectionLabel(stringResource(R.string.market_detail_about))
             val summary = entry.summary(language)
             if (summary.isNotBlank()) {
@@ -572,6 +553,32 @@ private fun MarketDetailSheet(
                 metaRows.forEach { (label, value) ->
                     MarketMetaRow(label = label, value = value)
                 }
+            }
+            val previews = entry.plugin?.previewUrls.orEmpty()
+            if (previews.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                DdSectionLabel(stringResource(R.string.market_detail_previews))
+                Spacer(Modifier.height(DdSpacing.Sm))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
+                ) {
+                    previews.forEach { url ->
+                        MarketPreviewCard(
+                            url = url,
+                            modifier = Modifier
+                                .width(150.dp)
+                                .height(260.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            onClick = { previewViewerUrl = url },
+                        )
+                    }
+                }
+            }
+            previewViewerUrl?.let { url ->
+                MarketPreviewViewer(url = url, onDismiss = { previewViewerUrl = null })
             }
             if (entry.type == MarketEntryType.Mcp && mcp != null) {
                 Spacer(Modifier.height(12.dp))

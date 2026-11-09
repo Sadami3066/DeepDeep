@@ -102,6 +102,8 @@
     <string name="market_cancel">取消</string>
     <string name="market_detail_about">简介</string>
     <string name="market_detail_info">信息</string>
+    <string name="market_detail_previews">效果预览</string>
+    <string name="market_preview_close">关闭</string>
     <string name="market_type_mcp">连接器</string>
     <string name="market_auth_type_apikey">访问令牌</string>
     <string name="market_auth_type_oauth">账号授权</string>
