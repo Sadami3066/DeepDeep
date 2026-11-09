@@ -29,9 +29,13 @@ internal fun buildPersonalizationSections(
             appendLine("Date: ${now.toLocalDate()} (UTC${now.offset.id}).")
             appendLine("Model: $providerId/$modelId.")
             if (rootBash) {
-                appendLine("Env: Alpine Linux chroot as real root (uid 0). Android /data is mounted at /android/data and /data/data; /system is read-only at /android/system; /sdcard points to /storage/emulated/0; the session workspace is /work.")
-                appendLine("Other apps' private data is at /data/data/<package> (also available at /android/data/data/<package>).")
-                appendLine("Android system commands are not in the chroot; use root_shell for pm, cmd, settings, dumpsys and similar operations.")
+                appendLine("Env: Alpine Linux chroot as real root (uid 0), Android filesystems at native paths.")
+                appendLine("- /data (rw): Android /data. Other apps' private data: /data/data/<package>.")
+                appendLine("- /system /vendor /product /system_ext /odm (ro): Android system files.")
+                appendLine("- /sdcard = /storage/emulated/0 (rw), same data as /data/media/0.")
+                appendLine("- /work (rw): workspace, alias of /data/data/io.github.whywood.deepdeep/files/home.")
+                appendLine("- /proc /sys /dev: host.")
+                appendLine("/system/bin native tools (getprop, toybox, ...) run directly; use root_shell for pm, cmd, settings, dumpsys.")
             } else {
                 appendLine("Env: Alpine Linux via proot and Android.")
             }
