@@ -127,6 +127,7 @@ internal fun AssistantOverlayScreen(
     state: AssistantOverlayState,
     pendingQuestions: List<PendingQuestion>,
     preview: AssistantOverlayPreview?,
+    draftStore: OverlayDraftStore,
     config: AssistantOverlayConfig,
     actions: AssistantOverlayActions,
 ) {
@@ -137,7 +138,7 @@ internal fun AssistantOverlayScreen(
     val focusManager = LocalFocusManager.current
     val speaker = remember(context) { TextSpeaker(context) }
     val inputFocus = remember { FocusRequester() }
-    var input by remember { mutableStateOf("") }
+    var input by remember { mutableStateOf(draftStore.read()) }
     var wasSending by remember { mutableStateOf(state.conversation.sending) }
     var entered by remember { mutableStateOf(false) }
     var laidOut by remember { mutableStateOf(false) }
@@ -160,6 +161,7 @@ internal fun AssistantOverlayScreen(
         language = config.language,
         onCommit = { text ->
             input = if (input.isBlank()) text else input.trimEnd() + " " + text
+            draftStore.save(input)
         },
         onSendRequested = { voiceSendRequested = true },
     )
@@ -178,6 +180,7 @@ internal fun AssistantOverlayScreen(
         focusManager.clearFocus()
         if (actions.onSend(text, followUp)) {
             input = ""
+            draftStore.clear()
         }
     }
 
@@ -192,10 +195,6 @@ internal fun AssistantOverlayScreen(
             speaker.stop()
             speaker.release()
         }
-    }
-
-    LaunchedEffect(state.sessionId) {
-        input = ""
     }
 
     LaunchedEffect(state.conversation.sending) {
@@ -215,6 +214,7 @@ internal fun AssistantOverlayScreen(
     val quote: (Long, String) -> Unit = { _, text ->
         val quoted = text.trim().lineSequence().joinToString("\n") { line -> "> $line" }
         input = if (input.isBlank()) "$quoted\n\n" else "$quoted\n\n$input"
+        draftStore.save(input)
         focusRequest++
     }
 
@@ -400,6 +400,7 @@ internal fun AssistantOverlayScreen(
                     value = input,
                     onValueChange = { next ->
                         input = next
+                        draftStore.save(next)
                         voice.clearFailure()
                     },
                     voice = voice,

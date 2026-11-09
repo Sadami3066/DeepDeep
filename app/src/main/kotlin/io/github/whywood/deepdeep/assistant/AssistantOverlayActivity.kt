@@ -42,6 +42,9 @@ import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
 
 class AssistantOverlayActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }
+    private val draftStore by lazy {
+        OverlayDraftStore(PreferencesOverlayDraftPersistence(this))
+    }
     private var controller: AssistantOverlayController? = null
     private var requestedSessionId: String? = null
 
@@ -143,6 +146,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                     state = state,
                     pendingQuestions = sessionQuestions,
                     preview = preview,
+                    draftStore = draftStore,
                     config = AssistantOverlayConfig(
                         autoSpeak = autoSpeak,
                         entryMode = overlayEntryMode,

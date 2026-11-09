@@ -14,6 +14,7 @@
 | `AssistantOverlaySwitcher.kt` | 工作区/会话两级切换浮层 |
 | `OverlayEffects.kt` | 光效绘制与输入卡玻璃、投影效果 |
 | `OverlayGlow.kt` | 光效状态机：按轮次阶段驱动亮度与动画 |
+| `OverlayDraftStore.kt` | 输入草稿持久化：SharedPreferences 保存未发送文字，重新进入浮层恢复 |
 
 ## 要点
 
@@ -21,4 +22,5 @@
 - 浮层与聊天共用 `ui/common/chat` 的回合、输入卡与附件组件（不 import `ui.chat`）；`AssistantEntry`/`AssistantRole` 在 `core/`。
 - `setContent` 根用 `ProvidePluginManager(graph.pluginManager)`（`ui.common.chat`）包住内容，浮层里的自定义消息卡与工具卡才能渲染插件 Compose 槽位（与 `MainActivity` 同源）；输入图片经 `normalizeImages` 带原始附件路径，供插件输入钩子使用。
 - 会话状态投影自 `ConversationStore`，不复制真相；运行中发送是插话、长按发送是排队。
+- 输入框草稿由 `OverlayDraftStore` 保存与恢复，发送成功后清空；关闭浮层或 Activity 重建不会丢草稿。
 - 光效与玻璃输入卡是同一套视觉：`OverlayGlow` 出状态、`OverlayEffects` 负责绘制，别绕开它们另画。
