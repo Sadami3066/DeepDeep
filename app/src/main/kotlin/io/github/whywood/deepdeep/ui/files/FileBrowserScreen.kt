@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.files
 
+import android.os.Environment
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import io.github.whywood.deepdeep.data.FilePreviewKind
 import io.github.whywood.deepdeep.data.filePreviewKind
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.data.guessMime
+import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -85,28 +87,36 @@ private data class FileBrowserEntry(
 fun FileBrowserScreen(
     root: File,
     rootLabel: String,
+    sharedRoot: File? = null,
     onOpenFile: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var relativePath by rememberSaveable(root.absolutePath) { mutableStateOf("") }
-    val directory = remember(root, relativePath) {
-        if (relativePath.isEmpty()) root else File(root, relativePath)
+    var browsingSharedRoot by rememberSaveable { mutableStateOf(false) }
+    val activeRoot = sharedRoot?.takeIf { browsingSharedRoot } ?: root
+    val onSharedRoot = activeRoot != root
+    var relativePath by rememberSaveable(activeRoot.absolutePath) { mutableStateOf("") }
+    val directory = remember(activeRoot, relativePath) {
+        if (relativePath.isEmpty()) activeRoot else File(activeRoot, relativePath)
     }
     val listing by produceState<FileBrowserListing>(
         initialValue = FileBrowserListing.Loading,
-        root.absolutePath,
+        activeRoot.absolutePath,
         relativePath,
     ) {
         value = withContext(Dispatchers.IO) { readFileBrowserDirectory(directory) }
     }
     val canGoUp = relativePath.isNotEmpty()
+    val canSwitchRoot = sharedRoot != null && sharedRoot.absolutePath != root.absolutePath
     val goUp = { relativePath = FileBrowserPaths.parentPath(relativePath) }
+    val switchRoot = { browsingSharedRoot = !browsingSharedRoot }
     val label = if (canGoUp) {
         relativePath
+    } else if (onSharedRoot) {
+        stringResource(R.string.files_root_shared)
     } else {
-        rootLabel.ifBlank { root.name.ifBlank { root.absolutePath } }
+        rootLabel.ifBlank { root.name.ifBlank { stringResource(R.string.files_root_private) } }
     }
 
     DdPageScaffold(
@@ -125,6 +135,16 @@ fun FileBrowserScreen(
                 style = DdType.heading,
                 color = colors.ink,
             )
+            if (canSwitchRoot) {
+                DdIconButton(
+                    icon = if (onSharedRoot) DdIcons.Folder else DdIcons.Phone,
+                    onClick = switchRoot,
+                    contentDescription = stringResource(R.string.files_root_switch),
+                    modifier = Modifier.testTag("files_root_switch"),
+                    tint = colors.ink,
+                    iconSize = 21.dp,
+                )
+            }
         },
         modifier = modifier,
     ) {
@@ -330,3 +350,7 @@ private fun readFileBrowserDirectory(directory: File): FileBrowserListing {
         .map { FileBrowserEntry(it.name, it, directory = false, size = it.length()) }
     return FileBrowserListing.Ready(directories + files)
 }
+
+@Suppress("DEPRECATION")
+internal fun sharedStorageRoot(): File? =
+    if (isSharedStorageGranted()) Environment.getExternalStorageDirectory() else null
