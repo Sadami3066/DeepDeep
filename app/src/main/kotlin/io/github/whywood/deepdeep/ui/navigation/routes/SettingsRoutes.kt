@@ -204,6 +204,7 @@ internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScop
         rootBashStatus = rootBashStatus,
         onRootBashEnabledChange = { enabled -> scope.launch { dependencies.rootBash.setEnabled(enabled) } },
         onRetryRootBash = { scope.launch { dependencies.rootBash.retry() } },
+        onRebuildRootBash = { scope.launch { dependencies.rootBash.rebuild() } },
         onBack = onBack,
     )
 }

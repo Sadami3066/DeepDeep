@@ -41,9 +41,10 @@
     <string name="permission_effective">Effective now</string>
     <string name="permission_effective_fallback">The selected tier is not available; running at %1$s instead.</string>
     <string name="permission_root_bash_title">Allow bash to use root</string>
-    <string name="permission_root_bash_hint_off">When on, bash runs as real root in the Root tier.</string>
+    <string name="permission_root_bash_hint_off">Not enabled</string>
     <string name="permission_root_bash_hint_need_root">Takes effect after switching to the Root tier.</string>
-    <string name="permission_root_bash_hint_preparing">Preparing for the first time; copying the Linux environment.</string>
-    <string name="permission_root_bash_hint_ready">Active: bash runs as real root.</string>
-    <string name="permission_root_bash_hint_failed">Preparation failed; tap to retry.</string>
+    <string name="permission_root_bash_hint_preparing">Preparing</string>
+    <string name="permission_root_bash_hint_ready">Active</string>
+    <string name="permission_root_bash_hint_failed">Preparation failed; tap to retry</string>
+    <string name="permission_root_bash_rebuild">Rebuild Root Linux</string>
 </resources>

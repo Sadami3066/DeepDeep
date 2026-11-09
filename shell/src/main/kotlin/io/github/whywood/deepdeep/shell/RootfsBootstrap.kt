@@ -48,43 +48,72 @@ class RootfsBootstrap internal constructor(
 
     fun cachedStatus(): RootfsStatus = _status.value
 
-    suspend fun ensureReady(): RootfsStatus {
-        return mutex.withLock {
-            val current = _status.value.state
-            if (current is RootfsState.Preparing) return@withLock RootfsStatus(current)
-            if (!appRootfsDir.isDirectory || !File(appRootfsDir, BASH_BINARY).exists()) {
-                return@withLock fail("Linux environment is not installed yet")
+    suspend fun ensureReady(): RootfsStatus = mutex.withLock {
+        val current = _status.value.state
+        if (current is RootfsState.Preparing) return@withLock RootfsStatus(current)
+        prepareLocked()
+    }
+
+    suspend fun rebuild(): RootfsStatus = mutex.withLock {
+        val current = _status.value.state
+        if (current is RootfsState.Preparing) return@withLock RootfsStatus(current)
+        if (!appRootfsDir.isDirectory || !File(appRootfsDir, BASH_BINARY).exists()) {
+            return@withLock fail("Linux environment is not installed yet")
+        }
+        publish(RootfsState.Preparing)
+        val cleanup = withContext(ioDispatcher) {
+            runCatching {
+                runner.run(
+                    "rm -rf ${ChrootExecutor.shellQuote(rootfsDir.absolutePath)} " +
+                        ChrootExecutor.shellQuote(tempRootfsDir.absolutePath),
+                    PREPARE_TIMEOUT_MILLIS,
+                    null,
+                )
             }
-            publish(RootfsState.Preparing)
-            val result = withContext(ioDispatcher) {
-                runCatching {
-                    writeScratchFiles()
-                    runner.run(
-                        "sh ${ChrootExecutor.shellQuote(bootstrapScriptFile.absolutePath)}",
-                        PREPARE_TIMEOUT_MILLIS,
-                        null,
-                    )
-                }
+        }
+        val cleanupFailure = cleanup.exceptionOrNull()
+        if (cleanupFailure != null) {
+            return@withLock fail("Root Linux cleanup failed: ${cleanupFailure.message ?: cleanupFailure.javaClass.simpleName}")
+        }
+        val cleanupResult = cleanup.getOrThrow()
+        if (!cleanupResult.started) return@withLock fail("su is not available")
+        if (cleanupResult.timedOut) return@withLock fail("Root Linux preparation timed out")
+        prepareLocked()
+    }
+
+    private suspend fun prepareLocked(): RootfsStatus {
+        if (!appRootfsDir.isDirectory || !File(appRootfsDir, BASH_BINARY).exists()) {
+            return fail("Linux environment is not installed yet")
+        }
+        publish(RootfsState.Preparing)
+        val result = withContext(ioDispatcher) {
+            runCatching {
+                writeScratchFiles()
+                runner.run(
+                    "sh ${ChrootExecutor.shellQuote(bootstrapScriptFile.absolutePath)}",
+                    PREPARE_TIMEOUT_MILLIS,
+                    null,
+                )
             }
-            val failure = result.exceptionOrNull()
-            if (failure != null) {
-                return@withLock fail("Root Linux preparation failed: ${failure.message ?: failure.javaClass.simpleName}")
+        }
+        val failure = result.exceptionOrNull()
+        if (failure != null) {
+            return fail("Root Linux preparation failed: ${failure.message ?: failure.javaClass.simpleName}")
+        }
+        val output = result.getOrThrow()
+        if (!output.started) return fail("su is not available")
+        if (output.timedOut) return fail("Root Linux preparation timed out")
+        val text = output.stdout
+        return when {
+            text.contains(PREPARE_READY) || text.contains(PREPARE_ALREADY) -> {
+                persistStatus(STATUS_READY)
+                publish(RootfsState.Ready)
+                RootfsStatus(RootfsState.Ready)
             }
-            val output = result.getOrThrow()
-            if (!output.started) return@withLock fail("su is not available")
-            if (output.timedOut) return@withLock fail("Root Linux preparation timed out")
-            val text = output.stdout
-            when {
-                text.contains(PREPARE_READY) || text.contains(PREPARE_ALREADY) -> {
-                    persistStatus(STATUS_READY)
-                    publish(RootfsState.Ready)
-                    RootfsStatus(RootfsState.Ready)
-                }
-                text.contains(PREPARE_NO_BUSYBOX) -> fail("busybox not found")
-                text.contains(PREPARE_COPY_FAILED) -> fail("copy failed")
-                text.contains(PREPARE_PROBE_FAILED) -> fail("chroot probe failed")
-                else -> fail("Root Linux preparation failed with exit code ${output.exitCode}")
-            }
+            text.contains(PREPARE_NO_BUSYBOX) -> fail("busybox not found")
+            text.contains(PREPARE_COPY_FAILED) -> fail("copy failed")
+            text.contains(PREPARE_PROBE_FAILED) -> fail("chroot probe failed")
+            else -> fail("Root Linux preparation failed with exit code ${output.exitCode}")
         }
     }
 
@@ -118,6 +147,9 @@ class RootfsBootstrap internal constructor(
         }
     }
 
+    private val rootfsDir: File get() = File(linuxDir, ROOTFS_DIR_NAME)
+    private val tempRootfsDir: File get() = File(linuxDir, TEMP_ROOTFS_DIR_NAME)
+
     private fun writeScratchFiles() {
         check(scratchDir.isDirectory || scratchDir.mkdirs()) { "Cannot create scratch directory: $scratchDir" }
         bootstrapScriptFile.writeText(
@@ -139,6 +171,7 @@ class RootfsBootstrap internal constructor(
     companion object {
         const val DEFAULT_LINUX_DIR = "/data/adb/deepdeep/linux"
         private const val ROOTFS_DIR_NAME = "rootfs"
+        private const val TEMP_ROOTFS_DIR_NAME = "rootfs.tmp"
         private const val BASH_BINARY = "bin/bash"
         private const val PREPARE_TIMEOUT_MILLIS = 10 * 60 * 1000L
         private const val STATUS_READY = "ready"

@@ -67,6 +67,10 @@ class RootBashController(
         bootstrap.ensureReady()
     }
 
+    suspend fun rebuild() {
+        bootstrap.rebuild()
+    }
+
     fun failureReason(): String? = (status.value.state as? RootfsState.Failed)?.reason
 }
 

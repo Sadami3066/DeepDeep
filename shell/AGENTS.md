@@ -17,7 +17,7 @@
 | `CommandOutput.kt` | 输出环形缓冲，超限转写日志并做 UTF-8 截断 |
 | `RootShell.kt` | su 探测与 root 命令执行，带超时与双流截断、root 侧 pid/进程组回收 |
 | `ChrootExecutor.kt` | Root Bash 执行器：run.sh → unshare + chroot 真实 root，命令从 stdin 传入 |
-| `RootfsBootstrap.kt` | 首次启用时经 su 复制 App rootfs 到 /data/adb，探测 busybox 与挂载私有化，状态持久化 |
+| `RootfsBootstrap.kt` | 首次启用时经 su 复制 App rootfs 到 /data/adb，探测 busybox 与挂载私有化，状态持久化，支持重建 |
 | `PosixTimeZone.kt` | 把系统时区转成 POSIX TZ 字符串传给命令 |
 
 ## 要点
@@ -26,6 +26,6 @@
 - 一个 `LinuxEnvironment` 绑定一个工作目录，App 按 cwd 各建实例；proot 的 `-w` 与该目录一致。
 - proot 不是安全沙箱；输出统一截到 64 KiB、超出后写日志并回传完整路径；取消必须杀整棵进程树。
 - `sharedStorageEnabled` 与 `extraBinds` 控制宿主目录映射，App 侧传入 `/data` 绑定与存储开关。
-- Root bash：开关开且权限档生效为 ROOT 时走 `ChrootExecutor`（su + chroot），其余走 `PRootExecutor`；两条通道共用 60s 默认/600s 上限与 64 KiB 输出截断。
+- Root bash：开关开且权限档生效为 ROOT 时走 `ChrootExecutor`（su + chroot），其余走 `PRootExecutor`；两条通道共用 60s 默认/600s 上限与 64 KiB 输出截断。准备失败可在权限页重试，重建入口会删除快照后重新准备。
 - Root 侧取消与超时必须经 `RootShell` 的 setsid + pid + root kill；App uid 不能给 root 子进程发信号。
 - 测试在 `src/test/kotlin`（JUnit4 + coroutines-test），tar 夹具在 `TarFixtures.kt`。

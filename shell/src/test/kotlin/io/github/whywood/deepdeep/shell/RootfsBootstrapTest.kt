@@ -104,4 +104,41 @@ class RootfsBootstrapTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun rebuildClearsRootfsThenPrepares() = runBlocking {
+        val dir = kotlin.io.path.createTempDirectory("rootfs-rebuild").toFile()
+        try {
+            val appRootfs = File(dir, "app-rootfs")
+            File(appRootfs, "bin").mkdirs()
+            File(appRootfs, "bin/bash").writeText("")
+            val commands = mutableListOf<String>()
+            val statusFile = File(dir, "state")
+            val bootstrap = RootfsBootstrap(
+                appRootfsDir = appRootfs,
+                statusFile = statusFile,
+                scratchDir = File(dir, "scratch"),
+                linuxDir = File(dir, "linux"),
+                runner = RootCommandRunner { command, _, _ ->
+                    commands += command
+                    if (command.startsWith("rm -rf ")) {
+                        RootProcessResult(0, "", "", false, true)
+                    } else {
+                        RootProcessResult(0, "DEEPDEEP_READY", "", false, true)
+                    }
+                },
+                ioDispatcher = Dispatchers.Unconfined,
+            )
+
+            val status = bootstrap.rebuild()
+
+            assertEquals(RootfsState.Ready, status.state)
+            assertEquals(2, commands.size)
+            assertTrue(commands[0].startsWith("rm -rf "))
+            assertTrue(commands[0].contains("rootfs"))
+            assertTrue(commands[1].startsWith("sh "))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }

@@ -71,6 +71,7 @@ fun PermissionScreen(
     rootBashStatus: RootfsStatus,
     onRootBashEnabledChange: (Boolean) -> Unit,
     onRetryRootBash: () -> Unit,
+    onRebuildRootBash: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -152,10 +153,11 @@ fun PermissionScreen(
             Spacer(Modifier.height(DdSpacing.Md))
             SettingsGroup {
                 val failed = rootBashStatus.state is RootfsState.Failed
+                val preparing = rootBashStatus.state is RootfsState.Preparing
                 DdListRow(
                     title = stringResource(R.string.permission_root_bash_title),
                     subtitle = rootBashHint(rootBashEnabled, state.effective, rootBashStatus),
-                    subtitleMaxLines = 2,
+                    subtitleMaxLines = 1,
                     onClick = if (failed) onRetryRootBash else null,
                     showChevron = failed,
                     modifier = Modifier.testTag("permission_root_bash"),
@@ -170,6 +172,15 @@ fun PermissionScreen(
                         )
                     },
                 )
+                if (rootBashEnabled && !preparing) {
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(R.string.permission_root_bash_rebuild),
+                        showChevron = true,
+                        onClick = onRebuildRootBash,
+                        modifier = Modifier.testTag("permission_root_bash_rebuild"),
+                    )
+                }
             }
             Spacer(Modifier.height(DdSpacing.Xxl))
             SettingsGroup {

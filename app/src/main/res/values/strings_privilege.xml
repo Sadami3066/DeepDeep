@@ -41,9 +41,10 @@
     <string name="permission_effective">当前生效</string>
     <string name="permission_effective_fallback">所选档位尚未授权，当前按「%1$s」运行。</string>
     <string name="permission_root_bash_title">允许 bash 使用 Root</string>
-    <string name="permission_root_bash_hint_off">开启后，Root 档下 bash 使用真实 root 环境。</string>
+    <string name="permission_root_bash_hint_off">未开启</string>
     <string name="permission_root_bash_hint_need_root">切换到 Root 档后生效。</string>
-    <string name="permission_root_bash_hint_preparing">首次准备中，正在复制 Linux 环境。</string>
-    <string name="permission_root_bash_hint_ready">已生效：bash 使用真实 root 环境。</string>
-    <string name="permission_root_bash_hint_failed">准备失败，点按重试。</string>
+    <string name="permission_root_bash_hint_preparing">正在准备</string>
+    <string name="permission_root_bash_hint_ready">已生效</string>
+    <string name="permission_root_bash_hint_failed">准备失败，点按重试</string>
+    <string name="permission_root_bash_rebuild">重建 Root Linux</string>
 </resources>
