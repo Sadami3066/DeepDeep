@@ -1,11 +1,8 @@
 # 品牌与第三方资产
 
-## 启动图标
+## 应用图标
 
-- 文件：`app/src/main/res/drawable/ic_launcher_foreground.xml`
-- 内容：白色小写 `d` 线性标记 + 蓝色自适应背景 `#1D4ED8`
-- 来源：本项目自绘，不使用第三方角色或图片素材
-- 旧版鲸鱼娘占位图标、`DeepDeepMascot` 与其 CC BY-NC-SA 许可文件已从应用和仓库移除
+自适应图标资源在 `app/src/main/res/mipmap-*/` 与 `drawable*/`，背景色为 `#1D4ED8`。
 
 ## 字体
 
@@ -20,10 +17,10 @@
 
 ## 图标
 
-- 应用内通用 UI 图标上游为 [Milo Modern 图标素材包](../milo-modern-icons-200-revised/README.md)（App 取 regular 档），分类源、命名与生成流程见 `design/icons/`，生成到 `design/src/main/res/drawable-nodpi/`。
+- 应用内通用 UI 图标来自 [Milo Modern 图标素材包](../milo-modern-icons-200-revised/README.md)（App 取 regular 档），分类源、命名与生成流程见 `design/icons/`。
 - 无 Milo 对应语义的少数线稿为手绘 vector（源自 [Tabler Icons](https://github.com/tabler/tabler-icons)，MIT，快照 v3.50.0）；许可全文 `design/src/main/assets/licenses/tabler-MIT.txt`，随 APK 打包。
-- 厂商/服务图标素材见 `assets/pi-provider-logos/` 与 `assets/vendor-logos/`，来源、许可与替换说明见各自 README 与仓库根目录 `THIRD_PARTY_NOTICES.md`。
+- 厂商/服务图标素材见 `assets/pi-provider-logos/` 与 `assets/vendor-logos/`，来源与许可见各自 README。
 
-## 未进入仓库的参考素材
+## 许可
 
-`artifacts/` 仅保存在本地，被 Git 忽略；未复制 Claude 的字体、图标、代码、文案或图片。Claude 拆包只用于理解信息架构与输入入口。
+第三方组件的完整清单与许可见仓库根目录 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)。

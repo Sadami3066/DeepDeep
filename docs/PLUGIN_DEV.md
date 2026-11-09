@@ -1,6 +1,6 @@
 # DeepDeep 插件开发
 
-面向外部插件作者的开发文档：工程搭建、契约、打包签名、安装更新与全部扩展面。插件工程在宿主仓库同级的 `plugins/` 仓库（官方插件、示例、模板与共享打包脚本），宿主仓库只保留契约与真机回归脚本。产品能力边界见 [GUIDE.md](GUIDE.md)，设计取舍见 [DECISIONS.md](DECISIONS.md)。
+面向外部插件作者的开发文档：工程搭建、契约、打包签名、安装更新与全部扩展面。官方插件与模板分别在 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) 和 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins)；宿主仓库只保留契约与真机回归脚本。产品能力见 [USER_GUIDE.md](USER_GUIDE.md)，构建与模块见 [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)。
 
 DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPlugin`，打包成 `.ddp`，由宿主在 App 进程内加载。插件只从 `.ddp` 安装，不存在随包编译的插件。
 
@@ -10,7 +10,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 `plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.7.0`、`PLUGIN_API_LEVEL = 4`、`BASELINE_API_LEVEL = 4`、`HOST_UI_API_LEVEL = 1`。
 
-`plugins/` 仓库自带两份参考：
+插件工程包含三类参考（`template/` 与官方插件公开，`sample/`、`interop/` 用于宿主回归）：
 
 - `sample/`：最小插件（两个工具 + 自定义消息卡 + 插件页面），用于宿主真机回归。
 - `template/`：完整模板（工具 + partial 更新 + 会话感知工具 + 技能 + hooks + 工具卡槽位 + 插件页面），复制为新模块即起点。
@@ -33,7 +33,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 新增插件：
 
 ```bash
-# 1. 复制模板并改名（在 plugins/ 仓库根目录执行）
+# 1. 复制模板并改名（在插件工程仓库根目录执行）
 cp -R template my-plugin
 #    改 build.gradle.kts 的 namespace/applicationId/versionName
 #    改 src/main/assets/plugin.json 的 id/version/entryClass/name/summary/provides
@@ -54,7 +54,7 @@ cp -R template my-plugin
 
 安装：把 `.ddp` 传到手机，插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、是否要求特权、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
 
-真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-e2e.sh` 用 `plugins/sample` 跑安装→启用→工具→停用→卸载；`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
+真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-e2e.sh` 用插件工程的 `sample/` 跑安装→启用→工具→停用→卸载；`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
 
 ## 工程与依赖
 
@@ -203,7 +203,7 @@ plugin.ddp
 
 ### 打包与签名任务
 
-`plugins/` 仓库根 `gradle/plugin-bundle.gradle.kts` 是所有模块共用的构建脚本，提供三个任务：
+插件工程仓库根的 `gradle/plugin-bundle.gradle.kts` 是所有模块共用的构建脚本，提供三个任务：
 
 | 任务 | 作用 |
 |---|---|
@@ -744,7 +744,7 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 
 ## 调试与常见错误
 
-构建/打包/签名（在 `plugins/` 仓库根）：
+构建/打包/签名（在插件工程仓库根）：
 
 ```bash
 ./scripts/gradlew-locked :sample:assemblePlugin :sample:signPlugin :sample:verifyPlugin
@@ -785,5 +785,5 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 ## 参考
 
 - 契约源码：宿主仓库 `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/`
-- 插件工程：`plugins/` 仓库的 `sample/`（最小）与 `template/`（完整模板与签名流程），README 见仓库根目录
-- 插件系统取舍：[DECISIONS.md](DECISIONS.md) 的 #94–#103；产品能力边界：[GUIDE.md](GUIDE.md)
+- 插件工程：[DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)（官方实现）与 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins)（模板与开发资料）；`sample/`、`interop/` 为内部回归工程
+- 产品能力：[USER_GUIDE.md](USER_GUIDE.md)；构建与模块：[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)

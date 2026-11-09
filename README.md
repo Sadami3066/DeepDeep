@@ -196,7 +196,7 @@ shell/        ADB / Root 特权通道
 
 **1.0.0 · Private Beta。** 目前由作者本地构建与分发，没有上架应用商店；源码暂未公开。
 
-功能与边界详见 [docs/GUIDE.md](docs/GUIDE.md)，设计取舍在 [docs/DECISIONS.md](docs/DECISIONS.md)，插件开发在 [docs/PLUGIN_DEV.md](docs/PLUGIN_DEV.md)。
+使用说明见 [docs/USER_GUIDE.md](docs/USER_GUIDE.md)，构建与模块见 [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)，插件开发在 [docs/PLUGIN_DEV.md](docs/PLUGIN_DEV.md)。
 
 ## License
 
