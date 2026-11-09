@@ -278,10 +278,10 @@ fun SettingsScreen(
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Privacy,
-                    title = stringResource(R.string.settings_privacy),
+                    title = stringResource(R.string.settings_privacy_agreement),
                     onClick = onOpenPrivacy,
                     showChevron = true,
-                    modifier = Modifier.testTag("settings_privacy"),
+                    modifier = Modifier.testTag("settings_privacy_agreement"),
                 )
             }
 

@@ -13,7 +13,7 @@
 | `FontScreen.kt` | 英文字体选择与预览（DdFontStyle） |
 | `PermissionScreen.kt` | 权限三档选择、ADB 配对、Root 探测、生效档提示 |
 | `PersonalizationScreen.kt` | 个性化：头像、称呼、互动风格、语气、自定义指令 |
-| `PrivacyScreen.kt` | 隐私说明：本地数据、Provider 通信、统计、小米云、卸载 |
+| `AgreementScreen.kt` | 隐私与用户协议：数据与隐私、用户协议、免责声明、开源许可 |
 | `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情 |
 | `ProviderDetailScreen.kt` | 厂商详情：OAuth 登录/退出、API Key 保存/清除 |
 | `RuntimeSettingsScreen.kt` | Linux 设置页：Linux 环境 + 开发包组合页 |

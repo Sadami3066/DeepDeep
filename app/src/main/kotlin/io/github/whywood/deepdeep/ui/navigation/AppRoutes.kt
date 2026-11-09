@@ -31,8 +31,8 @@ import io.github.whywood.deepdeep.ui.navigation.routes.MiniappDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MemoryRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MiniappRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.WorkspaceSettingsRoute
+import io.github.whywood.deepdeep.ui.settings.AgreementScreen
 import io.github.whywood.deepdeep.ui.settings.AndroidSettingsScreen
-import io.github.whywood.deepdeep.ui.settings.PrivacyScreen
 import io.github.whywood.deepdeep.ui.skills.SkillsScreen
 
 data class RouteSpec(
@@ -114,7 +114,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
 
         AppDestination.Personalization -> PersonalizationRoute(dependencies, host.scope, onBack)
 
-        AppDestination.Privacy -> PrivacyScreen(onBack = onBack)
+        AppDestination.Privacy -> AgreementScreen(onBack = onBack)
 
         AppDestination.AssistantSettings -> AssistantSettingsScreen(onBack = onBack)
 
