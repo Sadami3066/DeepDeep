@@ -87,133 +87,78 @@ adb install -r DeepDeep-1.0.0.apk
 
 ## 功能
 
-### Agent 运行时
-
-Agent 循环、工具调度、会话存储与插件宿主均在 App 进程内运行。模型可以调用文件、命令、屏幕、日历、网页等工具；长任务通过 `job_start` 转为后台任务，定时任务使用五段 cron 并绑定当前会话。MCP 工具通过 `tool_search` 按需加载，避免将全部 schema 注入上下文。
-
-- **工具**：读写文件、执行命令、操作屏幕、读写日历、搜索网页。失败会重试，长任务可以转到后台。
-- **技能**：以 `SKILL.md` 描述流程，按需加载；也可以让 Agent 根据任务编写新技能。
-- **自动化**：后台任务、五段 cron 定时任务、会话级目标，以及「帮我盯」这类轮询任务。
-- **MCP**：支持 Streamable HTTP 与 OAuth；工具按需加载。
-- **会话**：会话以 JSONL 保存；支持置顶、归档、重命名与单会话导出。
-
-<p align="center">
-  <a href="https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-monitor.mp4"><img src="docs/media/demo/agent-monitor.gif" width="320" alt="DeepDeep 在对话中查询场馆空位并创建后台任务" /></a><br />
-  <sub>在对话中查询场馆空位并创建轮询任务；工具调用、运行状态与结果都保留在会话中。点击图片查看完整视频。</sub>
-</p>
-
-### Android 系统集成
-
-权限分为普通、无线调试与 Root 三档。普通档提供 `bash`、文件与网络；无线调试增加 `adb_shell`，可以操作屏幕和系统设置；Root 档增加 `root_shell`。屏幕操作默认关闭，开启后还需要对应的后端实际可用，`screen_*` 工具才会出现。
-
-Agent 默认在后台虚拟屏中运行应用，不抢占当前主屏；需要操作主屏时，必须显式指定 `target=main`。虚拟屏连续 15 分钟没有 Agent 操作会自动关闭。支付、密码等受保护页面禁止截图，Agent 会把控制权交还给你。
-
 <table>
 <tr>
-<td width="55%" align="center"><a href="https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-phone-control.mp4"><img src="docs/media/demo/phone-operation.gif" width="300" alt="DeepDeep 在悬浮窗中操作其他应用" /></a><br /><sub>在悬浮窗中启动虚拟屏、输入文字，并切换到其他应用完成操作。点击查看完整视频。</sub></td>
-<td width="45%" align="center"><img src="docs/media/shots/settings.jpg" width="220" alt="DeepDeep 权限与运行环境设置" /><br /><sub>权限与运行环境</sub></td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/148208b2-11de-4ea5-a3a0-0b0378e6df34
+
+<b>Agent 运行时</b><br />
+<sub>工具、MCP、技能与后台任务在同一个会话中运行。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/f20ce2ce-26e9-4f7c-8696-dea81d0a74e1
+
+<b>Android 系统集成</b><br />
+<sub>虚拟屏、悬浮窗、系统助手与三档权限。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d
+
+<b>小程序</b><br />
+<sub>Agent 现场生成 HTML 应用，可保存数据并添加到桌面。</sub>
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/6783519b-5f93-46d6-ad54-86a8e1350016
+
+<b>万能扫一扫</b><br />
+<sub>同时识别多个二维码，按内容跳转对应应用。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a
+
+<b>远程连接</b><br />
+<sub>连接电脑上的 DSH，局域网优先，证书固定。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+<img src="docs/media/shots/personalization.jpg" width="100%" alt="DeepDeep 个性化设置" /><br />
+<b>记忆</b><br />
+<sub>分层记忆自动沉淀，可搜索并注入当前会话。</sub>
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top" align="center">
+<img src="docs/media/shots/drawer.jpg" width="100%" alt="DeepDeep 抽屉" /><br />
+<b>插件与市场</b><br />
+<sub>插件、技能与远程 MCP 从市场安装，能力清单在安装前展示。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+<img src="docs/media/shots/settings.jpg" width="100%" alt="DeepDeep 权限与运行环境设置" /><br />
+<b>权限与设置</b><br />
+<sub>普通 / 无线调试 / Root 三档，屏幕操作按需开启。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+<img src="docs/media/shots/providers.jpg" width="100%" alt="DeepDeep 模型服务商列表" /><br />
+<b>模型与对话</b><br />
+<sub>42 家 Provider，API Key 或 OAuth；模型与思考档按会话独立。</sub>
+</td>
 </tr>
 </table>
-
-其他系统集成：
-
-- **本地文件**：使用真实绝对路径读写、预览、分享与交付，不经过中转服务器。
-- **系统助手**：设为默认助手后，长按电源键或使用助手手势唤起，在任意应用上直接交代任务。
-- **悬浮窗**：显示运行进度、待处理提问和交付结果；点开是运行面板，长按可以查看虚拟屏预览。
-- **悬浮语音**：在桌面显示悬浮输入条，支持连续语音、拍照和附件；[观看完整演示](https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-overlay-voice.mp4)。
-- **分享接收**：从其他应用分享图片、文件或文本，会插入当前会话或预填输入框。
-- **通知**：后台任务、定时任务和插件消息通过通知投递，点击回到对应会话。
 
 ### Linux 环境
 
-Alpine 通过 proot 运行，不依赖 root。首次在「设置 → Linux 设置」初始化后，可以直接使用 `bash`。常用命令、Node、Python、数据库客户端、办公套件和 Android 编译工具链可以按需安装。
-
-<p align="center">
-  <img src="docs/media/terminal.svg" width="880" alt="在手机内执行构建命令" />
-  <br />
-  <sub>在手机内执行 shell 命令与构建任务。</sub>
-</p>
-
-工作文件默认位于 App 的工作区。文件工具使用绝对路径，工作区只是默认位置，不是访问边界；这样 Linux、插件与 Agent 可以复用同一套路径。
-
-### 模型与对话
-
-支持 42 家 Provider，API Key 与浏览器 OAuth 均可使用。模型和思考档按会话独立，切换会话不会影响其他对话。
-
-对话支持 Markdown、代码块、表格、图片、文件、语音输入与朗读。附件最多 20 个，单文件上限 1 GB；拍照界面可以同时识别多个二维码。输入区右上角的圆环显示上下文占用，点开可以查看输入、输出、缓存与费用；长会话可以用 `/compact` 压缩。
-
-### 插件
-
-插件是 Kotlin 代码模块，实现 `plugin-api` 契约，打包为签名 `.ddp`，由宿主在 App 进程内加载。插件可以提供工具、技能、提示词段、会话 hooks、Compose 页面和消息卡。
-
-```json
-{
-  "id": "com.example.myplugin",
-  "version": "1.0.0",
-  "entryClass": "com.example.MyPlugin",
-  "capabilities": ["linux", "files", "network", "ui"]
-}
-```
-
-清单中的 `capabilities` 声明插件实际使用的宿主服务，当前共 18 项。安装确认页会展示名称、版本、体积、sha256、发布者、能力清单和将提供的工具/技能/页面；宿主只注入声明过的服务。更新必须使用同一发布者密钥。新版本在无忙碌会话时立即激活，忙碌会话结束后自动生效，不需要重启 App。
-
-插件与 App 同进程、同权限，没有沙箱。只安装可信来源的 `.ddp`。
-
-### 记忆
-
-记忆按用途分层，不把所有历史都放进上下文：
-
-| 区域 | 内容 |
-|---|---|
-| **用户与我** | 身份、偏好、习惯、长期约定 |
-| **当下与将来** | 正在处理的任务、计划与承诺 |
-| **经验与教训** | 已解决的问题、可复用的方法 |
-| **日记 / 月 / 年** | 原始记录、月度汇总、年度回看 |
-
-会话结束时自动沉淀，按天和按月汇总；需要时可以搜索，或将摘要注入当前会话。
-
-<p align="center">
-  <img src="docs/media/shots/personalization.jpg" width="220" alt="DeepDeep 个性化设置" />
-  <br />
-  <sub>称呼、交互风格与头像保存在本机。</sub>
-</p>
-
-### 小程序与常用工具
-
-**小程序**是 Agent 根据需求生成的 HTML/CSS/JS 页面。页面通过 bridge 读写自己的 SQLite 数据，也可以调用 `app.agent.*` 编排一次性 Agent；完成后可以添加到桌面，点击图标直接打开。
-
-**万能扫一扫**在相机中同时识别多个二维码，按内容路由到对应应用的扫一扫、浏览器或剪贴板。
-
-**帮我盯**让 Agent 启动后台任务，轮询网页或接口；条件满足后自动执行下一步，例如查询场馆空位并在出现空位时下单。
-
 <table>
 <tr>
-<td width="33%" valign="top" align="center"><a href="https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-miniapp.mp4"><img src="docs/media/demo/miniapp.gif" width="210" alt="DeepDeep 生成打卡待办小程序" /></a><br /><b>小程序</b><br /><sub>对话生成「打卡待办」，添加到桌面后直接使用。点击查看完整视频。</sub></td>
-<td width="33%" valign="top" align="center"><a href="https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-scan.mp4"><img src="docs/media/demo/scan.gif" width="210" alt="DeepDeep 识别二维码并跳转对应应用" /></a><br /><b>万能扫一扫</b><br /><sub>相机识别二维码，按内容进入对应应用的扫一扫。点击查看完整视频。</sub></td>
-<td width="33%" valign="top" align="center"><a href="https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-monitor.mp4"><img src="docs/media/shots/monitor.jpg" width="210" alt="DeepDeep 后台任务与工具调用" /></a><br /><b>帮我盯</b><br /><sub>轮询网页或接口，条件满足后执行下一步。点击查看完整视频。</sub></td>
+<td width="58%"><img src="docs/media/terminal.svg" width="100%" alt="在手机内执行构建命令" /></td>
+<td width="42%" valign="middle">Alpine 通过 proot 运行，不依赖 root。初始化后可以直接使用 <code>bash</code>，并按需安装 Node、Python、数据库客户端和 Android 编译工具链。工作文件默认位于 App 工作区；文件工具使用绝对路径。</td>
 </tr>
 </table>
-
-### 远程连接
-
-抽屉中的「远程连接」通过 `dsh-mobile` 连接电脑上的 DSH。扫码或粘贴配对链接后，首次连接会固定电脑证书，之后只信任同一台电脑。局域网优先，不通时自动尝试远程入口；多台电脑按 `installationId` 合并成一行，一次连接一台。连接页就是电脑上的 DSH 手机版，会话、消息和工作区与电脑一致。
-
-<p align="center">
-  <a href="https://github.com/Sadami3066/DeepDeep/releases/download/demo-20261109/deepdeep-remote.mp4"><img src="docs/media/demo/remote.gif" width="340" alt="DeepDeep 远程连接电脑上的 DSH" /></a><br />
-  <sub>从手机连接电脑上的 DSH；首次配对固定证书。点击图片查看完整视频。</sub>
-</p>
-
-### 市场
-
-插件、技能与远程 MCP 可以从 [DeepDeep 市场](https://github.com/Sadami3066/deepdeep-market) 获取。索引使用 ECDSA 签名，制品会核对 sha256；条目分为插件、技能、MCP 三类。
-
-App 不预装插件。安装后的插件与技能会出现在抽屉和插件页；卸载会移除插件文件、登录信息与技能。
-
-<p align="center">
-  <img src="docs/media/shots/drawer.jpg" width="220" alt="DeepDeep 抽屉中的应用入口" />
-  <br />
-  <sub>插件、技能、记忆与远程连接等入口集中在抽屉中。</sub>
-</p>
 
 ## 设计
 
