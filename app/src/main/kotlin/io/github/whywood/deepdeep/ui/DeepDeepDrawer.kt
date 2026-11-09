@@ -149,6 +149,8 @@ fun DeepDeepDrawer(
     pinnedWorkspaceIds: Set<String>,
     expandedWorkspaceIds: Set<String>,
     busySessionIds: Set<String>,
+    timerSessionIds: Set<String>,
+    jobSessionIds: Set<String>,
     userName: String,
     avatar: ImageBitmap?,
     onOpenSearch: () -> Unit,
@@ -360,6 +362,8 @@ fun DeepDeepDrawer(
                         conversation = entry.conversation,
                         selected = entry.conversation.id == activeSessionId,
                         busy = entry.conversation.id in busySessionIds,
+                        hasTimer = entry.conversation.id in timerSessionIds,
+                        hasJob = entry.conversation.id in jobSessionIds,
                         menuExpanded = sessionMenuTarget?.id == entry.conversation.id,
                         menuAnchor = sessionMenuAnchor,
                         modifier = Modifier.animateItem(),
@@ -713,6 +717,8 @@ private fun DrawerSessionRow(
     conversation: ConversationSummary,
     selected: Boolean,
     busy: Boolean,
+    hasTimer: Boolean,
+    hasJob: Boolean,
     menuExpanded: Boolean,
     menuAnchor: Offset,
     onClick: () -> Unit,
@@ -733,6 +739,8 @@ private fun DrawerSessionRow(
         label = "session-row-wash",
     )
     val relativeTime = rememberRelativeTime(conversation.updatedAt)
+    val timerMark = stringResource(R.string.drawer_session_has_timer)
+    val jobMark = stringResource(R.string.drawer_session_has_job)
     Box(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -775,26 +783,49 @@ private fun DrawerSessionRow(
                 modifier = Modifier.widthIn(min = 40.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                when {
-                    busy -> DdSpinner(
-                        modifier = Modifier.testTag("session_busy_${conversation.id}"),
-                        color = colors.inkTertiary,
-                        size = 12.dp,
-                        strokeWidth = 1.5.dp,
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (hasTimer) {
+                        DdIcon(
+                            icon = DdIcons.Clock,
+                            tint = colors.inkTertiary,
+                            size = 11.dp,
+                            contentDescription = timerMark,
+                            modifier = Modifier.testTag("session_timer_${conversation.id}"),
+                        )
+                    }
+                    if (hasJob) {
+                        DdIcon(
+                            icon = DdIcons.Terminal,
+                            tint = colors.inkTertiary,
+                            size = 11.dp,
+                            contentDescription = jobMark,
+                            modifier = Modifier.testTag("session_job_${conversation.id}"),
+                        )
+                    }
+                    when {
+                        busy -> DdSpinner(
+                            modifier = Modifier.testTag("session_busy_${conversation.id}"),
+                            color = colors.inkTertiary,
+                            size = 12.dp,
+                            strokeWidth = 1.5.dp,
+                        )
 
-                    conversation.pinned -> DdIcon(
-                        icon = DdIcons.Pin,
-                        tint = colors.inkTertiary,
-                        size = 12.dp,
-                    )
+                        conversation.pinned -> DdIcon(
+                            icon = DdIcons.Pin,
+                            tint = colors.inkTertiary,
+                            size = 12.dp,
+                        )
 
-                    else -> Text(
-                        text = relativeTime,
-                        style = DdType.bodySmall.copy(fontSize = 10.5.sp),
-                        color = colors.inkTertiary,
-                        maxLines = 1,
-                    )
+                        else -> Text(
+                            text = relativeTime,
+                            style = DdType.bodySmall.copy(fontSize = 10.5.sp),
+                            color = colors.inkTertiary,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }

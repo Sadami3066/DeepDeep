@@ -82,6 +82,8 @@ data class ShellDrawerState(
     val activeSessionId: String?,
     val pinnedWorkspaceIds: Set<String>, val expandedWorkspaceIds: Set<String>,
     val busySessionIds: Set<String>,
+    val timerSessionIds: Set<String>,
+    val jobSessionIds: Set<String>,
     val userName: String,
     val avatar: ImageBitmap? = null,
 )
@@ -205,6 +207,8 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 pinnedWorkspaceIds = state.pinnedWorkspaceIds,
                 expandedWorkspaceIds = state.expandedWorkspaceIds,
                 busySessionIds = state.busySessionIds,
+                timerSessionIds = state.timerSessionIds,
+                jobSessionIds = state.jobSessionIds,
                 userName = state.userName,
                 avatar = state.avatar,
                 onOpenSearch = { actions.onNavigate(AppDestination.Search) },

@@ -47,11 +47,13 @@ import io.github.whywood.deepdeep.ui.chat.ChatScreenActions
 import io.github.whywood.deepdeep.ui.chat.ChatScreenOverlay
 import io.github.whywood.deepdeep.ui.chat.ChatViewModel
 import io.github.whywood.deepdeep.ui.chat.CommandItem
-import io.github.whywood.deepdeep.ui.common.ProfileAvatarCache
-import io.github.whywood.deepdeep.ui.common.rememberAvatarBitmap
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
+import io.github.whywood.deepdeep.ui.common.ProfileAvatarCache
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
+import io.github.whywood.deepdeep.ui.common.rememberAvatarBitmap
 import io.github.whywood.deepdeep.ui.common.shareChooser
+import io.github.whywood.deepdeep.ui.sessionIdsWithEnabledTimers
+import io.github.whywood.deepdeep.ui.sessionIdsWithRunningJobs
 import io.github.whywood.deepdeep.ui.navigation.AnimatedScreenHost
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppRouteContent
@@ -172,6 +174,8 @@ internal fun AppShell(
     val activeJobs = remember(allJobs, state.conversationId) {
         allJobs.filter { it.sessionId == state.conversationId }
     }
+    val timerSessionIds = remember(timers) { sessionIdsWithEnabledTimers(timers) }
+    val jobSessionIds = remember(allJobs) { sessionIdsWithRunningJobs(allJobs) }
     var modelsOpen by remember { mutableStateOf(false) }
     var exportSummary by remember { mutableStateOf<ConversationSummary?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
@@ -579,6 +583,8 @@ internal fun AppShell(
             uiPreferences.pinnedWorkspaceIds,
             expandedWorkspaceIds,
             state.busySessionIds,
+            timerSessionIds,
+            jobSessionIds,
             nickname,
             avatarBitmap,
         )

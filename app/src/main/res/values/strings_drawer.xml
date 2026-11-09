@@ -51,4 +51,6 @@
     <string name="workspace_delete_confirm">删除</string>
     <string name="drawer_sessions_more">更多历史 · %1$d</string>
     <string name="drawer_sessions_less">收起</string>
+    <string name="drawer_session_has_timer">有定时任务</string>
+    <string name="drawer_session_has_job">有后台任务</string>
 </resources>

@@ -51,4 +51,6 @@
     <string name="workspace_delete_confirm">Delete</string>
     <string name="drawer_sessions_more">More history · %1$d</string>
     <string name="drawer_sessions_less">Show less</string>
+    <string name="drawer_session_has_timer">Has a timer</string>
+    <string name="drawer_session_has_job">Has a background job</string>
 </resources>
