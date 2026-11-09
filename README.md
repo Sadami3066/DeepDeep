@@ -18,9 +18,11 @@ DeepDeep 把 Agent、Alpine Linux 和一层可编程界面装进 Android。
 <td width="380" valign="top"><img src="docs/media/phone-hero.svg" width="360" alt="DeepDeep 在手机上完成一次订场" /></td>
 <td valign="top">
 
-<p><code>01 对话</code> 42 家 Provider，按会话独立</p>
-<p><code>02 终端</code> Alpine、bash，Node / Python 按需安装</p>
-<p><code>03 屏幕</code> 后台虚拟屏，点按滑动输入</p>
+<p><code>01 对话</code> 42 家 Provider，按会话独立切换模型与思考档</p>
+<p><code>02 终端</code> Alpine、bash，Node / Python 按需安装；后台任务与定时任务都在这里跑</p>
+<p><code>03 屏幕</code> 后台虚拟屏里点按滑动输入，不抢你正在用的主屏</p>
+
+<blockquote>一台能揣进口袋的 Linux 机器，只是恰好会聊天。</blockquote>
 
 <p><a href="https://github.com/Sadami3066"><b>内测申请 →</b></a><br/>
 <sub>实机演示录制中 · 规格见 <a href="docs/media/SHOTS.md">docs/media/SHOTS.md</a></sub></p>
@@ -37,15 +39,13 @@ DeepDeep 把 Agent、Alpine Linux 和一层可编程界面装进 Android。
 
 DeepDeep 多给了两层：一个真正的 Linux，和一套能装东西的插件与小程序。于是同一台手机既能查教务、跑脚本，也能订场地、写页面——**不需要 root**。
 
-> 它更像一台能揣进口袋的 Linux 机器，只是恰好会聊天。
-
 ## 一天
 
 | 时间 | 你说 | 它做 | 画面 |
 |---|---|---|---|
-| **07:50** | 今天几节课？ | `sysu jwxt schedule --today`，8:00 第一门 | <img src="docs/media/slot-1.svg" width="140" alt="" /> |
-| **12:10** | 群里这周定了什么？ | 飞书插件翻消息和文档，整理出 4 条决定 | <img src="docs/media/slot-2.svg" width="140" alt="" /> |
-| **21:00** | 盯南校园羽毛球，有空位就订 | 60 秒轮询，抢到 20:00 场，扣 30 积分 | <img src="docs/media/slot-3.svg" width="140" alt="" /> |
+| **07:50** | 今天几节课？ | `sysu jwxt schedule --today`，8:00 第一门 | <img src="docs/media/slot-1.svg" width="160" alt="" /> |
+| **12:10** | 群里这周定了什么？ | 飞书插件翻消息和文档，整理出 4 条决定 | <img src="docs/media/slot-2.svg" width="160" alt="" /> |
+| **21:00** | 盯南校园羽毛球，有空位就订 | 60 秒轮询，抢到 20:00 场，扣 30 积分 | <img src="docs/media/slot-3.svg" width="160" alt="" /> |
 
 <sub>画面为 GIF 占位，实机录制中。</sub>
 
