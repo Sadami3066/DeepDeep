@@ -1,0 +1,9 @@
+<svg width="360" height="480" viewBox="0 0 360 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="1" y="1" width="358" height="478" rx="22" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="21" y="21" width="318" height="438" rx="14" fill="#F8FAFC" stroke="#CBD5E1" stroke-dasharray="8 8"/>
+  <text x="39" y="62" fill="#3370FF" font-size="18" font-family="ui-monospace, monospace" font-weight="600">12:10</text>
+  <circle cx="180" cy="240" r="34" fill="#EEF4FF" stroke="#C7D8FF"/>
+  <path d="M171 224L193 240L171 256V224Z" fill="#3370FF"/>
+  <text x="180" y="310" fill="#64748B" font-size="17" text-anchor="middle" font-family="-apple-system, 'Noto Sans CJK SC', sans-serif">飞书 · GIF 占位</text>
+  <text x="180" y="338" fill="#94A3B8" font-size="13" text-anchor="middle" font-family="ui-monospace, monospace">3:4 / 720x960</text>
+</svg>
