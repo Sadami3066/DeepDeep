@@ -143,6 +143,7 @@ private fun arrangeCalendarTool(
             withContext(Dispatchers.IO) {
                 when (action) {
                     CALENDAR_CALENDARS -> {
+                        calendar.ensureReadAccess()
                         val list = calendar.calendars()
                         textResult(
                             buildJsonObject {
@@ -179,6 +180,7 @@ private fun arrangeCalendarTool(
                             throw IllegalArgumentException("limit must be between 1 and $MAX_CALENDAR_LIMIT")
                         }
                         val query = args.stringOrNull("query")?.trim()?.takeIf { it.isNotEmpty() }
+                        calendar.ensureReadAccess()
                         val events = calendar.list(start, end, query, limit)
                         textResult(
                             buildJsonObject {
@@ -194,6 +196,7 @@ private fun arrangeCalendarTool(
 
                     CALENDAR_GET -> {
                         val id = args.requiredLong("id")
+                        calendar.ensureReadAccess()
                         val event = calendar.get(id)
                             ?: throw IllegalArgumentException("Event $id not found")
                         textResult(buildJsonObject { put("event", eventJson(event, zone)) }.toString())
@@ -217,6 +220,7 @@ private fun arrangeCalendarTool(
                             calendarId = args.longOrNull("calendarId"),
                             reminderMinutes = args.reminderMinutes(),
                         )
+                        calendar.ensureWriteAccess()
                         val created = calendar.create(draft)
                         textResult(
                             buildJsonObject {
@@ -240,6 +244,7 @@ private fun arrangeCalendarTool(
                             calendarId = args.longOrNull("calendarId"),
                             reminderMinutes = if (args.containsKey("reminders")) args.reminderMinutes() else null,
                         )
+                        calendar.ensureWriteAccess()
                         val updated = calendar.update(id, patch)
                             ?: throw IllegalArgumentException("Event $id not found")
                         textResult(
@@ -252,6 +257,7 @@ private fun arrangeCalendarTool(
 
                     CALENDAR_DELETE -> {
                         val id = args.requiredLong("id")
+                        calendar.ensureWriteAccess()
                         val removed = calendar.delete(id)
                         if (!removed) throw IllegalArgumentException("Event $id not found")
                         textResult(buildJsonObject { put("deleted", id) }.toString())

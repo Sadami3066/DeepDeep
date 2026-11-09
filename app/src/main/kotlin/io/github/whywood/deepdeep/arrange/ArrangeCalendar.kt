@@ -14,6 +14,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.TimeZone
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 internal const val ARRANGE_EVENT_LIMIT_MAX = 200
 internal const val ARRANGE_HOUR_MILLIS = 3_600_000L
@@ -75,10 +77,51 @@ class ArrangeNoWritableCalendarException(
     message: String = "No writable system calendar; create or sync one in a calendar app first",
 ) : IllegalStateException(message)
 
+class CalendarPermissionGate(
+    private val check: (String) -> Boolean,
+    private val request: suspend (String) -> Boolean,
+) {
+    private val mutex = Mutex()
+    private val results = mutableMapOf<String, Boolean>()
+
+    suspend fun ensure(permission: String) {
+        if (check(permission)) {
+            mutex.withLock { results[permission] = true }
+            return
+        }
+        mutex.withLock {
+            if (check(permission)) {
+                results[permission] = true
+            } else if (results[permission] == false) {
+                throw denied(permission)
+            } else {
+                val granted = request(permission)
+                results[permission] = granted
+                if (!granted) throw denied(permission)
+            }
+        }
+    }
+
+    private fun denied(permission: String): ArrangeCalendarPermissionException {
+        val access = when (permission) {
+            Manifest.permission.READ_CALENDAR -> "read"
+            Manifest.permission.WRITE_CALENDAR -> "write"
+            else -> "calendar"
+        }
+        return ArrangeCalendarPermissionException(
+            "Calendar $access permission was not granted; grant calendar access for DeepDeep in system settings, then retry",
+        )
+    }
+}
+
 interface ArrangeCalendarGateway {
     fun hasReadPermission(): Boolean
 
     fun hasWritePermission(): Boolean
+
+    suspend fun ensureReadAccess() {}
+
+    suspend fun ensureWriteAccess() {}
 
     fun calendars(): List<ArrangeCalendarInfo>
 
@@ -220,10 +263,23 @@ class AndroidArrangeCalendarGateway(context: Context) : ArrangeCalendarGateway {
     private val context: Context = context.applicationContext
     private val resolver: ContentResolver = this.context.contentResolver
     private val writer = ArrangeCalendarWriter(ResolverEventStore())
+    private val permissionGate = CalendarPermissionGate(
+        check = { permission -> hasPermission(permission) },
+        request = { permission -> CalendarPermissionBridge.request(context, permission) },
+    )
 
     override fun hasReadPermission(): Boolean = hasPermission(Manifest.permission.READ_CALENDAR)
 
     override fun hasWritePermission(): Boolean = hasPermission(Manifest.permission.WRITE_CALENDAR)
+
+    override suspend fun ensureReadAccess() {
+        permissionGate.ensure(Manifest.permission.READ_CALENDAR)
+    }
+
+    override suspend fun ensureWriteAccess() {
+        permissionGate.ensure(Manifest.permission.READ_CALENDAR)
+        permissionGate.ensure(Manifest.permission.WRITE_CALENDAR)
+    }
 
     override fun calendars(): List<ArrangeCalendarInfo> {
         requireReadPermission()
