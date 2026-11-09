@@ -46,21 +46,29 @@ dependencies {
     debugImplementation(libs.compose.tooling)
 }
 
-group = "io.github.whywood.deepdeep"
+val publishGroup = providers.gradleProperty("deepdeepPublishGroup")
+    .getOrElse("io.github.sadami3066.deepdeep")
+group = publishGroup
 version = pluginApiVersion
 
 afterEvaluate {
     publishing {
+        repositories {
+            maven {
+                name = "pages"
+                url = uri(rootProject.layout.projectDirectory.dir("build/maven-repo"))
+            }
+        }
         publications {
             create<MavenPublication>("design") {
                 from(components["release"])
-                groupId = "io.github.whywood.deepdeep"
+                groupId = publishGroup
                 artifactId = "design"
                 version = pluginApiVersion
                 pom {
                     name.set("DeepDeep Design")
                     description.set("DeepDeep design system components shared with plugin UIs")
-                    url.set("https://github.com/whywood/DeepDeep")
+                    url.set("https://github.com/Sadami3066/DeepDeep-Plugins")
                 }
             }
         }

@@ -19,16 +19,16 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 宿主契约先发布到 mavenLocal（`plugins/` 仓库按 `io.github.whywood.deepdeep` group 从 `mavenLocal()` 解析）：
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api:0.7.0`、`design:0.6.0`），不需要本地 mavenLocal 发布。
+
+`plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
 ```bash
-# 在 plugins/ 仓库根目录执行
-cd ../app
-./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal
-# 产物在 ~/.m2/repository/io/github/whywood/deepdeep/plugin-api/0.7.0/ 与 design/0.6.0/
+./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository
+# 产物在 app/build/maven-repo/io/github/sadami3066/deepdeep/
 ```
 
-`plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。改了任意一个都要重新发布一次；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 版本。
+把产物同步到 `deepdeep-maven` 仓库对应目录并推送，Pages 会自动更新；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 与模板版本。
 
 新增插件：
 

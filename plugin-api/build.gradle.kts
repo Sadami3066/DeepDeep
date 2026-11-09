@@ -45,21 +45,29 @@ dependencies {
     testImplementation(libs.junit)
 }
 
-group = "io.github.whywood.deepdeep"
+val publishGroup = providers.gradleProperty("deepdeepPublishGroup")
+    .getOrElse("io.github.sadami3066.deepdeep")
+group = publishGroup
 version = pluginApiVersion
 
 afterEvaluate {
     publishing {
+        repositories {
+            maven {
+                name = "pages"
+                url = uri(rootProject.layout.projectDirectory.dir("build/maven-repo"))
+            }
+        }
         publications {
             create<MavenPublication>("pluginApi") {
                 from(components["release"])
-                groupId = "io.github.whywood.deepdeep"
+                groupId = publishGroup
                 artifactId = "plugin-api"
                 version = pluginApiVersion
                 pom {
                     name.set("DeepDeep Plugin API")
                     description.set("DeepDeep external plugin contract SDK")
-                    url.set("https://github.com/whywood/DeepDeep")
+                    url.set("https://github.com/Sadami3066/DeepDeep-Plugins")
                 }
             }
         }

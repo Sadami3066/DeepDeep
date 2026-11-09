@@ -22,7 +22,7 @@
 
 测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较（semver 与 `compareCore`）、槽位 ID 规则、capabilities 校验、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。公开 ABI 由 `scripts/plugin-api-abi.sh` + `plugin-api/abi/` 的 golden 清单固定，删改公开类型/签名必须显式更新清单并升版本。
 
-对外发布：`./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal`（group `io.github.whywood.deepdeep`，版本 `pluginApiVersion` 默认 `0.7.0`；`design` 是 App 的设计系统（当前 `0.6.0`），通过 `api(project(":design"))` 成为插件 UI 的编译期依赖，版本独立维护。发布前 ABI 可随时删改且不升级 `PLUGIN_API_LEVEL`，发布后才按「只做加法 + 改 ABI 升等级」执行）。
+对外发布：`./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository`（产物在 `app/build/maven-repo`，group `io.github.sadami3066.deepdeep`，发布后复制到 `deepdeep-maven` 仓库并推送 Pages），版本 `pluginApiVersion` 默认 `0.7.0`；`design` 是 App 的设计系统（当前 `0.6.0`），通过 `api(project(":design"))` 成为插件 UI 的编译期依赖，版本独立维护。发布前 ABI 可随时删改且不升级 `PLUGIN_API_LEVEL`，发布后才按「只做加法 + 改 ABI 升等级」执行）。
 
 ## ABI 规则（对外承诺）
 
