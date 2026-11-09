@@ -33,6 +33,57 @@ class MarketRegistryParserTest {
     }
 
     @Test
+    fun pluginWithoutPreviewsHasEmptyList() {
+        val plugin = MarketRegistryParser.parse(registry().encodeToByteArray()).entries[0]
+        assertEquals(emptyList<String>(), plugin.plugin?.previewUrls)
+    }
+
+    @Test
+    fun parsesPluginPreviewsInOrder() {
+        val json = registry(
+            previews = """["https://example.com/1.jpg", "https://example.com/2.jpg"]""",
+        )
+        val plugin = MarketRegistryParser.parse(json.encodeToByteArray()).entries[0]
+        assertEquals(
+            listOf("https://example.com/1.jpg", "https://example.com/2.jpg"),
+            plugin.plugin?.previewUrls,
+        )
+    }
+
+    @Test
+    fun previewsFilterNonHttpsDuplicatesAndNonStrings() {
+        val json = registry(
+            previews = """["https://example.com/1.jpg", "http://example.com/2.jpg", "https://example.com/1.jpg", 7, "", "https://example.com/3.jpg"]""",
+        )
+        val plugin = MarketRegistryParser.parse(json.encodeToByteArray()).entries[0]
+        assertEquals(
+            listOf("https://example.com/1.jpg", "https://example.com/3.jpg"),
+            plugin.plugin?.previewUrls,
+        )
+    }
+
+    @Test
+    fun previewsKeepAtMostSix() {
+        val urls = (1..8).map { "https://example.com/$it.jpg" }
+        val json = registry(previews = urls.joinToString(",", "[", "]") { "\"$it\"" })
+        val plugin = MarketRegistryParser.parse(json.encodeToByteArray()).entries[0]
+        assertEquals(urls.take(6), plugin.plugin?.previewUrls)
+    }
+
+    @Test
+    fun previewsRequirePreviewsArrayField() {
+        val wrongField = registry().replace(
+            "\"publisherName\": \"milous\"",
+            "\"publisherName\": \"milous\", \"preview\": [\"https://example.com/1.jpg\"]",
+        )
+        val plugin = MarketRegistryParser.parse(wrongField.encodeToByteArray()).entries[0]
+        assertEquals(emptyList<String>(), plugin.plugin?.previewUrls)
+        val notArray = registry(previews = "\"https://example.com/1.jpg\"")
+        val notArrayPlugin = MarketRegistryParser.parse(notArray.encodeToByteArray()).entries[0]
+        assertEquals(emptyList<String>(), notArrayPlugin.plugin?.previewUrls)
+    }
+
+    @Test
     fun parsesApiKeyAuth() {
         val json = registry(mcpAuthType = "apiKey")
         val mcp = MarketRegistryParser.parse(json.encodeToByteArray()).entries[2]
@@ -115,6 +166,7 @@ class MarketRegistryParserTest {
         transport: String = "http",
         mcpAuthType: String = "oauth",
         apiKeyHeader: String? = "Authorization",
+        previews: String? = null,
     ): String {
         val secondId = if (duplicateId) "io.example.plugin" else "example-skill"
         val auth = when (mcpAuthType) {
@@ -138,7 +190,7 @@ class MarketRegistryParserTest {
               "tags": {"zh": ["插件"], "en": ["Plugin"]},
               "version": "1.0.0",
               "artifact": {"url": "https://example.com/p.ddp", "sha256": "$sha256", "size": 1024},
-              "plugin": {"apiLevel": 4, "minHostVersion": "0.2.0", "publisherKeyId": "plugin-key", "publisherName": "milous"}
+              "plugin": {"apiLevel": 4, "minHostVersion": "0.2.0", "publisherKeyId": "plugin-key", "publisherName": "milous"${if (previews == null) "" else ", \"previews\": $previews"}}
             },
             {
               "type": "skill",

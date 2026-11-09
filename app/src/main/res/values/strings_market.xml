@@ -104,6 +104,9 @@
     <string name="market_detail_info">信息</string>
     <string name="market_detail_previews">效果预览</string>
     <string name="market_preview_close">关闭</string>
+    <string name="market_preview_retry">加载失败，点按重试</string>
+    <string name="market_preview_page">%1$d/%2$d</string>
+    <string name="market_preview_content_description">%1$s 预览图 %2$d</string>
     <string name="market_type_mcp">连接器</string>
     <string name="market_auth_type_apikey">访问令牌</string>
     <string name="market_auth_type_oauth">账号授权</string>

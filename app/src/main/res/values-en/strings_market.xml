@@ -104,6 +104,9 @@
     <string name="market_detail_info">Details</string>
     <string name="market_detail_previews">Preview</string>
     <string name="market_preview_close">Close</string>
+    <string name="market_preview_retry">Failed to load. Tap to retry</string>
+    <string name="market_preview_page">%1$d/%2$d</string>
+    <string name="market_preview_content_description">%1$s preview %2$d</string>
     <string name="market_type_mcp">Connector</string>
     <string name="market_auth_type_apikey">Access token</string>
     <string name="market_auth_type_oauth">Account authorization</string>

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -35,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +55,7 @@ import io.github.whywood.deepdeep.design.DdLoadingBlock
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -528,7 +526,7 @@ private fun MarketDetailSheet(
                 .padding(horizontal = 24.dp)
                 .testTag("${testTagPrefix}_market_detail"),
         ) {
-            var previewViewerUrl by rememberSaveable { mutableStateOf<String?>(null) }
+            var previewViewerIndex by rememberSaveable { mutableStateOf<Int?>(null) }
             DdSectionLabel(stringResource(R.string.market_detail_about))
             val summary = entry.summary(language)
             if (summary.isNotBlank()) {
@@ -565,20 +563,30 @@ private fun MarketDetailSheet(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
                 ) {
-                    previews.forEach { url ->
+                    previews.forEachIndexed { index, url ->
                         MarketPreviewCard(
                             url = url,
+                            contentDescription = stringResource(
+                                R.string.market_preview_content_description,
+                                entry.name(language),
+                                index + 1,
+                            ),
                             modifier = Modifier
-                                .width(150.dp)
-                                .height(260.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            onClick = { previewViewerUrl = url },
+                                .width(144.dp)
+                                .height(320.dp)
+                                .clip(DdShapes.Medium),
+                            onClick = { previewViewerIndex = index },
                         )
                     }
                 }
             }
-            previewViewerUrl?.let { url ->
-                MarketPreviewViewer(url = url, onDismiss = { previewViewerUrl = null })
+            previewViewerIndex?.let { index ->
+                MarketPreviewViewer(
+                    urls = previews,
+                    initialPage = index,
+                    title = entry.name(language),
+                    onDismiss = { previewViewerIndex = null },
+                )
             }
             if (entry.type == MarketEntryType.Mcp && mcp != null) {
                 Spacer(Modifier.height(12.dp))
