@@ -79,7 +79,7 @@
     <string name="onboarding_privilege_root_body">需要系统授权；之后可以前往 设置 → 权限 继续配置。</string>
 
     <string name="personalization_avatar_title">头像</string>
-    <string name="personalization_avatar_empty">未设置</string>
+    <string name="personalization_avatar_empty">未设置时用这个</string>
     <string name="personalization_avatar_change">更换</string>
     <string name="personalization_avatar_remove">移除头像</string>
     <string name="personalization_avatar_pick">选择头像</string>
