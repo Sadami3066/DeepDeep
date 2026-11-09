@@ -46,7 +46,6 @@ class PluginUiProjectionTest {
         val snapshot = projection().snapshots(gate.views(), registry.snapshot()).single()
 
         assertEquals(PluginPhaseUi.PENDING_RESTART, snapshot.phase)
-        assertEquals(false, snapshot.updateAvailable)
     }
 
     @Test

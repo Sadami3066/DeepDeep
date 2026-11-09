@@ -94,6 +94,7 @@ internal class PluginRuntimeRegistry {
         runtime.externalHandle = null
         runtime.contributions = PluginContributions.Empty
         runtime.skillIds = emptyList()
+        runtime.materialized = false
         viewLocked(pluginId)
     }
 
@@ -110,6 +111,9 @@ internal class PluginRuntimeRegistry {
             runtime.contributions = result.contributions
             runtime.availability = result.availability
             runtime.materializationFailure = result.failure
+            if (runtime.plugin != null) {
+                runtime.materialized = result.failure == null
+            }
             if (result.failure != null) {
                 records[pluginId] = records.getValue(pluginId).copy(lastError = result.failure)
             }

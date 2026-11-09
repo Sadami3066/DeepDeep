@@ -1,7 +1,6 @@
 <resources>
     <string name="plugins_title">Plugins</string>
     <string name="plugins_back">Back</string>
-    <string name="plugins_refresh">Refresh</string>
     <string name="plugins_search_placeholder">Search plugins</string>
     <string name="plugins_empty">No plugins installed yet</string>
     <string name="plugins_empty_hint">Tap + in the top right to import a .ddp package</string>
@@ -16,7 +15,6 @@
     <string name="plugins_info_source">Source</string>
     <string name="plugins_info_source_external">External</string>
     <string name="plugins_info_source_builtin">Built-in</string>
-    <string name="plugins_info_update">Available version</string>
     <string name="plugins_info_version">Version</string>
     <string name="plugins_info_installed_version">Installed version</string>
     <string name="plugins_info_size">Size</string>
@@ -71,21 +69,6 @@
     <string name="plugins_import_success">Plugin imported</string>
     <string name="plugins_import_done">Plugin imported and active.</string>
     <string name="plugins_import_restart">Plugin imported; takes effect after DeepDeep restarts.</string>
-
-    <string name="plugins_check_updates">Check for updates</string>
-    <string name="plugins_updates_title">Plugin updates</string>
-    <string name="plugins_updates_empty">No updates available</string>
-    <string name="plugins_updates_item">%1$s → %2$s</string>
-    <string name="plugins_updates_install">Install update</string>
-    <string name="plugins_updates_available">%1$d plugin updates available</string>
-    <string name="plugins_update_staged">Staged; takes effect after restart</string>
-
-    <string name="plugins_source_row">Plugin source</string>
-    <string name="plugins_source_title">Plugin source</string>
-    <string name="plugins_source_hint">Unified index URL used for update checks; publisher trust is confirmed at first install.</string>
-    <string name="plugins_source_url">https://example.com/plugins/index.json</string>
-    <string name="plugins_source_auto_check">Check for updates on startup</string>
-    <string name="plugins_source_save">Save</string>
 
     <string name="plugins_page_title">Plugin page</string>
     <string name="plugins_page_unavailable">This plugin does not provide content for this page</string>

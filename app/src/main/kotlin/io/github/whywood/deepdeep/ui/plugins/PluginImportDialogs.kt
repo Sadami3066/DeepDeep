@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.ui.plugins
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,7 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -20,20 +18,12 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdListRow
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdTextField
-import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
-import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 
 @Composable
 internal fun PluginImportDialog(
@@ -145,162 +135,6 @@ internal fun PluginImportDialog(
                     enabled = !busy && (inspection.trusted || trustPublisher),
                 )
             }
-        },
-    )
-}
-
-@Composable
-internal fun PluginUpdatesDialog(
-    updates: List<PluginUpdateUi>,
-    busyId: String?,
-    stagedIds: Set<String>,
-    error: String?,
-    onUpdate: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    val context = LocalContext.current
-    DdDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(R.string.plugins_updates_title),
-        content = {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                if (updates.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.plugins_updates_empty),
-                        style = DdType.bodySmall,
-                        color = colors.inkSecondary,
-                        modifier = Modifier.padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Sm),
-                    )
-                } else {
-                    PluginGroup {
-                        updates.forEachIndexed { index, update ->
-                            if (index > 0) DdHairline()
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(update.name, style = DdType.body, color = colors.ink)
-                                    Text(
-                                        text = stringResource(
-                                            R.string.plugins_updates_item,
-                                            update.installedVersion,
-                                            update.availableVersion,
-                                        ),
-                                        style = DdType.bodySmall,
-                                        color = colors.inkTertiary,
-                                    )
-                                }
-                                Text(
-                                    text = formatPluginSize(context, update.size),
-                                    style = DdType.bodySmall,
-                                    color = colors.inkTertiary,
-                                )
-                                when {
-                                    update.pluginId in stagedIds -> Text(
-                                        text = stringResource(R.string.plugins_update_staged),
-                                        style = DdType.bodySmall,
-                                        color = colors.inkTertiary,
-                                    )
-
-                                    busyId == update.pluginId -> DdSpinner(size = 16.dp, strokeWidth = 2.dp)
-
-                                    else -> DdTextAction(
-                                        text = stringResource(R.string.plugins_updates_install),
-                                        onClick = { onUpdate(update.pluginId) },
-                                        color = colors.accent,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    error?.let { message ->
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = message,
-                            style = DdType.bodySmall,
-                            color = colors.danger,
-                            modifier = Modifier.padding(horizontal = DdSpacing.Xs),
-                        )
-                    }
-                }
-            }
-        },
-        actions = {
-            DdTextAction(
-                text = stringResource(R.string.plugins_close),
-                onClick = onDismiss,
-                color = colors.accent,
-            )
-        },
-    )
-}
-
-@Composable
-internal fun PluginRepositoryDialog(
-    settings: PluginRepositorySettings,
-    onSave: (PluginRepositorySettings) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    var url by remember(settings) { mutableStateOf(settings.indexUrl.orEmpty()) }
-    var autoCheck by remember(settings) { mutableStateOf(settings.autoCheck) }
-    DdDialog(
-        onDismissRequest = onDismiss,
-        title = stringResource(R.string.plugins_source_title),
-        content = {
-            Column(Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.plugins_source_hint),
-                    style = DdType.bodySmall,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Xs),
-                )
-                DdTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    placeholder = stringResource(R.string.plugins_source_url),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = DdSpacing.Xs),
-                    testTag = "plugins_source_url",
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xs, vertical = DdSpacing.Sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.plugins_source_auto_check),
-                        modifier = Modifier.weight(1f),
-                        style = DdType.body,
-                        color = colors.ink,
-                    )
-                    DdSwitch(checked = autoCheck, onCheckedChange = { autoCheck = it })
-                }
-            }
-        },
-        actions = {
-            DdTextAction(
-                text = stringResource(R.string.plugins_close),
-                onClick = onDismiss,
-                color = colors.inkSecondary,
-            )
-            DdTextAction(
-                text = stringResource(R.string.plugins_source_save),
-                onClick = {
-                    onSave(
-                        PluginRepositorySettings(
-                            indexUrl = url.trim().takeIf { it.isNotEmpty() },
-                            autoCheck = autoCheck,
-                        ),
-                    )
-                },
-                color = colors.accent,
-            )
         },
     )
 }

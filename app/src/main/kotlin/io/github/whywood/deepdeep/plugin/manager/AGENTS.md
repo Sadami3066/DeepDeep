@@ -16,12 +16,11 @@
 | `PluginActivationProtocol.kt` | 激活协议 prepare→probe→commit→swap 与失败矩阵 |
 | `PluginSessionHooks.kt` | 会话 hooks 绑定（`SessionBinding`）、每 `SessionBinding` 一次 `contributionsFor`（工具与会话 hooks 共用）、per-session hook source、run 级冻结、运行期/SDK 事件派发 |
 | `PluginUiProjection.kt` | UI 状态投影：只读 record+runtime+descriptor，不调用插件 |
-| `PluginRules.kt` | 纯规则：更新可用 |
 | `PluginRecoveryPolicy.kt` | 崩溃恢复纯策略：激活中断（marker attempts）与同版本连续启动次数 → 继续/需手动重试/自动禁用 |
 | `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、启停/卸载、导入/更新、槽位、页面、composer 动作、恢复） |
 | `PluginUiModels.kt` | UI 状态模型：快照（含 pages）/相位/可用性/恢复结果 |
-| `PluginExternalUiModels.kt` | 外部包 UI 模型：导入检查/安装结果/更新候选 |
-| `PluginExternalFlow.kt` | 外部 `.ddp` 流程：记录注册/启动激活（支持 skip 集合供崩溃守卫跳过）、导入校验/首装、启停装载、更新检查与暂存、Staged 同步 pending\*、错误落盘 |
+| `PluginExternalUiModels.kt` | 外部包 UI 模型：导入检查/安装结果 |
+| `PluginExternalFlow.kt` | 外部 `.ddp` 流程：记录注册/启动激活（支持 skip 集合供崩溃守卫跳过）、导入校验/首装、启停装载、Staged 同步 pending\*、错误落盘 |
 | `PluginExternalActivation.kt` | 外部 pending 版本的激活协议接线：prepare/probe（onUpgrade+contributions/skills/ui）/commit/swap/discard/abort；marker begin/complete 与失败时旧版本保持可用的 lastError 语义 |
 | `ExternalPluginRuntime.kt` | 外部 `.ddp` 的装载/句柄/提交/卸载包装，以及恢复原语（activation marker/startup 计数/previous 回滚/版本目录清理） |
 

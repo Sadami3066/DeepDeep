@@ -25,6 +25,7 @@ internal class ManagedPlugin(
     var skillIds: List<String> = emptyList(),
     var failure: String? = null,
     var materializationFailure: String? = null,
+    var materialized: Boolean = false,
 ) {
     fun view(record: PluginRecord): PluginRuntimeView = PluginRuntimeView(
         record = record,
@@ -39,6 +40,7 @@ internal class ManagedPlugin(
         skillIds = skillIds,
         failure = failure,
         materializationFailure = materializationFailure,
+        materialized = materialized,
     )
 }
 
@@ -55,6 +57,7 @@ internal data class PluginRuntimeView(
     val skillIds: List<String>,
     val failure: String?,
     val materializationFailure: String?,
+    val materialized: Boolean,
 ) {
     val id: String get() = record.id
 

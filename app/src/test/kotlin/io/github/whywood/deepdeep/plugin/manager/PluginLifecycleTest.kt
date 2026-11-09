@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
+import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.testPluginHost
 import java.nio.file.Files
@@ -11,7 +12,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -133,6 +133,66 @@ class PluginLifecycleTest {
         assertFalse(plugin.events.contains("enable"))
         assertEquals(1, plugin.count("close"))
     }
+
+    @Test
+    fun syncSkillsKeepsRecordedSkillsUntilPluginIsMaterialized() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val lifecycle = lifecycle(gate)
+        register(lifecycle, gate, CountingPlugin())
+        gate.markSkills("alpha", listOf("legacy"))
+
+        lifecycle.syncSkills("alpha")
+
+        assertEquals(listOf("legacy"), gate.view("alpha")?.skillIds)
+        assertFalse(gate.view("alpha")!!.materialized)
+    }
+
+    @Test
+    fun syncSkillsClearsSkillsWhenMaterializedPluginLegitimatelyHasNone() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val lifecycle = lifecycle(gate)
+        register(lifecycle, gate, CountingPlugin())
+        gate.markSkills("alpha", listOf("legacy"))
+        gate.applyMaterialized("alpha", materialized())
+
+        lifecycle.syncSkills("alpha")
+
+        assertEquals(emptyList<String>(), gate.view("alpha")?.skillIds)
+    }
+
+    @Test
+    fun detachPluginResetsMaterializedState() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val lifecycle = lifecycle(gate)
+        register(lifecycle, gate, CountingPlugin())
+        gate.applyMaterialized("alpha", materialized())
+
+        assertTrue(gate.view("alpha")!!.materialized)
+        assertNull(lifecycle.deactivate("alpha"))
+        assertFalse(gate.view("alpha")!!.materialized)
+    }
+
+    @Test
+    fun materializationFailureKeepsSkillsAndClearsMaterializedState() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val lifecycle = lifecycle(gate)
+        register(lifecycle, gate, CountingPlugin())
+        gate.applyMaterialized("alpha", materialized())
+        gate.markSkills("alpha", listOf("legacy"))
+        gate.applyMaterialized("alpha", materialized(failure = "materialization failed"))
+
+        lifecycle.syncSkills("alpha")
+
+        assertEquals(listOf("legacy"), gate.view("alpha")?.skillIds)
+        assertFalse(gate.view("alpha")!!.materialized)
+    }
+
+    private fun materialized(failure: String? = null): MaterializedPlugin = MaterializedPlugin(
+        contributions = PluginContributions.Empty,
+        availability = PluginAvailabilityUi.Available,
+        skills = emptyList(),
+        failure = failure,
+    )
 
     @Test
     fun parentScopeCancellationCancelsPluginScope() = runTest {

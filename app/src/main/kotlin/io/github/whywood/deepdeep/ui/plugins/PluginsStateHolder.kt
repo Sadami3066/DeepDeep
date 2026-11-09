@@ -1,11 +1,9 @@
 package io.github.whywood.deepdeep.ui.plugins
 
-import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
 import io.github.whywood.deepdeep.plugin.manager.ExternalInstallUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.plugin.manager.PluginRecoveryResult
-import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,21 +48,6 @@ internal class PluginsStateHolder(
 
     suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi =
         manager.installExternal(file, acceptPublisher)
-
-    suspend fun checkExternalUpdates(): List<PluginUpdateUi> = manager.checkExternalUpdates()
-
-    suspend fun loadRepositorySettings(): PluginRepositorySettings = manager.pluginRepositorySettings()
-
-    fun saveRepositorySettings(settings: PluginRepositorySettings) {
-        scope.launch {
-            runCatching { manager.savePluginRepositorySettings(settings) }
-            runCatching { manager.refreshAvailableUpdates() }
-        }
-    }
-
-    suspend fun stageUpdate(pluginId: String): String? =
-        runCatching { manager.stageExternalUpdate(pluginId) }
-            .getOrElse { error -> error.message ?: error.javaClass.simpleName }
 
     suspend fun retryActivation(pluginId: String): PluginRecoveryResult =
         runCatching { manager.retryActivation(pluginId) }

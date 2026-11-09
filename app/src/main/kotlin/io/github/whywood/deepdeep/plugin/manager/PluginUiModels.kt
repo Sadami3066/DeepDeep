@@ -36,7 +36,6 @@ data class PluginSnapshot(
     val enabled: Boolean,
     val phase: PluginPhaseUi,
     val availability: PluginAvailabilityUi,
-    val updateAvailable: Boolean,
     val pages: List<PluginPageUi>,
     val skills: List<String>,
     val installedSizeBytes: Long?,
@@ -59,7 +58,6 @@ data class PluginsUiState(
     val loading: Boolean = false,
     val busy: Boolean = false,
     val error: String? = null,
-    val availableUpdates: List<PluginUpdateUi> = emptyList(),
 ) {
     fun snapshot(pluginId: String): PluginSnapshot? = plugins.firstOrNull { it.id == pluginId }
 }

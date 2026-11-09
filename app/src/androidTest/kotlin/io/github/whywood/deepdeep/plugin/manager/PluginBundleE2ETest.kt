@@ -12,7 +12,6 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -91,30 +90,61 @@ class PluginBundleE2ETest {
             snapshot.installedVersion.orEmpty() + "/assets/icon.png",
         )
         assertTrue("${bundle.name} icon was not extracted: ${icon.absolutePath}", icon.isFile)
+        expectedSkills.forEach { skillId ->
+            val file = skillFile(skillId)
+            assertTrue("${bundle.name} skill was not synced: ${file.absolutePath}", file.isFile)
+        }
+        if (expectedSkills.isNotEmpty()) {
+            manager.setEnabled(pluginId, false)
+            awaitSnapshot(pluginId) { !it.enabled }
+            awaitSkills(expectedSkills, present = false)
+            manager.setEnabled(pluginId, true)
+            awaitSnapshot(pluginId) { it.enabled && it.phase == PluginPhaseUi.ACTIVE }
+            awaitSkills(expectedSkills, present = true)
+        }
     }
 
     @Test
     fun updatesPluginWhileIdleWithoutRestart() = runBlocking {
-        val base = bundleDirectory.listFiles().orEmpty().firstOrNull { it.name == "interop.ddp" }
-        assertNotNull("push interop.ddp to ${bundleDirectory.absolutePath}", base)
         val updateDirectory = requireNotNull(context.getExternalFilesDir("plugin-e2e-update"))
-        val update = File(updateDirectory, "interop.ddp")
-        assertTrue("push the newer interop bundle to ${update.absolutePath}", update.isFile)
+        val update = updateDirectory.listFiles().orEmpty()
+            .filter { it.extension == "ddp" }
+            .minByOrNull { it.name }
+        assertNotNull("push the newer plugin bundle to ${updateDirectory.absolutePath}", update)
+        val base = bundleDirectory.listFiles().orEmpty().firstOrNull { it.name == update!!.name }
+        assertNotNull("push ${update!!.name} to ${bundleDirectory.absolutePath}", base)
         withTimeout(90_000) { manager.start() }
         installVerified(base!!)
         val updateManifest = readManifest(update)
         val pluginId = updateManifest.getValue("id").jsonPrimitive.content
         val updateVersion = updateManifest.getValue("version").jsonPrimitive.content
+        val expectedSkills = (updateManifest["provides"] as? JsonObject)?.get("skills").stringList().orEmpty()
         val result = manager.installExternal(update, acceptPublisher = true)
         assertTrue("hot update failed: ${result.error}", result.success)
         assertFalse("hot update should not require a restart", result.restartRequired)
         val snapshot = awaitSnapshot(pluginId) { it.installed && it.enabled && it.installedVersion == updateVersion }
         assertEquals(PluginPhaseUi.ACTIVE, snapshot.phase)
+        assertEquals(updateVersion, snapshot.installedVersion)
+        assertEquals(expectedSkills, snapshot.skills)
+        awaitSkills(expectedSkills, present = true)
     }
 
     private fun allToolNames(): Set<String> =
         (manager.tools(SessionBinding()).map { it.name } + manager.deferredTools(SessionBinding()).map { it.name })
             .toSet()
+
+    private fun skillFile(skillId: String): File =
+        File(File(File(context.filesDir, "agent"), "skills"), "$skillId/SKILL.md")
+
+    private suspend fun awaitSkills(
+        skillIds: List<String>,
+        present: Boolean,
+        timeoutMillis: Long = 30_000,
+    ) {
+        withTimeout(timeoutMillis) {
+            while (skillIds.map { skillFile(it).isFile }.any { it != present }) delay(200)
+        }
+    }
 
     private fun readManifest(bundle: File): JsonObject = ZipFile(bundle).use { zip ->
         val entry = requireNotNull(zip.getEntry("assets/plugin.json")) { "missing assets/plugin.json in ${bundle.name}" }

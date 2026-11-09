@@ -24,13 +24,3 @@ data class ExternalInstallUi(
     val requiresConfirmation: Boolean = false,
     val restartRequired: Boolean = false,
 )
-
-data class PluginUpdateUi(
-    val pluginId: String,
-    val name: String,
-    val installedVersion: String,
-    val availableVersion: String,
-    val bundleSha256: String,
-    val size: Long,
-    val publisherKeyId: String,
-)

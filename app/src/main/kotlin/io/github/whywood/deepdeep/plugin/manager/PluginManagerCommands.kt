@@ -54,6 +54,8 @@ internal class PluginManagerCommands(
         if (!view.enabled) return
         externalFlow.persistEnabled(pluginId, false)
         gate.setEnabled(pluginId, false)
+        refresh()
+        lifecycle.syncSkills(pluginId)
         lifecycle.disable(pluginId)
         refresh()
         lifecycle.syncSkills(pluginId)

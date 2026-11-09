@@ -17,7 +17,6 @@ import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.plugin.host.declaredOnly
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
-import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import java.io.File
@@ -54,13 +53,6 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
                 repoDir = File(deps.appContext.filesDir, "skills"),
             ),
             external = ExternalPluginRuntime(deps.appContext, installer, BuildConfig.VERSION_NAME),
-            externalUpdates = ExternalUpdateSupport(
-                filesDir = deps.appContext.filesDir,
-                hostVersion = BuildConfig.VERSION_NAME,
-                installer = installer,
-                trustStore = trustStore,
-                recordStore = recordStore,
-            ),
             onContributionsChanged = {
                 deps.scope.launch { deps.host.reconfigure() }
             },

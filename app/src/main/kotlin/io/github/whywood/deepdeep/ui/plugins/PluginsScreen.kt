@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,18 +60,15 @@ import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.plugin.manager.ExternalInspectionUi
 import io.github.whywood.deepdeep.plugin.manager.PluginAvailabilityUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
-import io.github.whywood.deepdeep.plugin.manager.PluginUpdateUi
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
@@ -105,12 +101,6 @@ internal fun PluginsScreen(
     var importBusy by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf<Boolean?>(null) }
     var importError by remember { mutableStateOf<String?>(null) }
-    var updateBusyId by remember { mutableStateOf<String?>(null) }
-    var updateError by remember { mutableStateOf<String?>(null) }
-    var stagedUpdateIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var updates by remember { mutableStateOf<List<PluginUpdateUi>?>(null) }
-    var updateBusy by remember { mutableStateOf(false) }
-    var sourceSettings by remember { mutableStateOf<PluginRepositorySettings?>(null) }
     var uninstallTarget by remember { mutableStateOf<PluginSnapshot?>(null) }
     var detailPluginId by remember { mutableStateOf<String?>(null) }
     var tab by rememberSaveable { mutableStateOf(MARKET_TAB_MARKET) }
@@ -137,7 +127,6 @@ internal fun PluginsScreen(
         query = query,
         togglingIds = togglingIds,
         pluginsRoot = resolvedPluginsRoot,
-        updateBusy = updateBusy,
         onBack = onBack,
         tab = tab,
         onTabSelect = { tab = it },
@@ -152,17 +141,6 @@ internal fun PluginsScreen(
         onRollback = { snapshot -> scope.launch { holder.rollback(snapshot.id) } },
         onUninstall = { snapshot -> uninstallTarget = snapshot },
         onImport = { importPicker.launch(arrayOf("*/*")) },
-        onShowUpdates = { updates = state.availableUpdates },
-        onOpenSource = { scope.launch { sourceSettings = holder.loadRepositorySettings() } },
-        onCheckUpdates = {
-            scope.launch {
-                updateBusy = true
-                updates = runCatching { holder.checkExternalUpdates() }.getOrDefault(emptyList())
-                updateError = null
-                stagedUpdateIds = emptySet()
-                updateBusy = false
-            }
-        },
         marketRepository = marketRepository,
         onMarketInstalled = { holder.refresh() },
         modifier = modifier,
@@ -173,7 +151,6 @@ internal fun PluginsScreen(
         PluginDetailSheet(
             snapshot = snapshot,
             pluginsRoot = resolvedPluginsRoot,
-            availableUpdate = state.availableUpdates.firstOrNull { it.pluginId == snapshot.id },
             onDismiss = { detailPluginId = null },
         )
     }
@@ -208,40 +185,6 @@ internal fun PluginsScreen(
 
     importResult?.let { restartRequired ->
         PluginImportResultDialog(restartRequired = restartRequired, onDismiss = { importResult = null })
-    }
-
-    updates?.let { list ->
-        PluginUpdatesDialog(
-            updates = list,
-            busyId = updateBusyId,
-            stagedIds = stagedUpdateIds,
-            error = updateError,
-            onUpdate = { pluginId ->
-                scope.launch {
-                    updateBusyId = pluginId
-                    updateError = null
-                    val failure = holder.stageUpdate(pluginId)
-                    updateBusyId = null
-                    if (failure == null) {
-                        stagedUpdateIds = stagedUpdateIds + pluginId
-                    } else {
-                        updateError = failure
-                    }
-                }
-            },
-            onDismiss = { updates = null },
-        )
-    }
-
-    sourceSettings?.let { settings ->
-        PluginRepositoryDialog(
-            settings = settings,
-            onSave = { updated ->
-                holder.saveRepositorySettings(updated)
-                sourceSettings = null
-            },
-            onDismiss = { sourceSettings = null },
-        )
     }
 
     uninstallTarget?.let { target ->
@@ -280,7 +223,6 @@ private fun PluginsContent(
     query: String,
     togglingIds: Set<String>,
     pluginsRoot: File?,
-    updateBusy: Boolean,
     onBack: () -> Unit,
     tab: Int,
     onTabSelect: (Int) -> Unit,
@@ -295,9 +237,6 @@ private fun PluginsContent(
     onRollback: (PluginSnapshot) -> Unit,
     onUninstall: (PluginSnapshot) -> Unit,
     onImport: () -> Unit,
-    onShowUpdates: () -> Unit,
-    onOpenSource: () -> Unit,
-    onCheckUpdates: () -> Unit,
     marketRepository: MarketRepository,
     onMarketInstalled: suspend () -> Unit,
     modifier: Modifier = Modifier,
@@ -381,15 +320,6 @@ private fun PluginsContent(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Sm, bottom = DdSpacing.Huge),
             ) {
-                if (state.availableUpdates.isNotEmpty()) {
-                    item {
-                        UpdatesBanner(
-                            count = state.availableUpdates.size,
-                            onClick = onShowUpdates,
-                        )
-                        Spacer(Modifier.height(DdSpacing.Sm))
-                    }
-                }
                 when {
                     state.loading && state.plugins.isEmpty() -> Unit
 
@@ -457,40 +387,6 @@ private fun PluginsContent(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun UpdatesBanner(
-    count: Int,
-    onClick: () -> Unit,
-) {
-    val colors = deepDeepColors()
-    DdPressable(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().testTag("plugins_updates_available"),
-        shape = DdShapes.Segmented,
-        background = colors.accentSoft,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 44.dp)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DdIcon(icon = DdIcons.Download, tint = colors.accent, size = 16.dp)
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = stringResource(R.string.plugins_updates_available, count),
-                modifier = Modifier.weight(1f),
-                style = DdType.label,
-                color = colors.accent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            DdIcon(icon = DdIcons.ChevronRight, tint = colors.accent, size = 14.dp)
         }
     }
 }
@@ -665,7 +561,6 @@ private fun PluginRow(
 private fun PluginDetailSheet(
     snapshot: PluginSnapshot,
     pluginsRoot: File?,
-    availableUpdate: PluginUpdateUi?,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -750,13 +645,6 @@ private fun PluginDetailSheet(
                         DdListRow(
                             title = stringResource(R.string.plugins_info_installed_version),
                             value = snapshot.installedVersion,
-                        )
-                    }
-                    if (availableUpdate != null) {
-                        DdHairline()
-                        DdListRow(
-                            title = stringResource(R.string.plugins_info_update),
-                            value = availableUpdate.availableVersion,
                         )
                     }
                     if (publisher != null) {

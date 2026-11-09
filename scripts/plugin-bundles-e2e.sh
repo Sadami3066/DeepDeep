@@ -7,46 +7,52 @@ TEST_PACKAGE="io.github.whywood.deepdeep.test"
 RUNNER="androidx.test.runner.AndroidJUnitRunner"
 TEST_CLASS="io.github.whywood.deepdeep.plugin.manager.PluginBundleE2ETest"
 DEVICE_DIR="/sdcard/Android/data/${PACKAGE}/files/plugin-e2e"
+PLUGINS_DIR="${PLUGINS_DIR:-$(cd .. && pwd)/DeepDeep-Official-Plugins}"
+UPDATE_MODULE="${UPDATE_MODULE:-wecom}"
+UPDATE_VERSION="9.9.9"
+MODULES=(feishu wecom sysu micloud)
+
+UPDATE_MANIFEST="${PLUGINS_DIR}/${UPDATE_MODULE}/src/main/assets/plugin.json"
+UPDATE_BUNDLE="${PLUGINS_DIR}/${UPDATE_MODULE}/build/plugin/${UPDATE_MODULE}.ddp"
+UPDATE_STAGED="/tmp/deepdeep-${UPDATE_MODULE}-update.ddp"
+
+if [[ ! -d "$PLUGINS_DIR" ]]; then
+  echo "plugin repository not found: $PLUGINS_DIR" >&2
+  exit 1
+fi
 
 ./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal :app:assembleDebug :app:assembleDebugAndroidTest
 
 (
-  cd ../plugins
-  ./scripts/gradlew-locked \
-    :feishu:signPlugin \
-    :wecom:signPlugin \
-    :jwxt:signPlugin \
-    :micloud:signPlugin \
-    :sample:signPlugin \
-    :template:signPlugin \
-    :interop:signPlugin \
-    :feishu:verifyPlugin \
-    :wecom:verifyPlugin \
-    :jwxt:verifyPlugin \
-    :micloud:verifyPlugin \
-    :sample:verifyPlugin \
-    :template:verifyPlugin \
-    :interop:verifyPlugin
+  cd "$PLUGINS_DIR"
+  tasks=()
+  for module in "${MODULES[@]}"; do
+    tasks+=(":${module}:signPlugin" ":${module}:verifyPlugin")
+  done
+  ./scripts/gradlew-locked "${tasks[@]}"
 )
 
-INTEROP_MANIFEST="../plugins/interop/src/main/assets/plugin.json"
-INTEROP_BACKUP="$(mktemp)"
-cp "$INTEROP_MANIFEST" "$INTEROP_BACKUP"
-restore_interop() { cp "$INTEROP_BACKUP" "$INTEROP_MANIFEST"; rm -f "$INTEROP_BACKUP"; }
-trap restore_interop EXIT
-python3 - "$INTEROP_MANIFEST" <<'PY'
+UPDATE_BACKUP="$(mktemp)"
+cp "$UPDATE_MANIFEST" "$UPDATE_BACKUP"
+restore_update_manifest() {
+  cp "$UPDATE_BACKUP" "$UPDATE_MANIFEST"
+  rm -f "$UPDATE_BACKUP"
+  (cd "$PLUGINS_DIR" && ./scripts/gradlew-locked ":${UPDATE_MODULE}:signPlugin" >/dev/null 2>&1) || true
+}
+trap restore_update_manifest EXIT
+
+python3 - "$UPDATE_MANIFEST" "$UPDATE_VERSION" <<'PY'
 import json, sys
 from pathlib import Path
 path = Path(sys.argv[1])
-data = json.loads(path.read_text())
-data["version"] = "1.0.1"
-path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+data = json.loads(path.read_text(encoding="utf-8"))
+data["version"] = sys.argv[2]
+path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
-(cd ../plugins && ./scripts/gradlew-locked :interop:signPlugin >/dev/null)
-cp ../plugins/interop/build/plugin/interop.ddp /tmp/deepdeep-interop-update.ddp
-restore_interop
+(cd "$PLUGINS_DIR" && ./scripts/gradlew-locked ":${UPDATE_MODULE}:signPlugin" >/dev/null)
+cp "$UPDATE_BUNDLE" "$UPDATE_STAGED"
+restore_update_manifest
 trap - EXIT
-(cd ../plugins && ./scripts/gradlew-locked :interop:signPlugin >/dev/null)
 
 adb push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/deepdeep.apk >/dev/null
 adb push app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/deepdeep-test.apk >/dev/null
@@ -57,21 +63,15 @@ adb shell su -c "rm -f ${DEVICE_DIR}/*.ddp"
 adb shell su -c "mkdir -p ${DEVICE_DIR}-update"
 adb shell su -c "rm -f ${DEVICE_DIR}-update/*.ddp"
 
-for ddp in ../plugins/feishu/build/plugin/feishu.ddp \
-  ../plugins/wecom/build/plugin/wecom.ddp \
-  ../plugins/jwxt/build/plugin/jwxt.ddp \
-  ../plugins/micloud/build/plugin/micloud.ddp \
-  ../plugins/sample/build/plugin/sample.ddp \
-  ../plugins/template/build/plugin/template.ddp \
-  ../plugins/interop/build/plugin/interop.ddp; do
-  name="$(basename "$ddp")"
-  adb push "$ddp" "/data/local/tmp/$name" >/dev/null
-  adb shell su -c "cp /data/local/tmp/$name ${DEVICE_DIR}/$name"
-  adb shell su -c "chmod 644 ${DEVICE_DIR}/$name"
+for module in "${MODULES[@]}"; do
+  ddp="${PLUGINS_DIR}/${module}/build/plugin/${module}.ddp"
+  adb push "$ddp" "/data/local/tmp/${module}.ddp" >/dev/null
+  adb shell su -c "cp /data/local/tmp/${module}.ddp ${DEVICE_DIR}/${module}.ddp"
+  adb shell su -c "chmod 644 ${DEVICE_DIR}/${module}.ddp"
 done
 
-adb push /tmp/deepdeep-interop-update.ddp /data/local/tmp/interop-update.ddp >/dev/null
-adb shell su -c "cp /data/local/tmp/interop-update.ddp ${DEVICE_DIR}-update/interop.ddp"
-adb shell su -c "chmod 644 ${DEVICE_DIR}-update/interop.ddp"
+adb push "$UPDATE_STAGED" "/data/local/tmp/${UPDATE_MODULE}-update.ddp" >/dev/null
+adb shell su -c "cp /data/local/tmp/${UPDATE_MODULE}-update.ddp ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
+adb shell su -c "chmod 644 ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
 
 adb shell am instrument -w -e class "$TEST_CLASS" "${TEST_PACKAGE}/${RUNNER}"

@@ -1,7 +1,6 @@
 <resources>
     <string name="plugins_title">插件</string>
     <string name="plugins_back">返回</string>
-    <string name="plugins_refresh">刷新</string>
     <string name="plugins_search_placeholder">搜索插件</string>
     <string name="plugins_empty">还没有安装插件</string>
     <string name="plugins_empty_hint">点右上角「＋」导入 .ddp 插件包</string>
@@ -16,7 +15,6 @@
     <string name="plugins_info_source">来源</string>
     <string name="plugins_info_source_external">外部导入</string>
     <string name="plugins_info_source_builtin">内置</string>
-    <string name="plugins_info_update">可更新版本</string>
     <string name="plugins_info_version">版本</string>
     <string name="plugins_info_installed_version">已安装版本</string>
     <string name="plugins_info_size">大小</string>
@@ -71,21 +69,6 @@
     <string name="plugins_import_success">插件已导入</string>
     <string name="plugins_import_done">插件已导入并生效。</string>
     <string name="plugins_import_restart">插件已导入，重启 DeepDeep 后生效。</string>
-
-    <string name="plugins_check_updates">检查更新</string>
-    <string name="plugins_updates_title">插件更新</string>
-    <string name="plugins_updates_empty">没有可用更新</string>
-    <string name="plugins_updates_item">%1$s → %2$s</string>
-    <string name="plugins_updates_install">安装更新</string>
-    <string name="plugins_updates_available">发现 %1$d 个插件更新</string>
-    <string name="plugins_update_staged">已暂存，重启 App 后生效</string>
-
-    <string name="plugins_source_row">插件源</string>
-    <string name="plugins_source_title">插件源</string>
-    <string name="plugins_source_hint">统一索引 URL：插件更新从这里检查；发布者信任仍在首次安装时确认。</string>
-    <string name="plugins_source_url">https://example.com/plugins/index.json</string>
-    <string name="plugins_source_auto_check">启动时自动检查更新</string>
-    <string name="plugins_source_save">保存</string>
 
     <string name="plugins_page_title">插件页面</string>
     <string name="plugins_page_unavailable">该插件没有提供这个页面的内容</string>

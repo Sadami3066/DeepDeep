@@ -2,17 +2,28 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginHost
+import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.testPluginHost
+import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -21,9 +32,17 @@ class PluginManagerCommandsTest {
         override fun get(id: Int): String = "string_$id"
     }
 
-    private class Harness(val gate: PluginRuntimeRegistry, val commands: PluginManagerCommands, val cleared: MutableList<String>)
+    private class Harness(
+        val gate: PluginRuntimeRegistry,
+        val lifecycle: PluginLifecycle,
+        val manifest: PluginManifest,
+        val root: File,
+        val commands: PluginManagerCommands,
+        val cleared: MutableList<String>,
+        val notifications: AtomicInteger,
+    )
 
-    private fun harness(): Harness {
+    private fun harness(plugin: DeepDeepPlugin = CountingPlugin()): Harness {
         val root = Files.createTempDirectory("plugin-commands").toFile()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         val gate = PluginRuntimeRegistry()
@@ -45,22 +64,21 @@ class PluginManagerCommandsTest {
         gate.markLoaded(
             pluginId = "alpha",
             manifest = manifest,
-            plugin = CountingPlugin(),
+            plugin = plugin,
             host = testPluginHost(manifest),
             scope = runtime.scope,
         )
+        val notifications = AtomicInteger()
+        val refresh: suspend () -> Unit = { PluginContributionMaterializer(gate).refreshAll() }
+        val onContributionsChanged: () -> Unit = { notifications.incrementAndGet() }
         val externalFlow = PluginExternalFlow(
-            scope = scope,
-            state = state,
             gate = gate,
-            registry = registry,
             external = null,
-            externalUpdates = null,
             strings = strings,
             textResolver = textResolver,
             lifecycle = lifecycle,
-            refresh = {},
-            onContributionsChanged = {},
+            refresh = refresh,
+            onContributionsChanged = onContributionsChanged,
         )
         val cleared = mutableListOf<String>()
         val commands = PluginManagerCommands(
@@ -74,14 +92,26 @@ class PluginManagerCommandsTest {
             externalFlow = externalFlow,
             busy = AtomicBoolean(false),
             mutex = Mutex(),
-            refresh = {},
+            refresh = refresh,
             clearStartupCount = { pluginId ->
                 cleared += pluginId
                 true
             },
-            onContributionsChanged = {},
+            onContributionsChanged = onContributionsChanged,
         )
-        return Harness(gate, commands, cleared)
+        return Harness(gate, lifecycle, manifest, root, commands, cleared, notifications)
+    }
+
+    private class SkillPlugin(private val skillId: String) : DeepDeepPlugin {
+        override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
+
+        override fun skills(host: PluginHost): List<PluginSkill> = listOf(PluginSkill(skillId, "# $skillId"))
+    }
+
+    private suspend fun await(timeoutMillis: Long = 5_000, condition: () -> Boolean) {
+        withTimeout(timeoutMillis) {
+            while (!condition()) delay(20)
+        }
     }
 
     @Test
@@ -104,5 +134,45 @@ class PluginManagerCommandsTest {
 
         assertEquals(emptyList<String>(), harness.cleared)
         assertTrue(harness.gate.view("alpha")?.enabled == true)
+    }
+
+    @Test
+    fun disableRemovesActiveSkillsAndEnableRestoresThem() = runBlocking {
+        val harness = harness(SkillPlugin("alpha-skill"))
+        val activeSkill = File(harness.root, "skills/alpha-skill/SKILL.md")
+        val repoSkill = File(harness.root, "repo/alpha-skill/SKILL.md")
+
+        harness.commands.setEnabled("alpha", true)
+        await {
+            val view = harness.gate.view("alpha")
+            harness.notifications.get() == 1 && view != null && view.enabled &&
+                view.skillIds == listOf("alpha-skill") && activeSkill.isFile
+        }
+        assertTrue(activeSkill.isFile)
+        assertTrue(repoSkill.isFile)
+
+        harness.commands.setEnabled("alpha", false)
+        await {
+            val view = harness.gate.view("alpha")
+            harness.notifications.get() == 2 && view != null && !view.enabled &&
+                view.contributions.skills.isEmpty() && view.skillIds.isEmpty()
+        }
+        assertFalse(activeSkill.exists())
+        assertTrue(repoSkill.isFile)
+
+        harness.gate.markLoaded(
+            pluginId = "alpha",
+            manifest = harness.manifest,
+            plugin = SkillPlugin("alpha-skill"),
+            host = testPluginHost(harness.manifest),
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
+        )
+        harness.commands.setEnabled("alpha", true)
+        await {
+            val view = harness.gate.view("alpha")
+            harness.notifications.get() == 3 && view != null && view.enabled &&
+                view.skillIds == listOf("alpha-skill") && activeSkill.isFile
+        }
+        assertTrue(activeSkill.isFile)
     }
 }

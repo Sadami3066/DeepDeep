@@ -10,7 +10,6 @@ import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginServices
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
-import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +30,6 @@ class PluginHostManager internal constructor(
     private val servicesFactory: (pluginId: String, dataDir: File, manifest: PluginManifest, scope: CoroutineScope) -> PluginServices,
     private val skillStore: PluginSkillStore,
     private val external: ExternalPluginRuntime?,
-    private val externalUpdates: ExternalUpdateSupport? = null,
     private val onContributionsChanged: () -> Unit,
     private val busySessions: () -> Set<String> = { emptySet() },
 ) : PluginManagerDelegation() {
@@ -73,12 +71,8 @@ class PluginHostManager internal constructor(
     private val uiProjection = PluginUiProjection(textResolver)
     override val sessionHooks: PluginSessionHooks = PluginSessionHooks(scope, gate, registry)
     override val externalFlow: PluginExternalFlow = PluginExternalFlow(
-        scope = scope,
-        state = _state,
         gate = gate,
-        registry = registry,
         external = external,
-        externalUpdates = externalUpdates,
         strings = strings,
         textResolver = textResolver,
         lifecycle = lifecycle,
@@ -108,31 +102,32 @@ class PluginHostManager internal constructor(
 
     override val registrySnapshot: PluginRegistrySnapshot get() = registry.snapshot()
 
-    override suspend fun start() = mutex.withLock {
-        if (started) {
-            externalFlow.activatePendingVersions()
-            refreshLocked()
-            gate.ids().forEach { pluginId -> lifecycle.syncSkills(pluginId) }
-            return
-        }
-        _state.update { it.copy(loading = true) }
-        try {
-            externalFlow.registerRecords()
-            gate.publishTo(registry)
-            val startupBlocked = guardStartup()
-            externalFlow.activatePendingVersions(startupBlocked)
-            externalFlow.activateEnabledRecords(startupBlocked)
-            refreshLocked()
-            gate.views().filter { view -> view.enabled }.forEach { view ->
-                val failure = lifecycle.enable(view)
-                if (failure == null) external?.clearStartupCount(view.id)
-                externalFlow.recordFailure(view.id, failure)
+    override suspend fun start() {
+        mutex.withLock {
+            if (started) {
+                externalFlow.activatePendingVersions()
+                refreshLocked()
+                gate.ids().forEach { pluginId -> lifecycle.syncSkills(pluginId) }
+                return@withLock
             }
-            gate.ids().forEach { pluginId -> lifecycle.syncSkills(pluginId) }
-            externalFlow.scheduleUpdateCheck()
-            started = true
-        } finally {
-            _state.update { it.copy(loading = false) }
+            _state.update { it.copy(loading = true) }
+            try {
+                externalFlow.registerRecords()
+                gate.publishTo(registry)
+                val startupBlocked = guardStartup()
+                externalFlow.activatePendingVersions(startupBlocked)
+                externalFlow.activateEnabledRecords(startupBlocked)
+                refreshLocked()
+                gate.views().filter { view -> view.enabled }.forEach { view ->
+                    val failure = lifecycle.enable(view)
+                    if (failure == null) external?.clearStartupCount(view.id)
+                    externalFlow.recordFailure(view.id, failure)
+                }
+                gate.ids().forEach { pluginId -> lifecycle.syncSkills(pluginId) }
+                started = true
+            } finally {
+                _state.update { it.copy(loading = false) }
+            }
         }
     }
 

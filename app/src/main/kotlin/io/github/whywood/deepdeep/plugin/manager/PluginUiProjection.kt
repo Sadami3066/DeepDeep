@@ -25,11 +25,6 @@ internal class PluginUiProjection(
             enabled = view.enabled,
             phase = phaseUi(view, descriptor.phase),
             availability = view.availability,
-            updateAvailable = PluginRules.updateAvailable(
-                descriptor.manifest.version,
-                view.record.installedVersion,
-                view.record.pendingVersion,
-            ),
             pages = descriptor.contributions.ui.pages.map { page ->
                 PluginPageUi(page.id, textResolver.resolve(page.title))
             },

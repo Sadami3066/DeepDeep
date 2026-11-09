@@ -7,7 +7,6 @@ import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
-import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.io.File
@@ -37,23 +36,11 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
     override suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi =
         externalFlow.installExternal(file, acceptPublisher)
 
-    override suspend fun checkExternalUpdates(): List<PluginUpdateUi> = externalFlow.checkExternalUpdates()
-
-    override suspend fun stageExternalUpdate(pluginId: String): String? = externalFlow.stageExternalUpdate(pluginId)
-
     override suspend fun applyPendingUpdates() {
         if (!externalFlow.hasPendingUpdates()) return
         externalFlow.activatePendingVersions()
         refreshNow()
     }
-
-    override suspend fun pluginRepositorySettings(): PluginRepositorySettings = externalFlow.pluginRepositorySettings()
-
-    override suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings) {
-        externalFlow.savePluginRepositorySettings(settings)
-    }
-
-    override suspend fun refreshAvailableUpdates(): List<PluginUpdateUi> = externalFlow.checkExternalUpdates()
 
     override fun slotEntries(slotId: String): List<SlotRenderEntry> = slotRegistry.bindings(slotId)
 

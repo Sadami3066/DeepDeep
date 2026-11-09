@@ -6,31 +6,18 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.host.PluginRecord
-import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import io.github.whywood.deepdeep.plugin.host.external.InspectionResult
 import io.github.whywood.deepdeep.plugin.host.external.InstallResult
-import io.github.whywood.deepdeep.plugin.host.update.ExternalUpdateSupport
-import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
-import io.github.whywood.deepdeep.plugin.host.update.UpdateCheckResultUi
-import io.github.whywood.deepdeep.plugin.host.update.UpdateStageResultUi
 import java.io.File
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal class PluginExternalFlow(
-    private val scope: CoroutineScope,
-    private val state: MutableStateFlow<PluginsUiState>,
     private val gate: PluginRuntimeRegistry,
-    private val registry: PluginRegistry,
     private val external: ExternalPluginRuntime?,
-    private val externalUpdates: ExternalUpdateSupport?,
     private val strings: PluginStrings,
     private val textResolver: PluginTextResolver,
     private val lifecycle: PluginLifecycle,
@@ -111,18 +98,6 @@ internal class PluginExternalFlow(
             .forEach { view -> activation.activate(view.id) }
     }
 
-    fun scheduleUpdateCheck() {
-        val support = externalUpdates ?: return
-        scope.launch {
-            runCatching {
-                val settings = support.loadSettings()
-                if (!settings.autoCheck || settings.indexUrl.isNullOrBlank()) return@runCatching
-                val updates = checkExternalUpdates()
-                state.update { it.copy(availableUpdates = updates) }
-            }
-        }
-    }
-
     suspend fun loadForEnable(pluginId: String): Boolean {
         val runtime = external ?: return false
         val view = gate.view(pluginId) ?: return false
@@ -197,7 +172,6 @@ internal class PluginExternalFlow(
                     is InstallResult.Installed -> {
                         registerRecord(result.record)
                         val error = installFresh(result.record, runtime)
-                        refresh()
                         onContributionsChanged()
                         ExternalInstallUi(error == null, error, restartRequired = false)
                     }
@@ -234,61 +208,14 @@ internal class PluginExternalFlow(
         }
     }
 
-    suspend fun checkExternalUpdates(): List<PluginUpdateUi> {
-        val support = externalUpdates ?: return emptyList()
-        val updates = when (val typedResult = support.checkUpdates()) {
-            is UpdateCheckResultUi.Ready -> typedResult.candidates.map { candidate ->
-                PluginUpdateUi(
-                    pluginId = candidate.pluginId,
-                    name = gate.view(candidate.pluginId)?.let { view ->
-                        textResolver.resolve(view.manifest.name)
-                    } ?: candidate.pluginId,
-                    installedVersion = candidate.installedVersion,
-                    availableVersion = candidate.availableVersion,
-                    bundleSha256 = candidate.sha256,
-                    size = candidate.size,
-                    publisherKeyId = candidate.publisherKeyId,
-                )
-            }
-
-            else -> emptyList()
-        }
-        state.update { it.copy(availableUpdates = updates) }
-        return updates
-    }
-
-    suspend fun pluginRepositorySettings(): PluginRepositorySettings =
-        externalUpdates?.loadSettings() ?: PluginRepositorySettings()
-
-    suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings) {
-        externalUpdates?.saveSettings(settings)
-        scheduleUpdateCheck()
-    }
-
-    suspend fun stageExternalUpdate(pluginId: String): String? {
-        val support = externalUpdates ?: return "plugin updates are unavailable"
-        return when (val result = support.stageUpdate(pluginId)) {
-            is UpdateStageResultUi.Staged -> {
-                external?.record(pluginId)?.let { record ->
-                    gate.updateRecord(pluginId) { it.copy(pendingVersion = record.pendingVersion) }
-                    gate.attachExternalRecord(pluginId, record)
-                }
-                refresh()
-                activateStagedNow(pluginId)
-                null
-            }
-
-            is UpdateStageResultUi.Rejected -> result.reason
-        }
-    }
-
     suspend fun hasPendingUpdates(): Boolean =
         gate.views().any { view -> view.enabled && view.record.pendingVersion != null }
 
-    private suspend fun activateStagedNow(pluginId: String): Boolean {
+    internal suspend fun activateStagedNow(pluginId: String): Boolean {
         if (busySessions().isNotEmpty()) return false
         activation.activate(pluginId)
         refresh()
+        lifecycle.syncSkills(pluginId)
         onContributionsChanged()
         return gate.view(pluginId)?.record?.pendingVersion == null
     }

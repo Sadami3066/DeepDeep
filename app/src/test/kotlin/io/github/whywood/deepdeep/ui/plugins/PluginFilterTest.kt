@@ -67,7 +67,6 @@ class PluginFilterTest {
         enabled = true,
         phase = PluginPhaseUi.ACTIVE,
         availability = PluginAvailabilityUi.Available,
-        updateAvailable = false,
         pages = pages.map { io.github.whywood.deepdeep.plugin.manager.PluginPageUi(it, it) },
         skills = emptyList(),
         installedSizeBytes = null,

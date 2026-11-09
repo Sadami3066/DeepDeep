@@ -4,7 +4,6 @@ import io.github.whywood.deepdeep.plugin.api.ComposerAction
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
-import io.github.whywood.deepdeep.plugin.host.update.PluginRepositorySettings
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.flow.StateFlow
@@ -44,17 +43,7 @@ interface PluginManagerFacade {
 
     suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi
 
-    suspend fun checkExternalUpdates(): List<PluginUpdateUi>
-
-    suspend fun stageExternalUpdate(pluginId: String): String?
-
     suspend fun applyPendingUpdates()
-
-    suspend fun pluginRepositorySettings(): PluginRepositorySettings
-
-    suspend fun savePluginRepositorySettings(settings: PluginRepositorySettings)
-
-    suspend fun refreshAvailableUpdates(): List<PluginUpdateUi>
 
     suspend fun retryActivation(pluginId: String): PluginRecoveryResult
 
