@@ -1,0 +1,24 @@
+<svg width="900" height="1200" viewBox="0 0 900 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="900" y2="1200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1220"/><stop offset="1" stop-color="#111C31"/>
+    </linearGradient>
+    <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(760 120) rotate(130) scale(420)">
+      <stop stop-color="#3370FF" stop-opacity="0.35"/><stop offset="1" stop-color="#3370FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1200" rx="28" fill="url(#bg1)"/>
+  <rect width="900" height="1200" rx="28" fill="url(#g1)"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJK SC', 'PingFang SC', sans-serif">
+    <text x="64" y="104" fill="#3370FF" font-size="34" font-weight="700">01</text>
+    <text x="64" y="196" fill="#F8FAFC" font-size="56" font-weight="700">一句话订场地</text>
+    <text x="64" y="250" fill="#8FA3C8" font-size="26">中山大学 · 体育场馆</text>
+    <text x="64" y="316" fill="#6B7C99" font-size="24">&quot;明晚 8 点有空场吗？帮我订。&quot;</text>
+    <rect x="64" y="380" width="772" height="660" rx="28" fill="#0F172A" stroke="#2A3A58" stroke-width="2" stroke-dasharray="10 10"/>
+    <circle cx="450" cy="650" r="46" fill="#16213A" stroke="#33456B"/>
+    <path d="M438 628L468 650L438 672V628Z" fill="#7FA6FF"/>
+    <text x="450" y="748" fill="#8FA3C8" font-size="24" text-anchor="middle">演示 GIF 占位</text>
+    <text x="450" y="786" fill="#586A88" font-size="18" text-anchor="middle">3:4 · 建议 720×960 · 无声循环</text>
+    <text x="64" y="1128" fill="#586A88" font-size="20" letter-spacing="3">DEEPDEEP</text>
+  </g>
+</svg>

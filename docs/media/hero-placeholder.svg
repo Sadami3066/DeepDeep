@@ -1,0 +1,50 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="675" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#101A2E"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1010 120) rotate(125) scale(430)">
+      <stop stop-color="#3370FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#3370FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(150 640) rotate(-45) scale(380)">
+      <stop stop-color="#00D6B9" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#00D6B9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="675" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="675" rx="24" fill="url(#glowA)"/>
+  <rect width="1200" height="675" rx="24" fill="url(#glowB)"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJK SC', 'PingFang SC', sans-serif">
+    <text x="72" y="96" fill="#8FA3C8" font-size="20" font-weight="600" letter-spacing="2">DEEPDEEP · DEMO</text>
+    <text x="72" y="268" fill="#F8FAFC" font-size="62" font-weight="700">一句话，</text>
+    <text x="72" y="348" fill="#F8FAFC" font-size="62" font-weight="700">把手机上的事办完。</text>
+    <text x="76" y="410" fill="#9FB0CC" font-size="24">跑命令 · 点 App · 装插件 · 写小程序</text>
+    <g transform="translate(76 486)">
+      <rect width="132" height="52" rx="26" fill="#3370FF"/>
+      <path d="M30 18L52 26L30 34V18Z" fill="#FFFFFF"/>
+      <text x="64" y="33" fill="#FFFFFF" font-size="20" font-weight="600">看演示</text>
+    </g>
+    <text x="76" y="606" fill="#6B7C99" font-size="18">实机录屏占位 · 之后替换为 assets/demo-hero.gif（16:9）</text>
+  </g>
+  <g transform="translate(720 110)">
+    <rect x="0" y="0" width="390" height="455" rx="34" fill="#0F172A" stroke="#26344F" stroke-width="2"/>
+    <rect x="14" y="14" width="362" height="427" rx="24" fill="#0B1220"/>
+    <rect x="34" y="42" width="200" height="54" rx="18" fill="#1B2B4D"/>
+    <text x="52" y="76" fill="#C7D6F5" font-size="17" font-family="-apple-system, 'Noto Sans CJK SC', sans-serif">帮我订明晚的羽毛球场</text>
+    <rect x="84" y="112" width="272" height="88" rx="18" fill="#16213A"/>
+    <text x="102" y="142" fill="#9FB0CC" font-size="15" font-family="-apple-system, 'Noto Sans CJK SC', sans-serif">查空位 → 选场地 → 下单</text>
+    <rect x="102" y="160" width="120" height="24" rx="12" fill="#1F3358"/>
+    <text x="114" y="177" fill="#7FA6FF" font-size="13" font-family="ui-monospace, monospace">gym slots</text>
+    <rect x="232" y="160" width="106" height="24" rx="12" fill="#1F3358"/>
+    <text x="244" y="177" fill="#7FA6FF" font-size="13" font-family="ui-monospace, monospace">book --yes</text>
+    <rect x="34" y="226" width="322" height="170" rx="20" fill="#10281F" stroke="#1E5C43"/>
+    <circle cx="64" cy="260" r="14" fill="#22C55E"/>
+    <path d="M57 260L62 265L72 254" stroke="#0B1220" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="90" y="266" fill="#BBF7D0" font-size="19" font-weight="600" font-family="-apple-system, 'Noto Sans CJK SC', sans-serif">预订成功</text>
+    <text x="54" y="304" fill="#86EFAC" font-size="15" font-family="-apple-system, 'Noto Sans CJK SC', sans-serif">11-10 20:00–21:00 · 场地 6</text>
+    <text x="54" y="334" fill="#4ADE80" font-size="14" font-family="ui-monospace, monospace">#RB-8K2M4Q1Z</text>
+    <text x="54" y="372" fill="#6B7C99" font-size="13" font-family="-apple-system, 'Noto Sans CJK SC', sans-serif">积分 -30 · 已写入日历</text>
+  </g>
+</svg>
