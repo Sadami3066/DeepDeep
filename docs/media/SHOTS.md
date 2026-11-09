@@ -1,20 +1,23 @@
 # README 媒体资产
 
-README 直接使用 GitHub user-attachments 的视频链接。单独一行裸链接会被 GitHub 渲染成播放器；不要再写 `<video>` 标签，README 的 HTML sanitizer 会把它整个过滤掉。
+README 直接使用 GitHub user-attachments 的视频链接。单独一行裸链接会被 GitHub 渲染成播放器；不要写 `<video>` 标签，README 的 HTML sanitizer 会把它整个过滤掉。
+
+中文版使用 `README.md` 与 `hero-zh.webp`；英文版使用 `README.en.md` 与 `hero-en.webp`。
 
 ## 目录
 
 ```text
 docs/media/
-├── shots/                   # 实机截图
+├── shots/
 │   ├── drawer.jpg
 │   ├── home.jpg
 │   ├── personalization.jpg
 │   ├── providers.jpg
-│   └── settings.jpg
-├── hero-banner.svg          # 当前首屏；新 hero 到位后替换
-├── mascot.webp
-└── terminal.svg
+│   ├── settings.jpg
+│   └── ui-showcase.png
+├── hero-en.webp
+├── hero-zh.webp
+└── mascot.webp
 ```
 
 单张截图为 720×1280，JPEG q86，27–58KB。`ui-showcase.png` 是五张截图合并后的展示图，1920×680，约 310KB。
@@ -25,12 +28,12 @@ docs/media/
 
 | 名称 | 内容 | 链接 |
 |---|---|---|
-| `deepdeep-monitor.mp4` | Agent 轮询场馆 | https://github.com/user-attachments/assets/148208b2-11de-4ea5-a3a0-0b0378e6df34 |
-| `deepdeep-phone-control.mp4` | 悬浮窗操作其他应用 | https://github.com/user-attachments/assets/f20ce2ce-26e9-4f7c-8696-dea81d0a74e1 |
-| `deepdeep-miniapp.mp4` | 生成打卡待办小程序 | https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d |
-| `deepdeep-scan.mp4` | 扫码与跳转 | https://github.com/user-attachments/assets/0fcfc455-4a06-4f74-ba69-26f27d341b57 |
-| `deepdeep-remote.mp4` | 连接电脑 DSH | https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a |
-| `deepdeep-overlay-voice.mp4` | 悬浮语音输入 | https://github.com/user-attachments/assets/32ce705b-dd43-4677-8509-ea7ad7fcf49b |
+| `monitor.mp4` | Agent 轮询场馆 | https://github.com/user-attachments/assets/bfeaac5e-da31-4790-a9e3-3f7e9a6b2018 |
+| `phone-control.mp4` | 悬浮窗操作其他应用 | https://github.com/user-attachments/assets/32019883-ca2d-40f6-b18f-6c941131cc64 |
+| `miniapp.mp4` | 生成打卡待办小程序 | https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4 |
+| `scan.mp4` | 扫码与跳转 | https://github.com/user-attachments/assets/d387b523-4283-4269-9302-63f135e3541c |
+| `remote.mp4` | 连接电脑 DSH | https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae |
+| `overlay-voice.mp4` | 悬浮语音输入 | https://github.com/user-attachments/assets/99a8fa59-0e0b-404d-a56f-f00015c5647d |
 
 这些是 720×1280、H.264、无音轨的压缩版，单个 0.3–2.3MB。原始录屏保留在 Release：
 
@@ -74,7 +77,7 @@ PYCODE
 ```bash
 ffmpeg -i 帮我盯着.mp4 -vf scale=720:1280:flags=lanczos \
   -c:v libx264 -crf 26 -preset medium -pix_fmt yuv420p -an -movflags +faststart \
-  deepdeep-monitor.mp4
+  monitor.mp4
 ```
 
 `DeepDeep小程序.mp4` 先裁成 9:16 再缩放：
@@ -82,22 +85,22 @@ ffmpeg -i 帮我盯着.mp4 -vf scale=720:1280:flags=lanczos \
 ```bash
 ffmpeg -i DeepDeep小程序.mp4 -vf "crop=1080:1920:0:240,scale=720:1280:flags=lanczos" \
   -c:v libx264 -crf 26 -preset medium -pix_fmt yuv420p -an -movflags +faststart \
-  deepdeep-miniapp.mp4
+  miniapp.mp4
 ```
 
 上传（需要仓库写权限）：
 
 ```bash
 curl -X POST \
-  "https://uploads.github.com/user-attachments/assets?name=deepdeep-monitor.mp4&content_type=video/mp4&repository_id=1429875049" \
+  "https://uploads.github.com/user-attachments/assets?name=monitor.mp4&content_type=video/mp4&repository_id=1429875049" \
   -H "Authorization: Bearer <token>" \
-  --data-binary @deepdeep-monitor.mp4
+  --data-binary @monitor.mp4
 ```
 
 返回的 `url` 直接放进 README 的单元格或段落，单独一行。
 
-## 首屏
+## Hero
 
-`hero-banner.svg` 是当前占位图。新的首屏按 16:9 输出（建议 1200×675 或 1600×900），放到 `docs/media/hero.gif` 或 `docs/media/hero.png`，替换 README 引用即可。
+`hero-zh.webp` 与 `hero-en.webp` 都是 1881×836，WebP q90。它们分别服务中文和英文 README；替换时保持尺寸一致即可。
 
-首屏不承担功能说明；标题、定位和快速开始已经在上方，图片只需要呈现一个真实使用场景。
+Hero 不承担功能说明；标题、定位和快速开始已经在上方，图片只需要呈现一个真实使用场景。

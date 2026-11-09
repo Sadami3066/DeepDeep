@@ -4,26 +4,28 @@
 
 # DeepDeep
 
-**Android 上的个人 Agent**
+**Android 上的个人智能体**
 
 <sub>对话、系统操作与 Linux 环境，运行在同一个应用内。</sub>
 
-<a href="https://github.com/Sadami3066"><img src="https://img.shields.io/badge/内测申请-联系作者-1D4ED8?style=for-the-badge&logo=android&logoColor=white" alt="内测申请" /></a>
+[简体中文](README.md) · [English](README.en.md)
+
+<a href="https://github.com/Sadami3066/DeepDeep/releases/latest"><img src="https://img.shields.io/badge/下载-最新版本-2EA043?style=for-the-badge&logo=github&logoColor=white" alt="下载最新版本" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
-<img src="https://img.shields.io/badge/1.0.0-Private%20Beta-6B7280?style=flat-square" alt="1.0.0 Private Beta" />
+<img src="https://img.shields.io/badge/1.0.0-6B7280?style=flat-square" alt="1.0.0" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 <br />
 <br />
 
-<img src="docs/media/hero-banner.svg" width="880" alt="DeepDeep：Agent、Android 与 Linux 三层结构" />
+<img src="docs/media/hero-zh.webp" width="100%" alt="DeepDeep：你的个人智能体，在手机端运行" />
 
 </div>
 
-[概览](#概览) · [预览](#预览) · [UI 展示](#ui-展示) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [功能](#功能) · [开发](#开发与构建) · [文档](#文档与反馈) · [License](#license)
+[概览](#概览) · [预览](#预览) · [UI 展示](#ui-展示) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [功能](#功能) · [开发](#开发与构建) · [文档](#文档与反馈) · [贡献](#贡献) · [License](#license)
 
 ## 概览
 
@@ -31,7 +33,7 @@ DeepDeep 面向需要在手机上完成实际任务的用户。它将 Agent 运�
 
 适合需要在手机上处理文件、检索资料、操作应用、运行脚本，或把手机作为随身 Linux 环境的用户。
 
-当前版本为 1.0.0，处于小范围内测，安装包由作者分发，源码暂未公开。
+当前版本为 1.0.0，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest)；源码暂未公开。
 
 ## 预览
 
@@ -39,21 +41,21 @@ DeepDeep 面向需要在手机上完成实际任务的用户。它将 Agent 运�
 <tr>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/148208b2-11de-4ea5-a3a0-0b0378e6df34
+https://github.com/user-attachments/assets/bfeaac5e-da31-4790-a9e3-3f7e9a6b2018
 
 <b>Agent 运行时</b><br />
 <sub>查询空位并创建后台任务。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/f20ce2ce-26e9-4f7c-8696-dea81d0a74e1
+https://github.com/user-attachments/assets/32019883-ca2d-40f6-b18f-6c941131cc64
 
 <b>Android 系统集成</b><br />
 <sub>在悬浮窗中操作其他应用。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d
+https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4
 
 <b>小程序</b><br />
 <sub>现场生成打卡待办。</sub>
@@ -62,21 +64,21 @@ https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d
 <tr>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/0fcfc455-4a06-4f74-ba69-26f27d341b57
+https://github.com/user-attachments/assets/d387b523-4283-4269-9302-63f135e3541c
 
 <b>万能扫一扫</b><br />
 <sub>识别二维码并跳转到对应应用。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a
+https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 
 <b>远程连接</b><br />
 <sub>连接电脑上的 DSH。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/32ce705b-dd43-4677-8509-ea7ad7fcf49b
+https://github.com/user-attachments/assets/99a8fa59-0e0b-404d-a56f-f00015c5647d
 
 <b>悬浮语音</b><br />
 <sub>在桌面悬浮条中直接提问。</sub>
@@ -92,7 +94,7 @@ https://github.com/user-attachments/assets/32ce705b-dd43-4677-8509-ea7ad7fcf49b
 
 ## 快速开始
 
-1. **获取安装包。** 当前版本通过内测分发，请联系 [@Sadami3066](https://github.com/Sadami3066) 获取 `DeepDeep-1.0.0.apk`。
+1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest) 下载最新 `DeepDeep-1.0.0.apk`。
 2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入 6 屏引导；可以跳过，之后在设置中逐项完成。
 3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。模型与思考档按会话独立选择。
 4. **初始化 Linux。** 进入「设置 → Linux 设置」完成 Alpine 初始化；之后可以在对话中直接使用 `bash`。
@@ -111,7 +113,7 @@ adb install -r DeepDeep-1.0.0.apk
 | 项目 | 说明 |
 |---|---|
 | 系统 | Android 10 及以上 |
-| 安装包 | APK，当前由作者本地签名并分发 |
+| 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases/latest) 下载 APK |
 | 账号 | 没有账号系统；模型 Key 仅保存在本机 |
 | 升级 | 使用同一签名覆盖安装；更换签名需要先卸载，卸载会删除本机会话与凭据 |
 | 网络 | 对话内容只发送给已配置的模型厂商；市场与更新检查访问 GitHub |
@@ -126,7 +128,7 @@ adb install -r DeepDeep-1.0.0.apk
 | 权限 | 设置 → 权限 | 普通 / 无线调试 / Root 三档；屏幕操作默认关闭 |
 | Linux | 设置 → Linux 设置 | 初始化 Alpine；安装命令、Node、Python 与编译工具链 |
 | Android 集成 | 设置 → Android 设置 | 悬浮窗、系统助手、通知与分享接收 |
-| 远程连接 | 抽屉 → 远程连接 | 通过 `dsh-mobile` 配对电脑 |
+| 远程连接 | 抽屉 → 远程连接 | 通过 [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) 配对电脑 |
 | 插件 | 抽屉 → 插件 | 导入签名 `.ddp`；查看能力清单与运行状态 |
 | 记忆 | 自动 | 会话结束时沉淀；可搜索，也可注入当前会话 |
 
@@ -141,12 +143,7 @@ adb install -r DeepDeep-1.0.0.apk
 
 ### Linux 环境
 
-<table>
-<tr>
-<td width="58%"><img src="docs/media/terminal.svg" width="100%" alt="在手机内执行构建命令" /></td>
-<td width="42%" valign="middle">Alpine 通过 proot 运行，不依赖 root；初始化后可直接使用 <code>bash</code>，并按需安装 Node、Python、数据库客户端和 Android 编译工具链。工作文件默认位于 App 工作区，文件工具使用绝对路径。</td>
-</tr>
-</table>
+Alpine 通过 proot 运行，不依赖 root；初始化后可直接使用 `bash`，并按需安装 Node、Python、数据库客户端和 Android 编译工具链。工作文件默认位于 App 工作区，文件工具使用绝对路径。
 
 ## 设计
 
@@ -163,7 +160,7 @@ DeepDeep 将三类能力放在同一个应用中：Agent 运行时、Android 系
 | **审批** | 只分普通、无线调试、Root 三档，不逐条确认命令 |
 | **运行位置** | 任务在本机执行；关闭 App 后停止，目标续跑只在进程内有效 |
 | **受保护页面** | 支付、密码等页面禁止截图，Agent 会把控制权交还给你 |
-| **分发** | 1.0.0 为本地分发的内测版，未上架应用商店，源码暂未公开 |
+| **分发** | 1.0.0 通过 GitHub Releases 分发，未上架应用商店，源码暂未公开 |
 
 ## 开发与构建
 
@@ -204,7 +201,7 @@ DeepDeep 将三类能力放在同一个应用中：Agent 运行时、Android 系
 
 ## 贡献
 
-当前为私有内测，暂不接受外部 PR。问题与建议可以通过 [@Sadami3066](https://github.com/Sadami3066) 联系作者。插件作者可以从 [插件开发](docs/PLUGIN_DEV.md) 与 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) 开始。
+欢迎提交 Issue 与 PR。提交前请阅读[贡献指南](CONTRIBUTING.zh-CN.md)。插件作者可以从[插件开发](docs/PLUGIN_DEV.md)与 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) 开始。安全相关问题请不要公开提交，直接联系作者。
 
 ## License
 
