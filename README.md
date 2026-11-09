@@ -1,145 +1,183 @@
+<div align="center">
+
+<img src="docs/media/mascot.webp" width="88" alt="DeepDeep" />
+
+# DeepDeep
+
+**让手机自己动手。**
+
+<sub>A phone that works for you.</sub>
+
+完整 Agent Harness、Android 原生能力和一台 Linux，装在同一个 App 里。
+
+<a href="https://github.com/Sadami3066"><img src="https://img.shields.io/badge/内测申请-联系作者-1D4ED8?style=for-the-badge&logo=android&logoColor=white" alt="内测申请" /></a>
+
+<img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
+<img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
+<img src="https://img.shields.io/badge/冷启动-1.2s-0EA5E9?style=flat-square" alt="Cold start 1.2s" />
+<img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
+
+<br/>
+<br/>
+
+<img src="docs/media/hero-banner.svg" width="880" alt="DeepDeep：Agent、Android 与 Linux 三层" />
+
+<sub>实机演示位 · 之后替换为 16:9 的 <code>hero.gif</code></sub>
+
+</div>
+
+DeepDeep 不是一个更大的聊天框。
+
+它把三样东西放进同一部手机：一个完整的 Agent Harness、Android 的系统能力、一台随身的 Linux。于是它接得住任务，也够得到系统——**不需要 root**。
+
+## 三件事，同时成立
+
+| 完整的 Agent | 一部真正的 Android | 一台随身的 Linux |
+|---|---|---|
+| 工具、MCP、技能、插件、记忆、定时任务，都在同一个循环里 | 文件、虚拟屏、ADB/Root、系统助手、悬浮窗 | `bash`、办公、开发、构建插件 |
+| 它知道下一步该调用什么，也知道做完了没有 | 它能在后台操作 App，不抢你正在用的主屏 | 它能在手机里编译代码，甚至重新构建自己 |
+
+## 一个完整的 Agent
+
+从「想」到「做」，中间不缺零件。
+
+| | |
+|---|---|
+| **工具** | 读写文件、执行命令、操作屏幕、读写日历、搜索网页；失败会重试，长任务转后台 |
+| **MCP** | Streamable HTTP + OAuth，工具按需加载，不把几百个 schema 塞进上下文 |
+| **技能** | 把你的流程写成 `SKILL.md`，需要时加载；也可以让 Agent 自己写 |
+| **插件** | 工具、技能、提示词段和自绘页面，一个 `.ddp` 全部带走 |
+| **记忆** | 分层长期记忆，自动沉淀，可搜索，可注入当前会话 |
+| **定时任务** | 五段 cron，绑定会话；到点把结果投递回原对话 |
+
+模型有 42 家 Provider，API Key 或 OAuth 都行；模型与思考档按会话独立，不绑定全局。
+
+## 它住得够深
+
+很多手机 Agent 只能「看屏幕、点按钮」。DeepDeep 还能碰文件、碰系统、碰权限。
+
 <table>
 <tr>
-<td><img src="docs/media/mascot.webp" width="30" alt="" /> &nbsp;<b>DEEPDEEP</b></td>
-<td align="right"><sub>Android 10+ · 1.0.0 · Private beta</sub></td>
-</tr>
-</table>
-
-<h1>你的手机里，<br/>住着一台小电脑。</h1>
-
-<sub>A personal agent that lives on your Android phone.</sub>
-
-DeepDeep 把 Agent、Alpine Linux 和一层可编程界面装进 Android。
-
-它不只是聊天，它替你把事做完。
-
-<table>
-<tr>
-<td width="380" valign="top"><img src="docs/media/phone-hero.svg" width="360" alt="DeepDeep 在手机上完成一次订场" /></td>
+<td width="330" valign="top"><img src="docs/media/phone-hero.svg" width="300" alt="DeepDeep 在手机上完成一次订场" /></td>
 <td valign="top">
 
-<p><code>01 对话</code> 42 家 Provider，按会话独立切换模型与思考档</p>
-<p><code>02 终端</code> Alpine、bash，Node / Python 按需安装；后台任务与定时任务都在这里跑</p>
-<p><code>03 屏幕</code> 后台虚拟屏里点按滑动输入，不抢你正在用的主屏</p>
-
-<blockquote>一台能揣进口袋的 Linux 机器，只是恰好会聊天。</blockquote>
-
-<p><a href="https://github.com/Sadami3066"><b>内测申请 →</b></a><br/>
-<sub>实机演示录制中 · 规格见 <a href="docs/media/SHOTS.md">docs/media/SHOTS.md</a></sub></p>
+- **本地文件**：真实绝对路径，读写、预览、分享、交付；不经过中转服务器。
+- **虚拟屏幕**：在后台虚拟屏里启动 App、点击、滑动、输入，主屏继续用。
+- **Shell**：普通档 `bash`；需要系统能力时，无线调试 `adb_shell` 或 Root `root_shell`。
+- **系统助手**：设为默认助手后，长按电源键或助手手势唤起，直接在任意 App 上交代任务。
+- **悬浮窗**：小鲸鱼显示进度、提问和交付；点开是实时运行面板，长按看虚拟屏。
 
 </td>
 </tr>
 </table>
 
----
+还有三个小东西，平时最常用：
 
-## 不是聊天框，是运行环境
+- **小程序**：Agent 现场写的 HTML 轻应用，能读自己的数据、调用一次性 Agent，还能添加到桌面。
+- **万能扫一扫**：相机里同时识别多个二维码，按内容路由到对应 App 的扫一扫、浏览器或剪贴板。
+- **帮我盯**：一句话挂一个后台任务，轮询网页或接口；条件满足就自动执行，结果回到对话。
 
-大多数手机 Agent 停在「看屏幕、点按钮」。
+## 它也是一台 Linux
 
-DeepDeep 多给了两层：一个真正的 Linux，和一套能装东西的插件与小程序。于是同一台手机既能查教务、跑脚本，也能订场地、写页面——**不需要 root**。
+<img src="docs/media/terminal.svg" width="880" alt="在手机里构建插件" />
 
-## 一天
+Alpine 跑在 proot 里，不需要 root。常用命令、Node、Python、数据库客户端都能装；办公套件和编译工具链也能装。
 
-| 时间 | 你说 | 它做 | 画面 |
-|---|---|---|---|
-| **07:50** | 今天几节课？ | `sysu jwxt schedule --today`，8:00 第一门 | <img src="docs/media/slot-1.svg" width="160" alt="" /> |
-| **12:10** | 群里这周定了什么？ | 飞书插件翻消息和文档，整理出 4 条决定 | <img src="docs/media/slot-2.svg" width="160" alt="" /> |
-| **21:00** | 盯南校园羽毛球，有空位就订 | 60 秒轮询，抢到 20:00 场，扣 30 积分 | <img src="docs/media/slot-3.svg" width="160" alt="" /> |
+更有意思的是：给它源码和 Android SDK，它能在手机里编译插件，甚至重新构建自己。喜欢什么功能，改就是了。
 
-<sub>画面为 GIF 占位，实机录制中。</sub>
+## 它连得上你的电脑
 
-<details>
-<summary><b>一次调用大概长这样</b></summary>
+抽屉里的「远程连接」通过 `dsh-mobile` 接上电脑上的 DSH：
 
-<sub>示意；具体输出取决于插件、模型和权限档。</sub>
+- 扫码或粘贴配对链接，首次连接固定证书，之后只信任同一台电脑。
+- 局域网优先，不通时自动走远程入口；多台电脑按 installationId 合并成一行。
+- 连接页就是电脑上的 DSH 手机版，会话、消息、工作区与电脑一致。
 
-```text
-你  今天几节课？
-它  sysu jwxt schedule --today
-    → 3 门课：08:00 高等数学，10:00 大学物理，14:00 英语
+手机负责随手交代，电脑负责重活。
 
-你  把这周的课件整理成提纲
-它  bash: find ~/Downloads -name '*.pdf'
-    read → 12 份 PDF → 输出 markdown
+## 纯 Kotlin，快得不像 Agent
 
-你  给我做个课程表
-它  miniapp_create → app/index.html
-    present → 已添加到桌面
+| | |
+|---|---|
+| **冷启动** | 1.2 秒 |
+| **运行时** | pi2kotlin：Agent 循环、工具调度、会话存储都是 Kotlin |
+| **不背运行时** | App 本身不内嵌 Node；需要 Node 的插件在自己的 Linux 里装 |
+| **插件** | 纯 Kotlin `plugin-api`，18 项能力声明，热升级不重启 |
+
+DeepDeep 把 Agent 内核直接编译进 App，Linux 只在需要时启动；不需要为了跑 Agent 常驻一个 Node 运行时。
+
+## 插件是 Kotlin
+
+插件不是脚本，是能声明能力、提供页面、参与生命周期的 Kotlin 模块：
+
+```json
+{
+  "id": "com.example.myplugin",
+  "version": "1.0.0",
+  "entryClass": "com.example.MyPlugin",
+  "capabilities": ["linux", "files", "network", "ui"]
+}
 ```
 
-</details>
+- 能力清单在安装前展示，宿主只注入声明过的服务。
+- 插件可以带自己的设置页、登录页和状态页，不用回到主界面。
+- 更新必须同钥；发布者、sha256、能力清单都在确认页里。
 
-## 剖面
+> 插件与 App 同进程、同权限，没有沙箱。只安装可信来源的 `.ddp`。
 
-```text
-Android
-├─ Compose UI          聊天 · 文件 · 设置 · 插件页 · 小程序
-├─ Agent runtime       pi2kotlin · pi-ai · pi-agent
-├─ Tools               bash · screen_* · job/timer · miniapp · MCP
-├─ Alpine (proot)      Node · Python · shell
-└─ Privileged bridge   ADB（无线调试）/ Root（可选）
-```
+## 它记得住
 
-模型用你自己的 Key，会话与文件留在设备上。没有 DeepDeep 账号，也没有中转服务器。
+记忆不是一段越来越长的聊天记录，而是分层的：
 
-## 权限阶梯
-
-| 档位 | 工具 | 说明 |
-|---|---|---|
-| **普通** | `bash` | proot 用户空间，能跑命令和脚本；**不是安全沙箱** |
-| **无线调试** | `adb_shell` | 用系统配对码连接，App 内嵌 ADB 守护进程；重启后需重新打开无线调试 |
-| **Root** | `root_shell` | 交给系统 root 管理器授权，只在后端可用时注册工具 |
-
-屏幕操作开关默认关闭；打开后还需要 ADB 或 Root 后端实际可用。Agent 默认在**后台虚拟屏**里操作，不抢占你正在用的主屏；主屏必须显式 `target=main`。
-
-## 插件是器官
-
-App 出厂不带插件。能力靠装：
-
-| 插件 | 能做什么 |
+| 区域 | 放什么 |
 |---|---|
-| **飞书** | 通过官方 `lark-cli` 读写消息、日历、云文档、云空间、邮箱与任务 |
-| **企业微信** | 扫码授权后操作消息、邮件、文档、日程与待办 |
-| **中山大学 CLI** | 课表、成绩、作业、课件下载、体育场馆预约、网费查询与续费 |
-| **小米云服务** | 读取笔记、待办、短信、联系人、相册与录音 |
+| **用户与我** | 你是谁、偏好、习惯、长期约定 |
+| **当下与将来** | 正在做的事、接下来的安排 |
+| **经验与教训** | 踩过的坑、可复用的方法 |
+| **日记 / 月 / 年** | 原始记录、按月汇总、按年回看 |
 
-插件、技能与远程 MCP 都可以从 [DeepDeep 市场](https://github.com/Sadami3066/deepdeep-market) 获取；索引经过 ECDSA 签名，制品核对 sha256。
+会话结束时自动沉淀，按天和按月汇总；需要时搜索，或把摘要注入当前会话。它不会把所有历史都塞进上下文，但该记得的不会丢。
 
-> 插件与 App 同进程、同权限，没有沙箱。只安装可信来源的 `.ddp`；首次安装会展示发布者、sha256 与能力清单，更新必须同钥。
+## 市场
 
-## 界面是长出来的
+插件、技能、MCP 统一放在 [DeepDeep 市场](https://github.com/Sadami3066/deepdeep-market)：
 
-小程序不是固定模板，而是 Agent 按你的需求现场写的 HTML/CSS/JS：
+- 索引经过 ECDSA 签名，制品核对 sha256。
+- 插件、技能、MCP 三类条目，装完即用，不用自己找服务器、配 JSON。
+- 官方插件：飞书、企业微信、中山大学 CLI、小米云服务。
 
-- 页面通过 bridge 读写自己的 SQLite 数据，按小程序隔离。
-- 页面里的 `app.agent.*` 可以编排一次性 Agent，用完即走。
-- 做好后「添加到桌面」，点图标直接打开。
-
-课程表、记账、纪念日、抽签、小工具都可以是它。也可以把一次性的任务固化成每天都能点的按钮。
-
-## 它做不到什么
-
-| 边界 | 说明 |
-|---|---|
-| **不是安全沙箱** | Linux 是 proot 用户空间；插件与 App 同权限。能力给你，边界也给你 |
-| **不做二次审批** | 只有普通 / ADB / Root 三档；命令执行前不会再逐条问你 |
-| **不是云手机** | 所有任务都在你手机上跑，关掉 App 就停；目标续跑只在进程内有效 |
-| **不保证受保护页面** | 支付、密码页禁止截图，Agent 会把控制权交还给你 |
-| **暂时不上架** | 1.0.0 本地分发，源码未公开；接口与插件 API 仍可能变化 |
+App 出厂不带插件；能力按需装，卸载会带走插件文件、登录信息与技能。
 
 ## 装上
 
 1. **申请内测**：[联系作者](https://github.com/Sadami3066) 获取安装包。
-2. **连一个模型**：推荐 DeepSeek，也可以选 Anthropic、OpenAI、Gemini、OpenRouter、Kimi 等，支持 OAuth 或 API Key。
+2. **连一个模型**：推荐 DeepSeek，也可以选 Anthropic、OpenAI、Gemini、OpenRouter、Kimi 等。
 3. **初始化 Linux**：首次进入「Linux 设置」按提示装好 Alpine。
 4. **选权限档**：先用普通档；要操作 App 时再开无线调试或 Root。
 5. **说一句话**：比如「看看我明天几点上课」「把这份课件整理成复习提纲」。
 
 首次安装会走 6 屏引导，可以跳过。
 
+## 边界
+
+| | |
+|---|---|
+| **不是安全沙箱** | Linux 是 proot 用户空间；插件与 App 同权限 |
+| **不做二次审批** | 只有普通 / ADB / Root 三档；命令执行前不会再逐条问你 |
+| **不是云手机** | 任务都在你手机上跑，关掉 App 就停；目标续跑只在进程内有效 |
+| **不保证受保护页面** | 支付、密码页禁止截图，Agent 会把控制权交还给你 |
+| **暂时不上架** | 1.0.0 本地分发，源码未公开；接口与插件 API 仍可能变化 |
+
 <details>
-<summary><b>从源码构建</b></summary>
+<summary><b>架构与从源码构建</b></summary>
+
+```text
+app/          Compose UI · 聊天 · 文件 · 设置 · 插件页 · 小程序
+runtime/      pi2kotlin · memory · tools · session
+plugin-api/   插件契约与能力服务
+design/       设计系统与图标
+shell/        ADB / Root 特权通道
+```
 
 需要 JDK 17+、Android SDK Platform 36 + build-tools 36.0.0。
 
@@ -158,7 +196,7 @@ App 出厂不带插件。能力靠装：
 
 **1.0.0 · Private Beta。** 目前由作者本地构建与分发，没有上架应用商店；源码暂未公开。
 
-已知边界都写在 [docs/GUIDE.md](docs/GUIDE.md)，设计取舍在 [docs/DECISIONS.md](docs/DECISIONS.md)，插件开发在 [docs/PLUGIN_DEV.md](docs/PLUGIN_DEV.md)。
+功能与边界详见 [docs/GUIDE.md](docs/GUIDE.md)，设计取舍在 [docs/DECISIONS.md](docs/DECISIONS.md)，插件开发在 [docs/PLUGIN_DEV.md](docs/PLUGIN_DEV.md)。
 
 ## License
 
