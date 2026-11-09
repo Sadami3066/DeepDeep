@@ -8,7 +8,7 @@
 
 不只会聊，还会替你把事办完：跑 Linux、操作屏幕、装插件、写小程序。
 
-<a href="https://github.com/Sadami3066/DeepDeep/releases/latest"><img src="https://img.shields.io/badge/下载-内测版-1D4ED8?style=for-the-badge&logo=android&logoColor=white" alt="Download" /></a>
+<a href="https://github.com/Sadami3066"><img src="https://img.shields.io/badge/内测申请-联系作者-1D4ED8?style=for-the-badge&logo=android&logoColor=white" alt="内测申请" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
