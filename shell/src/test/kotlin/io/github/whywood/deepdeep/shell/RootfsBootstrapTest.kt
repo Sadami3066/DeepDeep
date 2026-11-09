@@ -48,7 +48,10 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("for d in system vendor product system_ext odm"))
         assertTrue(script.contains("chroot"))
         assertTrue(script.contains("/bin/bash -ls"))
-        assertTrue(script.contains("/work"))
+        assertTrue(script.contains("DEEPDEEP_CWD=\"\$1\""))
+        assertTrue(script.contains("mkdir -p \"\$ROOT\$1\""))
+        assertTrue(script.contains("mount --rbind \"\$1\" \"\$ROOT\$1\""))
+        assertFalse(script.contains("/work"))
     }
 
     @Test
@@ -59,7 +62,7 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("export HOME=/root"))
         assertFalse(script.contains("export TZ=UTC"))
         assertTrue(script.contains("export TZ"))
-        assertTrue(script.contains("cd /work"))
+        assertTrue(script.contains("cd -- \"\${DEEPDEEP_CWD:-/}\""))
     }
 
     @Test

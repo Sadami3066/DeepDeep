@@ -213,7 +213,7 @@ class RootfsBootstrap internal constructor(
             appendLine("rm -rf \"\$TMP\"")
             appendLine("mkdir -p \"\$TMP\"")
             appendLine("\"\$BB\" cp -a \"\$APP_ROOT/.\" \"\$TMP/\" || { echo $PREPARE_COPY_FAILED; exit 12; }")
-            appendLine("mkdir -p \"\$TMP/work\" \"\$TMP/data\" \"\$TMP/system\" \"\$TMP/vendor\" \"\$TMP/product\" \"\$TMP/system_ext\" \"\$TMP/odm\" \"\$TMP/.deepdeep-empty\" \"\$TMP/storage/emulated/0\" \"\$TMP/etc/profile.d\"")
+            appendLine("mkdir -p \"\$TMP/data\" \"\$TMP/system\" \"\$TMP/vendor\" \"\$TMP/product\" \"\$TMP/system_ext\" \"\$TMP/odm\" \"\$TMP/.deepdeep-empty\" \"\$TMP/storage/emulated/0\" \"\$TMP/etc/profile.d\"")
             appendLine("rm -rf \"\$TMP/sdcard\"")
             appendLine("ln -s /storage/emulated/0 \"\$TMP/sdcard\"")
             appendLine("cp \"\$PROFILE\" \"\$TMP/etc/profile.d/deepdeep.sh\"")
@@ -234,7 +234,6 @@ class RootfsBootstrap internal constructor(
                 appendLine("#!/system/bin/sh")
                 appendLine("set -e")
                 appendLine("WS=\"\$1\"")
-                appendLine("STORAGE=\"\$2\"")
                 appendLine("RESOLV=\"\$3\"")
                 append("exec /system/bin/unshare -m /system/bin/sh -c '")
                 appendLine()
@@ -255,12 +254,20 @@ class RootfsBootstrap internal constructor(
                 appendLine("mount --bind /storage/emulated/0 \"\$ROOT/storage/emulated/0\"")
                 appendLine("rm -rf \"\$ROOT/sdcard\"")
                 appendLine("ln -s /storage/emulated/0 \"\$ROOT/sdcard\"")
-                appendLine("mount --rbind \"\$1\" \"\$ROOT/work\"")
+                appendLine("case \"\$1\" in")
+                appendLine("  /data/*|/storage/*|/) ;;")
+                appendLine("  \"\")")
+                appendLine("    ;;")
+                appendLine("  *)")
+                appendLine("    mkdir -p \"\$ROOT\$1\"")
+                appendLine("    mount --rbind \"\$1\" \"\$ROOT\$1\"")
+                appendLine("    ;;")
+                appendLine("esac")
                 appendLine("if [ -n \"\$3\" ] && [ -f \"\$3\" ]; then mount --bind \"\$3\" \"\$ROOT/etc/resolv.conf\"; fi")
                 appendLine("TZ_NAME=\$(/system/bin/getprop persist.sys.timezone 2>/dev/null || true)")
                 appendLine("[ -n \"\$TZ_NAME\" ] || TZ_NAME=UTC")
-                appendLine("exec /system/bin/env -i HOME=/root TERM=dumb LANG=C.UTF-8 TZ=\"\$TZ_NAME\" chroot \"\$ROOT\" /bin/bash -ls 2>&1")
-                appendLine("' deepdeep \"\$WS\" \"\$STORAGE\" \"\$RESOLV\"")
+                appendLine("exec /system/bin/env -i HOME=/root TERM=dumb LANG=C.UTF-8 TZ=\"\$TZ_NAME\" DEEPDEEP_CWD=\"\$1\" chroot \"\$ROOT\" /bin/bash -ls 2>&1")
+                appendLine("' deepdeep \"\$WS\" \"\" \"\$RESOLV\"")
             }
         }
 
@@ -271,7 +278,7 @@ class RootfsBootstrap internal constructor(
             appendLine("export LANG=C.UTF-8")
             appendLine(": \"\${TZ:=UTC}\"")
             appendLine("export TZ")
-            appendLine("cd /work 2>/dev/null || true")
+            appendLine("cd -- \"\${DEEPDEEP_CWD:-/}\" 2>/dev/null || true")
         }
     }
 }

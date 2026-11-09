@@ -33,7 +33,6 @@ internal fun buildPersonalizationSections(
                 appendLine("- /data (rw): Android /data. Other apps' private data: /data/data/<package>.")
                 appendLine("- /system /vendor /product /system_ext /odm (ro): Android system files.")
                 appendLine("- /sdcard = /storage/emulated/0 (rw), same data as /data/media/0.")
-                appendLine("- /work (rw): workspace, alias of /data/data/io.github.whywood.deepdeep/files/home.")
                 appendLine("- /proc /sys /dev: host.")
                 appendLine("/system/bin native tools (getprop, toybox, ...) run directly; use root_shell for pm, cmd, settings, dumpsys.")
             } else {
