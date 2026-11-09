@@ -33,7 +33,7 @@ DeepDeep 面向需要在手机上完成实际任务的用户。它将 Agent 运�
 
 适合需要在手机上处理文件、检索资料、操作应用、运行脚本，或把手机作为随身 Linux 环境的用户。
 
-当前版本为 1.0.0，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases)；源码暂未公开。
+当前版本为 1.0.0，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases)，源码已公开。
 
 ## 预览
 
@@ -160,7 +160,7 @@ DeepDeep 将三类能力放在同一个应用中：Agent 运行时、Android 系
 | **审批** | 只分普通、无线调试、Root 三档，不逐条确认命令 |
 | **运行位置** | 任务在本机执行；关闭 App 后停止，目标续跑只在进程内有效 |
 | **受保护页面** | 支付、密码等页面禁止截图，Agent 会把控制权交还给你 |
-| **分发** | 1.0.0 通过 GitHub Releases 分发，未上架应用商店，源码暂未公开 |
+| **分发** | 1.0.0 通过 GitHub Releases 分发，未上架应用商店；源码已公开 |
 
 ## 开发与构建
 

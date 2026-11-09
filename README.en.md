@@ -33,7 +33,7 @@ DeepDeep is a personal agent that runs on Android. It combines an agent runtime,
 
 It is intended for users who need to finish real tasks on a phone: handling files, looking up information, operating other apps, running scripts, or carrying a Linux environment in their pocket.
 
-Version 1.0.0 is distributed through [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The source code is not public yet.
+Version 1.0.0 is distributed through [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The source code is public.
 
 ## Preview
 
@@ -160,7 +160,7 @@ Plugins share the app process and permissions. Installing a plugin is equivalent
 | **Approval** | Three permission tiers (Standard, Wireless debugging, Root); commands are not confirmed individually |
 | **Execution** | Tasks run on the device; closing the app stops them, and goal continuation is process-local |
 | **Protected pages** | Payment and password pages cannot be captured; the agent returns control to the user |
-| **Distribution** | 1.0.0 is distributed through GitHub Releases and is not available in an app store; the source is not public yet |
+| **Distribution** | 1.0.0 is distributed through GitHub Releases and is not available in an app store; the source code is public |
 
 ## Development
 
