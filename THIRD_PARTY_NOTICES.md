@@ -89,13 +89,13 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 
 ## 2. 编译进 APK 的代码库
 
-### 2.1 pi2kotlin SDK 0.4.0
+### 2.1 pi2kotlin SDK 0.6.2（DeepDeep-KotlinSDK）
 
-- 构件：`dev.pi:pi-coding-agent-android:0.4.0`、`dev.pi:pi-ai-android:0.4.0`、`dev.pi:pi-agent-android:0.4.0`、`dev.pi:pi-mcp-android:0.4.0`
+- 构件：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.2`、`pi-ai-android`、`pi-agent-android`、`pi-mcp-android`（JitPack 构建，版本标签 `v0.6.2`）
 - 版权行：`Copyright (c) 2026 pi2kotlin contributors`、`Copyright (c) 2025 Mario Zechner and pi contributors`
 - 许可证：MIT
-- 来源：<https://github.com/Sadami3066/pi2kotlin> 提交 `d03325b82de8e1c0544758dd4f9d567bc1aeabfa`（`LICENSE`）
-- 本仓库内声明：`gradle/libs.versions.toml`（`pi = "0.4.0"`）与根 `build.gradle.kts`（`syncPiSdk`，从 pi2kotlin Release 下载并校验 sha256）
+- 来源：<https://github.com/Sadami3066/DeepDeep-KotlinSDK> 标签 `v0.6.2`，提交 `94f300abef96516204358a8fe549f9d774c373df`（`LICENSE`）
+- 本仓库内声明：`gradle/libs.versions.toml`（`pi = "v0.6.2"`，依赖坐标见同文件 `[libraries]`）
 - 许可全文：`licenses/pi2kotlin-MIT.txt`
 - 说明：上游 AAR/POM 未携带 LICENSE/NOTICE 元数据；本条目构成随二进制分发所需的版权与许可声明。
 
@@ -274,7 +274,7 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 | `licenses/BSD-2-Clause.txt` | <https://spdx.org/licenses/BSD-2-Clause.txt>（下载原文 sha256 `ffcd6a8c421ee58d9f85b115ee0642805be3b497d2023565739622f044dc11e2`） | `0b86240ad7fea85ddf41452089afc233637d0879dc833cf425d73dac9fd4dee0` |
 | `licenses/BSD-3-Clause.txt` | <https://spdx.org/licenses/BSD-3-Clause.txt>（下载原文 sha256 `0fe4dd6931c4c2fc418940de41074fa3c506cad24bfd891743ea7f2fcfe631ef`） | `7d4b8b9f72b9a4795b33e71ab9fcddd8df245b2a609aa82fd455270e103b70a8` |
 | `licenses/Bouncy-Castle.txt` | <https://www.bouncycastle.org/licence.html> | c61027784b36d538c8ca196869d6a3e3f3937e3cd0e5869c38c1c10bdbb6723d |
-| `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/pi2kotlin/d03325b82de8e1c0544758dd4f9d567bc1aeabfa/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
+| `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/DeepDeep-KotlinSDK/94f300abef96516204358a8fe549f9d774c373df/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
 | `licenses/lobehub-MIT.txt` | <https://raw.githubusercontent.com/lobehub/lobe-icons/680f1d7f95b5ae6a494fe43539da8a992f17b53d/LICENSE> | `add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a` |
 | `licenses/lora-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt>（与 cyrealtype/Lora-Cyrillic 的 OFL.txt 字节一致） | `1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716` |
 | `licenses/manrope-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt> | `58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b` |
@@ -292,3 +292,4 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 - 2026-11-01：pi2kotlin SDK 升级至 0.3.0，构件与来源提交同步更新。
 - 2026-11-01：pi2kotlin SDK 升级至 0.4.0，构件与来源提交同步更新。
 - 2026-11-05：新增 Open Runde（Regular/Medium/Semibold，静态 OTF）与 Fredoka（`wght`/`wdth` 可变 TTF）两款 OFL-1.1 字体，补充版权行、上游来源与提交、文件 sha256 及许可全文；默认字体改为 Open Runde。
+- 2026-11-09：pi2kotlin SDK 升级至 0.6.2（JitPack 坐标 `com.github.Sadami3066.DeepDeep-KotlinSDK`），构件、来源提交与版本声明同步更新。

@@ -20,8 +20,7 @@
     <text x="100" y="318" fill="#F8FAFC" font-size="96" font-weight="700" letter-spacing="-2">让手机</text>
     <text x="100" y="430" fill="#F8FAFC" font-size="96" font-weight="700" letter-spacing="-2">自己动手。</text>
     <text x="104" y="505" fill="#9FB0CC" font-size="27">完整 Agent Harness · Android 原生能力 · Linux 工具链</text>
-    <text x="104" y="548" fill="#6B7C99" font-size="21">纯 Kotlin · 无内嵌 Node · 冷启动 1.2s</text>
-    <text x="100" y="840" fill="#586A88" font-size="19">实机演示占位 · 之后替换为 docs/media/hero.gif（16:9）</text>
+    <text x="104" y="548" fill="#6B7C99" font-size="21">纯 Kotlin · 无内嵌 Node</text>
   </g>
 
   <g>

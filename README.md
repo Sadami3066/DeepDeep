@@ -14,15 +14,12 @@
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
-<img src="https://img.shields.io/badge/冷启动-1.2s-0EA5E9?style=flat-square" alt="Cold start 1.2s" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 <br/>
 <br/>
 
 <img src="docs/media/hero-banner.svg" width="880" alt="DeepDeep：Agent、Android 与 Linux 三层" />
-
-<sub>实机演示位 · 之后替换为 16:9 的 <code>hero.gif</code></sub>
 
 </div>
 
@@ -99,7 +96,6 @@ Alpine 跑在 proot 里，不需要 root。常用命令、Node、Python、数据
 
 | | |
 |---|---|
-| **冷启动** | 1.2 秒 |
 | **运行时** | pi2kotlin：Agent 循环、工具调度、会话存储都是 Kotlin |
 | **不背运行时** | App 本身不内嵌 Node；需要 Node 的插件在自己的 Linux 里装 |
 | **插件** | 纯 Kotlin `plugin-api`，18 项能力声明，热升级不重启 |

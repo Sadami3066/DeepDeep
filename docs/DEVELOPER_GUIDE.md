@@ -97,4 +97,4 @@
 - [插件开发](PLUGIN_DEV.md)
 - [发布](RELEASE.md)
 - [变更记录](../CHANGELOG.md)
-- 内部设计记录不随仓库分发；需要时从作者备份恢复到 `docs/dev/`（已被 `.gitignore` 忽略）。
+- 内部设计记录不随仓库分发；需要时从作者备份恢复到 `docs/DECISIONS.md`、`docs/GUIDE.md`、`docs/plan.md`（已被 `docs/.gitignore` 忽略）。

@@ -73,7 +73,7 @@ cp -R template my-plugin
 
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.whywood.deepdeep:plugin-api:0.7.0`（`api()` 传递 `io.github.whywood.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.sadami3066.deepdeep:plugin-api:0.7.0`（`api()` 传递 `io.github.sadami3066.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
 - 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
 - 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
@@ -256,32 +256,12 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 - 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录；当前没有忙碌会话时立即激活，有忙碌会话时相位保持 `PENDING_RESTART`，等会话全部结束后自动激活（进程重启后也会继续激活）；激活走准备 → 校验 → 提交 → 换装的阶段序列，校验阶段会调用 `onUpgrade(fromVersion)` 并预生成贡献；准备/校验失败会丢弃暂存版本并删除坏版本目录，旧版本继续可用；提交写盘失败保留暂存版本到下次启动重试。
 - 安装记录保留 `previousVersion` 作为回滚点。恢复规则：上次激活中断 → 下次启动跳过自动激活并提示「上次激活中断」；同一版本连续 2 次启动失败 → 自动停用（`enabled=false`），用户手动启用即重新授权。
 
-### 分发索引
+### 市场预览图
 
-内部分发使用统一索引 `index.json`，App 侧索引地址与自动检查开关存在 `files/plugins/sources.json`（插件页「插件源」可编辑）：
+市场条目的 `plugin.previews` 字段配置详情页预览图，`plugin.json` 清单本身不含该字段：
 
-```json
-{
-  "schemaVersion": 1,
-  "plugins": [
-    {
-      "id": "com.example.myplugin",
-      "version": "1.0.1",
-      "apiLevel": 4,
-      "minHostVersion": "0.2.0",
-      "url": "https://example.com/plugins/my-plugin-1.0.1.ddp",
-      "sha256": "<.ddp 整包 sha256>",
-      "size": 123456,
-      "publisherKeyId": "ed25519:8bfc...fad213"
-    }
-  ]
-}
-```
-
-- `schemaVersion` 必须为 1；`url` 支持 `http`/`https`/`file`；索引里最大 2 MB、最多 512 条。
-- `sha256`/`publisherKeyId` 是候选筛选与下载校验依据，发布者信任仍来自首装 TOFU；未信任的发布者不会被索引自动信任。
-- 索引地址与 `autoCheck`、`intervalHours`（1–720）存 `sources.json`，schema 1；网络失败时回退上次缓存，来源 URL 不匹配不采用缓存。
-- 下载后校验 `size` + `sha256` + 签名同钥，再暂存；更新同样要经过用户确认。
+- 竖版 9:20 图片 URL 列表，建议 1080×2400；只接受 `https://`，同一 URL 去重，最多 6 张。
+- 市场详情页以 144×320dp 卡片按 9:20 零裁切展示，可点开全屏左右滑动查看；没有 `previews` 时不展示预览区块。
 
 ## 生命周期与相位
 
