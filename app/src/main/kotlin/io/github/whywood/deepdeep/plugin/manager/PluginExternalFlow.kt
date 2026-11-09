@@ -330,6 +330,7 @@ internal class PluginExternalFlow(
             return enableFailure
         }
         runtime.clearStartupCount(pluginId)
+        refresh()
         lifecycle.syncSkills(pluginId)
         return null
     }

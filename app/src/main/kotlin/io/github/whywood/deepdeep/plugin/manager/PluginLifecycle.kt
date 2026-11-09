@@ -136,6 +136,7 @@ internal class PluginLifecycle(
         val view = gate.view(pluginId) ?: return
         val active = view.enabled && view.availability is PluginAvailabilityUi.Available
         val skills = view.contributions.skills
+        if (active && skills.isEmpty() && view.skillIds.isNotEmpty()) return
         runCatching { skillStore.sync(view.id, skills, view.skillIds, active) }
         val skillIds = skills.map { it.id }
         gate.markSkills(view.id, skillIds)
