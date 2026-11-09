@@ -78,7 +78,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 </td>
 <td width="33%" valign="top" align="center">
 
-https://github.com/user-attachments/assets/99a8fa59-0e0b-404d-a56f-f00015c5647d
+https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
 
 <b>Voice overlay</b><br />
 <sub>Asks from the floating bar on the home screen.</sub>

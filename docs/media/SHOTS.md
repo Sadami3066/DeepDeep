@@ -33,7 +33,7 @@ docs/media/
 | `miniapp.mp4` | 生成打卡待办小程序 | https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4 |
 | `scan.mp4` | 扫码与跳转 | https://github.com/user-attachments/assets/d387b523-4283-4269-9302-63f135e3541c |
 | `remote.mp4` | 连接电脑 DSH | https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae |
-| `overlay-voice.mp4` | 悬浮语音输入 | https://github.com/user-attachments/assets/99a8fa59-0e0b-404d-a56f-f00015c5647d |
+| `overlay-voice.mp4` | 悬浮语音输入（已打码） | https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b |
 
 这些是 720×1280、H.264、无音轨的压缩版，单个 0.3–2.3MB。原始录屏保留在 Release：
 
