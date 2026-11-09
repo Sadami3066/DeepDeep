@@ -28,6 +28,9 @@
     <uses-permission android:name="android.permission.REORDER_TASKS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -92,6 +95,13 @@
         <receiver
             android:name=".adb.AdbPairingReceiver"
             android:exported="false" />
+
+        <activity
+            android:name=".arrange.CalendarPermissionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeepDeep.PermissionRequest"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
 
         <activity
             android:name=".assistant.AssistantOverlayActivity"
