@@ -54,6 +54,12 @@ internal object MarketRegistryParser {
                 minHostVersion = it.string("minHostVersion"),
                 publisherKeyId = it.string("publisherKeyId"),
                 publisherName = it.string("publisherName"),
+                previewUrls = (it["previews"] as? JsonArray)
+                    ?.mapNotNull { element -> (element as? JsonPrimitive)?.contentOrNull }
+                    ?.filter { url -> url.startsWith("https://") }
+                    ?.distinct()
+                    ?.take(6)
+                    .orEmpty(),
             )
         }
         val skill = (obj["skill"] as? JsonObject)?.let {

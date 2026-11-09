@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,12 +27,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -521,6 +528,26 @@ private fun MarketDetailSheet(
                 .padding(horizontal = 24.dp)
                 .testTag("${testTagPrefix}_market_detail"),
         ) {
+            val previews = entry.plugin?.previewUrls.orEmpty()
+            if (previews.isNotEmpty()) {
+                Spacer(Modifier.height(DdSpacing.Md))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
+                ) {
+                    previews.forEach { url ->
+                        MarketPreviewImage(
+                            url = url,
+                            modifier = Modifier
+                                .width(260.dp)
+                                .height(150.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                        )
+                    }
+                }
+            }
             DdSectionLabel(stringResource(R.string.market_detail_about))
             val summary = entry.summary(language)
             if (summary.isNotBlank()) {
