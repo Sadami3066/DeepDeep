@@ -6,7 +6,7 @@
 
 **Android 上的个人智能体**
 
-<sub>对话、系统操作与 Linux 环境，运行在同一个应用内。</sub>
+<sub>深度求索，深知你心。</sub>
 
 [简体中文](README.md) · [English](README.en.md)
 
@@ -25,49 +25,64 @@
 
 </div>
 
-[概览](#概览) · [预览](#预览) · [UI 展示](#ui-展示) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [功能](#功能) · [开发](#开发与构建) · [文档](#文档与反馈) · [贡献](#贡献) · [License](#license)
+[概览](#概览) · [功能预览](#功能预览) · [UI 展示](#ui-展示) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [开发](#开发与构建) · [文档](#文档与反馈) · [贡献](#贡献) · [License](#license)
 
 ## 概览
 
-DeepDeep 面向需要在手机上完成实际任务的用户。它将 Agent 运行时、Android 系统接口和 Alpine Linux 环境集成在同一个应用中，可以处理本地文件、检索网页、操作应用、执行 shell 命令，也可以按计划在后台运行任务。应用使用 Kotlin 与 Jetpack Compose 编写，大部分功能不需要 root。
+DeepDeep 对标所有手机厂商的内置智能助理，支持长按电源一键唤醒，浮层语音输入和输出。
 
-适合需要在手机上处理文件、检索资料、操作应用、运行脚本，或把手机作为随身 Linux 环境的用户。
+同时配备完整的 Harness 工程，包含工具、技能、长期记忆、MCP 扩展和插件系统。它便捷地运行在手机上，无需服务器，无需电脑常开，随时随地都可以打开使用，只要你长按电源，一句话，它就能开始工作，把事情办好。
+
+DeepDeep拥有内置的超轻量Linux环境，能够覆盖99%的电脑办公和代码任务，但本质运行在Android手机系统上，也能为你操作手机文件：找寻图片，清理垃圾，整理文件，编写代码，优化手机，甚至通过屏幕工具，开启虚拟屏幕操作你的APP。
+
+除此之外，DeepDeep还拥有丰富的插件生态，能够通过mcp和cli连接外部服务，帮你处理远程任务：接入飞书，企业微信，高德地图，麦当劳MCP，Notion笔记，邮件等。为你的工作，生活，学习各个方面提高效率。
+
+最后，DeepDeep秉持开源开放原则，代码足够安全透明，无任何外部网络服务（除了您向模型服务商的LLM网络请求外），全程无任何数据收集和上传行为。
+
+使用 DeepDeep 时，请遵循 App 内的用户协议。
 
 当前版本为 1.0.0，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases)，源码已公开。
 
-## 预览
+## 功能预览
 
 <table>
 <tr>
 <td width="33%" valign="top" align="center">
 
+https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
+
+<b>多形态交互</b><br />
+<sub>长按电源唤醒，支持语音与文字交互。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
 https://github.com/user-attachments/assets/bfeaac5e-da31-4790-a9e3-3f7e9a6b2018
 
-<b>Agent 运行时</b><br />
-<sub>查询空位并创建后台任务。</sub>
+<b>帮我盯</b><br />
+<sub>监控预约系统，有空位直接订票。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
 https://github.com/user-attachments/assets/32019883-ca2d-40f6-b18f-6c941131cc64
 
-<b>Android 系统集成</b><br />
-<sub>在悬浮窗中操作其他应用。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4
-
-<b>小程序</b><br />
-<sub>现场生成打卡待办。</sub>
+<b>虚拟屏幕操作 App</b><br />
+<sub>后台不打扰，帮你看帮你做。</sub>
 </td>
 </tr>
 <tr>
 <td width="33%" valign="top" align="center">
 
+https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4
+
+<b>小程序</b><br />
+<sub>制作应用添加到桌面。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
 https://github.com/user-attachments/assets/d387b523-4283-4269-9302-63f135e3541c
 
-<b>万能扫一扫</b><br />
-<sub>识别二维码并跳转到对应应用。</sub>
+<b>统一扫码</b><br />
+<sub>统一入口识别各类生态，可自定义策略。</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
@@ -75,13 +90,6 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 
 <b>远程连接</b><br />
 <sub>连接电脑上的 DSH。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
-
-<b>悬浮语音</b><br />
-<sub>在桌面悬浮条中直接提问。</sub>
 </td>
 </tr>
 </table>
@@ -94,17 +102,12 @@ https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
 
 ## 快速开始
 
-1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载最新 `DeepDeep-1.0.0.apk`。
-2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入 6 屏引导；可以跳过，之后在设置中逐项完成。
-3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。模型与思考档按会话独立选择。
-4. **初始化 Linux。** 进入「设置 → Linux 设置」完成 Alpine 初始化；之后可以在对话中直接使用 `bash`。
-5. **选择权限。** 默认使用普通档。需要操作其他应用时，在「设置 → 权限」中开启无线调试或 Root。
+1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载最新版本。
+2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入引导界面；建议跟着流程走，也可以跳过，之后在设置中逐项完成。
+3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。建议使用 DeepSeek 模型，或 GPT 订阅。
+4. **初始化 Linux。** 进入「设置 → Linux 设置」完成 Alpine 初始化；这一步建议认真完成，请根据提示完成基础配置。
+5. **选择权限。** 默认使用普通档。需要操作其他应用时，在「设置 → 权限」中跟随教程开启无线调试或 Root。开启无线调试时，你可以通过系统通知输入验证码，若系统通知无法使用，可以通过小窗化/分屏DeepDeep，在无线配对界面观察验证码，再在 DeepDeep 中输入。
 
-如果使用 adb 安装：
-
-```bash
-adb install -r DeepDeep-1.0.0.apk
-```
 
 ## 安装与配置
 
@@ -116,9 +119,8 @@ adb install -r DeepDeep-1.0.0.apk
 | 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载 APK |
 | 账号 | 没有账号系统；模型 Key 仅保存在本机 |
 | 升级 | 使用同一签名覆盖安装；更换签名需要先卸载，卸载会删除本机会话与凭据 |
-| 网络 | 对话内容只发送给已配置的模型厂商；市场与更新检查访问 GitHub |
+| 网络 | 对话内容只发送给已配置的模型厂商；市场与更新检查访问 GitHub，可能需要VPN服务 |
 
-首次启动的 6 屏引导依次覆盖欢迎、账号、模型、通知与悬浮窗、Linux 环境和权限。所有步骤都可以跳过，之后在设置中补齐。
 
 ### 配置
 
@@ -131,25 +133,6 @@ adb install -r DeepDeep-1.0.0.apk
 | 远程连接 | 抽屉 → 远程连接 | 通过 [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) 配对电脑 |
 | 插件 | 抽屉 → 插件 | 导入签名 `.ddp`；查看能力清单与运行状态 |
 | 记忆 | 自动 | 会话结束时沉淀；可搜索，也可注入当前会话 |
-
-## 功能
-
-| 能力 | 说明 |
-|---|---|
-| **Agent 运行时** | 工具、MCP、技能、后台任务、定时任务与记忆在同一会话中运行；MCP 工具按需加载。 |
-| **Android 系统集成** | 普通 / 无线调试 / Root 三档权限；虚拟屏、悬浮窗、系统助手、文件、分享与通知。 |
-| **扩展与自动化** | 小程序、万能扫一扫、插件、市场、远程连接；后台任务与五段 cron。 |
-| **模型与对话** | 42 家 Provider；Markdown、附件、语音、朗读、上下文占用与 `/compact`。 |
-
-### Linux 环境
-
-Alpine 通过 proot 运行，不依赖 root；初始化后可直接使用 `bash`，并按需安装 Node、Python、数据库客户端和 Android 编译工具链。工作文件默认位于 App 工作区，文件工具使用绝对路径。
-
-## 设计
-
-DeepDeep 将三类能力放在同一个应用中：Agent 运行时、Android 系统接口和 Linux 环境。Agent 循环、工具调度、会话存储与插件宿主使用 Kotlin 实现，App 本身不内嵌 Node 运行时；需要 Node 的插件在自己的 Linux 环境中安装。Linux 通过 proot 按需启动，不需要 root。
-
-插件与 App 同进程、同权限，安装插件等同于信任其代码。应用不为插件提供独立沙箱；第三方工具源应优先使用 MCP。
 
 ## 边界
 

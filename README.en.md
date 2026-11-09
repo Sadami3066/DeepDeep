@@ -6,7 +6,7 @@
 
 **A personal agent for Android**
 
-<sub>Conversation, device control, and a Linux environment in one app.</sub>
+<sub>Deep understanding, always with you.</sub>
 
 [简体中文](README.md) · [English](README.en.md)
 
@@ -25,49 +25,64 @@
 
 </div>
 
-[Overview](#overview) · [Preview](#preview) · [UI](#ui) · [Getting Started](#getting-started) · [Installation & Configuration](#installation--configuration) · [Features](#features) · [Development](#development) · [Docs](#docs--feedback) · [Contributing](#contributing) · [License](#license)
+[Overview](#overview) · [Feature Preview](#feature-preview) · [UI](#ui) · [Getting Started](#getting-started) · [Installation & Configuration](#installation--configuration) · [Development](#development) · [Docs](#docs--feedback) · [Contributing](#contributing) · [License](#license)
 
 ## Overview
 
-DeepDeep is a personal agent that runs on Android. It combines an agent runtime, Android system APIs, and an Alpine Linux environment in one application. It can work with local files, search the web, operate apps, run shell commands, and execute scheduled background tasks. The app is written in Kotlin and Jetpack Compose; most features do not require root.
+DeepDeep is built to match the built-in assistants from phone makers. It supports one-press wake-up from the power button, with voice input and output in a floating layer.
 
-It is intended for users who need to finish real tasks on a phone: handling files, looking up information, operating other apps, running scripts, or carrying a Linux environment in their pocket.
+It includes a complete agent harness: tools, skills, long-term memory, MCP extensions, and a plugin system. It runs on the phone without a server or an always-on computer. Press and hold the power button, say what you need, and it starts working.
+
+DeepDeep includes a lightweight Linux environment that covers 99% of desktop office and coding tasks while running on Android. It can also manage phone files: find photos, clean up junk, organize files, write code, optimize the phone, and use screen tools or a virtual display to operate other apps.
+
+A broad plugin ecosystem connects external services through MCP and CLI for remote work: Feishu, WeCom, Amap, McDonald's MCP, Notion, email, and more. It is intended to improve efficiency across work, daily life, and study.
+
+DeepDeep is open source and built for transparency. It does not run its own backend service; apart from the model-provider requests you configure, it does not collect or upload data.
+
+Use of DeepDeep is subject to the user agreement in the app.
 
 Version 1.0.0 is distributed through [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The source code is public.
 
-## Preview
+## Feature Preview
 
 <table>
 <tr>
 <td width="33%" valign="top" align="center">
 
+https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
+
+<b>Multi-modal interaction</b><br />
+<sub>Wake with the power button; voice and text input.</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
 https://github.com/user-attachments/assets/bfeaac5e-da31-4790-a9e3-3f7e9a6b2018
 
-<b>Agent runtime</b><br />
-<sub>Checks availability and starts a background task.</sub>
+<b>Availability monitor</b><br />
+<sub>Watches booking systems and reserves a slot when one opens.</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
 https://github.com/user-attachments/assets/32019883-ca2d-40f6-b18f-6c941131cc64
 
-<b>Android integration</b><br />
-<sub>Controls another app from the floating window.</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4
-
-<b>Mini apps</b><br />
-<sub>Generates a check-in app on the spot.</sub>
+<b>Virtual-screen app control</b><br />
+<sub>Works in the background without interrupting you.</sub>
 </td>
 </tr>
 <tr>
 <td width="33%" valign="top" align="center">
 
+https://github.com/user-attachments/assets/9deb4845-514d-4c42-a197-0fa80f2cd9f4
+
+<b>Mini apps</b><br />
+<sub>Builds an app and adds it to the home screen.</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
 https://github.com/user-attachments/assets/d387b523-4283-4269-9302-63f135e3541c
 
 <b>Universal scanner</b><br />
-<sub>Reads a QR code and routes it to the right app.</sub>
+<sub>One entry point for QR codes across ecosystems, with custom routing rules.</sub>
 </td>
 <td width="33%" valign="top" align="center">
 
@@ -75,13 +90,6 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 
 <b>Remote connection</b><br />
 <sub>Connects to DSH on your computer.</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
-
-<b>Voice overlay</b><br />
-<sub>Asks from the floating bar on the home screen.</sub>
 </td>
 </tr>
 </table>
@@ -94,21 +102,15 @@ https://github.com/user-attachments/assets/a6e1d2c3-3d13-4ce4-afec-aaa0d1b5bf5b
 
 ## Getting Started
 
-1. **Download the APK.** Get the latest `DeepDeep-1.0.0.apk` from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases).
-2. **Install and open.** Android 10 or later is required. The first launch runs a six-screen setup; it can be skipped and completed later in Settings.
-3. **Connect a model.** Open **Settings → Providers**, choose a provider, and enter an API key or sign in with OAuth. Model and reasoning settings are selected per conversation.
-4. **Initialize Linux.** Open **Settings → Linux Settings** and initialize Alpine. After that, `bash` is available in conversations.
-5. **Choose permissions.** The default tier is Standard. To operate other apps, enable Wireless debugging or Root under **Settings → Permissions**.
-
-To install with adb:
-
-```bash
-adb install -r DeepDeep-1.0.0.apk
-```
+1. **Download the APK.** Get the latest version from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases).
+2. **Install and open.** Android 10 or later is required. The first launch opens a setup guide; follow it, or skip it and complete the steps later in Settings.
+3. **Connect a model.** Open **Settings → Providers**, choose a provider, and enter an API key or sign in with OAuth. DeepSeek or a GPT subscription is recommended.
+4. **Initialize Linux.** Open **Settings → Linux Settings** and initialize Alpine. This step is strongly recommended; complete the basic setup as prompted.
+5. **Choose permissions.** The default tier is Standard. To operate other apps, follow the guide under **Settings → Permissions** to enable Wireless debugging or Root. When enabling Wireless debugging, you can enter the pairing code from the system notification. If notifications are unavailable, open DeepDeep in split-screen or a floating window, read the code from the wireless pairing screen, and enter it in DeepDeep.
 
 ## Installation & Configuration
 
-### Install
+### Installation
 
 | Item | Description |
 |---|---|
@@ -116,9 +118,7 @@ adb install -r DeepDeep-1.0.0.apk
 | Package | APK from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) |
 | Account | No account system; model keys are stored only on the device |
 | Upgrade | Install over the same signing key. Changing keys requires uninstalling, which removes local sessions and credentials |
-| Network | Conversations go only to the configured model provider; the market and update checks access GitHub |
-
-The first launch runs a six-screen setup covering welcome, account, model, notifications and overlay, Linux, and permissions. Every step can be skipped and completed later in Settings.
+| Network | Conversations go only to the configured model provider; market and update checks access GitHub, which may require a VPN |
 
 ### Configuration
 
@@ -131,25 +131,6 @@ The first launch runs a six-screen setup covering welcome, account, model, notif
 | Remote connection | Drawer → Remote connection | Pair a computer through [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) |
 | Plugins | Drawer → Plugins | Import signed `.ddp` packages; inspect capabilities and status |
 | Memory | Automatic | Consolidated at session end; searchable and injectable into the current conversation |
-
-## Features
-
-| Capability | Description |
-|---|---|
-| **Agent runtime** | Tools, MCP, skills, background jobs, cron timers, and memory run in the same conversation; MCP tools are loaded on demand. |
-| **Android integration** | Standard / Wireless debugging / Root permissions; virtual display, overlay, system assistant, files, sharing, and notifications. |
-| **Extensions and automation** | Mini apps, universal scanner, plugins, market, remote connection, background jobs, and five-field cron. |
-| **Models and chat** | 42 providers; Markdown, attachments, voice input, read-aloud, context usage, and `/compact`. |
-
-### Linux environment
-
-Alpine runs through proot and does not require root. After initialization, `bash` is available directly; Node, Python, database clients, and Android build toolchains can be installed as needed. Working files live in the app workspace by default, and file tools use absolute paths.
-
-## Design
-
-DeepDeep puts three capabilities in one app: an agent runtime, Android system APIs, and a Linux environment. The agent loop, tool dispatch, session storage, and plugin host are implemented in Kotlin; the app does not embed a Node runtime. Plugins that need Node install it in their own Linux environment. Linux starts on demand through proot and does not require root.
-
-Plugins share the app process and permissions. Installing a plugin is equivalent to trusting its code. The app does not provide a separate plugin sandbox; third-party tool sources should use MCP where possible.
 
 ## Boundaries
 
