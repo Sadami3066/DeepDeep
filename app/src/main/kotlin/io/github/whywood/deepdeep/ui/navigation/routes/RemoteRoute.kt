@@ -23,7 +23,7 @@ import io.github.whywood.deepdeep.ui.remote.RemoteRenameDialog
 import io.github.whywood.deepdeep.ui.remote.RemoteScanSheet
 import io.github.whywood.deepdeep.ui.remote.RemoteScreen
 import io.github.whywood.deepdeep.ui.remote.RemoteStateHolder
-import io.github.whywood.deepdeep.ui.remote.messageRes
+import io.github.whywood.deepdeep.ui.remote.pairMessageRes
 
 @Composable
 internal fun RemoteRoute(
@@ -89,7 +89,7 @@ internal fun RemoteRoute(
 
     holder.pairFailure?.let { failure ->
         RemotePairFailureDialog(
-            message = stringResource(failure.messageRes()),
+            message = stringResource(failure.pairMessageRes()),
             canRetry = true,
             onRetry = { holder.retryPair(defaultName, openComputer) },
             onDismiss = holder::dismissPairFailure,

@@ -16,6 +16,13 @@ internal fun RemoteReachability.labelRes(): Int = when (this) {
 }
 
 @StringRes
+internal fun RemoteGatewayFailure?.pairMessageRes(): Int = when (this) {
+    RemoteGatewayFailure.Unauthorized -> R.string.remote_pair_expired
+    RemoteGatewayFailure.Forbidden -> R.string.remote_pair_rejected
+    else -> messageRes()
+}
+
+@StringRes
 internal fun RemoteGatewayFailure?.messageRes(): Int = when (this) {
     RemoteGatewayFailure.Unauthorized -> R.string.remote_failure_unauthorized
     RemoteGatewayFailure.Forbidden -> R.string.remote_failure_forbidden

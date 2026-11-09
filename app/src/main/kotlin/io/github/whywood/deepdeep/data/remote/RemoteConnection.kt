@@ -53,11 +53,20 @@ class RemoteConnection(
 
     suspend fun pair(link: RemotePairingLink, name: String): RemoteComputer {
         if (link.kind == RemoteEntryKind.Public) {
-            val paired = runCatching { pairWithBrowser(link, name) }.getOrNull()
-            if (paired != null) return paired
+            try {
+                return pairWithBrowser(link, name)
+            } catch (error: RemoteGatewayException) {
+                if (!error.failure.allowsNativeFallback()) throw error
+            } catch (_: Exception) {
+            }
         }
         return pairWithNative(link, name)
     }
+
+    private fun RemoteGatewayFailure.allowsNativeFallback(): Boolean =
+        this == RemoteGatewayFailure.Unreachable ||
+            this == RemoteGatewayFailure.BadResponse ||
+            this == RemoteGatewayFailure.CertificateRejected
 
     private suspend fun pairWithBrowser(link: RemotePairingLink, name: String): RemoteComputer {
         val pairing = browser.pair(link.origin, link.token, deviceLabel())

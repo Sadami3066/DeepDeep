@@ -222,6 +222,12 @@ internal fun RemotePasteDialog(
                 ),
                 onDone = { onConfirm(draft) },
             )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.remote_paste_hint_expiry),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+            )
             if (invalid) {
                 Spacer(Modifier.height(8.dp))
                 Text(

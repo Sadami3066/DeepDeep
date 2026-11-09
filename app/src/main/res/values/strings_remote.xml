@@ -37,6 +37,9 @@
     <string name="remote_paste_placeholder">粘贴电脑上的配对链接</string>
     <string name="remote_paste_confirm">连接</string>
     <string name="remote_paste_invalid">链接无效，请重新复制。</string>
+    <string name="remote_paste_hint_expiry">配对链接有效 2 分钟，请在电脑上生成后尽快粘贴。</string>
+    <string name="remote_pair_expired">配对码已过期或已使用，请在电脑上重新生成配对链接。</string>
+    <string name="remote_pair_rejected">电脑拒绝了这次配对，请重新生成配对链接。</string>
     <string name="remote_scan_hint">对准电脑上的配对二维码</string>
     <string name="remote_scan_permission">需要相机权限才能扫码</string>
     <string name="remote_scan_settings">去设置</string>
