@@ -46,6 +46,9 @@ class RootfsBootstrapTest {
         assertFalse(script.contains("android/data/user/0"))
         assertTrue(script.contains("getprop persist.sys.timezone"))
         assertTrue(script.contains("for d in system vendor product system_ext odm"))
+        assertTrue(script.contains("mount --rbind /apex/com.android.runtime"))
+        assertTrue(script.contains("\$ROOT/linkerconfig"))
+        assertTrue(script.contains("ln -sfn /system/usr/share/zoneinfo"))
         assertTrue(script.contains("chroot"))
         assertTrue(script.contains("/bin/bash -ls"))
         assertTrue(script.contains("DEEPDEEP_CWD=\"\$1\""))
@@ -62,6 +65,8 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("export HOME=/root"))
         assertFalse(script.contains("export TZ=UTC"))
         assertTrue(script.contains("export TZ"))
+        assertTrue(script.contains("CST-8"))
+        assertTrue(script.contains("/usr/share/zoneinfo/"))
         assertTrue(script.contains("cd -- \"\${DEEPDEEP_CWD:-/}\""))
     }
 
