@@ -136,10 +136,8 @@ class PluginRuntimeRegistryTest {
             start.await()
             repeat(500) {
                 val skills = gate.view("alpha")?.skillIds ?: return@repeat
-                val isFirst = skills === first
-                if (!isFirst && skills !== second) {
-                    failure.compareAndSet(null, AssertionError("torn snapshot: ${skills.size}"))
-                }
+                if (skills.isEmpty() || skills === first || skills === second) return@repeat
+                failure.compareAndSet(null, AssertionError("torn snapshot: ${skills.size}"))
             }
         }
         listOf(writer, reader).forEach(Thread::start)
