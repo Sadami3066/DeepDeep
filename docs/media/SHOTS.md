@@ -1,100 +1,109 @@
-# README 素材与录制规格
+# README 媒体资产
 
-README 里有一个 16:9 首屏、一个 Android 分区的竖向演示位，以及一张 Linux 终端示意图。
+README 使用两类媒体：仓库内的压缩预览，以及 GitHub Release 中的完整视频。仓库只提交预览与截图，不提交原始录屏。
 
-## 文件约定
+## 目录
 
-| 文件 | 位置 | 规格 |
-|---|---|---|
-| `hero.gif` | 首屏横幅 | 1200×675（16:9），8–12 秒，循环，无声 |
-| `phone.gif` | 「它住得够深」右侧 | 720×1280（9:16），6–10 秒，循环，无声 |
+```text
+docs/media/
+├── demo/                    # README 内联 GIF
+│   ├── agent-monitor.gif
+│   ├── miniapp.gif
+│   ├── phone-operation.gif
+│   ├── remote.gif
+│   └── scan.gif
+├── shots/                   # 实机截图与静态封面
+│   ├── drawer.jpg
+│   ├── home.jpg
+│   ├── monitor.jpg
+│   ├── personalization.jpg
+│   ├── providers.jpg
+│   └── settings.jpg
+├── hero-banner.svg          # 当前首屏；新 hero 到位后替换
+├── mascot.webp
+└── terminal.svg
+```
 
-`terminal.svg` 是静态示意图，不需要录；想换成实机终端截图也可以，保持 16:9。
+完整视频：
 
-单个 GIF 控制在 **8 MB 以内**，最多不超过 10 MB。首屏显示宽度约 880px，1200 宽足够。
+```text
+https://github.com/Sadami3066/DeepDeep/releases/tag/demo-20261109
+```
 
-## 录什么
+## 预览文件
 
-### hero.gif — 首屏
+| 文件 | 来源 | 片段 | 规格 | 用途 |
+|---|---|---|---|---|
+| `demo/agent-monitor.gif` | `帮我盯着.mp4` | 0–12s | 360 宽，8fps，96 色，623KB | Agent 运行时 |
+| `demo/phone-operation.gif` | `手机操作.mp4` | 0–38s | 360 宽，6fps，80 色，1.5MB | Android 系统集成 |
+| `demo/miniapp.gif` | `DeepDeep小程序.mp4` | 0–12s | 360 宽，8fps，96 色，901KB | 小程序 |
+| `demo/scan.gif` | `统一扫一扫.mp4` | 0–12s | 360 宽，6fps，64 色，1.9MB | 万能扫一扫 |
+| `demo/remote.gif` | `远程连接.mp4` | 0–14s | 360 宽，8fps，96 色，522KB | 远程连接 |
+| `shots/home.jpg` | `主界面.jpg` | — | 720×1600，48KB | 预览 |
+| `shots/drawer.jpg` | `抽屉.jpg` | — | 720×1600，48KB | 预览、市场 |
+| `shots/providers.jpg` | `42+服务商.jpg` | — | 720×1600，74KB | 预览 |
+| `shots/settings.jpg` | `设置页.jpg` | — | 720×1600，59KB | 权限与运行环境 |
+| `shots/personalization.jpg` | `个性化.jpg` | — | 720×1600，59KB | 记忆 |
+| `shots/monitor.jpg` | `帮我盯着.mp4` 22.5s | — | 720×1600，55KB | 帮我盯卡片 |
 
-最好用「盯场地」这条，因为结果最直观：
+截图统一缩放到 720×1600，JPEG q86。GIF 保留手机原始比例，不裁状态栏。
 
-| 时间 | 画面 |
+## 完整视频
+
+Release 资产使用英文文件名：
+
+| 资产 | 原文件 |
 |---|---|
-| 0–2s | 输入「盯南校园羽毛球，有空位就订，晚上优先」 |
-| 2–4s | 过程卡出现：查空位 → 选场地 → 下单 |
-| 4–7s | 悬浮窗里虚拟屏在操作场馆页（可选） |
-| 7–9s | 「预订成功」卡片，露出时间、场地、积分变化 |
-| 9–12s | 日历事件出现，或回到聊天停留 1 秒 |
+| `deepdeep-monitor.mp4` | `帮我盯着.mp4` |
+| `deepdeep-phone-control.mp4` | `手机操作.mp4` |
+| `deepdeep-miniapp.mp4` | `DeepDeep小程序.mp4` |
+| `deepdeep-overlay-voice.mp4` | `浮层浮窗主界面三态语音输入交互.mp4` |
+| `deepdeep-scan.mp4` | `统一扫一扫.mp4` |
+| `deepdeep-remote.mp4` | `远程连接.mp4` |
 
-隐私：真实姓名、学号、积分、订单号提前遮掉，或用演示账号。
+README 中的 GIF 点击后指向对应 Release 资产。
 
-### phone.gif — Android 分区
+## 重新生成
 
-这一段展示「它真的在手机里」，建议录悬浮窗 + 虚拟屏：
-
-| 时间 | 画面 |
-|---|---|
-| 0–2s | 聊天里交代任务，悬浮小鲸鱼出现 |
-| 2–5s | 长按小鲸鱼，虚拟屏预览展开，App 在后台被操作 |
-| 5–7s | 回到聊天，进度更新 |
-| 7–10s | 任务完成，交付卡片出现 |
-
-如果不好录虚拟屏，也可以录「系统助手里交代任务 → 悬浮窗显示进度」的完整过程。
-
-## 录制
-
-### 手机直接录
+截图（需要 Pillow）：
 
 ```bash
-adb shell screenrecord --size 720x1280 --bit-rate 8M --time-limit 20 /sdcard/Download/demo.mp4
-adb pull /sdcard/Download/demo.mp4 .
+python3 - <<'EOF'
+from PIL import Image
+import glob, os
+for p in glob.glob('UI_screenshot/*.jpg'):
+    im = Image.open(p).convert('RGB')
+    im.thumbnail((720, 1600), Image.LANCZOS)
+    im.save('docs/media/shots/' + os.path.splitext(os.path.basename(p))[0] + '.jpg', quality=86, optimize=True)
+EOF
 ```
 
-### 转 GIF
-
-首屏（16:9）：
+GIF（需要 ffmpeg）：
 
 ```bash
-ffmpeg -i hero.mp4 \
-  -vf "fps=24,scale=1200:675:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=160[p];[s1][p]paletteuse=dither=bayer" \
-  -loop 0 hero.gif
+ffmpeg -ss 0 -t 12 -i 帮我盯着.mp4 \
+  -vf "fps=8,scale=360:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer" \
+  -loop 0 docs/media/demo/agent-monitor.gif
+
+ffmpeg -ss 0 -t 38 -i 手机操作.mp4 \
+  -vf "fps=6,scale=360:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=80[p];[s1][p]paletteuse=dither=bayer" \
+  -loop 0 docs/media/demo/phone-operation.gif
+
+ffmpeg -ss 0 -t 12 -i DeepDeep小程序.mp4 \
+  -vf "fps=8,scale=360:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer" \
+  -loop 0 docs/media/demo/miniapp.gif
+
+ffmpeg -ss 0 -t 12 -i 统一扫一扫.mp4 \
+  -vf "fps=6,scale=360:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=64[p];[s1][p]paletteuse=dither=bayer" \
+  -loop 0 docs/media/demo/scan.gif
+
+ffmpeg -ss 0 -t 14 -i 远程连接.mp4 \
+  -vf "fps=8,scale=360:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer" \
+  -loop 0 docs/media/demo/remote.gif
 ```
 
-竖向（9:16）：
+## 首屏
 
-```bash
-ffmpeg -i phone.mp4 \
-  -vf "fps=24,scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer" \
-  -loop 0 phone.gif
-```
+`hero-banner.svg` 是当前占位图。新的首屏准备好后，按 16:9 输出（建议 1200×675 或 1600×900），放到 `docs/media/hero.gif` 或 `docs/media/hero.png`，替换 README 中的引用即可。
 
-压完检查大小：
-
-```bash
-ls -lh *.gif
-```
-
-超过 8 MB 就降 fps（24 → 15）、减颜色（128 → 96）或缩短时长。
-
-## 替换 README
-
-1. 首屏：把 `hero-banner.svg` 换成 `hero.gif`，宽度保持 880。
-
-```html
-<img src="docs/media/hero.gif" width="880" alt="DeepDeep 实机演示" />
-```
-
-2. Android 分区：把 `phone-hero.svg` 换成 `phone.gif`，宽度保持 300。
-
-3. 首屏下面的「实机演示位」说明可以删掉。
-
-## 截图（可选）
-
-如果不想全用 GIF，可以补静态图：
-
-- `shot-chat.png`：完整对话与工具卡
-- `shot-screen.png`：悬浮窗 + 虚拟屏预览
-- `shot-miniapp.png`：一个做得比较完整的小程序
-
-宽度统一 720，不要加手机边框，避免和现有矢量手机壳风格冲突。
+首屏不承担功能说明；标题、定位和快速开始已经在上方，图片只需要呈现一个真实使用场景。
