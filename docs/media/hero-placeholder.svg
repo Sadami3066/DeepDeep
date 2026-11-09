@@ -26,7 +26,7 @@
       <path d="M30 18L52 26L30 34V18Z" fill="#FFFFFF"/>
       <text x="64" y="33" fill="#FFFFFF" font-size="20" font-weight="600">看演示</text>
     </g>
-    <text x="76" y="606" fill="#6B7C99" font-size="18">实机录屏占位 · 之后替换为 assets/demo-hero.gif（16:9）</text>
+    <text x="76" y="606" fill="#6B7C99" font-size="18">实机录屏占位 · 之后替换为 docs/media/hero.gif（16:9）</text>
   </g>
   <g transform="translate(720 110)">
     <rect x="0" y="0" width="390" height="455" rx="34" fill="#0F172A" stroke="#26344F" stroke-width="2"/>
