@@ -21,4 +21,8 @@
     <string name="files_share_failed">Couldn\'t share</string>
     <string name="files_saved">Saved to Downloads</string>
     <string name="files_save_failed">Couldn\'t save</string>
+    <string name="files_qr_action">Scan QR code</string>
+    <string name="files_qr_result_title">QR code</string>
+    <string name="files_qr_copy">Copy QR content</string>
+    <string name="files_qr_copy_index">Copy QR content %1$d</string>
 </resources>

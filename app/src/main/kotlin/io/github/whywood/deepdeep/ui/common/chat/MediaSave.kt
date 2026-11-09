@@ -32,6 +32,7 @@ internal fun SaveToDownloadsSheet(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onShare: (() -> Unit)? = null,
+    onScanQr: (() -> Unit)? = null,
 ) {
     DdSheet(onDismiss = onDismiss) {
         DdSheetHeader(title = name, onClose = onDismiss)
@@ -47,6 +48,13 @@ internal fun SaveToDownloadsSheet(
                     title = stringResource(R.string.files_share),
                     icon = DdIcons.Share,
                     onClick = onShare,
+                )
+            }
+            if (onScanQr != null) {
+                DdListRow(
+                    title = stringResource(R.string.files_qr_action),
+                    icon = DdIcons.Scan,
+                    onClick = onScanQr,
                 )
             }
             Spacer(Modifier.height(28.dp))
