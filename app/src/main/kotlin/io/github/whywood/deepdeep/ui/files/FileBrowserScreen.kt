@@ -1,7 +1,11 @@
 package io.github.whywood.deepdeep.ui.files
 
-import android.os.Environment
+import android.Manifest
+import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,18 +28,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.FilePreviewKind
 import io.github.whywood.deepdeep.data.filePreviewKind
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.data.guessMime
-import io.github.whywood.deepdeep.data.isSharedStorageGranted
+import io.github.whywood.deepdeep.data.hasSharedStorageAccess
+import io.github.whywood.deepdeep.data.sharedStorageDirectory
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -87,15 +94,39 @@ private data class FileBrowserEntry(
 fun FileBrowserScreen(
     root: File,
     rootLabel: String,
-    sharedRoot: File? = null,
+    privateRoot: File,
     onOpenFile: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var browsingSharedRoot by rememberSaveable { mutableStateOf(false) }
-    val activeRoot = sharedRoot?.takeIf { browsingSharedRoot } ?: root
-    val onSharedRoot = activeRoot != root
+    val context = LocalContext.current
+    val sharedRoot = remember { sharedStorageDirectory() }
+    val alternateRoot = if (root.absolutePath == sharedRoot.absolutePath) privateRoot else sharedRoot
+    var browsingAlternate by rememberSaveable { mutableStateOf(false) }
+    var sharedStorageAccess by remember { mutableStateOf(hasSharedStorageAccess(context)) }
+    val accessHint = stringResource(R.string.settings_linux_shared_storage_grant)
+    val permissionHint = stringResource(R.string.settings_linux_shared_storage_permission)
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        sharedStorageAccess = granted
+        if (granted) {
+            browsingAlternate = true
+        } else {
+            Toast.makeText(context, permissionHint, Toast.LENGTH_SHORT).show()
+        }
+    }
+    LifecycleResumeEffect(Unit) {
+        sharedStorageAccess = hasSharedStorageAccess(context)
+        onPauseOrDispose {}
+    }
+    val activeRoot = if (
+        browsingAlternate && (alternateRoot.absolutePath != sharedRoot.absolutePath || sharedStorageAccess)
+    ) {
+        alternateRoot
+    } else {
+        root
+    }
+    val onSharedRoot = activeRoot.absolutePath == sharedRoot.absolutePath
     var relativePath by rememberSaveable(activeRoot.absolutePath) { mutableStateOf("") }
     val directory = remember(activeRoot, relativePath) {
         if (relativePath.isEmpty()) activeRoot else File(activeRoot, relativePath)
@@ -108,15 +139,26 @@ fun FileBrowserScreen(
         value = withContext(Dispatchers.IO) { readFileBrowserDirectory(directory) }
     }
     val canGoUp = relativePath.isNotEmpty()
-    val canSwitchRoot = sharedRoot != null && sharedRoot.absolutePath != root.absolutePath
+    val canSwitchRoot = alternateRoot.absolutePath != root.absolutePath
     val goUp = { relativePath = FileBrowserPaths.parentPath(relativePath) }
-    val switchRoot = { browsingSharedRoot = !browsingSharedRoot }
-    val label = if (canGoUp) {
-        relativePath
-    } else if (onSharedRoot) {
-        stringResource(R.string.files_root_shared)
-    } else {
-        rootLabel.ifBlank { root.name.ifBlank { stringResource(R.string.files_root_private) } }
+    val switchRoot = {
+        if (activeRoot.absolutePath != root.absolutePath) {
+            browsingAlternate = false
+        } else if (alternateRoot.absolutePath == sharedRoot.absolutePath && !sharedStorageAccess) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+            } else {
+                Toast.makeText(context, accessHint, Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            browsingAlternate = true
+        }
+    }
+    val label = when {
+        canGoUp -> relativePath
+        activeRoot.absolutePath == sharedRoot.absolutePath -> stringResource(R.string.files_root_shared)
+        activeRoot.absolutePath == privateRoot.absolutePath -> stringResource(R.string.files_root_private)
+        else -> rootLabel.ifBlank { root.name.ifBlank { stringResource(R.string.files_root_private) } }
     }
 
     DdPageScaffold(
@@ -350,7 +392,3 @@ private fun readFileBrowserDirectory(directory: File): FileBrowserListing {
         .map { FileBrowserEntry(it.name, it, directory = false, size = it.length()) }
     return FileBrowserListing.Ready(directories + files)
 }
-
-@Suppress("DEPRECATION")
-internal fun sharedStorageRoot(): File? =
-    if (isSharedStorageGranted()) Environment.getExternalStorageDirectory() else null

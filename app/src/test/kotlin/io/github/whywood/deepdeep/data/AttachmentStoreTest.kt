@@ -79,4 +79,19 @@ class AttachmentStoreTest {
         assertFalse(isSupportedImageSize(8_192, 8_193))
         assertFalse(isSupportedImageSize(0, 0))
     }
+
+    @Test
+    fun attachmentRootsExcludeExternalStorageWhenDisabled() {
+        val root = temporaryFolder.newFolder("root")
+        val home = temporaryFolder.newFolder("home")
+        val external = temporaryFolder.newFolder("external")
+        assertEquals(
+            listOf(root.canonicalPath, home.canonicalPath, external.canonicalPath),
+            attachmentRoots(root, home, external, sharedStorageEnabled = true).map { it.canonicalPath },
+        )
+        assertEquals(
+            listOf(root.canonicalPath, home.canonicalPath),
+            attachmentRoots(root, home, external, sharedStorageEnabled = false).map { it.canonicalPath },
+        )
+    }
 }

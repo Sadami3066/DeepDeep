@@ -1,12 +1,16 @@
 package io.github.whywood.deepdeep.data
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import androidx.core.content.ContextCompat
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -50,3 +54,15 @@ internal fun linuxEnabledDefault(): Boolean = true
 
 fun isSharedStorageGranted(): Boolean =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
+
+fun sharedStorageDirectory(): File = File(PUBLIC_STORAGE_ROOT)
+
+fun appHomeDirectory(context: Context): File = File(context.filesDir, "home")
+
+fun hasSharedStorageAccess(context: Context): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        Environment.isExternalStorageManager()
+    } else {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
+            PackageManager.PERMISSION_GRANTED
+    }

@@ -22,6 +22,9 @@ internal fun RemoteGatewayFailure?.pairMessageRes(): Int = when (this) {
     else -> messageRes()
 }
 
+internal fun RemoteGatewayFailure?.requiresNewPairingCode(): Boolean =
+    this == RemoteGatewayFailure.Unauthorized || this == RemoteGatewayFailure.Forbidden
+
 @StringRes
 internal fun RemoteGatewayFailure?.messageRes(): Int = when (this) {
     RemoteGatewayFailure.Unauthorized -> R.string.remote_failure_unauthorized

@@ -17,6 +17,7 @@ import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.remote.RemoteDeleteDialog
 import io.github.whywood.deepdeep.ui.remote.RemoteGuideDialog
 import io.github.whywood.deepdeep.ui.remote.RemotePairFailureDialog
+import io.github.whywood.deepdeep.ui.remote.RemotePairSource
 import io.github.whywood.deepdeep.ui.remote.RemotePairingDialog
 import io.github.whywood.deepdeep.ui.remote.RemotePasteDialog
 import io.github.whywood.deepdeep.ui.remote.RemoteRenameDialog
@@ -24,6 +25,7 @@ import io.github.whywood.deepdeep.ui.remote.RemoteScanSheet
 import io.github.whywood.deepdeep.ui.remote.RemoteScreen
 import io.github.whywood.deepdeep.ui.remote.RemoteStateHolder
 import io.github.whywood.deepdeep.ui.remote.pairMessageRes
+import io.github.whywood.deepdeep.ui.remote.requiresNewPairingCode
 
 @Composable
 internal fun RemoteRoute(
@@ -88,10 +90,21 @@ internal fun RemoteRoute(
     }
 
     holder.pairFailure?.let { failure ->
+        val needsNewCode = failure.requiresNewPairingCode()
         RemotePairFailureDialog(
             message = stringResource(failure.pairMessageRes()),
-            canRetry = true,
-            onRetry = { holder.retryPair(defaultName, openComputer) },
+            actionLabel = when {
+                !needsNewCode -> stringResource(R.string.remote_connect_retry)
+                holder.pairSource == RemotePairSource.Scan -> stringResource(R.string.remote_pair_rescan)
+                else -> stringResource(R.string.remote_pair_repaste)
+            },
+            onAction = {
+                if (needsNewCode) {
+                    holder.restartPair()
+                } else {
+                    holder.retryPair(defaultName, openComputer)
+                }
+            },
             onDismiss = holder::dismissPairFailure,
         )
     }

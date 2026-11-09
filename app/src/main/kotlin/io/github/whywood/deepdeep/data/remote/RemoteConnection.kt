@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.data.remote
 
 import android.os.Build
 import android.webkit.CookieManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -53,11 +54,18 @@ class RemoteConnection(
 
     suspend fun pair(link: RemotePairingLink, name: String): RemoteComputer {
         if (link.kind == RemoteEntryKind.Public) {
-            try {
-                return pairWithBrowser(link, name)
+            val entry = try {
+                browserPairEntry(link)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: RemoteGatewayException) {
                 if (!error.failure.allowsNativeFallback()) throw error
+                null
             } catch (_: Exception) {
+                null
+            }
+            if (entry != null) {
+                return persistPairing(entry, link.instanceId, link.instanceId, name, credentials = null)
             }
         }
         return pairWithNative(link, name)
@@ -68,9 +76,9 @@ class RemoteConnection(
             this == RemoteGatewayFailure.BadResponse ||
             this == RemoteGatewayFailure.CertificateRejected
 
-    private suspend fun pairWithBrowser(link: RemotePairingLink, name: String): RemoteComputer {
+    private suspend fun browserPairEntry(link: RemotePairingLink): RemoteEntry {
         val pairing = browser.pair(link.origin, link.token, deviceLabel())
-        val entry = RemoteEntry(
+        return RemoteEntry(
             deviceId = pairing.deviceId ?: link.instanceId,
             origin = link.origin,
             kind = RemoteEntryKind.Public,
@@ -81,7 +89,6 @@ class RemoteConnection(
             lastSeenAt = System.currentTimeMillis(),
             auth = RemoteEntryAuth.Browser,
         )
-        return persistPairing(entry, link.instanceId, link.instanceId, name, credentials = null)
     }
 
     private suspend fun pairWithNative(link: RemotePairingLink, name: String): RemoteComputer {

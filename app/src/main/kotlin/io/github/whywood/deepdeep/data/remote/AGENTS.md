@@ -12,7 +12,7 @@
 | `RemoteSecrets.kt` | 每台设备的 device/session/csrf token，经 `EncryptedSecretStore` 加密存本机 |
 | `RemoteTls.kt` | 证书编解码、SHA-256 指纹、TOFU 固定 CA 的 TrustManager 与 OkHttp 客户端 |
 | `RemoteGatewayClient.kt` | 局域网入口的配对/续期/探测请求与响应解析；错误映射为 `RemoteGatewayFailure` |
-| `RemoteBrowser.kt` | 远程入口的浏览器通道：隐藏 WebView 同源 fetch 完成配对/续期/探测，cookie 留在 CookieManager |
+| `RemoteBrowser.kt` | 远程入口的浏览器通道：隐藏 WebView 同源 fetch 完成配对/续期/探测，cookie 留在 CookieManager；配对响应映射（401/403/设备上限/限流/异常响应）抽成纯函数供单测 |
 | `RemoteConnection.kt` | 连接协调：列表状态、配对、续期、入口选择、写入 WebView cookie、删除 |
 
 ## 要点
@@ -25,3 +25,4 @@
 - 探测按局域网优先逐个入口尝试，连接失败会自动回退到同电脑的其它入口。
 - token 只存在加密存储，JSON 列表里不写 token；删除电脑时连同入口 token 一起清理。
 - 配对链接、请求体、响应解析与错误映射都是纯函数，单测覆盖；网络调用在 IO dispatcher 上。
+- 公网入口优先走浏览器通道配对：只有浏览器通道不可达/响应异常/证书被拒时才回退原生通道；浏览器配对成功后持久化失败不再回退，避免电脑端留下重复设备；协程取消原样抛出。

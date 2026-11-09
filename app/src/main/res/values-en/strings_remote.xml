@@ -38,7 +38,9 @@
     <string name="remote_paste_confirm">Connect</string>
     <string name="remote_paste_invalid">Invalid link. Copy it again.</string>
     <string name="remote_paste_hint_expiry">Pairing links expire after 2 minutes. Paste soon after generating.</string>
-    <string name="remote_pair_expired">Pairing code expired or already used. Generate a new link on the computer.</string>
+    <string name="remote_pair_expired">The pairing code is invalid, expired, or already used. Generate a new link on the computer.</string>
+    <string name="remote_pair_rescan">Scan again</string>
+    <string name="remote_pair_repaste">Paste a new link</string>
     <string name="remote_pair_rejected">The computer rejected this pairing. Generate a new link.</string>
     <string name="remote_scan_hint">Point at the pairing QR code on the computer</string>
     <string name="remote_scan_permission">Camera access is required to scan</string>

@@ -58,15 +58,7 @@ class RemoteBrowserClient(private val context: Context) {
         val status = envelope["status"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: 0
         val body = envelope["body"]?.jsonPrimitive?.contentOrNull.orEmpty()
         if (status == 0) throw RemoteGatewayException(RemoteGatewayFailure.Unreachable)
-        if (status !in 200..299) throw RemoteGatewayException(failureFor(status))
-        val payload = body.jsonObjectOrNull() ?: throw RemoteGatewayException(RemoteGatewayFailure.BadResponse)
-        if (payload["paired"]?.jsonPrimitive?.contentOrNull != "true") {
-            throw RemoteGatewayException(RemoteGatewayFailure.Unauthorized)
-        }
-        return RemoteBrowserPairing(
-            deviceId = payload["deviceId"]?.jsonPrimitive?.contentOrNull,
-            sessionExpiresAt = payload["sessionExpiresAt"]?.jsonPrimitive?.longOrNull ?: 0L,
-        )
+        return pairingFromResponse(status, body)
     }
 
     suspend fun state(origin: String): RemoteBrowserState {
@@ -205,16 +197,6 @@ class RemoteBrowserClient(private val context: Context) {
     private fun decodeJs(raw: String): String? =
         runCatching { Json.parseToJsonElement(raw).jsonPrimitive.contentOrNull }.getOrNull()
 
-    private fun failureFor(status: Int): RemoteGatewayFailure = when (status) {
-        401, 403 -> RemoteGatewayFailure.Unauthorized
-        409 -> RemoteGatewayFailure.DeviceLimit
-        429 -> RemoteGatewayFailure.RateLimited
-        in 500..599 -> RemoteGatewayFailure.BadResponse
-        else -> RemoteGatewayFailure.BadResponse
-    }
-
-    private fun String.jsonObjectOrNull() = runCatching { Json.parseToJsonElement(this).jsonObject }.getOrNull()
-
     private fun String.jsString(): String = buildString {
         append('"')
         this@jsString.forEach { character ->
@@ -242,3 +224,25 @@ class RemoteBrowserClient(private val context: Context) {
         const val EMPTY_JS_STRING = "\"\""
     }
 }
+
+internal fun pairFailureFor(status: Int): RemoteGatewayFailure = when (status) {
+    401 -> RemoteGatewayFailure.Unauthorized
+    403 -> RemoteGatewayFailure.Forbidden
+    409 -> RemoteGatewayFailure.DeviceLimit
+    429 -> RemoteGatewayFailure.RateLimited
+    else -> RemoteGatewayFailure.BadResponse
+}
+
+internal fun pairingFromResponse(status: Int, body: String): RemoteBrowserPairing {
+    if (status !in 200..299) throw RemoteGatewayException(pairFailureFor(status))
+    val payload = body.jsonObjectOrNull() ?: throw RemoteGatewayException(RemoteGatewayFailure.BadResponse)
+    if (payload["paired"]?.jsonPrimitive?.contentOrNull != "true") {
+        throw RemoteGatewayException(RemoteGatewayFailure.BadResponse)
+    }
+    return RemoteBrowserPairing(
+        deviceId = payload["deviceId"]?.jsonPrimitive?.contentOrNull,
+        sessionExpiresAt = payload["sessionExpiresAt"]?.jsonPrimitive?.longOrNull ?: 0L,
+    )
+}
+
+private fun String.jsonObjectOrNull() = runCatching { Json.parseToJsonElement(this).jsonObject }.getOrNull()

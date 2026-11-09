@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Environment
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -33,13 +32,14 @@ interface AttachmentStore {
     fun resolve(raw: String, root: File): AttachmentRef?
 }
 
-class FileAttachmentStore(context: Context, private val home: File) : AttachmentStore {
+class FileAttachmentStore(
+    context: Context,
+    private val home: File,
+    private val sharedStorage: () -> Boolean = { isSharedStorageGranted() },
+) : AttachmentStore {
     private val appContext = context.applicationContext
 
-    @Suppress("DEPRECATION")
-    private val externalRoot: File? = runCatching {
-        Environment.getExternalStorageDirectory().canonicalFile
-    }.getOrNull()
+    private val externalRoot: File? = runCatching { sharedStorageDirectory().canonicalFile }.getOrNull()
 
     @SuppressLint("UsableSpace")
     override suspend fun import(uri: Uri, root: File): AttachmentImport = withContext(Dispatchers.IO) {
@@ -104,8 +104,7 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
                 if (root.absolutePath != home.absolutePath) add(File(home, relative))
             }
         }
-        val roots = listOfNotNull(root, home, externalRoot)
-            .mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
+        val roots = attachmentRoots(root, home, externalRoot, sharedStorage())
         val external = externalRoot
         for (candidate in candidates) {
             val canonical = runCatching { candidate.canonicalFile }.getOrNull() ?: continue
@@ -188,6 +187,14 @@ class FileAttachmentStore(context: Context, private val home: File) : Attachment
 }
 
 private const val IMPORT_SPACE_MARGIN_BYTES = 64L * 1024 * 1024
+
+internal fun attachmentRoots(
+    root: File,
+    home: File,
+    external: File?,
+    sharedStorageEnabled: Boolean,
+): List<File> = listOfNotNull(root, home, external?.takeIf { sharedStorageEnabled })
+    .mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
 
 internal fun fileViewIntent(context: Context, file: File, mime: String): Intent? = runCatching {
     if (!file.isFile) return@runCatching null

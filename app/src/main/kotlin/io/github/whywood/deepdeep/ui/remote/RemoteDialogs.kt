@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,8 +125,8 @@ internal fun RemotePairingDialog() {
 @Composable
 internal fun RemotePairFailureDialog(
     message: String,
-    canRetry: Boolean,
-    onRetry: () -> Unit,
+    actionLabel: String,
+    onAction: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -145,12 +146,10 @@ internal fun RemotePairFailureDialog(
                 onClick = onDismiss,
                 color = colors.inkSecondary,
             )
-            if (canRetry) {
-                DdTextAction(
-                    text = stringResource(R.string.remote_connect_retry),
-                    onClick = onRetry,
-                )
-            }
+            DdTextAction(
+                text = actionLabel,
+                onClick = onAction,
+            )
         },
     )
 }
@@ -206,7 +205,7 @@ internal fun RemotePasteDialog(
 ) {
     val colors = deepDeepColors()
     val focusRequester = remember { FocusRequester() }
-    var draft by remember { mutableStateOf("") }
+    var draft by rememberSaveable { mutableStateOf("") }
     DdDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.remote_paste_title),

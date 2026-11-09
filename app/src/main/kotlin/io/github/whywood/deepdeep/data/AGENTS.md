@@ -11,7 +11,7 @@
 | `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、自动重试、后台唤醒、置顶、字号 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
-| `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素，生成分享/预览 Intent |
+| `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素，生成分享/预览 Intent；解析绝对路径时按共享存储开关放行 `/storage/emulated/0` 内文件 |
 | `DevPackageCatalog.kt` | 运行环境可装 Alpine 包与组合清单（体积、描述、安装后命令） |
 | `DevPackageManager.kt` | 运行环境包安装/卸载/检测（proot 内 apk），进度与通知 |
 | `Downloads.kt` | 通过 MediaStore 把文件存到系统「下载」目录 |
@@ -22,7 +22,7 @@
 | `ImageScaling.kt` | 解码采样与长边 2000 缩放计算（纯函数） |
 | `LanguagePreferences.kt` | App 语言读写与 LocalizedContext 资源包装 |
 | `LegacyWorkspaceMigration.kt` | 旧 projects DataStore 补迁到 runtime WorkspaceStore |
-| `LinuxSettingsStore.kt` | Linux 环境启用（默认开启）/共享存储/root 开关与共享存储授权判断 |
+| `LinuxSettingsStore.kt` | Linux 环境启用（默认开启）/共享存储/root 开关、共享存储授权判断与目录 helper（`sharedStorageDirectory`/`appHomeDirectory`/`hasSharedStorageAccess`） |
 | `MarketPresets.kt` | 技能/连接器/插件的市场本地预设（名称/说明/标签/类型）与纯函数 `filterMarketPresets` |
 | `OnboardingPreferences.kt` | 新手引导开始/完成标记（SharedPreferences） |
 | `OverlayEntryPreferences.kt` | 助手浮层入口方式（语音/拍照/无）DataStore |
@@ -45,4 +45,4 @@
 - 偏好默认 DataStore（一个 store 文件一个 `preferencesDataStore`），Flow 都 catch IOException 回退默认值；只有 Font/Language/Onboarding 仍是 SharedPreferences，新增偏好别再照抄。
 - 技能目录分三层：`files/skills` 是安装仓库、`agentDir/skills` 是全局启用副本、`home` 与各工作区 `.pi/skills` 是项目级；`.deepdeep-plugin` marker 表示目录归插件所有，SkillRepository 不会把它导入仓库。
 - 迁移只在启动时跑一次且幂等：StorageMigration 用 `.storage-migrated` 标记并重写会话 JSONL 头里的 cwd，LegacyWorkspaceMigration 仅在 WorkspaceStore 为空时补数据；目录名是 home/workspaces，不是旧 workspace/projects。
-- 附件进入会话时以工作区绝对路径为 ID：AttachmentStore 把 Uri 拷进工作区 `attachments/` 并校验大小/空间/像素；分享入口先暂存到 cache 再走同一导入，暂存文件不进会话，历史靠 `<attachments>` 块还原路径。
+- 附件进入会话时以工作区绝对路径为 ID：AttachmentStore 把 Uri 拷进工作区 `attachments/` 并校验大小/空间/像素；分享入口先暂存到 cache 再走同一导入，暂存文件不进会话，历史靠 `<attachments>` 块还原路径。共享存储内的文件只在「共享存储」开关开启时按绝对路径解析，关闭后不再接受外部路径。

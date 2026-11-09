@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.sdk.mcp.oauth.defaultMcpAuthFile
 import io.github.whywood.deepdeep.core.ModelSelection
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.appHomeDirectory
 import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.FileAttachmentStore
@@ -55,7 +56,7 @@ import kotlinx.coroutines.launch
 import okio.Path.Companion.toPath
 
 internal class DataGraph(private val deps: DataGraphDeps) {
-    val homeDir: File = File(deps.appContext.filesDir, "home").apply { mkdirs() }
+    val homeDir: File = appHomeDirectory(deps.appContext).apply { mkdirs() }
     val workspacesDir: File = File(deps.appContext.filesDir, "workspaces").apply { mkdirs() }
     val agentDir: File = File(deps.appContext.filesDir, "agent").apply { mkdirs() }
 
@@ -66,7 +67,7 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val apiKeyStore = ApiKeyStore(secretStore)
     val oauthCredentialStore = OAuthCredentialStore(secretStore)
     val modelConfigStore = ModelConfigStore(deps.appContext)
-    val attachmentStore = FileAttachmentStore(deps.appContext, homeDir)
+    val attachmentStore = FileAttachmentStore(deps.appContext, homeDir) { sharedStorage.value }
     val linuxSettings = LinuxSettingsStore(deps.appContext)
     val storageMountStore = StorageMountStore(File(deps.appContext.filesDir, "storage-mounts.json"))
     val workspaceToolPolicies = WorkspaceToolPolicyStore(File(deps.appContext.filesDir, "workspace-tool-policies.json"))

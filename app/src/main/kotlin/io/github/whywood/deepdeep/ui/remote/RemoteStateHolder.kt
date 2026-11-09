@@ -39,6 +39,8 @@ internal class RemoteStateHolder(
         private set
 
     private var lastLink: RemotePairingLink? = null
+    var pairSource by mutableStateOf(RemotePairSource.Scan)
+        private set
 
     fun refresh() {
         if (refreshing) return
@@ -67,7 +69,7 @@ internal class RemoteStateHolder(
         }
         scanOpen = false
         scanInvalid = false
-        startPair(link, defaultName, onPaired)
+        startPair(link, defaultName, onPaired, RemotePairSource.Scan)
     }
 
     fun openPaste() {
@@ -88,12 +90,21 @@ internal class RemoteStateHolder(
         }
         pasteOpen = false
         pasteInvalid = false
-        startPair(link, defaultName, onPaired)
+        startPair(link, defaultName, onPaired, RemotePairSource.Paste)
     }
 
     fun retryPair(defaultName: String, onPaired: (String) -> Unit) {
         val link = lastLink ?: return
-        startPair(link, defaultName, onPaired)
+        startPair(link, defaultName, onPaired, pairSource)
+    }
+
+    fun restartPair() {
+        pairFailure = null
+        lastLink = null
+        when (pairSource) {
+            RemotePairSource.Scan -> openScan()
+            RemotePairSource.Paste -> openPaste()
+        }
     }
 
     fun dismissPairFailure() {
@@ -145,9 +156,11 @@ internal class RemoteStateHolder(
         link: RemotePairingLink,
         defaultName: String,
         onPaired: (String) -> Unit,
+        source: RemotePairSource,
     ) {
         if (pairing) return
         lastLink = link
+        pairSource = source
         pairFailure = null
         pairing = true
         scope.launch {
@@ -164,4 +177,9 @@ internal class RemoteStateHolder(
                 }
         }
     }
+}
+
+internal enum class RemotePairSource {
+    Scan,
+    Paste,
 }
