@@ -69,6 +69,7 @@
     <string name="plugins_import_success">插件已导入</string>
     <string name="plugins_import_done">插件已导入并生效。</string>
     <string name="plugins_import_restart">插件已导入，重启 DeepDeep 后生效。</string>
+    <string name="plugins_market_installed_hint">请前往插件配置页面进行配置</string>
 
     <string name="plugins_page_title">插件页面</string>
     <string name="plugins_page_unavailable">该插件没有提供这个页面的内容</string>

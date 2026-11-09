@@ -117,6 +117,15 @@ internal fun MarketTab(
                 onInstalled()
                 when {
                     apiKey != null -> tokenId = null
+                    entry.type == MarketEntryType.Plugin -> {
+                        selectedId = null
+                        confirmId = null
+                        Toast.makeText(
+                            context,
+                            R.string.plugins_market_installed_hint,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                     entry.mcp?.auth?.type == MarketMcpAuthType.OAuth -> {
                         selectedId = null
                         confirmId = null

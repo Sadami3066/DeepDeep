@@ -69,6 +69,7 @@
     <string name="plugins_import_success">Plugin imported</string>
     <string name="plugins_import_done">Plugin imported and active.</string>
     <string name="plugins_import_restart">Plugin imported; takes effect after DeepDeep restarts.</string>
+    <string name="plugins_market_installed_hint">Go to the plugin page to configure it</string>
 
     <string name="plugins_page_title">Plugin page</string>
     <string name="plugins_page_unavailable">This plugin does not provide content for this page</string>
