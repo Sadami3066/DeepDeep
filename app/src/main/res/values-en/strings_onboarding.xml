@@ -11,7 +11,7 @@
     <string name="onboarding_later">Later</string>
 
     <string name="onboarding_welcome_title">Hello,\nI\'m DeepDeep.</string>
-    <string name="onboarding_welcome_lead">Your everyday AI assistant.\nFrom daily chores to new ideas.</string>
+    <string name="onboarding_welcome_lead">Your everyday DeepDeep.\nFrom daily chores to new ideas.</string>
     <string name="onboarding_welcome_note">A few steps now; you can adjust them anytime.</string>
 
     <string name="onboarding_account_title">A little about you</string>
@@ -60,7 +60,7 @@
     <string name="onboarding_permissions_subtitle">Turn on what you need now; you can adjust these later in Settings.</string>
     <string name="onboarding_permission_notification">Notifications</string>
     <string name="onboarding_permission_overlay">Floating window</string>
-    <string name="onboarding_permission_assistant">System assistant</string>
+    <string name="onboarding_permission_assistant">System DeepDeep</string>
     <string name="onboarding_permission_granted">On</string>
     <string name="onboarding_permission_missing">Off</string>
 

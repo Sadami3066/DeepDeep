@@ -11,7 +11,7 @@
     <string name="onboarding_later">稍后</string>
 
     <string name="onboarding_welcome_title">你好，\n我是 DeepDeep。</string>
-    <string name="onboarding_welcome_lead">你的随身 AI 助手。\n从日常小事，到新的想法。</string>
+    <string name="onboarding_welcome_lead">你的随身 DeepDeep。\n从日常小事，到新的想法。</string>
     <string name="onboarding_welcome_note">只需几步，之后你随时可以调整</string>
 
     <string name="onboarding_account_title">先认识一下</string>
@@ -60,7 +60,7 @@
     <string name="onboarding_permissions_subtitle">你可以按需开启以下权限，之后也可以在设置中调整。</string>
     <string name="onboarding_permission_notification">通知</string>
     <string name="onboarding_permission_overlay">悬浮窗</string>
-    <string name="onboarding_permission_assistant">系统助手</string>
+    <string name="onboarding_permission_assistant">系统 DeepDeep</string>
     <string name="onboarding_permission_granted">已开启</string>
     <string name="onboarding_permission_missing">未开启</string>
 

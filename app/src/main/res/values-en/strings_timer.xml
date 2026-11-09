@@ -21,7 +21,7 @@
     <string name="timers_name_label">Name</string>
     <string name="timers_name_hint">For example: Morning brief</string>
     <string name="timers_prompt_label">Prompt</string>
-    <string name="timers_prompt_hint">Message sent to the assistant when due</string>
+    <string name="timers_prompt_hint">Message sent to DeepDeep when due</string>
     <string name="timers_repeat_label">Repeat</string>
     <string name="timers_frequency_once">Once</string>
     <string name="timers_frequency_daily">Daily</string>

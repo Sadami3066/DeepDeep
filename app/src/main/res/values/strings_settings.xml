@@ -64,7 +64,7 @@
     <string name="settings_linux_status_installed">已内置 · Alpine %1$s</string>
     <string name="settings_linux_status_failed">内置环境准备失败</string>
     <string name="settings_linux_builtin">内置环境</string>
-    <string name="settings_linux_enable">允许助手运行 Linux 命令</string>
+    <string name="settings_linux_enable">允许 DeepDeep 运行 Linux 命令</string>
     <string name="settings_linux_reset">重新准备内置环境</string>
     <string name="settings_linux_reset_title">重新准备内置环境？</string>
     <string name="settings_linux_reset_dialog">将删除当前内置环境并关闭开关，下次启动会重新准备，工作区文件保留。</string>
@@ -200,10 +200,10 @@
     <string name="settings_background_job_wake">后台任务完成时唤醒</string>
     <string name="settings_oauth_manual_hint">浏览器没有自动返回？也可以手动粘贴授权码或回调链接。</string>
     <string name="settings_new_chat_model">新会话默认模型</string>
-    <string name="settings_assistant">系统助手</string>
-    <string name="assistant_settings_title">系统助手</string>
-    <string name="assistant_settings_subtitle">用于替换手机系统助手</string>
-    <string name="assistant_settings_role">默认助手</string>
+    <string name="settings_assistant">系统 DeepDeep</string>
+    <string name="assistant_settings_title">系统 DeepDeep</string>
+    <string name="assistant_settings_subtitle">用于替换手机系统 DeepDeep</string>
+    <string name="assistant_settings_role">默认 DeepDeep</string>
     <string name="assistant_settings_role_held">已设置</string>
     <string name="assistant_settings_role_missing">未设置</string>
     <string name="assistant_settings_power">长按电源键启动DeepDeep</string>
@@ -229,7 +229,7 @@
 
     <string name="settings_linux_mount_add_title">添加共享目录</string>
     <string name="settings_linux_mount_edit_title">编辑共享目录</string>
-    <string name="settings_linux_mount_subtitle">选好目录，让助手知道如何使用。</string>
+    <string name="settings_linux_mount_subtitle">选好目录，让 DeepDeep 知道如何使用。</string>
     <string name="settings_linux_mount_section">共享目录</string>
     <string name="settings_linux_mount_name_label">目录名称</string>
     <string name="settings_linux_mount_description_label">使用说明</string>

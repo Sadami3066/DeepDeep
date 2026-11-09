@@ -59,7 +59,7 @@
     <string name="settings_linux_status_installed">Built in · Alpine %1$s</string>
     <string name="settings_linux_status_failed">Built-in environment couldn\'t be prepared</string>
     <string name="settings_linux_builtin">Built-in environment</string>
-    <string name="settings_linux_enable">Allow assistant to run Linux commands</string>
+    <string name="settings_linux_enable">Allow DeepDeep to run Linux commands</string>
     <string name="settings_linux_reset">Prepare built-in environment again</string>
     <string name="settings_linux_reset_title">Prepare built-in environment again?</string>
     <string name="settings_linux_reset_dialog">This deletes the current built-in environment and turns it off. It will be prepared again on next launch. Workspace files are kept.</string>
@@ -194,10 +194,10 @@
     <string name="settings_background_job_wake">Wake when a background job finishes</string>
     <string name="settings_oauth_manual_hint">Browser did not return automatically? Paste the authorization code or redirect URL below.</string>
     <string name="settings_new_chat_model">Default model for new chats</string>
-    <string name="settings_assistant">System assistant</string>
-    <string name="assistant_settings_title">System assistant</string>
-    <string name="assistant_settings_subtitle">Replaces the phone\'s system assistant</string>
-    <string name="assistant_settings_role">Default assistant</string>
+    <string name="settings_assistant">System DeepDeep</string>
+    <string name="assistant_settings_title">System DeepDeep</string>
+    <string name="assistant_settings_subtitle">Replaces the phone\'s system DeepDeep</string>
+    <string name="assistant_settings_role">Default DeepDeep</string>
     <string name="assistant_settings_role_held">Set</string>
     <string name="assistant_settings_role_missing">Not set</string>
     <string name="assistant_settings_power">Launch DeepDeep with a long press of the power button</string>

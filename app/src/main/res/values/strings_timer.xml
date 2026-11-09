@@ -21,7 +21,7 @@
     <string name="timers_name_label">名称</string>
     <string name="timers_name_hint">例如：每日简报</string>
     <string name="timers_prompt_label">提示词</string>
-    <string name="timers_prompt_hint">到点后发送给助手的内容</string>
+    <string name="timers_prompt_hint">到点后发送给 DeepDeep 的内容</string>
     <string name="timers_repeat_label">重复</string>
     <string name="timers_frequency_once">一次</string>
     <string name="timers_frequency_daily">每天</string>
