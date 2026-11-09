@@ -23,19 +23,7 @@
 
 </div>
 
-[概览](#概览) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [功能](#功能) · [开发](#开发与构建) · [文档](#文档与反馈) · [License](#license)
-
-## 预览
-
-<table>
-<tr>
-<td width="33%" align="center"><img src="docs/media/shots/home.jpg" width="220" alt="DeepDeep 主界面" /><br /><sub>主界面</sub></td>
-<td width="33%" align="center"><img src="docs/media/shots/drawer.jpg" width="220" alt="DeepDeep 抽屉" /><br /><sub>抽屉</sub></td>
-<td width="33%" align="center"><img src="docs/media/shots/providers.jpg" width="220" alt="DeepDeep 模型服务商列表" /><br /><sub>模型服务商</sub></td>
-</tr>
-</table>
-
-<sub>截图来自 1.0.0 内测版。各功能的演示视频见下文。</sub>
+[概览](#概览) · [预览](#预览) · [UI 展示](#ui-展示) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [功能](#功能) · [开发](#开发与构建) · [文档](#文档与反馈) · [License](#license)
 
 ## 概览
 
@@ -44,6 +32,63 @@ DeepDeep 面向需要在手机上完成实际任务的用户。它将 Agent 运�
 适合需要在手机上处理文件、检索资料、操作应用、运行脚本，或把手机作为随身 Linux 环境的用户。
 
 当前版本为 1.0.0，处于小范围内测，安装包由作者分发，源码暂未公开。
+
+## 预览
+
+<table>
+<tr>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/148208b2-11de-4ea5-a3a0-0b0378e6df34
+
+<b>Agent 运行时</b><br />
+<sub>查询空位并创建后台任务。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/f20ce2ce-26e9-4f7c-8696-dea81d0a74e1
+
+<b>Android 系统集成</b><br />
+<sub>在悬浮窗中操作其他应用。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d
+
+<b>小程序</b><br />
+<sub>现场生成打卡待办。</sub>
+</td>
+</tr>
+<tr>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/0fcfc455-4a06-4f74-ba69-26f27d341b57
+
+<b>万能扫一扫</b><br />
+<sub>识别二维码并跳转到对应应用。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a
+
+<b>远程连接</b><br />
+<sub>连接电脑上的 DSH。</sub>
+</td>
+<td width="33%" valign="top" align="center">
+
+https://github.com/user-attachments/assets/32ce705b-dd43-4677-8509-ea7ad7fcf49b
+
+<b>悬浮语音</b><br />
+<sub>在桌面悬浮条中直接提问。</sub>
+</td>
+</tr>
+</table>
+
+## UI 展示
+
+<p align="center"><img src="docs/media/shots/ui-showcase.png" width="100%" alt="DeepDeep 界面：主界面、抽屉、模型服务商、设置与个性化" /></p>
+
+<sub>主界面、抽屉、模型服务商、设置与个性化。</sub>
 
 ## 快速开始
 
@@ -87,69 +132,12 @@ adb install -r DeepDeep-1.0.0.apk
 
 ## 功能
 
-<table>
-<tr>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/148208b2-11de-4ea5-a3a0-0b0378e6df34
-
-<b>Agent 运行时</b><br />
-<sub>工具、MCP、技能与后台任务在同一个会话中运行。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/f20ce2ce-26e9-4f7c-8696-dea81d0a74e1
-
-<b>Android 系统集成</b><br />
-<sub>虚拟屏、悬浮窗、系统助手与三档权限。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d
-
-<b>小程序</b><br />
-<sub>Agent 现场生成 HTML 应用，可保存数据并添加到桌面。</sub>
-</td>
-</tr>
-<tr>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/6783519b-5f93-46d6-ad54-86a8e1350016
-
-<b>万能扫一扫</b><br />
-<sub>同时识别多个二维码，按内容跳转对应应用。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-
-https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a
-
-<b>远程连接</b><br />
-<sub>连接电脑上的 DSH，局域网优先，证书固定。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-<img src="docs/media/shots/personalization.jpg" width="100%" alt="DeepDeep 个性化设置" /><br />
-<b>记忆</b><br />
-<sub>分层记忆自动沉淀，可搜索并注入会话。</sub>
-</td>
-</tr>
-<tr>
-<td width="33%" valign="top" align="center">
-<img src="docs/media/shots/drawer.jpg" width="100%" alt="DeepDeep 抽屉" /><br />
-<b>插件与市场</b><br />
-<sub>插件、技能与 MCP 从市场安装，安装前展示能力。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-<img src="docs/media/shots/settings.jpg" width="100%" alt="DeepDeep 权限与运行环境设置" /><br />
-<b>权限与设置</b><br />
-<sub>普通 / 无线调试 / Root 三档权限。</sub>
-</td>
-<td width="33%" valign="top" align="center">
-<img src="docs/media/shots/providers.jpg" width="100%" alt="DeepDeep 模型服务商列表" /><br />
-<b>模型与对话</b><br />
-<sub>42 家 Provider，模型与思考档按会话独立。</sub>
-</td>
-</tr>
-</table>
+| 能力 | 说明 |
+|---|---|
+| **Agent 运行时** | 工具、MCP、技能、后台任务、定时任务与记忆在同一会话中运行；MCP 工具按需加载。 |
+| **Android 系统集成** | 普通 / 无线调试 / Root 三档权限；虚拟屏、悬浮窗、系统助手、文件、分享与通知。 |
+| **扩展与自动化** | 小程序、万能扫一扫、插件、市场、远程连接；后台任务与五段 cron。 |
+| **模型与对话** | 42 家 Provider；Markdown、附件、语音、朗读、上下文占用与 `/compact`。 |
 
 ### Linux 环境
 

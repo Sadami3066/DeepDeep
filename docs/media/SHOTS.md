@@ -28,11 +28,11 @@ docs/media/
 | `deepdeep-monitor.mp4` | Agent 轮询场馆 | https://github.com/user-attachments/assets/148208b2-11de-4ea5-a3a0-0b0378e6df34 |
 | `deepdeep-phone-control.mp4` | 悬浮窗操作其他应用 | https://github.com/user-attachments/assets/f20ce2ce-26e9-4f7c-8696-dea81d0a74e1 |
 | `deepdeep-miniapp.mp4` | 生成打卡待办小程序 | https://github.com/user-attachments/assets/fd8eba76-f19e-477a-95c7-8c1d1609198d |
-| `deepdeep-scan.mp4` | 扫码与跳转 | https://github.com/user-attachments/assets/6783519b-5f93-46d6-ad54-86a8e1350016 |
+| `deepdeep-scan.mp4` | 扫码与跳转 | https://github.com/user-attachments/assets/0fcfc455-4a06-4f74-ba69-26f27d341b57 |
 | `deepdeep-remote.mp4` | 连接电脑 DSH | https://github.com/user-attachments/assets/b712257f-c700-43c3-ac4e-6fd829c6e24a |
-| `deepdeep-overlay-voice.mp4` | 悬浮语音输入（备用） | https://github.com/user-attachments/assets/32ce705b-dd43-4677-8509-ea7ad7fcf49b |
+| `deepdeep-overlay-voice.mp4` | 悬浮语音输入 | https://github.com/user-attachments/assets/32ce705b-dd43-4677-8509-ea7ad7fcf49b |
 
-这些是 720×1280、H.264、无音轨的压缩版，单个 0.3–1.8MB。原始录屏保留在 Release：
+这些是 720×1280、H.264、无音轨的压缩版，单个 0.3–2.3MB。原始录屏保留在 Release：
 
 ```text
 https://github.com/Sadami3066/DeepDeep/releases/tag/demo-20261109
@@ -42,11 +42,12 @@ https://github.com/Sadami3066/DeepDeep/releases/tag/demo-20261109
 
 | 文件 | 用途 |
 |---|---|
-| `shots/home.jpg` | README 预览：主界面 |
-| `shots/drawer.jpg` | README 预览、功能卡片：抽屉与插件入口 |
-| `shots/providers.jpg` | README 预览、功能卡片：模型服务商 |
-| `shots/settings.jpg` | 功能卡片：权限与运行环境 |
-| `shots/personalization.jpg` | 功能卡片：记忆与个性化 |
+| `shots/home.jpg` | UI 展示：主界面 |
+| `shots/drawer.jpg` | UI 展示：抽屉 |
+| `shots/providers.jpg` | UI 展示：模型服务商 |
+| `shots/settings.jpg` | UI 展示：权限与运行环境 |
+| `shots/personalization.jpg` | UI 展示：个性化 |
+| `shots/ui-showcase.png` | UI 展示：五张截图合并为一张 |
 
 ## 重新生成
 
