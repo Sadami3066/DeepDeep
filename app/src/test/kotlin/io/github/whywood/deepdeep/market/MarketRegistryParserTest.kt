@@ -16,6 +16,7 @@ class MarketRegistryParserTest {
         assertEquals(MarketEntryType.Plugin, plugin.type)
         assertEquals("io.example.plugin", plugin.id)
         assertEquals("plugin-key", plugin.plugin?.publisherKeyId)
+        assertEquals("milous", plugin.plugin?.publisherName)
         assertEquals("插件", plugin.name("zh"))
         assertEquals("Plugin", plugin.name("en"))
         val skill = registry.entries[1]
@@ -137,7 +138,7 @@ class MarketRegistryParserTest {
               "tags": {"zh": ["插件"], "en": ["Plugin"]},
               "version": "1.0.0",
               "artifact": {"url": "https://example.com/p.ddp", "sha256": "$sha256", "size": 1024},
-              "plugin": {"apiLevel": 4, "minHostVersion": "0.2.0", "publisherKeyId": "plugin-key"}
+              "plugin": {"apiLevel": 4, "minHostVersion": "0.2.0", "publisherKeyId": "plugin-key", "publisherName": "milous"}
             },
             {
               "type": "skill",

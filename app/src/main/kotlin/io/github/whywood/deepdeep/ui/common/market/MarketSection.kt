@@ -61,6 +61,7 @@ import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketInstallState
 import io.github.whywood.deepdeep.market.MarketMcpAuthType
+import io.github.whywood.deepdeep.market.MarketPluginMeta
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketSource
 import io.github.whywood.deepdeep.market.MarketState
@@ -350,6 +351,7 @@ private fun MarketRow(
 ) {
     val colors = deepDeepColors()
     val name = entry.name(language)
+    val publisher = if (entry.type == MarketEntryType.Plugin) marketPublisherDisplay(entry.plugin) else null
     DdPressable(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -377,7 +379,7 @@ private fun MarketRow(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = entry.summary(language),
+                    text = listOfNotNull(entry.summary(language).takeIf { it.isNotBlank() }, publisher).joinToString(" · "),
                     style = DdType.bodySmall,
                     color = colors.inkTertiary,
                     maxLines = 1,
@@ -397,6 +399,12 @@ private fun MarketRow(
             )
         }
     }
+}
+
+private fun marketPublisherDisplay(plugin: MarketPluginMeta?): String? {
+    plugin ?: return null
+    return plugin.publisherName?.takeIf { it.isNotBlank() }
+        ?: plugin.publisherKeyId?.takeIf { it.isNotBlank() }?.take(12)
 }
 
 @Composable
@@ -443,8 +451,8 @@ private fun MarketDetailSheet(
         }
         val plugin = entry.plugin
         if (entry.type == MarketEntryType.Plugin && plugin != null) {
-            val publisher = plugin.publisherKeyId
-            if (!publisher.isNullOrBlank()) {
+            val publisher = marketPublisherDisplay(plugin)
+            if (publisher != null) {
                 metaRows += stringResource(R.string.market_detail_publisher) to publisher
             }
         }

@@ -25,6 +25,7 @@ data class MarketPluginMeta(
     val apiLevel: Int,
     val minHostVersion: String?,
     val publisherKeyId: String?,
+    val publisherName: String? = null,
 )
 
 data class MarketSkillMeta(

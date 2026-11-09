@@ -53,6 +53,7 @@ internal object MarketRegistryParser {
                 apiLevel = it.int("apiLevel") ?: 0,
                 minHostVersion = it.string("minHostVersion"),
                 publisherKeyId = it.string("publisherKeyId"),
+                publisherName = it.string("publisherName"),
             )
         }
         val skill = (obj["skill"] as? JsonObject)?.let {

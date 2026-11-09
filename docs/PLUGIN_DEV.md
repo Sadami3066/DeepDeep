@@ -98,7 +98,7 @@ cp -R template my-plugin
 | `changelog` | string | 否 | 更新说明 |
 | `icon` | string | 否 | 只支持 `asset:<包内相对路径>`，如 `asset:icon.png`；列表按显示尺寸降采样、不染色，缺失或损坏回退占位图标 |
 | `ui` | object | 否 | `{ "apiLevel": 1, "kotlin"?: "2.4", "compose"?: "1.10.5" }`；参与 Compose 槽兼容判定，见「UI 扩展」 |
-| `publisher` | object | 否 | `{ "name": ..., "keyId": ... }`；只做展示，信任以签名里的 `keyId` 为准 |
+| `publisher` | object | 否 | `{ "name": ..., "keyId": ... }`。`name` 是展示名（如 `milous`），导入确认与已安装信息里直接显示；缺失时界面回落到签名 `keyId` 前 12 位。`keyId` 只作说明，发布者身份与信任始终以签名文件 `META-INF/plugin-signature.json` 里的 `keyId` 为准 |
 | `provides` | object | 否 | 贡献预检，见下；必须与实际贡献一致 |
 | `capabilities` | string[] | 是 | 插件需要的宿主服务清单，见下；缺失或含未知项拒绝装载 |
 | `requiresPrivilege` | bool | 否（默认 false） | 需要 ADB/Root 能力，确认页与信息弹窗标黄提示 |

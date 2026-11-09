@@ -815,7 +815,7 @@ private fun PluginDetailSheet(
                             title = stringResource(R.string.plugins_info_publisher),
                             subtitle = publisher.keyId.ifBlank { null },
                             subtitleMaxLines = 2,
-                            value = publisher.name.ifBlank { null },
+                            value = publisher.name.ifBlank { publisher.keyId.take(12) },
                         )
                     }
                     DdHairline()

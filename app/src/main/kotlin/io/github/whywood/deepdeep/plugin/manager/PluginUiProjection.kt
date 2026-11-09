@@ -36,7 +36,9 @@ internal class PluginUiProjection(
             skills = descriptor.contributions.skills.map { it.id },
             installedSizeBytes = view.externalRecord?.size,
             lastError = view.record.lastError,
-            publisher = view.externalRecord?.let { record -> PublisherInfo("", record.publisherKeyId) },
+            publisher = view.externalRecord?.let { record ->
+                PublisherInfo(descriptor.manifest.publisher?.name.orEmpty(), record.publisherKeyId)
+            },
             capabilities = descriptor.manifest.capabilities.orEmpty(),
         )
     }

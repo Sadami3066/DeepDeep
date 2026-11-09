@@ -6,8 +6,10 @@ import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
+import io.github.whywood.deepdeep.plugin.api.PublisherInfo
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
+import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -57,6 +59,34 @@ class PluginUiProjectionTest {
 
         assertEquals(PluginPhaseUi.DISABLED, snapshot.phase)
         assertEquals(false, snapshot.enabled)
+    }
+
+    @Test
+    fun publisherNameComesFromManifestWithRecordKeyId() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val manifest = managerManifest("alpha").copy(
+            publisher = PublisherInfo("milous", "ed25519:cb08"),
+        )
+        val runtime = managerRuntime(manifest, CountingPlugin()).apply {
+            externalRecord = ExternalPluginRecord(
+                id = "alpha",
+                version = "1.0.0",
+                installedAt = 0L,
+                installPath = "/tmp/alpha",
+                activeBundleSha256 = "sha",
+                size = 1L,
+                publisherKeyId = "ed25519:cb08701a59d66606",
+                apiLevel = 4,
+                uiApiLevel = 1,
+            )
+        }
+        gate.register(managerRecord("alpha"), runtime)
+        val registry = registryFor(gate)
+
+        val snapshot = projection().snapshots(gate.views(), registry.snapshot()).single()
+
+        assertEquals("milous", snapshot.publisher?.name)
+        assertEquals("ed25519:cb08701a59d66606", snapshot.publisher?.keyId)
     }
 
     @Test
