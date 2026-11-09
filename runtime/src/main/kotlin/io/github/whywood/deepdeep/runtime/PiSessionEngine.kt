@@ -37,6 +37,7 @@ class PiSessionEngine(
     private val credentials: CredentialStore,
     private val transport: HttpTransport,
     private val shellExecutor: ShellExecutor?,
+    private val rootBashActive: () -> Boolean = { false },
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
     private val sharedStorage: suspend () -> Boolean = { false },
@@ -117,6 +118,7 @@ class PiSessionEngine(
                 modelId = session?.model?.id ?: modelId,
                 now = OffsetDateTime.now(),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
+                rootBash = runCatching { rootBashActive() }.getOrDefault(false),
                 extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(
                         "paths",

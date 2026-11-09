@@ -7,7 +7,7 @@ AppGraph 拆出的装配子图：把一组相关的全局依赖的构造与接�
 | 文件 | 职责 |
 |---|---|
 | `DataGraph.kt` / `DataGraphDeps.kt` | 数据与偏好子图：目录、DataStore 偏好、附件/会话/工作区/技能存储、凭据与 Provider 目录、MCP 存储、问题中心、目标服务；持有 `jobWake` / `sharedStorage` 两个派生状态 |
-| `PlatformGraph.kt` / `PlatformGraphDeps.kt` | 平台子图：RootShell、ADB 桥、权限控制器、Linux 环境（按工作区缓存）、虚拟屏、屏幕工具装配（`ScreenToolset`，同时供插件宿主服务复用控制器）、MCP 插件桥 |
+| `PlatformGraph.kt` / `PlatformGraphDeps.kt` | 平台子图：RootShell、ADB 桥、权限控制器、Linux 环境（按工作区缓存）与 root bash（rootfs 准备、按权限档路由）、虚拟屏、屏幕工具装配（`ScreenToolset`，同时供插件宿主服务复用控制器）、MCP 插件桥 |
 | `RuntimeGraph.kt` / `RuntimeGraphDeps.kt` | 运行时子图：App 自带工具装配（present/shell/web/安排/目标/任务/定时/小程序/记忆/开关且权限生效时的屏幕）、记忆存储与纪要（`MemoryStore`/`MemoryRecap`）、engine 工厂、Miniapp agent、`AgentRuntimeHost`、`ConversationStore` |
 | `ServiceGraph.kt` / `ServiceGraphDeps.kt` | 服务子图：通知中心、定时器、后台任务、开发包管理器、`ProcessRuntime` |
 | `PluginGraph.kt` / `PluginGraphDeps.kt` | 插件装配子图：创建 `PluginInstaller` / `ExternalPluginRuntime` / `PluginHostManager`，按插件构造宿主服务依赖（`buildPluginServices`），并把经理暴露为 `AppGraph.pluginManager`；只读 `PluginGraphDeps` |

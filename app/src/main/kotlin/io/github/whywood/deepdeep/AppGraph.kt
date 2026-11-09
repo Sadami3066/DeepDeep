@@ -68,6 +68,8 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
+import io.github.whywood.deepdeep.service.RootBashController
+import io.github.whywood.deepdeep.service.RootBashMode
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.shouldAutoInstallLinux
 import java.io.File
@@ -129,6 +131,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
 
     override val privilege: PrivilegeController get() = platformGraph.privilege
+    override val rootBash: RootBashController get() = platformGraph.rootBash
     val adbBridge get() = platformGraph.adbBridge
     override val linuxEnvironment: LinuxEnvironment get() = platformGraph.linuxEnvironment
 
@@ -243,6 +246,7 @@ class AppGraph(context: Context) : AppDependencies {
         pluginManager = { pluginManager },
         shellExecutorFor = platformGraph.shellExecutorFor,
         linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
+        rootBashActive = { platformGraph.rootBash.mode.value == RootBashMode.CHROOT },
         decorateInterrupted = ::decorateInterrupted,
         timerService = { serviceGraph.timerService },
         jobRegistry = { serviceGraph.jobRegistry },

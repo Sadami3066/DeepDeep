@@ -185,6 +185,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             credentials = deps.credentials,
             transport = deps.httpTransport,
             shellExecutor = deps.shellExecutorFor(cwd),
+            rootBashActive = deps.rootBashActive,
             providers = deps.providerCatalog,
             personalization = { deps.personalizationStore.read().toRuntime() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },

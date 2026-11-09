@@ -79,7 +79,7 @@ fun rootShellTool(
     status: () -> RootToolStatus,
 ): CodingTool = privilegedShellTool(
     name = "root_shell",
-    description = "Run a shell command with root privileges and return its exit code, stdout and stderr. Use only when the user explicitly asks for a system-level operation that needs root; prefer the regular bash tool otherwise.",
+    description = "Run a command with Android root privileges and return its exit code, stdout and stderr. Use it for Android system operations such as pm, cmd, settings and dumpsys that the Linux bash environment cannot serve.",
     parameters = rootShellParameters,
     executor = executor,
     enabled = enabled,

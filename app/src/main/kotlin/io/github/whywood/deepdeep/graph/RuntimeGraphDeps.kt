@@ -55,6 +55,7 @@ internal class RuntimeGraphDeps(
     val pluginManager: () -> PluginHostManager,
     val shellExecutorFor: suspend (File) -> AppShellExecutor?,
     val linuxEnvironmentFor: (String?) -> LinuxEnvironment,
+    val rootBashActive: () -> Boolean,
     val decorateInterrupted: suspend (ConversationState, String) -> ConversationState,
     val timerService: () -> TimerService,
     val jobRegistry: () -> JobRegistry,

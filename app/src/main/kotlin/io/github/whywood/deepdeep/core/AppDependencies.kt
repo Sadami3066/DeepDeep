@@ -37,6 +37,7 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
+import io.github.whywood.deepdeep.service.RootBashController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
 
@@ -49,6 +50,8 @@ interface AppDependencies :
 
 interface AdvancedDependencies {
     val privilege: PrivilegeController
+
+    val rootBash: RootBashController
 }
 
 interface RuntimeDependencies {

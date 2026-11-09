@@ -37,6 +37,7 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
+import io.github.whywood.deepdeep.service.RootBashController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import java.io.File
 
@@ -91,6 +92,8 @@ internal class FakeAppDependencies(
     override val webSearchSettings: WebSearchSettingsStore get() = unavailable("webSearchSettings")
 
     override val linuxEnvironment: LinuxEnvironment get() = unavailable("linuxEnvironment")
+
+    override val rootBash: RootBashController get() = unavailable("rootBash")
 
     override val devPackageManager: DevPackageManager get() = unavailable("devPackageManager")
 

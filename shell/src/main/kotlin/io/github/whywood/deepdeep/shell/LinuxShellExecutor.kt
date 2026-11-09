@@ -10,7 +10,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 class LinuxShellExecutor(
-    private val environment: LinuxEnvironment,
+    private val executor: LinuxExecutor,
     private val defaultTimeoutSeconds: Long = 60,
 ) : ShellExecutor {
     override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
@@ -23,7 +23,7 @@ class LinuxShellExecutor(
         signal?.throwIfAborted()
         val timeout = (timeoutSeconds ?: defaultTimeoutSeconds).coerceIn(1, 600)
         return coroutineScope {
-            val execution = async { environment.execute(command, timeout * 1000) }
+            val execution = async { executor.execute(command, timeout * 1000) }
             val unsubscribe = signal?.onAbort { execution.cancel() }
             val result = try {
                 execution.await()

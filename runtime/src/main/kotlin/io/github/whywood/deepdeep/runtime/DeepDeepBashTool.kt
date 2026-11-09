@@ -44,12 +44,12 @@ private val bashParameters: JsonObject = buildJsonObject {
 
 internal fun deepDeepBashTool(shellExecutor: ShellExecutor): CodingTool = CodingTool(
     name = "bash",
-    description = "Execute a command using the Linux /bin/sh shell in the current working directory. Returns merged stdout and stderr, ending with the exit code as [exit: N]. Output is truncated to the last $BASH_MAX_LINES lines or ${BASH_MAX_BYTES / 1024}KB (whichever is hit first). Oversized output is saved to a complete log when available. Cancellation stops execution and is not retried. Optionally provide a timeout in seconds.",
+    description = "Execute a command in the Linux shell for the current working directory. Returns merged stdout and stderr, ending with the exit code as [exit: N]. The active shell mode, user, and path layout are described in the system prompt environment section. Output is truncated to the last $BASH_MAX_LINES lines or ${BASH_MAX_BYTES / 1024}KB (whichever is hit first). Oversized output is saved to a complete log when available. Cancellation stops execution and is not retried. Optionally provide a timeout in seconds.",
     parameters = bashParameters,
     label = "bash",
     promptGuidelines = listOf(
         "Check the [exit: N] marker on every bash result; investigate failures before moving on.",
-        "bash runs Linux /bin/sh; shared work files keep the same absolute paths as the file tools.",
+        "bash runs the session Linux shell; read the system prompt environment section for its current mode and path layout.",
     ),
     execute = { _toolCallId, args, signal, _onUpdate ->
         val command = args.requiredString("command")

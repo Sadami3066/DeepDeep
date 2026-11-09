@@ -97,6 +97,24 @@ class LinuxEnvironment(
 
     suspend fun refreshDns() {
         if (!rootfsDir.isDirectory) return
+        val content = resolvConfContent()
+        runCatching {
+            File(rootfsDir, "etc").mkdirs()
+            File(rootfsDir, "etc/resolv.conf").writeText(content)
+        }
+    }
+
+    fun exportResolvConf(): File? {
+        val content = resolvConfContent()
+        return runCatching {
+            val file = File(appContext.cacheDir, "root-bash/resolv.conf")
+            file.parentFile?.mkdirs()
+            file.writeText(content)
+            file
+        }.getOrNull()
+    }
+
+    private fun resolvConfContent(): String {
         val servers = runCatching {
             val manager = appContext.getSystemService(ConnectivityManager::class.java)
             val network = manager?.activeNetwork
@@ -105,13 +123,8 @@ class LinuxEnvironment(
                 ?.filter { it.isNotBlank() }
                 .orEmpty()
         }.getOrDefault(emptyList())
-
         val resolved = servers.ifEmpty { listOf("8.8.8.8", "8.8.4.4") }
-        val content = resolved.joinToString(separator = "\n", postfix = "\n") { "nameserver $it" }
-        runCatching {
-            File(rootfsDir, "etc").mkdirs()
-            File(rootfsDir, "etc/resolv.conf").writeText(content)
-        }
+        return resolved.joinToString(separator = "\n", postfix = "\n") { "nameserver $it" }
     }
 
     private fun writeNotices() {

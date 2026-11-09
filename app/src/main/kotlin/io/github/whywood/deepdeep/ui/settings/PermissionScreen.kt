@@ -46,6 +46,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSpacing
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
@@ -53,6 +54,8 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.privilege.PrivilegeState
 import io.github.whywood.deepdeep.shell.RootStatus
+import io.github.whywood.deepdeep.shell.RootfsState
+import io.github.whywood.deepdeep.shell.RootfsStatus
 
 @Composable
 fun PermissionScreen(
@@ -64,6 +67,10 @@ fun PermissionScreen(
     onConnect: () -> Unit,
     onOpenWirelessDebugging: () -> Unit,
     onProbeRoot: () -> Unit,
+    rootBashEnabled: Boolean,
+    rootBashStatus: RootfsStatus,
+    onRootBashEnabledChange: (Boolean) -> Unit,
+    onRetryRootBash: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -142,6 +149,28 @@ fun PermissionScreen(
                 onOpenWirelessDebugging = onOpenWirelessDebugging,
                 onProbeRoot = onProbeRoot,
             )
+            Spacer(Modifier.height(DdSpacing.Md))
+            SettingsGroup {
+                val failed = rootBashStatus.state is RootfsState.Failed
+                DdListRow(
+                    title = stringResource(R.string.permission_root_bash_title),
+                    subtitle = rootBashHint(rootBashEnabled, state.effective, rootBashStatus),
+                    subtitleMaxLines = 2,
+                    onClick = if (failed) onRetryRootBash else null,
+                    showChevron = failed,
+                    modifier = Modifier.testTag("permission_root_bash"),
+                    trailing = {
+                        DdSwitch(
+                            checked = rootBashEnabled,
+                            onCheckedChange = onRootBashEnabledChange,
+                            stateDescription = stringResource(
+                                if (rootBashEnabled) R.string.settings_switch_on else R.string.settings_switch_off,
+                            ),
+                            modifier = Modifier.testTag("permission_root_bash_switch"),
+                        )
+                    },
+                )
+            }
             Spacer(Modifier.height(DdSpacing.Xxl))
             SettingsGroup {
                 DdListRow(
@@ -168,6 +197,16 @@ fun PermissionScreen(
             onConfirm = onPairingCode,
         )
     }
+}
+
+@Composable
+private fun rootBashHint(enabled: Boolean, effective: PrivilegeLevel, status: RootfsStatus): String = when {
+    !enabled -> stringResource(R.string.permission_root_bash_hint_off)
+    effective != PrivilegeLevel.ROOT -> stringResource(R.string.permission_root_bash_hint_need_root)
+    status.state is RootfsState.Preparing -> stringResource(R.string.permission_root_bash_hint_preparing)
+    status.state is RootfsState.Ready -> stringResource(R.string.permission_root_bash_hint_ready)
+    status.state is RootfsState.Failed -> stringResource(R.string.permission_root_bash_hint_failed)
+    else -> stringResource(R.string.permission_root_bash_hint_need_root)
 }
 
 @Composable

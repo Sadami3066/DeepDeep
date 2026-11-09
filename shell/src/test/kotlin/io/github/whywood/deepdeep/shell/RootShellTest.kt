@@ -21,7 +21,7 @@ class RootShellTest {
     }
 
     private fun shell(result: RootProcessResult): RootShell =
-        RootShell(RootCommandRunner { _, _ -> result })
+        RootShell(RootCommandRunner { _, _, _ -> result })
 
     @Test
     fun probeReturnsGrantedForUidZero() = runBlocking {
@@ -60,7 +60,7 @@ class RootShellTest {
 
     @Test
     fun probeReturnsErrorWhenRunnerThrows() = runBlocking {
-        val shell = RootShell(RootCommandRunner { _, _ -> throw IllegalStateException("boom") })
+        val shell = RootShell(RootCommandRunner { _, _, _ -> throw IllegalStateException("boom") })
 
         assertEquals(RootStatus.Error, shell.probe())
     }
@@ -69,7 +69,7 @@ class RootShellTest {
     fun probeRunsIdWithGivenTimeout() = runBlocking {
         var seenCommand: String? = null
         var seenTimeout = 0L
-        val shell = RootShell(RootCommandRunner { command, timeout ->
+        val shell = RootShell(RootCommandRunner { command, timeout, _ ->
             seenCommand = command
             seenTimeout = timeout
             RootProcessResult(0, "uid=0(root)", "", false, true)
@@ -85,7 +85,7 @@ class RootShellTest {
     fun executeReturnsExitCodeAndSeparateStreams() = runBlocking {
         var seenCommand: String? = null
         var seenTimeout = 0L
-        val shell = RootShell(RootCommandRunner { command, timeout ->
+        val shell = RootShell(RootCommandRunner { command, timeout, _ ->
             seenCommand = command
             seenTimeout = timeout
             RootProcessResult(7, "out\n", "err\n", false, true)

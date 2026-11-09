@@ -22,7 +22,7 @@
 | `ImageScaling.kt` | 解码采样与长边 2000 缩放计算（纯函数） |
 | `LanguagePreferences.kt` | App 语言读写与 LocalizedContext 资源包装 |
 | `LegacyWorkspaceMigration.kt` | 旧 projects DataStore 补迁到 runtime WorkspaceStore |
-| `LinuxSettingsStore.kt` | Linux 环境启用（默认开启）/共享存储/root 开关、共享存储授权判断与目录 helper（`sharedStorageDirectory`/`appHomeDirectory`/`hasSharedStorageAccess`） |
+| `LinuxSettingsStore.kt` | Linux 环境启用（默认开启）/共享存储/root bash 开关（允许 bash 使用 Root）、共享存储授权判断与目录 helper（`sharedStorageDirectory`/`appHomeDirectory`/`hasSharedStorageAccess`） |
 | `MarketPresets.kt` | 技能/连接器/插件的市场本地预设（名称/说明/标签/类型）与纯函数 `filterMarketPresets` |
 | `OnboardingPreferences.kt` | 新手引导开始/完成标记（SharedPreferences） |
 | `OverlayEntryPreferences.kt` | 助手浮层入口方式（语音/拍照/无）DataStore |

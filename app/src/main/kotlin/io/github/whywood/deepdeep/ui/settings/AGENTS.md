@@ -11,7 +11,7 @@
 | `AgentSettingsScreen.kt` | Agent 设置：屏幕操作开关与未生效提示（点提示进权限页）、权限级别行（进权限页） |
 | `AndroidSettingsScreen.kt` | Android 设置：悬浮窗开关与悬浮权限申请/状态、系统助手角色与电源设置 |
 | `FontScreen.kt` | 英文字体选择与预览（DdFontStyle） |
-| `PermissionScreen.kt` | 权限三档选择、ADB 配对、Root 探测、生效档提示 |
+| `PermissionScreen.kt` | 权限三档选择、ADB 配对、Root 探测、生效档提示、Root bash 开关与准备状态 |
 | `PersonalizationScreen.kt` | 个性化：头像、称呼、互动风格、语气、自定义指令 |
 | `AgreementScreen.kt` | 隐私与用户协议：数据与隐私、用户协议、免责声明、开源许可 |
 | `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情 |

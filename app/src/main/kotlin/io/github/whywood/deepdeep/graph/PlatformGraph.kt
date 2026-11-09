@@ -11,8 +11,12 @@ import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.screen.ScreenToolset
 import io.github.whywood.deepdeep.service.AppShellExecutor
+import io.github.whywood.deepdeep.service.RootBashController
+import io.github.whywood.deepdeep.service.RoutingLinuxExecutor
+import io.github.whywood.deepdeep.shell.ChrootExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
+import io.github.whywood.deepdeep.shell.RootfsBootstrap
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import java.io.File
 import kotlinx.coroutines.launch
@@ -44,6 +48,26 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
     )
 
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
+    private val chrootExecutors = mutableMapOf<String, ChrootExecutor>()
+
+    private val rootfsBootstrap: RootfsBootstrap by lazy {
+        RootfsBootstrap(
+            appRootfsDir = File(deps.appContext.filesDir, "linux/rootfs"),
+            statusFile = File(deps.appContext.filesDir, "linux/rootfs-bootstrap.state"),
+            scratchDir = File(deps.appContext.cacheDir, "root-bash"),
+        )
+    }
+
+    private val rootBashController: RootBashController by lazy {
+        RootBashController(
+            scope = deps.scope,
+            settings = deps.linuxSettings,
+            privilege = privilegeImpl,
+            bootstrap = rootfsBootstrap,
+        )
+    }
+
+    val rootBash: RootBashController get() = rootBashController
 
     fun linuxBinds(): () -> List<Pair<File, String>> = {
         listOf(File("/data") to "/data") + deps.storageMountStore.cached().map { mount ->
@@ -65,11 +89,29 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
         }
     }
 
+    private fun chrootExecutorFor(cwd: File): ChrootExecutor = synchronized(chrootExecutors) {
+        chrootExecutors.getOrPut(cwd.absolutePath) {
+            ChrootExecutor(
+                linuxDir = File(RootfsBootstrap.DEFAULT_LINUX_DIR),
+                workspaceDir = cwd,
+                logDir = File(deps.appContext.cacheDir, "tool-output"),
+                sharedStorageEnabled = { deps.sharedStorage.value },
+                resolvConf = { linuxEnvironmentFor(cwd.absolutePath).exportResolvConf() },
+            )
+        }
+    }
+
     val shellExecutorFor: suspend (File) -> AppShellExecutor? = { cwd ->
         if (!deps.linuxSettings.isEnabled()) {
             null
         } else {
-            AppShellExecutor(linuxEnvironmentFor(cwd.absolutePath))
+            val routing = RoutingLinuxExecutor(
+                proot = linuxEnvironmentFor(cwd.absolutePath),
+                chroot = chrootExecutorFor(cwd),
+                mode = { rootBashController.mode.value },
+                failureReason = { rootBashController.failureReason() },
+            )
+            AppShellExecutor(routing)
         }
     }
 

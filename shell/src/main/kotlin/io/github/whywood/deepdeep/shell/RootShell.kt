@@ -37,7 +37,7 @@ internal data class RootProcessResult(
 )
 
 internal fun interface RootCommandRunner {
-    suspend fun run(command: String, timeoutMillis: Long): RootProcessResult
+    suspend fun run(command: String, timeoutMillis: Long, stdin: String?): RootProcessResult
 }
 
 class RootShell internal constructor(
@@ -49,7 +49,7 @@ class RootShell internal constructor(
     suspend fun probe(timeoutMillis: Long = DEFAULT_PROBE_TIMEOUT_MILLIS): RootStatus {
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         val result = try {
-            runner.run("id", timeoutMillis)
+            runner.run("id", timeoutMillis, null)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -66,7 +66,7 @@ class RootShell internal constructor(
     suspend fun execute(command: String, timeoutMillis: Long): RootResult {
         require(command.isNotBlank()) { "command must not be blank" }
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
-        val process = runner.run(command, timeoutMillis)
+        val process = runner.run(command, timeoutMillis, null)
         check(process.started) { "su is not available" }
         val boundedStdout = takeUtf8(process.stdout, maxOutputBytes)
         val used = boundedStdout.toByteArray(Charsets.UTF_8).size
@@ -82,18 +82,23 @@ class RootShell internal constructor(
     }
 }
 
-private class ProcessRootCommandRunner : RootCommandRunner {
-    override suspend fun run(command: String, timeoutMillis: Long): RootProcessResult =
+internal class ProcessRootCommandRunner : RootCommandRunner {
+    override suspend fun run(command: String, timeoutMillis: Long, stdin: String?): RootProcessResult =
         runInterruptible(Dispatchers.IO) {
             val commandPid = File.createTempFile("deepdeep-root-", ".pid")
             val process = startRootProcess(wrapRootCommand(command, timeoutMillis, commandPid))
                 ?: return@runInterruptible RootProcessResult(NO_EXIT_CODE, "", "", false, false)
-            runCatching { process.outputStream.close() }
             val budget = AtomicInteger(MAX_OUTPUT_BYTES + 1)
             val stdout = ByteArrayOutputStream()
             val stderr = ByteArrayOutputStream()
             val stdoutReader = startReader("root-shell-stdout", process.inputStream, stdout, budget)
             val stderrReader = startReader("root-shell-stderr", process.errorStream, stderr, budget)
+            runCatching {
+                process.outputStream.use { output ->
+                    if (stdin != null) output.write(stdin.toByteArray(Charsets.UTF_8))
+                    output.flush()
+                }
+            }
             val timedOut = try {
                 !process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)
             } catch (interrupted: InterruptedException) {
@@ -177,7 +182,7 @@ private class ProcessRootCommandRunner : RootCommandRunner {
     }
 }
 
-private fun takeUtf8(text: String, limit: Int): String {
+internal fun takeUtf8(text: String, limit: Int): String {
     if (limit <= 0) return ""
     val bytes = text.toByteArray(Charsets.UTF_8)
     if (bytes.size <= limit) return text

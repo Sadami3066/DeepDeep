@@ -189,6 +189,8 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
 internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScope, onBack: () -> Unit) {
     val context = LocalContext.current
     val state by dependencies.privilege.state.collectAsStateWithLifecycle()
+    val rootBashEnabled by dependencies.rootBash.enabled.collectAsStateWithLifecycle()
+    val rootBashStatus by dependencies.rootBash.status.collectAsStateWithLifecycle()
     PermissionScreen(
         state = state,
         onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
@@ -198,6 +200,10 @@ internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScop
         onConnect = { scope.launch { dependencies.privilege.connect() } },
         onOpenWirelessDebugging = { dependencies.privilege.openWirelessDebugging(context) },
         onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },
+        rootBashEnabled = rootBashEnabled,
+        rootBashStatus = rootBashStatus,
+        onRootBashEnabledChange = { enabled -> scope.launch { dependencies.rootBash.setEnabled(enabled) } },
+        onRetryRootBash = { scope.launch { dependencies.rootBash.retry() } },
         onBack = onBack,
     )
 }

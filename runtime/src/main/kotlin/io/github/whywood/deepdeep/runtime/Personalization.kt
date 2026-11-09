@@ -19,6 +19,7 @@ internal fun buildPersonalizationSections(
     providerId: String,
     modelId: String,
     now: OffsetDateTime,
+    rootBash: Boolean = false,
 ): Map<String, String> {
     val nickname = personalization.nickname.trim()
     val sections = linkedMapOf<String, String>()
@@ -27,7 +28,12 @@ internal fun buildPersonalizationSections(
         buildString {
             appendLine("Date: ${now.toLocalDate()} (UTC${now.offset.id}).")
             appendLine("Model: $providerId/$modelId.")
-            appendLine("Env: Alpine Linux via proot and Android.")
+            if (rootBash) {
+                appendLine("Env: Alpine Linux chroot as real root (uid 0). Android /data is mounted at /android/data, /system is read-only at /android/system, the session workspace is /work.")
+                appendLine("Android system commands are not in the chroot; use root_shell for pm, cmd, settings, dumpsys and similar operations.")
+            } else {
+                appendLine("Env: Alpine Linux via proot and Android.")
+            }
             if (nickname.isNotEmpty()) {
                 appendLine("Nickname: $nickname.")
             } else {
@@ -51,9 +57,10 @@ internal fun buildSessionSystemPromptSections(
     modelId: String,
     now: OffsetDateTime,
     pluginBody: String?,
+    rootBash: Boolean = false,
     extra: Map<String, String> = emptyMap(),
 ): Map<String, String> {
-    val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, now))
+    val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, now, rootBash))
     val body = pluginBody?.trim().orEmpty()
     if (body.isNotEmpty()) {
         sections["plugins"] = wrapPromptSection("plugins", body)

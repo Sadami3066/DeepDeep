@@ -32,7 +32,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
 | `SessionCloseReason.kt` | 句柄关闭原因（Idle/Reload/Reconfigure/Deleted/Closed）与 `SessionClosure` 事件模型 |
 | `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
-| `Personalization.kt` | 称呼、交互风格与语气等提示词分节 |
+| `Personalization.kt` | 称呼、交互风格与语气等提示词分节；环境段按 bash 模式（proot / root chroot）动态生成 |
 | `PromptPaths.kt` | 提示词 paths 段：Skills / App data / Shared storage / Mounted directories（挂载目录名称、路径与说明） |
 | `SkillCatalog.kt` | 发现技能并渲染为提示词块 |
 | `WorkspaceStore.kt` | 工作区列表持久化（DataStore） |
@@ -45,9 +45,9 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `AppTools.kt` | App 专有工具注入：提问、插件工具与扩展工厂 |
 | `ToolVariants.kt` | 从统一工具派生具名变体并校验参数 |
 | `CommandResult.kt` | 命令结果模型与可带详细输出的执行器 |
-| `DeepDeepBashTool.kt` | bash 工具：执行、截尾、退出码与超时 |
+| `DeepDeepBashTool.kt` | bash 工具：执行、截尾、退出码与超时；描述与模式无关，模式与路径布局由系统提示词环境段说明 |
 | `PrivilegedShellTool.kt` | adb_shell / root_shell 的共用骨架 |
-| `RootShellTool.kt` | Root 执行适配器，产出 root_shell 工具 |
+| `RootShellTool.kt` | Root 执行适配器，产出 root_shell 工具（Android 系统操作） |
 | `AskUserQuestionTool.kt` | 结构化提问：1–5 题，等答最多 10 分钟 |
 | `QuestionCenter.kt` | 待答问题的状态流、回答/取消与持久化钩子 |
 | `QuestionPersistence.kt` | 待答问题落盘，重启后提示曾中断 |
