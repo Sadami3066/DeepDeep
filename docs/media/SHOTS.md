@@ -17,7 +17,7 @@ docs/media/
 └── terminal.svg
 ```
 
-截图统一为 720×1280，JPEG q86，单张 27–58KB。
+单张截图为 720×1280，JPEG q86，27–58KB。`ui-showcase.png` 是五张截图合并后的展示图，1920×680，约 310KB。
 
 ## 视频
 
