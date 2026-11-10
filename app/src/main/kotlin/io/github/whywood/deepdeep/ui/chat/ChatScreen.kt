@@ -79,6 +79,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -259,6 +260,7 @@ fun ChatScreen(
             layout(placeable.width, placeable.height + inset) { placeable.place(0, 0) }
         }
     }
+    var overlayHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
@@ -342,7 +344,7 @@ fun ChatScreen(
     }
 
     LaunchedEffect(controller) {
-        snapshotFlow { animatedBottomInset.value }.collect {
+        snapshotFlow { animatedBottomInset.value to overlayHeightPx }.collect {
             controller.anchorToBottom()
         }
     }
@@ -442,7 +444,9 @@ fun ChatScreen(
                     loaded = state.historyLoaded,
                     nickname = nickname,
                     avatar = avatar,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = with(density) { overlayHeightPx.toDp() }),
                 )
             } else {
                 CompositionLocalProvider(LocalDensity provides chatDensity) {
@@ -460,7 +464,9 @@ fun ChatScreen(
                             start = 14.dp,
                             end = 14.dp,
                             top = 6.dp,
-                            bottom = with(chatDensity) { DdSpacing.Sm.roundToPx().toDp() },
+                            bottom = with(chatDensity) {
+                                (overlayHeightPx + DdSpacing.Md.roundToPx()).toDp()
+                            },
                         ),
                         verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxl),
                     ) {
@@ -516,10 +522,12 @@ fun ChatScreen(
                     }
                 }
             }
-        }
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onSizeChanged { overlayHeightPx = it.height },
+            ) {
                 if (controller.showJumpToBottom) {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(bottom = DdSpacing.Sm),
@@ -647,6 +655,7 @@ fun ChatScreen(
                     modifier = Modifier.padding(top = 6.dp, bottom = DdSpacing.Sm),
                 )
             }
+        }
         }
     }
 }
