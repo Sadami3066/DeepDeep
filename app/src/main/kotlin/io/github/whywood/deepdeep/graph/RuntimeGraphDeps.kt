@@ -18,14 +18,14 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.QuestionCenter
-import io.github.whywood.deepdeep.runtime.RootCommandExecutor
 import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionCatalog
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.WorkspaceStore
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.service.AppShellExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
-import io.github.whywood.deepdeep.shell.RootShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 
@@ -49,13 +49,12 @@ internal class RuntimeGraphDeps(
     val questionCenter: QuestionCenter,
     val goalService: GoalService,
     val miniappStore: MiniappStore,
-    val rootShell: RootShell,
-    val adbExecutor: RootCommandExecutor,
     val privilege: () -> PrivilegeController,
     val pluginManager: () -> PluginHostManager,
+    val hostAccess: HostAccessController,
+    val hostEnvironment: HostEnvironmentProvider,
     val shellExecutorFor: suspend (File) -> AppShellExecutor?,
     val linuxEnvironmentFor: (String?) -> LinuxEnvironment,
-    val rootBashActive: () -> Boolean,
     val decorateInterrupted: suspend (ConversationState, String) -> ConversationState,
     val timerService: () -> TimerService,
     val jobRegistry: () -> JobRegistry,

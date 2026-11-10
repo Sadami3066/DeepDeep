@@ -9,16 +9,12 @@ import io.github.whywood.deepdeep.core.SessionTitleService
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.privilege.PrivilegeLevel
-import io.github.whywood.deepdeep.privilege.shellBackendsFor
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.GoalPhase
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.PiSessionEngine
-import io.github.whywood.deepdeep.runtime.RootCommandExecutor
-import io.github.whywood.deepdeep.runtime.RootCommandResult
-import io.github.whywood.deepdeep.runtime.RootToolStatus
 import io.github.whywood.deepdeep.runtime.SessionCloseReason
 import io.github.whywood.deepdeep.runtime.RunLedger
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
@@ -30,17 +26,16 @@ import io.github.whywood.deepdeep.runtime.todoWriteTool
 import io.github.whywood.deepdeep.runtime.RuntimeHooks
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.StorageMountInfo
-import io.github.whywood.deepdeep.runtime.adbShellTool
 import io.github.whywood.deepdeep.runtime.goalTools
 import io.github.whywood.deepdeep.runtime.jobTools
 import io.github.whywood.deepdeep.runtime.miniappEditTool
 import io.github.whywood.deepdeep.runtime.miniappLookup
 import io.github.whywood.deepdeep.runtime.miniappTools
 import io.github.whywood.deepdeep.runtime.presentTool
-import io.github.whywood.deepdeep.runtime.rootShellTool
+import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.systemShellTool
 import io.github.whywood.deepdeep.runtime.timerTools
 import io.github.whywood.deepdeep.service.LinuxJobRunner
-import io.github.whywood.deepdeep.shell.RootStatus
 import io.github.whywood.deepdeep.web.DeepSeekWebProvider
 import io.github.whywood.deepdeep.web.RoutingWebProvider
 import io.github.whywood.deepdeep.web.braveBackend
@@ -75,20 +70,6 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         complete = { prompt -> completeWithCheapModel(deps.providerCatalog, prompt) },
     )
 
-    private fun availableShellBackends(): List<PrivilegeLevel> =
-        shellBackendsFor(deps.privilege().state.value.effective)
-
-    private fun adbToolStatus(): RootToolStatus {
-        val adb = deps.privilege().state.value.adb
-        return when {
-            adb.daemon -> RootToolStatus.Granted
-            adb.busy -> RootToolStatus.NotRequested
-            adb.error != null -> RootToolStatus.Error
-            adb.paired -> RootToolStatus.NotRequested
-            else -> RootToolStatus.Unsupported
-        }
-    }
-
     val appToolContext: AppToolContext by lazy {
         AppToolContext(
             questionCenter = deps.questionCenter,
@@ -104,35 +85,8 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
     private fun builtInTools(binding: SessionBinding): List<CodingTool> = buildList {
         add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
-        for (backend in availableShellBackends()) {
-            when (backend) {
-                PrivilegeLevel.ROOT -> add(
-                    rootShellTool(
-                        executor = RootCommandExecutor { command, timeoutMillis ->
-                            val result = deps.rootShell.execute(command, timeoutMillis)
-                            RootCommandResult(
-                                exitCode = result.exitCode,
-                                stdout = result.stdout,
-                                stderr = result.stderr,
-                                truncated = result.truncated,
-                                timedOut = result.timedOut,
-                            )
-                        },
-                        enabled = { PrivilegeLevel.ROOT in deps.privilege().state.value.availableBackends },
-                        status = { deps.privilege().state.value.root.toRootToolStatus() },
-                    ),
-                )
-
-                PrivilegeLevel.ADB -> add(
-                    adbShellTool(
-                        executor = deps.adbExecutor,
-                        enabled = { PrivilegeLevel.ADB in deps.privilege().state.value.availableBackends },
-                        status = { adbToolStatus() },
-                    ),
-                )
-
-                PrivilegeLevel.NORMAL -> Unit
-            }
+        if (deps.hostAccess.state.value.effective == HostAccess.ADB) {
+            add(systemShellTool(deps.hostEnvironment.current().system!!))
         }
         add(todoWriteTool(
             sessionId = { binding.current()?.sessionId },
@@ -184,8 +138,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             agentDir = deps.agentDir,
             credentials = deps.credentials,
             transport = deps.httpTransport,
-            shellExecutor = deps.shellExecutorFor(cwd),
-            rootBashActive = deps.rootBashActive,
+            hostEnvironment = deps.hostEnvironment,
             providers = deps.providerCatalog,
             personalization = { deps.personalizationStore.read().toRuntime() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
@@ -301,12 +254,3 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
 internal fun isScreenOpsActive(screenOps: Boolean, effective: PrivilegeLevel): Boolean =
     screenOps && (effective == PrivilegeLevel.ADB || effective == PrivilegeLevel.ROOT)
-
-private fun RootStatus.toRootToolStatus(): RootToolStatus = when (this) {
-    RootStatus.Unsupported -> RootToolStatus.Unsupported
-    RootStatus.NotRequested -> RootToolStatus.NotRequested
-    RootStatus.Granted -> RootToolStatus.Granted
-    RootStatus.Denied -> RootToolStatus.Denied
-    RootStatus.Timeout -> RootToolStatus.Timeout
-    RootStatus.Error -> RootToolStatus.Error
-}

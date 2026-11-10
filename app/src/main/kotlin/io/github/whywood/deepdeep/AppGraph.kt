@@ -44,6 +44,8 @@ import io.github.whywood.deepdeep.graph.isScreenOpsActive
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.DeepDeepOAuthCallbackServerFactory
@@ -69,7 +71,6 @@ import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.service.RootBashController
-import io.github.whywood.deepdeep.service.RootBashMode
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.shouldAutoInstallLinux
 import java.io.File
@@ -132,6 +133,8 @@ class AppGraph(context: Context) : AppDependencies {
 
     override val privilege: PrivilegeController get() = platformGraph.privilege
     override val rootBash: RootBashController get() = platformGraph.rootBash
+    override val hostAccess: HostAccessController get() = platformGraph.hostAccess
+    override val hostEnvironmentProvider: HostEnvironmentProvider get() = platformGraph.hostEnvironmentProvider
     val adbBridge get() = platformGraph.adbBridge
     override val linuxEnvironment: LinuxEnvironment get() = platformGraph.linuxEnvironment
 
@@ -173,6 +176,11 @@ class AppGraph(context: Context) : AppDependencies {
         scope.launch {
             runCatching { marketRepository.refresh() }.onFailure {
                 Diagnostics.log(appContext, "app: market refresh failed", it)
+            }
+        }
+        scope.launch {
+            runCatching { hostAccess.refresh() }.onFailure {
+                Diagnostics.log(appContext, "app: host access refresh failed", it)
             }
         }
         OAuthRuntime.callbackServerFactory = DeepDeepOAuthCallbackServerFactory()
@@ -240,13 +248,12 @@ class AppGraph(context: Context) : AppDependencies {
         questionCenter = dataGraph.questionCenter,
         goalService = dataGraph.goalService,
         miniappStore = dataGraph.miniappStore,
-        rootShell = platformGraph.rootShell,
-        adbExecutor = platformGraph.adbExecutor,
         privilege = { platformGraph.privilege },
         pluginManager = { pluginManager },
+        hostAccess = hostAccess,
+        hostEnvironment = hostEnvironmentProvider,
         shellExecutorFor = platformGraph.shellExecutorFor,
         linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
-        rootBashActive = { platformGraph.rootBash.mode.value == RootBashMode.CHROOT },
         decorateInterrupted = ::decorateInterrupted,
         timerService = { serviceGraph.timerService },
         jobRegistry = { serviceGraph.jobRegistry },

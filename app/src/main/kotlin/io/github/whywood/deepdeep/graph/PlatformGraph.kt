@@ -1,24 +1,43 @@
 package io.github.whywood.deepdeep.graph
 
+import android.os.Process
+import android.system.Os
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
 import io.github.whywood.deepdeep.data.PrivilegePreferences
+import io.github.whywood.deepdeep.host.AdbHostEnvironment
+import io.github.whywood.deepdeep.host.AppHostAccessController
+import io.github.whywood.deepdeep.host.AppHostEnvironmentProvider
+import io.github.whywood.deepdeep.host.HostAccessPreferences
+import io.github.whywood.deepdeep.host.LocalHostEnvironment
+import io.github.whywood.deepdeep.host.RootBashReadiness
+import io.github.whywood.deepdeep.host.RootHostEnvironment
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
 import io.github.whywood.deepdeep.runtime.McpPluginBridge
 import io.github.whywood.deepdeep.runtime.RootCommandExecutor
+import io.github.whywood.deepdeep.runtime.createRootFileSystem
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.screen.ScreenToolset
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutionException
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import io.github.whywood.deepdeep.service.AppShellExecutor
 import io.github.whywood.deepdeep.service.RootBashController
 import io.github.whywood.deepdeep.service.RoutingLinuxExecutor
 import io.github.whywood.deepdeep.shell.ChrootExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
+import io.github.whywood.deepdeep.shell.RootStatus
+import io.github.whywood.deepdeep.shell.RootfsState
 import io.github.whywood.deepdeep.shell.RootfsBootstrap
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import java.io.File
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 internal class PlatformGraph(private val deps: PlatformGraphDeps) {
@@ -68,6 +87,109 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
     }
 
     val rootBash: RootBashController get() = rootBashController
+
+    private val hostAccessPreferences: HostAccessPreferences by lazy {
+        HostAccessPreferences(deps.appContext)
+    }
+
+    val hostAccess: AppHostAccessController by lazy {
+        AppHostAccessController(
+            scope = deps.scope,
+            preferences = hostAccessPreferences,
+            rootProbe = {
+                privilegeImpl.probeRoot() == RootStatus.Granted
+            },
+            adbStorage = adbBridge.state,
+            connectAdbAction = { privilegeImpl.connect() },
+            startPairingAction = { privilegeImpl.startPairing() },
+            openWirelessDebuggingAction = { context -> privilegeImpl.openWirelessDebugging(context) },
+            onChanged = {
+                deps.scope.launch { deps.pluginManager().refreshAndSyncSkills() }
+                deps.syncBundledSkills()
+                deps.host().reconfigure()
+            },
+        )
+    }
+
+    init {
+        deps.scope.launch {
+            hostAccess.state.map { it.effective }.distinctUntilChanged().collect { effective ->
+                if (effective == HostAccess.ROOT) rootfsBootstrap.ensureReady()
+            }
+        }
+    }
+
+    val hostEnvironmentProvider: AppHostEnvironmentProvider by lazy {
+        val sharedStorage = { deps.sharedStorage.value }
+        val prootBash: (String) -> ShellExecutor = { cwd ->
+            AppShellExecutor(linuxEnvironmentFor(cwd.ifBlank { null }))
+        }
+        AppHostEnvironmentProvider(
+            accessController = hostAccess,
+            local = LocalHostEnvironment(prootBash = prootBash, sharedStorageEnabled = sharedStorage),
+            adb = AdbHostEnvironment(
+                prootBash = prootBash,
+                sharedStorageEnabled = sharedStorage,
+                adbShell = adbSystemShell,
+            ),
+            root = RootHostEnvironment(
+                chrootBash = { cwd ->
+                    val directory = cwd.takeIf { it.isNotBlank() }?.let(::File) ?: deps.homeDir
+                    AppShellExecutor(chrootExecutorFor(directory))
+                },
+                rootFiles = createRootFileSystem(Process.myUid(), Os.getgid()),
+                rootShell = rootSystemShell,
+                sharedStorageEnabled = sharedStorage,
+                readiness = {
+                    when (val state = rootfsBootstrap.status.value.state) {
+                        RootfsState.Ready -> RootBashReadiness.READY
+                        RootfsState.Preparing -> RootBashReadiness.PREPARING
+                        is RootfsState.Failed -> RootBashReadiness.FAILED
+                        RootfsState.Idle -> RootBashReadiness.PREPARING
+                    }
+                },
+            ),
+        )
+    }
+
+    private val adbSystemShell: ShellExecutor = object : ShellExecutor {
+        override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
+            signal?.throwIfAborted()
+            val seconds = normalizedTimeoutSeconds(timeoutSeconds)
+            val result = adbBridge.exec(command, seconds * 1000)
+            signal?.throwIfAborted()
+            if (result.timedOut) throw ShellExecutionException("command timed out after ${seconds}s")
+            return ShellResult(
+                output = commandOutput(result.stdout, result.stderr),
+                exitCode = result.exitCode.takeIf { it >= 0 },
+                truncated = result.truncated,
+            )
+        }
+    }
+
+    private val rootSystemShell: ShellExecutor = object : ShellExecutor {
+        override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
+            signal?.throwIfAborted()
+            val seconds = normalizedTimeoutSeconds(timeoutSeconds)
+            val result = rootShell.execute(command, seconds * 1000)
+            signal?.throwIfAborted()
+            if (result.timedOut) throw ShellExecutionException("command timed out after ${seconds}s")
+            return ShellResult(
+                output = commandOutput(result.stdout, result.stderr),
+                exitCode = result.exitCode.takeIf { it >= 0 },
+                truncated = result.truncated,
+            )
+        }
+    }
+
+    private fun normalizedTimeoutSeconds(timeoutSeconds: Long?): Long =
+        (timeoutSeconds ?: DEFAULT_SHELL_TIMEOUT_SECONDS)
+            .coerceIn(MIN_SHELL_TIMEOUT_SECONDS, MAX_SHELL_TIMEOUT_SECONDS)
+
+    private fun commandOutput(stdout: String, stderr: String): String = listOfNotNull(
+        stdout.takeIf { it.isNotEmpty() },
+        stderr.takeIf { it.isNotEmpty() },
+    ).joinToString("\n")
 
     fun linuxBinds(): () -> List<Pair<File, String>> = {
         listOf(File("/data") to "/data") + deps.storageMountStore.cached().map { mount ->
@@ -137,5 +259,11 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
 
     val mcpPluginBridge: McpPluginBridge by lazy {
         McpPluginBridge(deps.httpTransport, deps.mcpTokenStore)
+    }
+
+    private companion object {
+        private const val DEFAULT_SHELL_TIMEOUT_SECONDS = 60L
+        private const val MIN_SHELL_TIMEOUT_SECONDS = 1L
+        private const val MAX_SHELL_TIMEOUT_SECONDS = 600L
     }
 }

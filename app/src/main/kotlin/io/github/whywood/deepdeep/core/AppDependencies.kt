@@ -20,6 +20,8 @@ import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.McpConfigStore
@@ -52,6 +54,10 @@ interface AdvancedDependencies {
     val privilege: PrivilegeController
 
     val rootBash: RootBashController
+
+    val hostAccess: HostAccessController
+
+    val hostEnvironmentProvider: HostEnvironmentProvider
 }
 
 interface RuntimeDependencies {

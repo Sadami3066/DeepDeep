@@ -20,6 +20,8 @@ import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.McpConfigStore
@@ -126,6 +128,11 @@ internal class FakeAppDependencies(
     override val processRuntime: ProcessRuntime get() = unavailable("processRuntime")
 
     override val privilege: PrivilegeController get() = unavailable("privilege")
+
+    override val hostAccess: HostAccessController get() = unavailable("hostAccess")
+
+    override val hostEnvironmentProvider: HostEnvironmentProvider
+        get() = unavailable("hostEnvironmentProvider")
 
     private fun unavailable(member: String): Nothing =
         error("FakeAppDependencies.$member 不可用；测试只应访问已注入的成员")
