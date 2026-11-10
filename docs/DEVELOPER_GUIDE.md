@@ -46,7 +46,7 @@
 
 - 会话以 pi JSONL 为唯一权威，保存在 `files/agent/sessions/`；置顶、归档、重命名只是本地元数据。
 - 界面状态是会话事件流的投影；不要另存一份「当前消息」状态。
-- 工具与文件都由当前系统访问环境（`HostEnvironmentProvider`）提供：普通、无线调试档的 `bash` 在 App 沙箱内，Root 档进原生 chroot；不再注册 `adb_shell` / `root_shell`，ADB/Root 档的系统命令统一由 `system_shell` 执行。
+- 工具与文件都由当前系统访问环境（`HostEnvironmentProvider`）提供：普通、无线调试档的 `bash` 在 App 沙箱内，Root 档进原生 chroot；不再注册 `adb_shell` / `root_shell`，ADB/Root 档的系统命令统一由常驻的 `system_shell` 执行（执行时解析当前档位，没有系统 Shell 的档位会报错提示）。后台任务与插件 Linux 流优先走 `HostEnvironment.bashStreaming(cwd)`：普通/无线调试档复用 proot 流式输出，Root 档由 chroot 执行器的 su 输出回调逐行推送，环境不支持时回退为结束后一次性输出。
 - 系统访问档位（普通 / 无线调试 / Root）由 `HostAccessController` 维护，只降级不自动升级；运行时只读 `HostEnvironment`，不自行判断 root。
 - 目标与后台任务只在进程内存，重启清空。
 - 普通、无线调试档的 Linux 是 proot 用户空间，不是安全沙箱；Root 档直接使用系统 root 环境。
