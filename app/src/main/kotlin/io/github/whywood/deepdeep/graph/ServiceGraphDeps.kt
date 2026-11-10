@@ -8,7 +8,6 @@ import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.TimerStore
-import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,11 +19,12 @@ internal class ServiceGraphDeps(
     val conversationStore: () -> ConversationStore,
     val questionCenter: QuestionCenter,
     val timerStore: TimerStore,
-    val linuxEnvironment: LinuxEnvironment,
     val pluginManager: () -> PluginManagerFacade,
     val skillRepository: SkillRepository,
     val installBundledSkills: suspend () -> Unit,
     val prepare: suspend () -> Unit,
     val jobWake: StateFlow<Boolean>,
     val hostEnvironment: HostEnvironmentProvider,
+    val devPackagesCwd: () -> String,
+    val devPackagesReady: () -> Boolean,
 )

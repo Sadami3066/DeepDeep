@@ -44,6 +44,7 @@ import io.github.whywood.deepdeep.graph.ServiceGraphDeps
 import io.github.whywood.deepdeep.graph.isScreenOpsActive
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.runtime.AssistantMessage
@@ -71,7 +72,9 @@ import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.shell.RootfsBootstrap
+import io.github.whywood.deepdeep.shell.RootfsState
 import io.github.whywood.deepdeep.shell.shouldAutoInstallLinux
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -288,13 +291,19 @@ class AppGraph(context: Context) : AppDependencies {
         conversationStore = { conversationStore },
         questionCenter = dataGraph.questionCenter,
         timerStore = dataGraph.timerStore,
-        linuxEnvironment = platformGraph.linuxEnvironment,
         pluginManager = { pluginManager },
         skillRepository = dataGraph.skillRepository,
         installBundledSkills = { syncBundledSkills() },
         prepare = ::prepare,
         jobWake = dataGraph.jobWake,
         hostEnvironment = platformGraph.hostEnvironmentProvider,
+        devPackagesCwd = { homeDir.absolutePath },
+        devPackagesReady = {
+            when (platformGraph.hostAccess.state.value.effective) {
+                HostAccess.ROOT -> platformGraph.rootfsBootstrap.status.value.state is RootfsState.Ready
+                else -> platformGraph.linuxEnvironment.state.value is LinuxInstallState.Installed
+            }
+        },
     )
 
     private fun pluginGraphDeps(): PluginGraphDeps = PluginGraphDeps(

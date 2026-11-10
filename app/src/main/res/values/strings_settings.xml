@@ -155,14 +155,13 @@
     <string name="settings_font_current">当前</string>
     <string name="settings_font_system">Roboto</string>
 
-    <string name="dev_bundles_title">安装组合</string>
+    <string name="dev_bundles_title_access">安装组合（%1$s）</string>
     <string name="dev_install">安装</string>
     <string name="dev_refresh">刷新</string>
-    <string name="dev_linux_required">内置环境正在准备，完成后再安装组合。</string>
+    <string name="dev_linux_required">当前档位的 Linux 环境尚未就绪，完成上方准备后再安装组合。</string>
     <string name="dev_error">失败：%1$s</string>
     <string name="dev_stage_updating">正在更新软件源…</string>
     <string name="dev_stage_installing">正在安装…</string>
-    <string name="dev_stage_progress">安装中 %1$d/%2$d</string>
     <string name="dev_stage_python">正在安装 Python 文档库…</string>
     <string name="dev_uninstalling">正在移除 %1$s…</string>
     <string name="dev_error_busy">正在安装其他组合</string>

@@ -71,6 +71,7 @@ fun SystemAccessScreen(
     sharedStorageEnabled: Boolean,
     mounts: List<StorageMount>,
     devPackages: DevPackagesState,
+    devPackagesAvailable: Boolean,
     onSelect: (HostAccess) -> Unit,
     onRefresh: () -> Unit,
     onPair: () -> Unit,
@@ -300,15 +301,16 @@ fun SystemAccessScreen(
                             onRemoveMount = onRemoveMount,
                         )
                     }
-                    Spacer(Modifier.height(DdSpacing.Xxl))
-                    DevPackagesSection(
-                        state = devPackages,
-                        linuxInstalled = linuxState is LinuxInstallState.Installed,
-                        onInstallBundle = onInstallBundle,
-                        onRefresh = onRefreshPackages,
-                    )
                 }
             }
+            Spacer(Modifier.height(DdSpacing.Xxl))
+            DevPackagesSection(
+                state = devPackages,
+                access = state.effective,
+                environmentReady = devPackagesAvailable,
+                onInstallBundle = onInstallBundle,
+                onRefresh = onRefreshPackages,
+            )
             Spacer(Modifier.height(DdSpacing.Huge))
         }
     }
@@ -453,7 +455,7 @@ private fun adbErrorLabel(error: AdbBridgeError): String = stringResource(
 )
 
 @StringRes
-private fun accessLevelLabel(access: HostAccess): Int = when (access) {
+internal fun accessLevelLabel(access: HostAccess): Int = when (access) {
     HostAccess.LOCAL -> R.string.access_level_local
     HostAccess.ADB -> R.string.access_level_adb
     HostAccess.ROOT -> R.string.access_level_root

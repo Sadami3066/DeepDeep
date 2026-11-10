@@ -149,14 +149,13 @@
     <string name="settings_font_current">Current</string>
     <string name="settings_font_system">Roboto</string>
 
-    <string name="dev_bundles_title">Install bundles</string>
+    <string name="dev_bundles_title_access">Install bundles (%1$s)</string>
     <string name="dev_install">Install</string>
     <string name="dev_refresh">Refresh</string>
-    <string name="dev_linux_required">The built-in environment is still preparing. Add bundles once it\'s ready.</string>
+    <string name="dev_linux_required">The Linux environment for this access level isn\'t ready yet. Finish the setup above first.</string>
     <string name="dev_error">Failed: %1$s</string>
     <string name="dev_stage_updating">Updating package index…</string>
     <string name="dev_stage_installing">Installing…</string>
-    <string name="dev_stage_progress">Installing %1$d/%2$d</string>
     <string name="dev_stage_python">Installing Python document libraries…</string>
     <string name="dev_uninstalling">Removing %1$s…</string>
     <string name="dev_error_busy">Another bundle is installing</string>

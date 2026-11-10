@@ -1,21 +1,20 @@
 package io.github.whywood.deepdeep.data
 
-import android.content.Context
+import androidx.annotation.StringRes
 import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.service.NotificationCenter
-import io.github.whywood.deepdeep.shell.LinuxEnvironment
-import io.github.whywood.deepdeep.shell.LinuxInstallState
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class DevPackageOperation(
     val label: String,
@@ -32,10 +31,22 @@ data class DevPackagesState(
     val busy: Boolean get() = operation != null
 }
 
+fun interface DevPackageStrings {
+    fun text(@StringRes resId: Int, vararg args: Any): String
+}
+
+interface DevPackageNotifier {
+    fun clearInstallNotification()
+    fun notifyInstall(label: String, stage: String?, progress: Int?)
+    fun notifyInstallFinished(label: String, success: Boolean, error: String? = null)
+}
+
 class DevPackageManager(
-    private val context: Context,
-    private val linux: LinuxEnvironment,
-    private val notifications: NotificationCenter,
+    private val strings: DevPackageStrings,
+    private val hostEnvironment: HostEnvironmentProvider,
+    private val cwd: () -> String,
+    private val ready: () -> Boolean,
+    private val notifier: DevPackageNotifier,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(DevPackagesState())
@@ -43,12 +54,12 @@ class DevPackageManager(
     private val running = AtomicBoolean(false)
 
     init {
-        notifications.clearInstallNotification()
+        notifier.clearInstallNotification()
     }
 
     fun refresh() {
         if (running.get()) return
-        if (linux.state.value !is LinuxInstallState.Installed) {
+        if (!ready()) {
             _state.update { it.copy(installed = emptySet(), checking = false) }
             return
         }
@@ -81,7 +92,7 @@ class DevPackageManager(
     fun installBundle(bundle: DevBundle) {
         install(
             packageIds = bundle.packageIds,
-            label = context.getString(bundle.titleRes),
+            label = strings.text(bundle.titleRes),
             postInstall = bundle.postInstallCommand,
             mirrorUrls = bundle.mirrorUrls,
             downloads = bundle.downloads,
@@ -90,34 +101,30 @@ class DevPackageManager(
 
     fun installPackage(packageId: String) {
         val packageInfo = DevPackageCatalog.packageById(packageId) ?: return
-        install(listOf(packageId), packageInfo.label(context))
+        install(listOf(packageId), packageLabel(packageInfo))
     }
 
     fun uninstallPackage(packageId: String) {
         val packageInfo = DevPackageCatalog.packageById(packageId) ?: return
         if (running.get()) return
-        if (linux.state.value !is LinuxInstallState.Installed) {
-            _state.update { it.copy(error = context.getString(R.string.dev_error_linux_missing)) }
+        if (!ready()) {
+            _state.update { it.copy(error = strings.text(R.string.dev_error_linux_missing)) }
             return
         }
         running.set(true)
         scope.launch {
             _state.update {
                 it.copy(
-                    operation = DevPackageOperation(context.getString(R.string.dev_uninstalling, packageInfo.label(context))),
+                    operation = DevPackageOperation(strings.text(R.string.dev_uninstalling, packageLabel(packageInfo))),
                     error = null,
                 )
             }
             try {
-                val result = linux.execute("apk del $packageId", TIMEOUT_UNINSTALL)
+                val result = execute("apk del $packageId", TIMEOUT_UNINSTALL_SECONDS)
                 if (result.exitCode != 0) {
-                    val message = result.output.takeLast(600).trim().ifBlank {
-                        context.getString(R.string.dev_error_generic)
-                    }
-                    _state.update { it.copy(error = message) }
+                    _state.update { it.copy(error = failureMessage(result)) }
                 } else {
                     _state.update { it.copy(installed = queryInstalled()) }
-                    runCatching { linux.refreshState() }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -144,11 +151,11 @@ class DevPackageManager(
         val ids = packageIds.distinct().filter { DevPackageCatalog.packageById(it) != null }
         if (ids.isEmpty() && mirrorUrls.isEmpty() && downloads.isEmpty()) return
         if (running.get()) {
-            _state.update { it.copy(error = context.getString(R.string.dev_error_busy)) }
+            _state.update { it.copy(error = strings.text(R.string.dev_error_busy)) }
             return
         }
-        if (linux.state.value !is LinuxInstallState.Installed) {
-            _state.update { it.copy(error = context.getString(R.string.dev_error_linux_missing)) }
+        if (!ready()) {
+            _state.update { it.copy(error = strings.text(R.string.dev_error_linux_missing)) }
             return
         }
         running.set(true)
@@ -157,99 +164,62 @@ class DevPackageManager(
                 it.copy(
                     operation = DevPackageOperation(
                         label = label,
-                        stage = context.getString(R.string.dev_stage_updating),
+                        stage = strings.text(R.string.dev_stage_updating),
                     ),
                     error = null,
                 )
             }
-            notifications.notifyInstall(label, context.getString(R.string.dev_stage_updating), null)
+            notifier.notifyInstall(label, strings.text(R.string.dev_stage_updating), null)
             try {
                 if (mirrorUrls.isNotEmpty()) {
-                    val stage = context.getString(R.string.dev_stage_mirror)
+                    val stage = strings.text(R.string.dev_stage_mirror)
                     _state.update { it.copy(operation = it.operation?.copy(stage = stage)) }
-                    notifications.notifyInstall(label, stage, null)
-                    if (!linux.applyApkRepositories(mirrorUrls)) {
-                        throw IllegalStateException(context.getString(R.string.dev_error_linux_missing))
-                    }
+                    notifier.notifyInstall(label, stage, null)
+                    val mirror = execute(writeRepositoriesCommand(mirrorUrls), TIMEOUT_UPDATE_SECONDS)
+                    if (mirror.exitCode != 0) throw IllegalStateException(failureMessage(mirror))
                 }
-                val updateStage = context.getString(R.string.dev_stage_updating)
+                val updateStage = strings.text(R.string.dev_stage_updating)
                 _state.update { it.copy(operation = it.operation?.copy(stage = updateStage)) }
-                notifications.notifyInstall(label, updateStage, null)
-                val update = linux.executeStreaming("apk update", TIMEOUT_UPDATE) { }
-                if (update.exitCode != 0) {
-                    throw IllegalStateException(
-                        update.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
-                    )
-                }
+                notifier.notifyInstall(label, updateStage, null)
+                val update = execute("apk update", TIMEOUT_UPDATE_SECONDS)
+                if (update.exitCode != 0) throw IllegalStateException(failureMessage(update))
                 if (ids.isNotEmpty()) {
-                    _state.update {
-                        it.copy(operation = it.operation?.copy(stage = context.getString(R.string.dev_stage_installing)))
-                    }
-                    notifications.notifyInstall(label, context.getString(R.string.dev_stage_installing), null)
-                    val command = "apk add ${ids.joinToString(" ")}"
-                    val result = linux.executeStreaming(command, TIMEOUT_INSTALL) { line ->
-                        val match = PROGRESS.find(line) ?: return@executeStreaming
-                        val current = match.groupValues[1].toIntOrNull() ?: return@executeStreaming
-                        val total = match.groupValues[2].toIntOrNull() ?: return@executeStreaming
-                        if (total <= 0) return@executeStreaming
-                        val progress = (current * 100 / total).coerceIn(0, 100)
-                        val stage = context.getString(R.string.dev_stage_progress, current, total)
-                        _state.update { it.copy(operation = it.operation?.copy(stage = stage, progress = progress)) }
-                        notifications.notifyInstall(label, stage, progress)
-                    }
-                    if (result.exitCode != 0) {
-                        throw IllegalStateException(
-                            result.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
-                        )
-                    }
+                    val stage = strings.text(R.string.dev_stage_installing)
+                    _state.update { it.copy(operation = it.operation?.copy(stage = stage)) }
+                    notifier.notifyInstall(label, stage, null)
+                    val result = execute("apk add ${ids.joinToString(" ")}", TIMEOUT_INSTALL_SECONDS)
+                    if (result.exitCode != 0) throw IllegalStateException(failureMessage(result))
                 }
                 downloads.forEachIndexed { index, download ->
-                    val stage = context.getString(
+                    val stage = strings.text(
                         R.string.dev_stage_download_progress,
                         index + 1,
                         downloads.size,
                     )
+                    val progress = (index * 100 / downloads.size).coerceIn(0, 100)
                     _state.update {
-                        it.copy(
-                            operation = it.operation?.copy(
-                                stage = stage,
-                                progress = (index * 100 / downloads.size).coerceIn(0, 100),
-                            ),
-                        )
+                        it.copy(operation = it.operation?.copy(stage = stage, progress = progress))
                     }
-                    notifications.notifyInstall(label, stage, index * 100 / downloads.size)
-                    val downloadResult = linux.executeStreaming(
-                        download.installCommand(),
-                        TIMEOUT_DOWNLOAD,
-                    ) { }
-                    if (downloadResult.exitCode != 0) {
-                        throw IllegalStateException(
-                            downloadResult.output.takeLast(600).trim()
-                                .ifBlank { context.getString(R.string.dev_error_generic) },
-                        )
-                    }
+                    notifier.notifyInstall(label, stage, progress)
+                    val downloadResult = execute(download.installCommand(), TIMEOUT_DOWNLOAD_SECONDS)
+                    if (downloadResult.exitCode != 0) throw IllegalStateException(failureMessage(downloadResult))
                 }
                 if (!postInstall.isNullOrBlank()) {
-                    val stage = context.getString(R.string.dev_stage_python)
+                    val stage = strings.text(R.string.dev_stage_python)
                     _state.update { it.copy(operation = it.operation?.copy(stage = stage, progress = null)) }
-                    notifications.notifyInstall(label, stage, null)
-                    val post = linux.executeStreaming(postInstall, TIMEOUT_POST) { }
-                    if (post.exitCode != 0) {
-                        throw IllegalStateException(
-                            post.output.takeLast(600).trim().ifBlank { context.getString(R.string.dev_error_generic) },
-                        )
-                    }
+                    notifier.notifyInstall(label, stage, null)
+                    val post = execute(postInstall, TIMEOUT_POST_SECONDS)
+                    if (post.exitCode != 0) throw IllegalStateException(failureMessage(post))
                 }
                 val installed = queryInstalled()
                 _state.update { it.copy(installed = installed, operation = null) }
-                runCatching { linux.refreshState() }
-                notifications.notifyInstallFinished(label, success = true)
+                notifier.notifyInstallFinished(label, success = true)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
                 val message = error.message ?: error.javaClass.simpleName
                 _state.update { it.copy(error = message, operation = null) }
-                notifications.notifyInstallFinished(label, success = false, error = message)
+                notifier.notifyInstallFinished(label, success = false, error = message)
             } finally {
                 running.set(false)
             }
@@ -259,7 +229,7 @@ class DevPackageManager(
     private suspend fun queryInstalled(): Set<String> {
         val names = DevPackageCatalog.packages.joinToString(" ") { it.id }
         val command = "for p in $names; do apk info -e \"\$p\" >/dev/null 2>&1 && echo \"\$p\"; done; true"
-        val result = linux.execute(command, TIMEOUT_QUERY)
+        val result = execute(command, TIMEOUT_QUERY_SECONDS)
         if (result.exitCode != 0) return emptySet()
         return result.output.lineSequence()
             .map { it.trim() }
@@ -268,13 +238,30 @@ class DevPackageManager(
             .intersect(DevPackageCatalog.packages.mapTo(mutableSetOf()) { it.id })
     }
 
+    private suspend fun execute(command: String, timeoutSeconds: Long): ShellResult =
+        hostEnvironment.current().bash(workingDirectory()).run(command, timeoutSeconds, null)
+
+    private fun workingDirectory(): String = cwd().ifBlank { "/" }
+
+    private fun packageLabel(packageInfo: DevPackage): String =
+        packageInfo.displayNameRes?.let(strings::text) ?: packageInfo.displayName
+
+    private fun failureMessage(result: ShellResult): String =
+        result.output.takeLast(600).trim().ifBlank { strings.text(R.string.dev_error_generic) }
+
+    private fun writeRepositoriesCommand(lines: List<String>): String {
+        val content = lines.joinToString(separator = "\n", postfix = "\n")
+        return "mkdir -p /etc/apk && printf '%s' ${shellQuote(content)} > /etc/apk/repositories"
+    }
+
+    private fun shellQuote(value: String): String = "'" + value.replace("'", "'\"'\"'") + "'"
+
     companion object {
-        private const val TIMEOUT_QUERY = 60_000L
-        private const val TIMEOUT_UPDATE = 120_000L
-        private const val TIMEOUT_INSTALL = 15 * 60_000L
-        private const val TIMEOUT_UNINSTALL = 120_000L
-        private const val TIMEOUT_POST = 10 * 60_000L
-        private const val TIMEOUT_DOWNLOAD = 30 * 60_000L
-        private val PROGRESS = Regex("""^\((\d+)/(\d+)\)""")
+        private const val TIMEOUT_QUERY_SECONDS = 60L
+        private const val TIMEOUT_UPDATE_SECONDS = 120L
+        private const val TIMEOUT_INSTALL_SECONDS = 600L
+        private const val TIMEOUT_UNINSTALL_SECONDS = 120L
+        private const val TIMEOUT_POST_SECONDS = 600L
+        private const val TIMEOUT_DOWNLOAD_SECONDS = 600L
     }
 }

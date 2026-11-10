@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.graph
 
 import io.github.whywood.deepdeep.data.DevPackageManager
+import io.github.whywood.deepdeep.data.DevPackageNotifier
+import io.github.whywood.deepdeep.data.DevPackageStrings
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.service.LinuxJobRunner
@@ -35,7 +37,21 @@ internal class ServiceGraph(private val deps: ServiceGraphDeps) {
     }
 
     val devPackageManager: DevPackageManager by lazy {
-        DevPackageManager(deps.uiContext, deps.linuxEnvironment, notificationCenter)
+        DevPackageManager(
+            strings = DevPackageStrings { resId, args -> deps.uiContext.getString(resId, *args) },
+            hostEnvironment = deps.hostEnvironment,
+            cwd = deps.devPackagesCwd,
+            ready = deps.devPackagesReady,
+            notifier = object : DevPackageNotifier {
+                override fun clearInstallNotification() = notificationCenter.clearInstallNotification()
+
+                override fun notifyInstall(label: String, stage: String?, progress: Int?) =
+                    notificationCenter.notifyInstall(label, stage, progress)
+
+                override fun notifyInstallFinished(label: String, success: Boolean, error: String?) =
+                    notificationCenter.notifyInstallFinished(label, success, error)
+            },
+        )
     }
 
     val processRuntime: ProcessRuntime by lazy {

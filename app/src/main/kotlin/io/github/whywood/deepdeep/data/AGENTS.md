@@ -11,12 +11,12 @@
 | `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、自动重试、后台唤醒、置顶、字号 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
-| `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素；文件读写经 `HostFiles`（Root 档可读系统目录，其余档自然失败），解析绝对路径时按共享存储开关放行 `/storage/emulated/0` 内文件；分享/预览前把不可读文件暂存到 cache |
+| `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素；文件读写经 `HostFiles`（Root 档可读系统目录，其余档自然失败），解析绝对路径时按共享存储开关放行 `/storage/emulated/0` 内文件；分享/预览前把不可读文件暂存到 cache，暂存不了（超大文件）时回退导出到共享存储或系统下载目录 |
 | `DevPackageCatalog.kt` | 运行环境可装 Alpine 包与组合清单（体积、描述、安装后命令） |
-| `DevPackageManager.kt` | 运行环境包安装/卸载/检测（proot 内 apk），进度与通知 |
-| `Downloads.kt` | 通过 MediaStore 把文件存到系统「下载」目录（读文件走 `HostFiles.openStream`，Root 档同样可用） |
+| `DevPackageManager.kt` | 运行环境包安装/卸载/检测：经当前 `HostEnvironment.bash(cwd)` 执行 apk（LOCAL/ADB 走 proot、ROOT 走 Root Linux，按档位环境隔离），进度与通知 |
+| `Downloads.kt` | 通过 MediaStore 把文件/流存到系统「下载」目录（`saveStreamToDownloads` 供 `HostFiles` 导出的文件复用；读文件走 `HostFiles.openStream`，Root 档同样可用） |
 | `FilePreview.kt` | 文件预览类型判定与文本限量读取（256 KB、拒绝二进制，可经 `HostFiles` 读取 Root 档文件） |
-| `HostFiles.kt` | 文件访问统一入口：经当前 `HostEnvironment.files` 做元数据/列目录/读流/写文件/暂存到 cache（Root 档暂存后再交给 FileProvider 或外部应用，1 小时清理） |
+| `HostFiles.kt` | 文件访问统一入口：经当前 `HostEnvironment.files` 做元数据/列目录/读流/写文件/暂存到 cache（Root 档暂存后再交给 FileProvider 或外部应用，1 小时清理）；超过 2 GiB 的文件不再暂存，ROOT 档经 root 复制到共享存储 `Download/DeepDeep/<uuid>/`（24 小时清理）后交给 FileProvider |
 | `FloatingWindowPreferences.kt` | 悬浮窗开关与气泡坐标 DataStore |
 | `FontPreferences.kt` | 界面字体样式（SharedPreferences，历史实现） |
 | `ImageNormalizer.kt` | 聊天图片按 EXIF 摆正、缩放、压到 ≤1.5 MB base64 |

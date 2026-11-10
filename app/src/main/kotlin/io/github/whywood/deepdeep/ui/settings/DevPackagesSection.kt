@@ -46,6 +46,7 @@ import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -54,7 +55,8 @@ private enum class DevSheetMode { DETAIL, MIRRORS }
 @Composable
 internal fun DevPackagesSection(
     state: DevPackagesState,
-    linuxInstalled: Boolean,
+    access: HostAccess,
+    environmentReady: Boolean,
     onInstallBundle: (DevBundle) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
@@ -92,18 +94,21 @@ internal fun DevPackagesSection(
     Column(modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             DdSectionLabel(
-                text = stringResource(R.string.dev_bundles_title),
+                text = stringResource(
+                    R.string.dev_bundles_title_access,
+                    stringResource(accessLevelLabel(access)),
+                ),
                 modifier = Modifier.weight(1f).padding(start = DdSpacing.Xs),
             )
             DdTextAction(
                 text = stringResource(R.string.dev_refresh),
                 onClick = onRefresh,
-                enabled = linuxInstalled && !state.busy && !state.checking,
+                enabled = environmentReady && !state.busy && !state.checking,
             )
         }
         Spacer(Modifier.height(10.dp))
         SettingsGroup {
-            if (!linuxInstalled) {
+            if (!environmentReady) {
                 Text(
                     text = stringResource(R.string.dev_linux_required),
                     modifier = Modifier.fillMaxWidth().padding(DdSpacing.Lg),
@@ -209,7 +214,7 @@ internal fun DevPackagesSection(
                     installedCount = composed.packageIds.count { it in state.installed },
                     installing = installing,
                     busy = state.busy,
-                    linuxInstalled = linuxInstalled,
+                    environmentReady = environmentReady,
                     stage = operation?.takeIf { installing }?.stage,
                     onOpenMirrors = {
                         mirrorError = false
@@ -224,7 +229,7 @@ internal fun DevPackagesSection(
                 DevSheetMode.MIRRORS -> MirrorPicker(
                     mirrors = customization.mirrorIds(),
                     error = mirrorError,
-                    linuxInstalled = linuxInstalled,
+                    environmentReady = environmentReady,
                     busy = state.busy,
                     onToggle = { toggleMirror(it) },
                     onApply = {
@@ -255,7 +260,7 @@ private fun BundleForm(
     installedCount: Int,
     installing: Boolean,
     busy: Boolean,
-    linuxInstalled: Boolean,
+    environmentReady: Boolean,
     stage: String?,
     onOpenMirrors: () -> Unit,
     onInstall: () -> Unit,
@@ -343,7 +348,7 @@ private fun BundleForm(
         )
     }
     when {
-        !linuxInstalled -> Text(
+        !environmentReady -> Text(
             text = stringResource(R.string.dev_linux_required),
             style = DdType.bodySmall,
             color = colors.inkTertiary,
@@ -380,7 +385,7 @@ private fun apkMirrorSubtitle(mirrorIds: List<String>): String {
 private fun MirrorPicker(
     mirrors: List<String>,
     error: Boolean,
-    linuxInstalled: Boolean,
+    environmentReady: Boolean,
     busy: Boolean,
     onToggle: (String) -> Unit,
     onApply: () -> Unit,
@@ -425,7 +430,7 @@ private fun MirrorPicker(
         )
     }
     Spacer(Modifier.height(DdSpacing.Lg))
-    if (!linuxInstalled) {
+    if (!environmentReady) {
         Text(
             text = stringResource(R.string.dev_linux_required),
             style = DdType.bodySmall,
