@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.BackgroundTurnStarted
 import io.github.whywood.deepdeep.runtime.NoticeEvent
@@ -10,6 +11,7 @@ import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.SessionUsage
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
+import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.runtime.UsageChanged
 
 data class ConversationState(
@@ -56,12 +58,30 @@ internal fun reduce(
     is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, now)
     is RuntimeEvent.QueueChanged -> state.onQueueChanged(event)
     is RuntimeEvent.QueuedInputsDropped -> state.onQueuedInputsDropped()
-    is NoticeEvent -> state.appendNotice(event.notice, now)
+    is NoticeEvent -> state.onNotice(event.notice, now)
     is BackgroundTurnStarted -> state.startBackgroundTurn(event, now)
     is UsageChanged -> state.copy(usage = event.usage)
     is RuntimeEvent.SessionListChanged -> state
     is RuntimeEvent.SessionRemoved -> state
     is RuntimeEvent.SessionArchived -> state
+}
+
+internal fun ConversationState.onNotice(
+    notice: TurnNotice,
+    now: Long = System.currentTimeMillis(),
+): ConversationState {
+    if (notice !is TurnNotice.JobFinished) return appendNotice(notice, now)
+    val index = messages.indexOfLast {
+        it.role == AssistantRole.ASSISTANT && it.streaming
+    }
+    if (index < 0) return appendNotice(notice, now)
+    val message = messages[index]
+    val step = AssistantStep.Notice(nextStepId(message.steps), notice)
+    return copy(
+        messages = messages.toMutableList().also {
+            it[index] = message.copy(steps = message.steps + step)
+        },
+    )
 }
 
 internal fun nextMessageId(messages: List<AssistantMessage>): Long =

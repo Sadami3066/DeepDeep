@@ -133,6 +133,13 @@ sealed interface AssistantStep {
     ) : AssistantStep {
         override val expanded: Boolean = false
     }
+
+    data class Notice(
+        override val id: Long,
+        val notice: TurnNotice,
+    ) : AssistantStep {
+        override val expanded: Boolean = false
+    }
 }
 
 enum class ToolActivityStatus {

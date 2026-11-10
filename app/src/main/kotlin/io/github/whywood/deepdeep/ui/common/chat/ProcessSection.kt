@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdAlpha
@@ -59,6 +60,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
+import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.common.chat.AnsweredAskCard
 import io.github.whywood.deepdeep.ui.common.chat.parseQuestionRecord
 import java.util.Locale
@@ -238,6 +240,8 @@ internal fun ProcessSection(
                                 modifier = Modifier.padding(start = DdSpacing.Xxs, top = DdSpacing.Xxs, bottom = DdSpacing.Xs),
                                 onFileClick = onFileClick,
                             )
+
+                            is AssistantStep.Notice -> NoticeStep(step)
                         }
 
                         is ProcessNode.ToolRun -> ToolRunGroup(
@@ -380,6 +384,39 @@ private fun ToolRunGroup(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NoticeStep(step: AssistantStep.Notice) {
+    val colors = deepDeepColors()
+    val notice = step.notice as? TurnNotice.JobFinished ?: return
+    val title = stringResource(
+        if (notice.failed) R.string.chat_job_card_failed else R.string.chat_job_card_done,
+    )
+    val text = if (notice.label.isBlank()) title else "$title · ${notice.label}"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 28.dp)
+            .padding(horizontal = DdSpacing.Xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(6.dp)
+                .clip(DdShapes.Pill)
+                .background(if (notice.failed) colors.danger else colors.inkTertiary.copy(alpha = DdAlpha.Muted)),
+        )
+        Spacer(Modifier.width(DdSpacing.Sm))
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+            color = colors.inkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

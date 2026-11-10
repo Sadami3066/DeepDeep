@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.BackgroundTurnStarted
 import io.github.whywood.deepdeep.runtime.MessageStatus
@@ -56,6 +57,68 @@ class ConversationNoticeTest {
         assertEquals("run-3", reduced.messages[0].runId)
         assertTrue(reduced.messages[0].streaming)
         assertTrue(reduced.sending)
+    }
+
+    @Test
+    fun jobFinishedDuringStreamingAppendsProcessStep() {
+        val history = listOf(
+            AssistantMessage(0, AssistantRole.USER, "run"),
+            AssistantMessage(
+                id = 1,
+                role = AssistantRole.ASSISTANT,
+                text = "",
+                streaming = true,
+                status = MessageStatus.RUNNING,
+                startedAt = 100L,
+                runId = "run-1",
+            ),
+        )
+        val reduced = reduce(
+            ConversationState(messages = history),
+            NoticeEvent("run-1", TurnNotice.JobFinished("build", failed = false)),
+            strings,
+            now = 1000L,
+        )
+        assertEquals(2, reduced.messages.size)
+        val step = reduced.messages[1].steps.single()
+        assertTrue(step is AssistantStep.Notice)
+        assertEquals(TurnNotice.JobFinished("build", false), (step as AssistantStep.Notice).notice)
+    }
+
+    @Test
+    fun jobFinishedOutsideTurnKeepsStandaloneNotice() {
+        val reduced = reduce(
+            ConversationState(),
+            NoticeEvent("run-1", TurnNotice.JobFinished("build", failed = true)),
+            strings,
+            now = 1000L,
+        )
+        val message = reduced.messages.single()
+        assertEquals(TurnNotice.JobFinished("build", true), message.notice)
+        assertTrue(message.steps.isEmpty())
+    }
+
+    @Test
+    fun nonJobNoticeDuringStreamingStaysStandalone() {
+        val history = listOf(
+            AssistantMessage(
+                id = 0,
+                role = AssistantRole.ASSISTANT,
+                text = "",
+                streaming = true,
+                status = MessageStatus.RUNNING,
+                startedAt = 100L,
+                runId = "run-1",
+            ),
+        )
+        val reduced = reduce(
+            ConversationState(messages = history),
+            NoticeEvent("run-1", TurnNotice.Compacted(20000, 4000)),
+            strings,
+            now = 1000L,
+        )
+        assertEquals(2, reduced.messages.size)
+        assertEquals(TurnNotice.Compacted(20000, 4000), reduced.messages[1].notice)
     }
 
     @Test
