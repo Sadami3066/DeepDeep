@@ -124,6 +124,12 @@ class PiSessionEngine(
             if (text.isBlank()) return emptyMap()
             return mapOf("memory" to wrapPromptSection("memory", text))
         }
+        val promptResources = PromptResourceSections(
+            cwd = cwd,
+            agentDir = agentDirectory,
+            fs = fs,
+            excludedSkills = excludedSkills,
+        )
         val currentSections: suspend () -> Map<String, String> = {
             val session = created
             val sharedStorageValue = runCatching { sharedStorage() }.getOrDefault(false)
@@ -145,7 +151,7 @@ class PiSessionEngine(
                             mounts = mounts,
                         ),
                     ),
-                ) + pluginContextSection() + extraSystemPromptSections,
+                ) + promptResources.current() + pluginContextSection() + extraSystemPromptSections,
             )
         }
         val session = createAgentSession(

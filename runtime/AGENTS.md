@@ -34,6 +34,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
 | `Personalization.kt` | 称呼、交互风格与语气等提示词分节；环境段由 `HostEnvironment.promptLines` 提供 |
 | `PromptPaths.kt` | 提示词 paths 段：Skills / App data / Shared storage / Mounted directories（挂载目录名称、路径与说明） |
+| `PromptResourceSections.kt` | 每轮重读提示词资源（技能、项目指令、附加系统提示），渲染 skills/project_context/addendum 三段覆盖建会话时的旧值；删空时用空串清掉旧段 |
 | `SkillCatalog.kt` | 发现技能并渲染为提示词块 |
 | `WorkspaceStore.kt` | 工作区列表持久化（DataStore） |
 | `RuntimeLog.kt` | 包内 Log 包装，失败不抛 |
