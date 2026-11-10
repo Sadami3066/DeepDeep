@@ -130,6 +130,8 @@ fun SystemAccessScreen(
                 color = colors.ink,
             )
             Spacer(Modifier.height(DdSpacing.Xl))
+            DdSectionLabel(stringResource(R.string.access_section_permission))
+            Spacer(Modifier.height(DdSpacing.Sm))
             SettingsGroup {
                 AccessLevelRow(
                     access = HostAccess.LOCAL,
@@ -209,22 +211,6 @@ fun SystemAccessScreen(
                             onClick = { showRebuildDialog = true },
                             modifier = Modifier.testTag("access_root_rebuild"),
                         )
-                        if (linuxState !is LinuxInstallState.Installed) {
-                            DdHairline()
-                            val installing = linuxState is LinuxInstallState.Installing
-                            DdListRow(
-                                title = stringResource(R.string.access_root_install_linux),
-                                subtitle = if (installing) {
-                                    stringResource(R.string.access_root_linux_installing)
-                                } else {
-                                    null
-                                },
-                                showChevron = true,
-                                enabled = !installing,
-                                onClick = onLinuxInstall,
-                                modifier = Modifier.testTag("access_root_install_linux"),
-                            )
-                        }
                         if (!state.rootReady) {
                             DdHairline()
                             DdListRow(

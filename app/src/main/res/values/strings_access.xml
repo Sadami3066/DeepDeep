@@ -13,6 +13,7 @@
     <string name="access_effective">当前生效</string>
     <string name="access_fallback_adb">无线调试尚未连接，当前按「%1$s」运行。</string>
     <string name="access_fallback_root">Root 未授权，当前按「%1$s」运行。</string>
+    <string name="access_section_permission">权限</string>
     <string name="access_section_linux">Linux 环境</string>
     <string name="access_section_root">Root Linux</string>
     <string name="access_hint_adb">需要开启系统无线调试并完成配对。</string>
@@ -34,9 +35,7 @@
     <string name="access_root_rebuild_message">重建会删除当前 Root 快照，正在运行的 Root 会话和后台任务会中断或失败。</string>
     <string name="access_root_rebuild_confirm">重建</string>
     <string name="access_root_rebuild_cancel">取消</string>
-    <string name="access_root_hint">Root 档在独立快照里运行，首次准备会复制基础 Linux 环境；基础 Linux 未安装时，可在本页先安装。</string>
-    <string name="access_root_install_linux">安装基础 Linux</string>
-    <string name="access_root_linux_installing">正在安装基础 Linux…</string>
+    <string name="access_root_hint">独立快照中的系统级 Linux 环境，文件与普通模式共享。</string>
     <string name="access_root_failed_reason">准备失败：%1$s</string>
     <string name="access_error_wireless_debugging_disabled">无线调试未开启</string>
     <string name="access_error_pairing_code_invalid">配对码不正确</string>

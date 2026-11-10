@@ -13,6 +13,7 @@
     <string name="access_effective">In effect</string>
     <string name="access_fallback_adb">Wireless debugging is not connected; running as “%1$s”.</string>
     <string name="access_fallback_root">Root is not granted; running as “%1$s”.</string>
+    <string name="access_section_permission">Permissions</string>
     <string name="access_section_linux">Linux environment</string>
     <string name="access_section_root">Root Linux</string>
     <string name="access_hint_adb">Turn on wireless debugging and finish pairing.</string>
@@ -34,9 +35,7 @@
     <string name="access_root_rebuild_message">Rebuilding deletes the current Root snapshot. Running Root sessions and background tasks will be interrupted or fail.</string>
     <string name="access_root_rebuild_confirm">Rebuild</string>
     <string name="access_root_rebuild_cancel">Cancel</string>
-    <string name="access_root_hint">The Root tier runs in its own snapshot; the first preparation copies the base Linux environment. If base Linux is missing, install it on this page.</string>
-    <string name="access_root_install_linux">Install base Linux</string>
-    <string name="access_root_linux_installing">Installing base Linux…</string>
+    <string name="access_root_hint">A system-level Linux environment in its own snapshot; files are shared with Standard mode.</string>
     <string name="access_root_failed_reason">Preparation failed: %1$s</string>
     <string name="access_error_wireless_debugging_disabled">Wireless debugging is off</string>
     <string name="access_error_pairing_code_invalid">Incorrect pairing code</string>
