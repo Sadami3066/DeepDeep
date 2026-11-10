@@ -38,6 +38,17 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `WorkspaceStore.kt` | 工作区列表持久化（DataStore） |
 | `RuntimeLog.kt` | 包内 Log 包装，失败不抛 |
 
+### 宿主环境
+
+| 文件 | 职责 |
+|---|---|
+| `host/HostAccess.kt` | 系统访问档位契约：`HostAccess`（LOCAL/ADB/ROOT）、`HostAccessState`、只降级不自动升级的 `resolveHostAccess` 与 `HostAccessController` |
+| `host/HostEnvironment.kt` | 宿主环境契约：`HostCapabilities`（含 bash 是否可用）、`HostEnvironment`（bash/bashStreaming/files/system/promptLines）、`HostEnvironmentProvider` |
+| `host/StreamingShell.kt` | 流式 shell 契约：`StreamingShellExecutor` 与结果模型 |
+| `host/DynamicHostAccess.kt` | 执行时解析包装：`DynamicShellExecutor`/`DynamicFileSystem` 每次调用向 `HostEnvironmentProvider` 现查当前环境，避免会话级快照 |
+
+`PiSessionEngine` 只依赖 `HostEnvironmentProvider`：会话的工具（bash/文件）与提示词环境段在每次执行/每轮开始时动态解析当前环境，不在建会话时缓存。
+
 ### 工具
 
 | 文件 | 职责 |
