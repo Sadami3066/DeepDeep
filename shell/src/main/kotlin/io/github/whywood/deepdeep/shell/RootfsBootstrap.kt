@@ -235,7 +235,9 @@ class RootfsBootstrap internal constructor(
                 appendLine("set -e")
                 appendLine("WS=\"\$1\"")
                 appendLine("RESOLV=\"\$3\"")
-                append("exec /system/bin/unshare -m /system/bin/sh -c '")
+                appendLine("NSENTER=\"\"")
+                appendLine("if /system/bin/nsenter -t 1 -m -- /system/bin/true >/dev/null 2>&1; then NSENTER=\"/system/bin/nsenter -t 1 -m --\"; fi")
+                append("exec \$NSENTER /system/bin/unshare -m /system/bin/sh -c '")
                 appendLine()
                 appendLine("set -e")
                 appendLine("ROOT=$root")
@@ -247,6 +249,7 @@ class RootfsBootstrap internal constructor(
                 appendLine("mount -t proc proc \"\$ROOT/proc\"")
                 appendLine("mount -t sysfs sysfs \"\$ROOT/sys\"")
                 appendLine("mount --rbind /dev \"\$ROOT/dev\"")
+                appendLine("if [ -d /dev/binderfs ]; then mount --rbind /dev/binderfs \"\$ROOT/dev/binderfs\" 2>/dev/null || true; fi")
                 appendLine("mkdir -p \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data\" \"\$ROOT/system\" \"\$ROOT/vendor\" \"\$ROOT/product\" \"\$ROOT/system_ext\" \"\$ROOT/odm\" \"\$ROOT/storage/emulated/0\"")
                 appendLine("mount --rbind /data \"\$ROOT/data\"")
                 appendLine("mount --bind \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data/adb/deepdeep\"")
@@ -281,7 +284,7 @@ class RootfsBootstrap internal constructor(
         }
 
         internal fun buildProfileScript(): String = buildString {
-            appendLine("export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+            appendLine("export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/system/bin")
             appendLine("export HOME=/root")
             appendLine("export TERM=dumb")
             appendLine("export LANG=C.UTF-8")

@@ -35,10 +35,12 @@ class RootfsBootstrapTest {
     fun runScriptPrivatizesMountsAndBindsAndroidData() {
         val script = RootfsBootstrap.buildRunScript(File("/data/adb/deepdeep/linux"))
 
+        assertTrue(script.contains("nsenter -t 1 -m --"))
         assertTrue(script.contains("unshare -m"))
         assertTrue(script.contains("mount --make-rprivate /"))
         assertTrue(script.contains("mount -t proc proc"))
         assertTrue(script.contains("mount --rbind /data"))
+        assertTrue(script.contains("mount --rbind /dev/binderfs"))
         assertTrue(script.contains("mount --bind \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data/adb/deepdeep\""))
         assertTrue(script.contains("ln -s /storage/emulated/0"))
         assertTrue(script.contains("mount --bind /storage/emulated/0 \"\$ROOT/storage/emulated/0\""))
