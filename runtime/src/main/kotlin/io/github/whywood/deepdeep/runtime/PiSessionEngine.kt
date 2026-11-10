@@ -55,6 +55,7 @@ class PiSessionEngine(
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
+    private val rootFileSystem: FileSystem by lazy { RootFileSystem() }
 
     suspend fun createSession(
         file: Path?,
@@ -188,9 +189,10 @@ class PiSessionEngine(
         binding: SessionBinding,
         session: () -> AgentSession?,
     ): List<CodingTool> = buildList {
+        val fileSystem = if (rootBashActive()) rootFileSystem else toolFs
         val defaults = defaultCodingTools(
             cwd = cwd,
-            fs = toolFs,
+            fs = fileSystem,
             mutationQueue = FileMutationQueue(),
             shellExecutor = null,
         )

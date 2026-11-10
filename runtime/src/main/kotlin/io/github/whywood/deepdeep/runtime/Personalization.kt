@@ -35,6 +35,7 @@ internal fun buildPersonalizationSections(
                 appendLine("- /sdcard = /storage/emulated/0 (rw), same data as /data/media/0.")
                 appendLine("- /proc /sys /dev: host.")
                 appendLine("/system/bin native tools (getprop, toybox, ...) run directly; use root_shell for pm, cmd, settings, dumpsys.")
+                appendLine("read, edit and write reach the same native tree as bash; pass absolute paths without an /android prefix.")
             } else {
                 appendLine("Env: Alpine Linux via proot and Android.")
             }
