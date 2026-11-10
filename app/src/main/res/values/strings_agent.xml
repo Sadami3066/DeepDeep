@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_agent">Agent</string>
-    <string name="agent_settings_title">Agent 设置</string>
+    <string name="settings_agent">智能体行为</string>
+    <string name="agent_settings_title">智能体行为</string>
     <string name="agent_section_capabilities">能力</string>
     <string name="agent_section_metadata">元数据</string>
     <string name="agent_metadata_title">会话标题</string>

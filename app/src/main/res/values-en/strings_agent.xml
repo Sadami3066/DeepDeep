@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_agent">Agent</string>
-    <string name="agent_settings_title">Agent settings</string>
+    <string name="settings_agent">Agent behavior</string>
+    <string name="agent_settings_title">Agent behavior</string>
     <string name="agent_section_capabilities">Capabilities</string>
     <string name="agent_section_metadata">Metadata</string>
     <string name="agent_metadata_title">Session titles</string>

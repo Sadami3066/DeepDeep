@@ -36,7 +36,7 @@
     <string name="settings_privacy_agreement">Privacy &amp; Terms</string>
     <string name="settings_provider">Provider</string>
     <string name="settings_access">System access</string>
-    <string name="settings_android">Android</string>
+    <string name="settings_android">Android settings</string>
     <string name="settings_theme_preset">Theme</string>
     <string name="settings_theme_preset_system">Follow system</string>
     <string name="settings_theme_preset_deepdeep">DeepDeep</string>
