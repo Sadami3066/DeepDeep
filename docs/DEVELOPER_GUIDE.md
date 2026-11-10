@@ -36,7 +36,7 @@
 | `app/` | Compose UI、聊天、文件、设置、插件页、小程序容器与各页面装配 |
 | `runtime/` | Agent 运行时：会话、工具、记忆、任务、定时器、插件加载 |
 | `runtime-api/` | 纯 JVM 契约，供 runtime 与宿主解耦 |
-| `shell/` | proot 与 ADB/Root 特权通道 |
+| `shell/` | proot 与 ADB/Root 系统访问后端 |
 | `design/` | 主题、图标、通用组件与设计 token |
 | `plugin-api/` | 插件契约与可发布 SDK |
 
@@ -46,9 +46,10 @@
 
 - 会话以 pi JSONL 为唯一权威，保存在 `files/agent/sessions/`；置顶、归档、重命名只是本地元数据。
 - 界面状态是会话事件流的投影；不要另存一份「当前消息」状态。
-- 工具按权限档注册：普通档只有 `bash`；无线调试或 Root 后端可用时才注册对应 `adb_shell` / `root_shell`。
+- 工具与文件都由当前系统访问环境（`HostEnvironmentProvider`）提供：普通、无线调试档的 `bash` 在 App 沙箱内，Root 档进原生 chroot；不再注册 `adb_shell` / `root_shell`，ADB/Root 档的系统命令统一由 `system_shell` 执行。
+- 系统访问档位（普通 / 无线调试 / Root）由 `HostAccessController` 维护，只降级不自动升级；运行时只读 `HostEnvironment`，不自行判断 root。
 - 目标与后台任务只在进程内存，重启清空。
-- Linux 是 proot 用户空间，不是安全沙箱。
+- 普通、无线调试档的 Linux 是 proot 用户空间，不是安全沙箱；Root 档直接使用系统 root 环境。
 - 定时任务绑定会话，五段 cron；投递失败或进程被杀时不保证执行。
 
 ## 插件

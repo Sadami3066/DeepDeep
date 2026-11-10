@@ -105,8 +105,8 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载最新版本。
 2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入引导界面；建议跟着流程走，也可以跳过，之后在设置中逐项完成。
 3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。建议使用 DeepSeek 模型，或 GPT 订阅。
-4. **初始化 Linux。** 进入「设置 → Linux 设置」完成 Alpine 初始化；这一步建议认真完成，请根据提示完成基础配置。
-5. **选择权限。** 默认使用普通档。需要操作其他应用时，在「设置 → 权限」中跟随教程开启无线调试或 Root。开启无线调试时，你可以通过系统通知输入验证码，若系统通知无法使用，可以通过小窗化/分屏DeepDeep，在无线配对界面观察验证码，再在 DeepDeep 中输入。
+4. **初始化 Linux。** 进入「设置 → 系统访问」的「Linux 环境」区完成 Alpine 初始化；这一步建议认真完成，请根据提示完成基础配置。
+5. **选择系统访问。** 默认使用普通档。需要操作其他应用时，在「设置 → 系统访问」中选择并跟随教程开启无线调试或 Root。开启无线调试时，你可以通过系统通知输入验证码，若系统通知无法使用，可以通过小窗化/分屏DeepDeep，在无线配对界面观察验证码，再在 DeepDeep 中输入。
 
 
 ## 安装与配置
@@ -127,8 +127,8 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 | 配置项 | 位置 | 说明 |
 |---|---|---|
 | 模型服务商 | 设置 → 服务商 | 支持 42 家 Provider；API Key 或浏览器 OAuth |
-| 权限 | 设置 → 权限 | 普通 / 无线调试 / Root 三档；屏幕操作默认关闭 |
-| Linux | 设置 → Linux 设置 | 初始化 Alpine；安装命令、Node、Python 与编译工具链 |
+| 系统访问 | 设置 → 系统访问 | 普通 / 无线调试 ADB / Root 三档；档位决定 bash 与文件操作的身份 |
+| Linux | 设置 → 系统访问 → Linux 环境 | 初始化 Alpine；安装命令、Node、Python 与编译工具链 |
 | Android 集成 | 设置 → Android 设置 | 悬浮窗、系统助手、通知与分享接收 |
 | 远程连接 | 抽屉 → 远程连接 | 通过 [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) 配对电脑 |
 | 插件 | 抽屉 → 插件 | 导入签名 `.ddp`；查看能力清单与运行状态 |
@@ -138,9 +138,9 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 
 | 项目 | 说明 |
 |---|---|
-| **Linux 隔离** | Alpine 运行在 proot 用户空间，不是安全沙箱 |
+| **Linux 隔离** | 普通、无线调试档的 Alpine 运行在 proot 用户空间，不是安全沙箱；Root 档直接使用系统 root 环境 |
 | **插件权限** | 插件与 App 同进程、同 UID，没有沙箱 |
-| **审批** | 只分普通、无线调试、Root 三档，不逐条确认命令 |
+| **审批** | 只分系统访问三档：普通、无线调试、Root，不逐条确认命令 |
 | **运行位置** | 任务在本机执行；关闭 App 后停止，目标续跑只在进程内有效 |
 | **受保护页面** | 支付、密码等页面禁止截图，Agent 会把控制权交还给你 |
 | **分发** | 1.0.0 通过 GitHub Releases 分发，未上架应用商店；源码已公开 |
@@ -155,7 +155,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 | `app/` | Compose UI、聊天、文件、设置、插件页、小程序容器与页面装配 |
 | `runtime/` | Agent 运行时：会话、工具、记忆、任务、定时器、插件加载 |
 | `runtime-api/` | 纯 JVM 契约，供 runtime 与宿主解耦 |
-| `shell/` | proot 与 ADB/Root 特权通道 |
+| `shell/` | proot 与 ADB/Root 系统访问后端 |
 | `design/` | 主题、图标、通用组件与设计 token |
 | `plugin-api/` | 插件契约与可发布 SDK |
 
@@ -176,7 +176,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 
 ## 文档与反馈
 
-- [用户指南](docs/USER_GUIDE.md)：安装、权限、Linux、插件、小程序、远程连接与常见问题。
+- [用户指南](docs/USER_GUIDE.md)：安装、系统访问、Linux、插件、小程序、远程连接与常见问题。
 - [开发指南](docs/DEVELOPER_GUIDE.md)：环境、模块、构建、测试与代码约定。
 - [插件开发](docs/PLUGIN_DEV.md)：插件契约、清单、签名、生命周期与 UI 扩展。
 - [发布说明](docs/RELEASE.md)：签名、打包与分发流程。

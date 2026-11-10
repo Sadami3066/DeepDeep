@@ -2,7 +2,11 @@
 
 ## HEAD (since m2)
 
-- feat: 插件 API v2：`plugin-api` 升 0.8.0 / `PLUGIN_API_LEVEL = 5`，删除 `host.privilege()`、`PrivilegeService` 与清单 `requiresPrivilege`，能力清单收敛为 17 项；`host.linux()`/`host.files()` 不再单独提权，执行身份由「权限」档位（普通/无线调试/Root）统一决定，Root 档为 uid 0 chroot 与原生文件系统 [插件] [运行时] [架构]
+- refactor: 系统访问档位统一：`bash`、文件与系统命令都按「普通 / 无线调试 / Root」档位执行，删除独立的 `adb_shell`/`root_shell`，ADB/Root 档系统命令统一走唯一的系统命令工具；root Linux 启动时显式挂载 binderfs [工具] [架构] [运行时]
+- feat: 文件访问统一：文件管理器、附件与分享都走当前系统访问环境；Root 档可浏览与分享系统文件，预览/分享时临时复制到应用缓存，过期后自动清理 [文件] [架构] [界面]
+- feat: 「系统访问」设置页：把权限与环境（Linux、开发组合）设置合并为一页，集中选择档位、查看 Root Linux 准备状态并在失败时重试；屏幕操作开关保留在 Agent 设置，未生效时提示进入系统访问 [界面] [设置]
+- refactor: 宿主环境清理：移除 `PrivilegeLevel`/`PrivilegeController`/RootBash 开关、`PrivilegePluginService`、`requiresPrivilege` 残留、两套提示词与裸文件实现，运行时只保留 `HostEnvironment` 一条路径 [架构] [运行时]
+- feat: 插件 API v2：`plugin-api` 升 0.8.0 / `PLUGIN_API_LEVEL = 5`，删除 `host.privilege()`、`PrivilegeService` 与清单 `requiresPrivilege`，能力清单收敛为 17 项；`host.linux()`/`host.files()` 不再单独提权，执行身份由「系统访问」档位（普通/无线调试/Root）统一决定，Root 档为 uid 0 chroot 与原生文件系统 [插件] [运行时] [架构]
 - feat: 小程序支持添加到桌面：查看页「⋯ → 添加到桌面」生成带 emoji 图标的快捷方式，点击直达小程序；已存在/已添加/需系统权限三种反馈，权限未开可一键去设置 [小程序] [界面]
 - feat: 远程连接：抽屉「远程连接」管理多台电脑，扫码/粘贴配对、证书固定、局域网与远程双入口（按 installationId 合并、自动回退）、状态圆点与使用教程，连接页注入手机样式；远程入口走 WebView 浏览器通道以适配按 TLS 客户端指纹过滤的网络；电脑端复用 dsh-mobile，零桌面改动，新增 `data/remote` 存储与单元测试 [界面] [数据]
 - feat: web_search 支持 Exa/Tavily/Brave/Serper 服务商密钥，按顺序尝试并自动回退 DeepSeek；Agent 设置「能力」新增搜索服务配置页，密钥存入本机加密存储 [工具] [界面]
