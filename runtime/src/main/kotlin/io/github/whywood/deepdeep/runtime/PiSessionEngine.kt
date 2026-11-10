@@ -27,6 +27,7 @@ import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.time.OffsetDateTime
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -36,8 +37,8 @@ class PiSessionEngine(
     agentDir: File,
     private val credentials: CredentialStore,
     private val transport: HttpTransport,
-    private val shellExecutor: ShellExecutor?,
-    private val rootBashActive: () -> Boolean = { false },
+    private val shellExecutor: ShellExecutor? = null,
+    private val hostEnvironment: HostEnvironmentProvider? = null,
     private val providers: ProviderCatalog,
     private val personalization: suspend () -> Personalization = { Personalization() },
     private val sharedStorage: suspend () -> Boolean = { false },
@@ -55,7 +56,6 @@ class PiSessionEngine(
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
-    private val rootFileSystem: FileSystem by lazy { RootFileSystem() }
 
     suspend fun createSession(
         file: Path?,
@@ -88,7 +88,9 @@ class PiSessionEngine(
         val explicitModel = if (restoredModel) null else fallback
         val providerId = if (restoredModel) restoredProviderId!! else fallback.providerId
         val modelId = if (restoredModel) restoredModelId!! else fallback.modelId
-        val activeShell = if (shellEnabled) shellExecutor else null
+        val environment = hostEnvironment?.let { provider -> runCatching { provider.current() }.getOrNull() }
+        val environmentShell = environment?.let { env -> runCatching { env.bash(cwd.toString()) }.getOrNull() }
+        val activeShell = if (!shellEnabled) null else environmentShell ?: shellExecutor
         val binding = SessionBinding(supportsChatDelivery)
         var created: AgentSession? = null
         val allTools = buildTools(activeShell, binding) { created }
@@ -119,7 +121,7 @@ class PiSessionEngine(
                 modelId = session?.model?.id ?: modelId,
                 now = OffsetDateTime.now(),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-                rootBash = runCatching { rootBashActive() }.getOrDefault(false),
+                environmentLines = runCatching { hostEnvironment?.current()?.promptLines }.getOrNull(),
                 extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(
                         "paths",
@@ -182,14 +184,21 @@ class PiSessionEngine(
     override suspend fun create(file: String?, config: ModelConfig): SessionHandle =
         PiSessionHandle(this, createSession(file?.toPath(), config))
 
-    fun availableTools(): List<CodingTool> = buildTools(shellExecutor, SessionBinding(supportsChatDelivery)) { null }
+    fun availableTools(): List<CodingTool> {
+        val environmentShell = hostEnvironment?.let { provider ->
+            runCatching { provider.current().bash(cwd.toString()) }.getOrNull()
+        }
+        return buildTools(environmentShell ?: shellExecutor, SessionBinding(supportsChatDelivery)) { null }
+    }
 
     private fun buildTools(
         activeShell: ShellExecutor?,
         binding: SessionBinding,
         session: () -> AgentSession?,
     ): List<CodingTool> = buildList {
-        val fileSystem = if (rootBashActive()) rootFileSystem else toolFs
+        val fileSystem = hostEnvironment?.let { provider ->
+            runCatching { provider.current().files }.getOrNull()
+        } ?: toolFs
         val defaults = defaultCodingTools(
             cwd = cwd,
             fs = fileSystem,

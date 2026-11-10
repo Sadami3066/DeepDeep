@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import okio.Buffer
@@ -7,6 +8,7 @@ import okio.FileMetadata
 import okio.FileSystem
 import okio.ForwardingFileSystem
 import okio.Path
+import okio.Path.Companion.toPath
 import okio.Sink
 import okio.Source
 import okio.Timeout
@@ -43,16 +45,19 @@ internal class SuRootFileRunner : RootFileRunner {
 internal class RootFileSystem(
     private val runner: RootFileRunner = SuRootFileRunner(),
     private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
+    private val appUid: Int = -1,
+    private val appGid: Int = -1,
 ) : ForwardingFileSystem(FileSystem.SYSTEM) {
 
     override fun metadataOrNull(path: Path): FileMetadata? {
-        val result = run("stat -Lc '%F|%s' -- ${quote(path)}")
+        val quoted = quote(path)
+        val result = run("stat -c '%F|%s' -- $quoted")
         if (result.exitCode != 0) return null
         val line = result.stdout.lineSequence().firstOrNull() ?: return null
         val type = line.substringBefore('|')
         val size = line.substringAfter('|', "").trim().toLongOrNull()
-        return if (type == "directory") {
-            FileMetadata(
+        return when {
+            type == "directory" -> FileMetadata(
                 isRegularFile = false,
                 isDirectory = true,
                 symlinkTarget = null,
@@ -62,8 +67,23 @@ internal class RootFileSystem(
                 lastAccessedAtMillis = null,
                 extras = emptyMap(),
             )
-        } else {
-            FileMetadata(
+            type.contains("link") -> {
+                val target = run("readlink -- $quoted")
+                if (target.exitCode != 0) return null
+                val value = target.stdout.trimEnd('\n')
+                if (value.isEmpty()) return null
+                FileMetadata(
+                    isRegularFile = false,
+                    isDirectory = false,
+                    symlinkTarget = value.toPath(),
+                    size = null,
+                    createdAtMillis = null,
+                    lastModifiedAtMillis = null,
+                    lastAccessedAtMillis = null,
+                    extras = emptyMap(),
+                )
+            }
+            else -> FileMetadata(
                 isRegularFile = true,
                 isDirectory = false,
                 symlinkTarget = null,
@@ -92,7 +112,12 @@ internal class RootFileSystem(
     }
 
     override fun sink(path: Path, mustCreate: Boolean): Sink {
-        val process = runner.start("cat > ${quote(path)}")
+        val command = if (mustCreate) {
+            "set -C; cat > ${quote(path)}"
+        } else {
+            "cat > ${quote(path)}"
+        }
+        val process = runner.start(command)
         val output = process.outputStream.sink().buffer()
         return object : Sink {
             override fun write(source: Buffer, byteCount: Long) = output.write(source, byteCount)
@@ -106,6 +131,7 @@ internal class RootFileSystem(
                 if (!waitForProcess(process)) {
                     throw IOException("root write failed: ${readError(process)}")
                 }
+                chown(path)
             }
         }
     }
@@ -117,6 +143,32 @@ internal class RootFileSystem(
             .filter { it.isNotBlank() }
             .map { dir / it }
             .toList()
+    }
+
+    override fun listOrNull(dir: Path): List<Path>? = runCatching { list(dir) }.getOrNull()
+
+    override fun listRecursively(dir: Path, followSymlinks: Boolean): Sequence<Path> {
+        if (followSymlinks) {
+            val result = run("find -L ${quote(dir)} -print")
+            if (result.exitCode != 0) return emptySequence()
+            return result.stdout.lineSequence()
+                .filter { it.isNotBlank() }
+                .map { it.toPath() }
+                .toList()
+                .asSequence()
+        }
+        return sequence {
+            val queue = ArrayDeque<Path>()
+            queue.addLast(dir)
+            while (queue.isNotEmpty()) {
+                val current = queue.removeFirst()
+                yield(current)
+                val metadata = metadataOrNull(current) ?: continue
+                if (metadata.isDirectory) {
+                    listOrNull(current)?.forEach { queue.addLast(it) }
+                }
+            }
+        }
     }
 
     override fun createDirectory(dir: Path, mustCreate: Boolean) {
@@ -131,21 +183,59 @@ internal class RootFileSystem(
     }
 
     override fun delete(path: Path, mustExist: Boolean) {
-        val result = run("rm -f -- ${quote(path)}")
-        if (mustExist && result.exitCode != 0) throw IOException("root delete failed: ${result.stderr.trim()}")
+        val quoted = quote(path)
+        val command = if (mustExist) {
+            "{ [ -e $quoted ] || [ -L $quoted ]; } || exit 3; rm -rf -- $quoted"
+        } else {
+            "rm -rf -- $quoted"
+        }
+        val result = run(command)
+        if (result.exitCode != 0) throw IOException("root delete failed: ${result.stderr.trim()}")
+    }
+
+    private fun chown(path: Path) {
+        val target = when {
+            appUid >= 0 && appGid >= 0 -> "$appUid:$appGid"
+            appUid >= 0 -> "$appUid"
+            appGid >= 0 -> ":$appGid"
+            else -> return
+        }
+        val result = run("chown $target -- ${quote(path)}")
+        if (result.exitCode != 0) throw IOException("root chown failed: ${result.stderr.trim()}")
     }
 
     private data class Result(val exitCode: Int, val stdout: String, val stderr: String)
 
     private fun run(command: String): Result {
         val process = runner.start(command)
-        val stdout = process.inputStream.readBytes()
-        val stderr = process.errorStream.readBytes()
-        if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
+        val stdout = ByteArrayOutputStream()
+        val stderr = ByteArrayOutputStream()
+        val stdoutReader = Thread {
+            runCatching { process.inputStream.copyTo(stdout) }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+        val stderrReader = Thread {
+            runCatching { process.errorStream.copyTo(stderr) }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+        val finished = runCatching { process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS) }.getOrDefault(false)
+        if (!finished) {
             process.destroyForcibly()
+            stdoutReader.join(1_000L)
+            stderrReader.join(1_000L)
             throw IOException("root command timed out")
         }
-        return Result(process.exitValue(), String(stdout, Charsets.UTF_8), String(stderr, Charsets.UTF_8))
+        stdoutReader.join()
+        stderrReader.join()
+        return Result(
+            process.exitValue(),
+            String(stdout.toByteArray(), Charsets.UTF_8),
+            String(stderr.toByteArray(), Charsets.UTF_8),
+        )
     }
 
     private fun waitForProcess(process: Process): Boolean {
@@ -165,3 +255,6 @@ internal class RootFileSystem(
         private const val DEFAULT_TIMEOUT_MILLIS = 30_000L
     }
 }
+
+fun createRootFileSystem(appUid: Int, appGid: Int): FileSystem =
+    RootFileSystem(appUid = appUid, appGid = appGid)

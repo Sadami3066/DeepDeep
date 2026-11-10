@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import io.github.whywood.deepdeep.sdk.coding.tools.bashTool
 import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import kotlinx.coroutines.CancellationException
@@ -82,6 +83,29 @@ fun adbShellTool(
     unavailableMessage = "ADB shell is unavailable on this device.",
     failureMessage = "adb_shell execution failed",
 )
+
+fun systemShellTool(executor: ShellExecutor): CodingTool {
+    val delegate = deepDeepBashTool(executor)
+    return CodingTool(
+        name = "system_shell",
+        description = "Run a command in the Android system shell and return the exit code with merged stdout and stderr. Use it for Android system operations such as pm, cmd, settings, dumpsys, am and getprop; use bash for ordinary Linux work.",
+        parameters = adbShellParameters,
+        label = "system_shell",
+        promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
+        execute = { toolCallId, args, signal, onUpdate ->
+            signal?.throwIfAborted()
+            try {
+                delegate.execute(toolCallId, args.shellArguments(), signal, onUpdate)
+            } catch (aborted: RequestAbortedException) {
+                throw aborted
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                textResult(error.message ?: "system_shell execution failed", isError = true)
+            }
+        },
+    )
+}
 
 internal fun JsonObject.shellArguments(): JsonObject {
     val command = (this["command"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty()

@@ -20,6 +20,7 @@ internal fun buildPersonalizationSections(
     modelId: String,
     now: OffsetDateTime,
     rootBash: Boolean = false,
+    environmentLines: List<String>? = null,
 ): Map<String, String> {
     val nickname = personalization.nickname.trim()
     val sections = linkedMapOf<String, String>()
@@ -28,13 +29,15 @@ internal fun buildPersonalizationSections(
         buildString {
             appendLine("Date: ${now.toLocalDate()} (UTC${now.offset.id}).")
             appendLine("Model: $providerId/$modelId.")
-            if (rootBash) {
+            if (!environmentLines.isNullOrEmpty()) {
+                environmentLines.forEach { appendLine(it) }
+            } else if (rootBash) {
                 appendLine("Env: Alpine Linux chroot as real root (uid 0), Android filesystems at native paths.")
                 appendLine("- /data (rw): Android /data. Other apps' private data: /data/data/<package>.")
                 appendLine("- /system /vendor /product /system_ext /odm (ro): Android system files.")
                 appendLine("- /sdcard = /storage/emulated/0 (rw), same data as /data/media/0.")
                 appendLine("- /proc /sys /dev: host.")
-                appendLine("/system/bin native tools (getprop, toybox, ...) run directly; use root_shell for pm, cmd, settings, dumpsys.")
+                appendLine("/system/bin is on PATH: run pm, cmd, settings, dumpsys and getprop directly.")
                 appendLine("read, edit and write reach the same native tree as bash; pass absolute paths without an /android prefix.")
             } else {
                 appendLine("Env: Alpine Linux via proot and Android.")
@@ -63,9 +66,12 @@ internal fun buildSessionSystemPromptSections(
     now: OffsetDateTime,
     pluginBody: String?,
     rootBash: Boolean = false,
+    environmentLines: List<String>? = null,
     extra: Map<String, String> = emptyMap(),
 ): Map<String, String> {
-    val sections = LinkedHashMap(buildPersonalizationSections(personalization, providerId, modelId, now, rootBash))
+    val sections = LinkedHashMap(
+        buildPersonalizationSections(personalization, providerId, modelId, now, rootBash, environmentLines),
+    )
     val body = pluginBody?.trim().orEmpty()
     if (body.isNotEmpty()) {
         sections["plugins"] = wrapPromptSection("plugins", body)
