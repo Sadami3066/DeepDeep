@@ -21,7 +21,6 @@
     <string name="plugins_info_capabilities">Permissions</string>
     <string name="plugins_import_capabilities">Permissions</string>
     <string name="plugins_capability_linux">Linux commands</string>
-    <string name="plugins_capability_privilege">System privilege</string>
     <string name="plugins_capability_screen">Screen control</string>
     <string name="plugins_capability_notifications">Notifications</string>
     <string name="plugins_capability_secrets">Secrets storage</string>
@@ -63,7 +62,6 @@
     <string name="plugins_import_publisher">Publisher</string>
     <string name="plugins_import_sha256">SHA-256</string>
     <string name="plugins_import_provides">Provides</string>
-    <string name="plugins_import_requires_privilege">Requires privileged access</string>
     <string name="plugins_import_trust_publisher">Trust this publisher and import</string>
     <string name="plugins_import_confirm">Import</string>
     <string name="plugins_import_success">Plugin imported</string>

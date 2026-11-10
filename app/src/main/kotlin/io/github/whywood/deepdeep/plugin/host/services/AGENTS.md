@@ -1,19 +1,18 @@
 # plugin/host/services · 宿主服务适配器
 
-`plugin-api` 的 `PluginHost` 18 个服务（Linux/特权/屏幕/通知/密钥/网络/文件/会话/任务/定时/目标/小程序/MCP/UI/App/总线/日志/聊天）在 `:app` 侧的真实实现。宿主只在本目录构造 `PluginServices`，`PluginHostImpl` 负责在服务缺失时抛 `PluginServiceUnavailable`。
+`plugin-api` 的 `PluginHost` 17 个服务（Linux/屏幕/通知/密钥/网络/文件/会话/任务/定时/目标/小程序/MCP/UI/App/总线/日志/聊天）在 `:app` 侧的真实实现。宿主只在本目录构造 `PluginServices`，`PluginHostImpl` 负责在服务缺失时抛 `PluginServiceUnavailable`。
 
 ## 文件
 
 | 文件 | 职责 |
 |---|---|
 | `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
-| `LinuxPluginService.kt` | `shell.LinuxEnvironment`：`exec`/`stream`（合并输出按行流式、结束显式 close、慢消费者丢弃的行数记入插件日志）、workspace 目录用 `cd` 前置 |
-| `PrivilegePluginService.kt` | `privilege.PrivilegeController` 状态/观察；`shell` 按 effective 档位走 `RootShell` 或 `AdbBootstrap`，NORMAL 抛错 |
+| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果；`stream` 目前为命令完成后一次性按行推送（结束发 `Exit`，慢消费者丢弃的行数记入插件日志）；`available` 由注入的 lambda 决定 |
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
 | `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限 |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |
 | `NetworkPluginService.kt` | `io.github.whywood.deepdeep.sdk.ai.http.HttpTransport`：`request`（2 MiB 截断）与 `download`（512 MiB 上限、sha256 校验、进度回调） |
-| `FilePluginService.kt` | 以插件 data 目录为根的读写/列举/删除；`workspaceDir`/`sharedStorageDir` 只作属性暴露，绝对路径原样放行 |
+| `FilePluginService.kt` | 以插件 data 目录为根，经 `HostEnvironment.files`（okio `FileSystem`）读写/列举/删除/resolve；`workspaceDir`/`sharedStorageDir` 只作属性暴露，绝对路径原样放行 |
 | `SessionPluginService.kt` | `ConversationQueries`/`SessionCommands`：会话列表、当前会话观察（同时观察 active 与 busySessionIds）、向会话发消息 |
 | `JobPluginService.kt` | `runtime.JobRegistry`：启动/读取/列表/终止后台任务，`sessionId` 缺省取当前会话 |
 | `TimerPluginService.kt` | `runtime.TimerService`：创建/列表/取消；`sessionId` 缺省取当前会话并从会话目录解析 session file/cwd |

@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
 import java.io.File
+import okio.FileSystem
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -19,7 +20,7 @@ class FilePluginServiceTest {
     fun readsWritesListsAndDeletes() = runTest {
         val root = temporary.newFolder("data")
         val workspace = temporary.newFolder("workspace")
-        val service = FilePluginService(root = root, workspace = workspace, sharedStorage = null)
+        val service = FilePluginService(root = root, workspace = workspace, sharedStorage = null, files = { FileSystem.SYSTEM })
 
         assertEquals(root.absolutePath, service.rootDir)
         assertEquals(workspace.absolutePath, service.workspaceDir)
@@ -45,7 +46,7 @@ class FilePluginServiceTest {
     @Test
     fun handlesBytesAndAbsolutePaths() = runTest {
         val root = temporary.newFolder("data")
-        val service = FilePluginService(root = root, workspace = null, sharedStorage = null)
+        val service = FilePluginService(root = root, workspace = null, sharedStorage = null, files = { FileSystem.SYSTEM })
 
         service.writeBytes("bin/x.bin", byteArrayOf(1, 2, 3))
         assertArrayEquals(byteArrayOf(1, 2, 3), service.readBytes("bin/x.bin"))

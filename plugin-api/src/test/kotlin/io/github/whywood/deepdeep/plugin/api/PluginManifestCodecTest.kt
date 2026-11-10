@@ -22,7 +22,7 @@ class PluginManifestCodecTest {
         {
           "id": "io.github.whywood.deepdeep.pluginsample",
           "version": "1.0.0",
-          "apiLevel": 4,
+          "apiLevel": 5,
           "capabilities": ["app", "files", "notifications"],
           "minHostVersion": "0.2.0",
           "entryClass": "io.github.whywood.deepdeep.pluginsample.SamplePlugin",
@@ -52,7 +52,6 @@ class PluginManifestCodecTest {
         assertEquals(listOf("home"), manifest.provides.pages)
         assertEquals(setOf("app", "files", "notifications"), manifest.capabilities)
         assertEquals(true, manifest.defaultEnabled)
-        assertEquals(false, manifest.requiresPrivilege)
         assertNull(manifest.ui)
         assertNull(manifest.publisher)
         assertNull(manifest.description)
@@ -95,7 +94,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.demo",
                   "version": "1.2.3",
-                  "apiLevel": 4,
+                  "apiLevel": 6,
                   "minHostVersion": "0.2.0",
                   "ui": { "apiLevel": 1, "kotlin": "2.1.0", "compose": "1.8.0" },
                   "name": { "default": "Demo" },
@@ -112,13 +111,11 @@ class PluginManifestCodecTest {
                     "uiSlots": ["tool.card.content:demo_echo", "chat.message:demo.card"],
                     "pages": ["home"]
                   },
-                  "requiresPrivilege": true,
                   "defaultEnabled": false
                 }
                 """.trimIndent(),
             ),
         )
-        assertEquals(true, manifest.requiresPrivilege)
         assertEquals(false, manifest.defaultEnabled)
         assertEquals(PublisherInfo("Example", "key-1"), manifest.publisher)
         assertEquals("https://example.com/demo", manifest.homepage)
@@ -147,14 +144,12 @@ class PluginManifestCodecTest {
                   "entryClass": "com.example.tolerant.TolerantPlugin",
                   "name": { "default": "Tolerant" },
                   "summary": { "default": "Tolerant plugin" },
-                  "apiLevel": "one",
-                  "requiresPrivilege": "maybe"
+                  "apiLevel": "one"
                 }
                 """.trimIndent(),
             ),
         )
         assertEquals(BASELINE_API_LEVEL, manifest.apiLevel)
-        assertEquals(false, manifest.requiresPrivilege)
     }
 
     @Test
@@ -253,7 +248,7 @@ class PluginManifestCodecTest {
                 {
                   "id": "com.example.future",
                   "version": "1.0.0",
-                  "apiLevel": 5,
+                  "apiLevel": 6,
                   "entryClass": "com.example.future.FuturePlugin",
                   "name": { "default": "Future" },
                   "summary": { "default": "Future" }

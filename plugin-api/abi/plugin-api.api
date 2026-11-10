@@ -891,7 +891,6 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginBusEvent {
 public final class io.github.whywood.deepdeep.plugin.api.PluginCapability extends java.lang.Enum<io.github.whywood.deepdeep.plugin.api.PluginCapability> {
   public static final io.github.whywood.deepdeep.plugin.api.PluginCapability$Companion Companion;
   public static final io.github.whywood.deepdeep.plugin.api.PluginCapability LINUX;
-  public static final io.github.whywood.deepdeep.plugin.api.PluginCapability PRIVILEGE;
   public static final io.github.whywood.deepdeep.plugin.api.PluginCapability SCREEN;
   public static final io.github.whywood.deepdeep.plugin.api.PluginCapability NOTIFICATIONS;
   public static final io.github.whywood.deepdeep.plugin.api.PluginCapability SECRETS;
@@ -1407,7 +1406,6 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHost {
   public abstract kotlinx.coroutines.CoroutineScope getScope();
   public abstract java.lang.String text(io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.Object...);
   public abstract io.github.whywood.deepdeep.plugin.api.LinuxService linux();
-  public abstract io.github.whywood.deepdeep.plugin.api.PrivilegeService privilege();
   public abstract io.github.whywood.deepdeep.plugin.api.ScreenService screen();
   public abstract io.github.whywood.deepdeep.plugin.api.NotificationService notifications();
   public abstract io.github.whywood.deepdeep.plugin.api.SecretService secrets();
@@ -1444,8 +1442,8 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginLogLevel extends 
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginManifest {
   public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set<java.lang.String>, boolean, boolean);
-  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set<java.lang.String>, boolean);
+  public io.github.whywood.deepdeep.plugin.api.PluginManifest(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getId();
   public final java.lang.String getVersion();
   public final int getApiLevel();
@@ -1461,7 +1459,6 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginManifest {
   public final io.github.whywood.deepdeep.plugin.api.PublisherInfo getPublisher();
   public final io.github.whywood.deepdeep.plugin.api.Provides getProvides();
   public final java.util.Set<java.lang.String> getCapabilities();
-  public final boolean getRequiresPrivilege();
   public final boolean getDefaultEnabled();
   public final java.lang.String component1();
   public final java.lang.String component2();
@@ -1479,9 +1476,8 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginManifest {
   public final io.github.whywood.deepdeep.plugin.api.Provides component14();
   public final java.util.Set<java.lang.String> component15();
   public final boolean component16();
-  public final boolean component17();
-  public final io.github.whywood.deepdeep.plugin.api.PluginManifest copy(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set<java.lang.String>, boolean, boolean);
-  public static io.github.whywood.deepdeep.plugin.api.PluginManifest copy$default(io.github.whywood.deepdeep.plugin.api.PluginManifest, java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set, boolean, boolean, int, java.lang.Object);
+  public final io.github.whywood.deepdeep.plugin.api.PluginManifest copy(java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set<java.lang.String>, boolean);
+  public static io.github.whywood.deepdeep.plugin.api.PluginManifest copy$default(io.github.whywood.deepdeep.plugin.api.PluginManifest, java.lang.String, java.lang.String, int, java.lang.String, io.github.whywood.deepdeep.plugin.api.UiManifest, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, io.github.whywood.deepdeep.plugin.api.LocalizedText, java.lang.String, java.lang.String, io.github.whywood.deepdeep.plugin.api.IconRef, java.lang.String, io.github.whywood.deepdeep.plugin.api.PublisherInfo, io.github.whywood.deepdeep.plugin.api.Provides, java.util.Set, boolean, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -1817,44 +1813,6 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginVersion$Companion
   public final io.github.whywood.deepdeep.plugin.api.PluginVersion parse(java.lang.String);
   public final java.lang.Integer compare(java.lang.String, java.lang.String);
   public io.github.whywood.deepdeep.plugin.api.PluginVersion$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
-}
-public final class io.github.whywood.deepdeep.plugin.api.PrivilegeLevel extends java.lang.Enum<io.github.whywood.deepdeep.plugin.api.PrivilegeLevel> {
-  public static final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel NORMAL;
-  public static final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel ADB;
-  public static final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel ROOT;
-  public static io.github.whywood.deepdeep.plugin.api.PrivilegeLevel[] values();
-  public static io.github.whywood.deepdeep.plugin.api.PrivilegeLevel valueOf(java.lang.String);
-  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.plugin.api.PrivilegeLevel> getEntries();
-}
-public interface io.github.whywood.deepdeep.plugin.api.PrivilegeService {
-  public abstract io.github.whywood.deepdeep.plugin.api.PrivilegeState getState();
-  public abstract kotlinx.coroutines.flow.Flow<io.github.whywood.deepdeep.plugin.api.PrivilegeState> observe();
-  public abstract java.lang.Object shell(java.lang.String, long, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.LinuxResult>);
-  public static java.lang.Object shell$default(io.github.whywood.deepdeep.plugin.api.PrivilegeService, java.lang.String, long, kotlin.coroutines.Continuation, int, java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.PrivilegeService$DefaultImpls {
-  public static java.lang.Object shell$default(io.github.whywood.deepdeep.plugin.api.PrivilegeService, java.lang.String, long, kotlin.coroutines.Continuation, int, java.lang.Object);
-}
-public final class io.github.whywood.deepdeep.plugin.api.PrivilegeState {
-  public static final int $stable;
-  public io.github.whywood.deepdeep.plugin.api.PrivilegeState(io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, boolean, boolean);
-  public io.github.whywood.deepdeep.plugin.api.PrivilegeState(io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel getSelected();
-  public final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel getEffective();
-  public final boolean getRootGranted();
-  public final boolean getAdbConnected();
-  public final java.util.Set<io.github.whywood.deepdeep.plugin.api.PrivilegeLevel> getAvailableBackends();
-  public final boolean getVirtualScreenAvailable();
-  public final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel component1();
-  public final io.github.whywood.deepdeep.plugin.api.PrivilegeLevel component2();
-  public final boolean component3();
-  public final boolean component4();
-  public final io.github.whywood.deepdeep.plugin.api.PrivilegeState copy(io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, boolean, boolean);
-  public static io.github.whywood.deepdeep.plugin.api.PrivilegeState copy$default(io.github.whywood.deepdeep.plugin.api.PrivilegeState, io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, io.github.whywood.deepdeep.plugin.api.PrivilegeLevel, boolean, boolean, int, java.lang.Object);
-  public java.lang.String toString();
-  public int hashCode();
-  public boolean equals(java.lang.Object);
-  public io.github.whywood.deepdeep.plugin.api.PrivilegeState();
 }
 public final class io.github.whywood.deepdeep.plugin.api.PromptRequest {
   public static final int $stable;

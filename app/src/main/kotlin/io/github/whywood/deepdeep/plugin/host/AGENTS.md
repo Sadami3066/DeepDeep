@@ -15,7 +15,7 @@
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主 |
-| `services/` | 18 个宿主服务的真实适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/特权/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
+| `services/` | 17 个宿主服务的真实适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
 | `HostToolNames.kt` | 宿主保留工具名表：引擎默认（read/write/edit/bash/ls/grep/find）、宿主工具（ask_user_question/present/adb_shell/root_shell、goal/job/timer/miniapp 变体、web/arrange/screen/virtual 工具）、SDK 工具（tool_search/mcp_\*）与 `mcp__` 前缀；外部插件安装期做工具名冲突校验 |
 
 ## 要点

@@ -2,11 +2,9 @@ package io.github.whywood.deepdeep.graph
 
 import android.content.Context
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
-import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
 import io.github.whywood.deepdeep.runtime.GoalService
@@ -18,9 +16,9 @@ import io.github.whywood.deepdeep.runtime.McpServerProbe
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.MiniappStore
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.screen.ScreenController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
-import io.github.whywood.deepdeep.shell.RootShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,9 +33,7 @@ internal class PluginGraphDeps(
     val host: AgentRuntimeHost,
     val installationId: InstallationIdStore,
     val linuxEnvironment: LinuxEnvironment,
-    val privilege: () -> PrivilegeController,
-    val rootShell: RootShell,
-    val adbBridge: AdbBootstrap,
+    val hostEnvironment: HostEnvironmentProvider,
     val secretStore: EncryptedSecretStore,
     val httpTransport: HttpTransport,
     val activeSessionId: MutableStateFlow<String?>,

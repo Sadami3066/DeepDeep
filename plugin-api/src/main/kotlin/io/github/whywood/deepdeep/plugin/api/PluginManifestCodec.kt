@@ -38,7 +38,6 @@ object PluginManifestCodec {
         publisher = json.objectOrNull("publisher")?.let(::parsePublisher),
         provides = json.objectOrNull("provides")?.let(::parseProvides) ?: Provides(),
         capabilities = json.takeIf { it.containsKey("capabilities") }?.stringList("capabilities")?.toSet(),
-        requiresPrivilege = json.boolean("requiresPrivilege") ?: false,
         defaultEnabled = json.boolean("defaultEnabled") ?: true,
     )
 

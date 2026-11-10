@@ -19,28 +19,6 @@ sealed interface LinuxChunk {
     data class Exit(val exitCode: Int) : LinuxChunk
 }
 
-enum class PrivilegeLevel {
-    NORMAL,
-    ADB,
-    ROOT,
-}
-
-data class PrivilegeState(
-    val selected: PrivilegeLevel = PrivilegeLevel.NORMAL,
-    val effective: PrivilegeLevel = PrivilegeLevel.NORMAL,
-    val rootGranted: Boolean = false,
-    val adbConnected: Boolean = false,
-) {
-    val availableBackends: Set<PrivilegeLevel>
-        get() = buildSet {
-            if (adbConnected) add(PrivilegeLevel.ADB)
-            if (rootGranted) add(PrivilegeLevel.ROOT)
-        }
-
-    val virtualScreenAvailable: Boolean
-        get() = selected != PrivilegeLevel.NORMAL && availableBackends.isNotEmpty()
-}
-
 enum class ScreenTarget {
     VIRTUAL,
     MAIN,

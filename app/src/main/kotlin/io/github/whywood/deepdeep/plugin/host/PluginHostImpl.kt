@@ -17,7 +17,6 @@ import io.github.whywood.deepdeep.plugin.api.PluginHost
 import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
-import io.github.whywood.deepdeep.plugin.api.PrivilegeService
 import io.github.whywood.deepdeep.plugin.api.ScreenService
 import io.github.whywood.deepdeep.plugin.api.SecretService
 import io.github.whywood.deepdeep.plugin.api.SessionService
@@ -29,7 +28,6 @@ import kotlinx.coroutines.CoroutineScope
 
 internal data class PluginServices(
     val linux: LinuxService? = null,
-    val privilege: PrivilegeService? = null,
     val screen: ScreenService? = null,
     val notifications: NotificationService? = null,
     val secrets: SecretService? = null,
@@ -54,7 +52,6 @@ internal data class PluginServices(
 
 internal fun PluginServices.declaredOnly(capabilities: Set<String>): PluginServices = copy(
     linux = linux.takeIf { PluginCapability.LINUX.wire in capabilities },
-    privilege = privilege.takeIf { PluginCapability.PRIVILEGE.wire in capabilities },
     screen = screen.takeIf { PluginCapability.SCREEN.wire in capabilities },
     notifications = notifications.takeIf { PluginCapability.NOTIFICATIONS.wire in capabilities },
     secrets = secrets.takeIf { PluginCapability.SECRETS.wire in capabilities },
@@ -89,8 +86,6 @@ internal class PluginHostImpl(
     override fun text(source: LocalizedText, vararg args: Any): String = textResolver.resolve(source, args)
 
     override fun linux(): LinuxService = service("linux", services.linux)
-
-    override fun privilege(): PrivilegeService = service("privilege", services.privilege)
 
     override fun screen(): ScreenService = service("screen", services.screen)
 

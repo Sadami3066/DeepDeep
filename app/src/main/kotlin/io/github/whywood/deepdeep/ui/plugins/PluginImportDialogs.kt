@@ -78,10 +78,6 @@ internal fun PluginImportDialog(
                             value = inspection.publisherName.ifBlank { inspection.publisherKeyId.take(12) },
                             subtitle = inspection.publisherKeyId,
                         )
-                        if (inspection.requiresPrivilege) {
-                            DdHairline()
-                            DdListRow(title = stringResource(R.string.plugins_import_requires_privilege))
-                        }
                         DdHairline()
                         DdListRow(
                             title = stringResource(R.string.plugins_import_provides),

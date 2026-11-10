@@ -75,7 +75,7 @@ class PluginValidationTest {
 
     @Test
     fun validatesApiLevel() {
-        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 5)))
+        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 6)))
         assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 3)))
         assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 0)))
         assertTrue(issues(manifest(apiLevel = MIN_SUPPORTED_API_LEVEL)).isEmpty())

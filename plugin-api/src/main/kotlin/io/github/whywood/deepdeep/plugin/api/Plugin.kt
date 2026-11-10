@@ -43,8 +43,6 @@ interface PluginHost {
 
     fun linux(): LinuxService
 
-    fun privilege(): PrivilegeService
-
     fun screen(): ScreenService
 
     fun notifications(): NotificationService

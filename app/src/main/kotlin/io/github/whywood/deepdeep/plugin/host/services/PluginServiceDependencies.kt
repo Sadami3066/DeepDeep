@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.plugin.host.services
 import android.content.Context
 import android.os.Build
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
 import io.github.whywood.deepdeep.plugin.api.McpTool
@@ -12,7 +11,6 @@ import io.github.whywood.deepdeep.plugin.api.PluginLogLevel
 import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.host.PluginServices
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
-import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
 import io.github.whywood.deepdeep.runtime.GoalService
@@ -23,13 +21,13 @@ import io.github.whywood.deepdeep.runtime.SessionCommands
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
 import io.github.whywood.deepdeep.runtime.MiniappStore
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.screen.ScreenController
-import io.github.whywood.deepdeep.shell.LinuxEnvironment
-import io.github.whywood.deepdeep.shell.RootShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonObject
+import okio.FileSystem
 
 data class PluginServiceDependencies(
     val context: Context,
@@ -43,10 +41,10 @@ data class PluginServiceDependencies(
     val versionCode: Long = 0L,
     val language: () -> String = { LanguagePreferences(context).read().tag },
     val installationId: suspend () -> String = { "" },
-    val linux: LinuxEnvironment? = null,
-    val privilege: PrivilegeController? = null,
-    val rootShell: RootShell? = null,
-    val adbBridge: AdbBootstrap? = null,
+    val hostEnvironment: HostEnvironmentProvider? = null,
+    val defaultWorkspace: () -> String = { pluginDataDir.absolutePath },
+    val linuxAvailable: () -> Boolean = { false },
+    val files: () -> FileSystem = { FileSystem.SYSTEM },
     val secrets: EncryptedSecretStore? = null,
     val network: HttpTransport? = null,
     val sessions: ConversationQueries? = null,
@@ -83,17 +81,14 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
     deps.pluginCacheDir.mkdirs()
     val logs = LogPluginService(deps.pluginId, deps.logSink)
     return PluginServices(
-        linux = deps.linux?.let {
-            LinuxPluginService(it) { dropped ->
+        linux = deps.hostEnvironment?.let { hostEnvironment ->
+            LinuxPluginService(
+                hostEnvironment = hostEnvironment,
+                defaultWorkspace = deps.defaultWorkspace,
+                availableProvider = deps.linuxAvailable,
+            ) { dropped ->
                 logs.warn("linux stream dropped $dropped output lines")
             }
-        },
-        privilege = deps.privilege?.let {
-            PrivilegePluginService(
-                privilege = it,
-                rootShell = deps.rootShell,
-                adbBridge = deps.adbBridge,
-            )
         },
         screen = if (deps.screen != null || deps.virtualScreen != null) {
             ScreenPluginService(
@@ -117,6 +112,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
             root = deps.pluginDataDir,
             workspace = deps.workspaceDir,
             sharedStorage = deps.sharedStorageDir,
+            files = deps.files,
         ),
         sessions = if (deps.sessions != null && deps.activeSessionId != null) {
             SessionPluginService(

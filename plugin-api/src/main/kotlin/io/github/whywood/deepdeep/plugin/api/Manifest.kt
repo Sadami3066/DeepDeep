@@ -13,7 +13,6 @@ data class UiManifest(
 
 enum class PluginCapability(val wire: String) {
     LINUX("linux"),
-    PRIVILEGE("privilege"),
     SCREEN("screen"),
     NOTIFICATIONS("notifications"),
     SECRETS("secrets"),
@@ -66,6 +65,5 @@ data class PluginManifest(
     val publisher: PublisherInfo? = null,
     val provides: Provides = Provides(),
     val capabilities: Set<String>? = null,
-    val requiresPrivilege: Boolean = false,
     val defaultEnabled: Boolean = true,
 )

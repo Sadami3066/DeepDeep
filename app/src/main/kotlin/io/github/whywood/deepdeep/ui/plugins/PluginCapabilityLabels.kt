@@ -19,7 +19,6 @@ internal fun capabilitySummary(capabilities: Set<String>): String {
 
 private fun capabilityLabelRes(capability: PluginCapability): Int = when (capability) {
     PluginCapability.LINUX -> R.string.plugins_capability_linux
-    PluginCapability.PRIVILEGE -> R.string.plugins_capability_privilege
     PluginCapability.SCREEN -> R.string.plugins_capability_screen
     PluginCapability.NOTIFICATIONS -> R.string.plugins_capability_notifications
     PluginCapability.SECRETS -> R.string.plugins_capability_secrets

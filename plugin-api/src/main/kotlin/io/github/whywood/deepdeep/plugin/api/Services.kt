@@ -22,14 +22,6 @@ interface LinuxService {
     }
 }
 
-interface PrivilegeService {
-    val state: PrivilegeState
-
-    fun observe(): Flow<PrivilegeState>
-
-    suspend fun shell(command: String, timeoutMs: Long = LinuxService.DEFAULT_TIMEOUT_MS): LinuxResult
-}
-
 interface ScreenService {
     val status: ScreenStatus
 
