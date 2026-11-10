@@ -9,6 +9,7 @@
 | `AvatarBadge.kt` | 圆形头像；无图时显示名字首字母 |
 | `ComposerVoice.kt` | 输入卡语音：录音状态机、麦克风权限、音量/转写与提交 |
 | `Haptics.kt` | 触感开关的 CompositionLocal（LocalHapticsEnabled） |
+| `HostFilesProvider.kt` | 文件访问入口的 CompositionLocal（LocalHostFiles + ProvideHostFiles），由 App 根层注入 `graph.hostFiles` |
 | `market/` | 市场页共用：`MarketSection.kt` 放市场 tab（加载/失败/离线/空态、条目行、详情弹层、预览卡片与全屏查看、安装）、`MarketLogic.kt` 放纯过滤/状态/体积格式化、`MarketIconLoader.kt` 下载并缓存条目图标、`MarketPreviewLoader.kt` 加载并缓存插件预览图（内存 LRU、下采样、去重与失败重试）、`MarketPreviewLogic.kt` 放预览纯逻辑 |
 | `OAuthLoginSession.kt` | OAuth 登录交互状态机：URL/提示/选择/输入，供 service 驱动 |
 | `OAuthLoginSheet.kt` | OAuth 登录弹层：打开浏览器、等待、选择与验证码输入 |
@@ -25,4 +26,5 @@
 - 语音共用：`rememberComposerVoice` 同时服务聊天输入卡与系统助手浮层，权限被永久拒绝时直接跳应用设置；改交互两边都要看。
 - OAuth：`OAuthLoginSession` 是 runtime `OAuthInteraction` 的实现，`ProviderOAuthService.login` 在协程里驱动；关闭必须 `cancel()`，否则挂起的 prompt/select 不返回。
 - 扫码策略：官方内置 `assets/scan/strategies.json`（只读），自定义落 `files/scan/strategies.json`；匹配优先级 scheme > host > regex > contains，`ScanLauncher` 打不开时回退复制。
+- 用户可见文件预览/分享统一从 `LocalHostFiles` 取文件（Root 档文件先暂存到 cache）；不要直接用 `FileViewerDialog` 传入的路径做 `BitmapFactory`/`bufferedReader` 假设可读。
 - `ProviderIcon` 是静态映射，新增厂商要同时补 `res/drawable-nodpi/provider_*`（含 `-night`）与映射表，否则回退首字母。

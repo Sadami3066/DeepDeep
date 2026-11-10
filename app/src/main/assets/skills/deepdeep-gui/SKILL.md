@@ -5,7 +5,7 @@ description: 优先操作后台虚拟屏，也支持显式选择主屏；读取�
 
 # 屏幕操作
 
-优先使用后台虚拟屏，减少对用户手机当前操作的打扰。screen_* 可选 target=virtual|main，省略时默认 virtual；需要操作主屏时显式指定 target=main。同一次调用失败后不会切换到另一块屏幕。screen_* 与 virtual_screen 需要用户先在「设置 → 权限」页打开屏幕操作开关，且生效权限为 ADB 或 Root；工具不存在时请用户先开启并授权，不要猜测参数继续调用。
+优先使用后台虚拟屏，减少对用户手机当前操作的打扰。screen_* 可选 target=virtual|main，省略时默认 virtual；需要操作主屏时显式指定 target=main。同一次调用失败后不会切换到另一块屏幕。screen_* 与 virtual_screen 需要用户在「设置 → Agent 设置」打开屏幕操作开关，且「设置 → 系统访问」中的当前生效档为无线调试或 Root；工具不存在时请用户先开启并授权，不要猜测参数继续调用。
 
 - `screen_status`：查看主屏能力、虚拟屏在线、正在重连、失败，以及 readNodes、tap、typeText、keys、screenshot 能力。
 - `screen_list_apps`：列出可启动应用，无需启动虚拟屏。

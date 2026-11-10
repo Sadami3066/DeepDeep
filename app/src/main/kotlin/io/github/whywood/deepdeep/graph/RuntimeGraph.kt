@@ -8,7 +8,6 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.core.SessionTitleService
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.GoalPhase
@@ -100,7 +99,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
         add(miniappEditTool(deps.miniappStore))
         addAll(memoryTools(memoryStore) { binding.current()?.sessionId })
-        if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.privilege().state.value.effective)) {
+        if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.hostAccess.state.value.effective)) {
             addAll(deps.screenTools())
             addAll(deps.virtualScreenTools())
         }
@@ -168,8 +167,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             storageMounts = { storageMountInfos() },
             defaultMaxTurns = { 16 },
             workspace = deps.homeDir,
-            shellExecutorFor = deps.shellExecutorFor,
-            backgroundRunnerFactory = { cwd -> LinuxJobRunner(deps.linuxEnvironmentFor(cwd)) },
+            shellExecutorFor = { workspace ->
+                runCatching { deps.hostEnvironment.current().bash(workspace.absolutePath) }.getOrNull()
+            },
+            backgroundRunnerFactory = { cwd -> LinuxJobRunner(deps.hostEnvironment, cwd) },
             hooksFactory = { pluginRuntimeHooks() },
         )
     }
@@ -252,5 +253,5 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     }
 }
 
-internal fun isScreenOpsActive(screenOps: Boolean, effective: PrivilegeLevel): Boolean =
-    screenOps && (effective == PrivilegeLevel.ADB || effective == PrivilegeLevel.ROOT)
+internal fun isScreenOpsActive(screenOps: Boolean, access: HostAccess): Boolean =
+    screenOps && (access == HostAccess.ADB || access == HostAccess.ROOT)

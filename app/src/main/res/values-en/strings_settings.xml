@@ -35,7 +35,7 @@
     <string name="settings_notifications_off">Off</string>
     <string name="settings_privacy_agreement">Privacy &amp; Terms</string>
     <string name="settings_provider">Provider</string>
-    <string name="settings_environment">Linux</string>
+    <string name="settings_access">System access</string>
     <string name="settings_android">Android</string>
     <string name="settings_theme_preset">Theme</string>
     <string name="settings_theme_preset_system">Follow system</string>
@@ -211,7 +211,6 @@
     <string name="assistant_settings_role_missing">Not set</string>
     <string name="assistant_settings_power">Launch DeepDeep with a long press of the power button</string>
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
-    <string name="settings_privilege">Permissions</string>
 
     <string name="settings_linux_mounts">Mounted folders</string>
     <string name="settings_linux_mounts_empty">Mount a folder from shared storage and tell DeepDeep what it is for.</string>

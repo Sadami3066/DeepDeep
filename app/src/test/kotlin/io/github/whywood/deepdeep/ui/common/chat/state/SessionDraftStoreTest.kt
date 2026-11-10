@@ -97,8 +97,14 @@ class SessionDraftStoreTest {
 
         override fun file(ref: AttachmentRef, root: File): File = File(root, ref.path)
 
-        override fun shareIntent(ref: AttachmentRef, root: File): android.content.Intent? = null
+        override suspend fun materialize(ref: AttachmentRef, root: File): File? = file(ref, root)
 
-        override fun resolve(raw: String, root: File): AttachmentRef? = null
+        override suspend fun delete(ref: AttachmentRef, root: File): Boolean = false
+
+        override suspend fun shareIntent(ref: AttachmentRef, root: File): android.content.Intent? = null
+
+        override suspend fun resolve(raw: String, root: File): AttachmentRef? = null
+
+        override fun available(): Boolean = false
     }
 }

@@ -32,6 +32,7 @@ import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.ui.common.ProvideHostFiles
 import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.launch
@@ -63,7 +64,8 @@ class MainActivity : ComponentActivity() {
             var fontStyle by remember { mutableStateOf(initialFontStyle) }
             val scope = rememberCoroutineScope()
             DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
-                ProvidePluginManager(graph.pluginManager) {
+                ProvideHostFiles(graph.hostFiles) {
+                    ProvidePluginManager(graph.pluginManager) {
                     DeepDeepApp(
                         graph = graph,
                         themePreset = preset,
@@ -81,6 +83,7 @@ class MainActivity : ComponentActivity() {
                         },
                         onThemePresetChange = { value -> scope.launch { graph.themePreferences.setPreset(value) } },
                     )
+                    }
                 }
             }
         }

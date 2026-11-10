@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.Paths
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,19 +28,25 @@ sealed interface AttachmentImport {
 interface AttachmentStore {
     suspend fun import(uri: Uri, root: File): AttachmentImport
     fun file(ref: AttachmentRef, root: File): File
-    fun shareIntent(ref: AttachmentRef, root: File): Intent?
-    fun viewIntent(ref: AttachmentRef, root: File): Intent? = null
-    fun resolve(raw: String, root: File): AttachmentRef?
+    suspend fun materialize(ref: AttachmentRef, root: File): File?
+    suspend fun delete(ref: AttachmentRef, root: File): Boolean
+    suspend fun shareIntent(ref: AttachmentRef, root: File): Intent?
+    suspend fun viewIntent(ref: AttachmentRef, root: File): Intent? = null
+    suspend fun resolve(raw: String, root: File): AttachmentRef?
+    fun available(): Boolean
 }
 
 class FileAttachmentStore(
     context: Context,
     private val home: File,
+    private val hostFiles: HostFiles,
     private val sharedStorage: () -> Boolean = { isSharedStorageGranted() },
 ) : AttachmentStore {
     private val appContext = context.applicationContext
 
     private val externalRoot: File? = runCatching { sharedStorageDirectory().canonicalFile }.getOrNull()
+
+    override fun available(): Boolean = hostFiles.available()
 
     @SuppressLint("UsableSpace")
     override suspend fun import(uri: Uri, root: File): AttachmentImport = withContext(Dispatchers.IO) {
@@ -50,7 +57,8 @@ class FileAttachmentStore(
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
         val relativePath = "$ATTACHMENTS_DIRECTORY/${id}_$name"
         val target = File(root, relativePath)
-        if (meta.size > 0 && !hasSpaceForImport(meta.size, root.usableSpace)) {
+        val usableSpace = runCatching { root.usableSpace }.getOrDefault(0L)
+        if (meta.size > 0 && usableSpace > 0 && !hasSpaceForImport(meta.size, usableSpace)) {
             return@withContext AttachmentImport.InsufficientSpace
         }
         if (meta.mime.startsWith("image/") && !isSupportedImage(resolver, uri)) {
@@ -58,9 +66,9 @@ class FileAttachmentStore(
         }
         val copied = runCatching {
             val input = resolver.openInputStream(uri) ?: return@withContext AttachmentImport.Failed
-            input.use { writeAttachment(it, target, MAX_BYTES) }
+            input.use { hostFiles.write(target, it, MAX_BYTES) }
         }.getOrElse {
-            runCatching { target.delete() }
+            hostFiles.delete(target)
             return@withContext AttachmentImport.Failed
         }
         if (!copied) return@withContext AttachmentImport.TooLarge
@@ -69,7 +77,7 @@ class FileAttachmentStore(
                 id = id,
                 name = name,
                 mime = meta.mime,
-                size = target.length(),
+                size = hostFiles.length(target),
                 path = target.absolutePath,
                 kind = attachmentKind(meta.mime, name),
             ),
@@ -78,14 +86,24 @@ class FileAttachmentStore(
 
     override fun file(ref: AttachmentRef, root: File): File = attachmentFile(ref, root)
 
-    override fun resolve(raw: String, root: File): AttachmentRef? {
+    override suspend fun materialize(ref: AttachmentRef, root: File): File? = withContext(Dispatchers.IO) {
+        val target = file(ref, root)
+        if (target.isFile && target.canRead()) target else hostFiles.stage(target, ref.name)
+    }
+
+    override suspend fun delete(ref: AttachmentRef, root: File): Boolean = withContext(Dispatchers.IO) {
+        val target = file(ref, root)
+        if (hostFiles.delete(target)) true else runCatching { target.delete() }.getOrDefault(false)
+    }
+
+    override suspend fun resolve(raw: String, root: File): AttachmentRef? = withContext(Dispatchers.IO) {
         val trimmed = raw.trim().trim('<', '>', '"', '\'')
-        if (trimmed.isEmpty()) return null
+        if (trimmed.isEmpty()) return@withContext null
         val decoded = if (trimmed.startsWith("file://")) {
             runCatching { trimmed.toUri().path }.getOrNull()
         } else {
             trimmed.replace("%20", " ")
-        } ?: return null
+        } ?: return@withContext null
         val candidates = buildList {
             if (decoded.startsWith("/")) {
                 if (decoded.startsWith("/workspace/")) {
@@ -106,36 +124,43 @@ class FileAttachmentStore(
         }
         val roots = attachmentRoots(root, home, externalRoot, sharedStorage())
         val external = externalRoot
+        val canReadSystemData = hostFiles.capabilities().canReadSystemData
         for (candidate in candidates) {
-            val canonical = runCatching { candidate.canonicalFile }.getOrNull() ?: continue
-            if (roots.none { canonical.path.startsWith(it.path + File.separator) }) continue
-            if (!canonical.isFile || !canonical.canRead()) continue
-            val base = roots.firstOrNull { canonical.path.startsWith(it.path + File.separator) } ?: continue
-            val relative = if (external != null && base.path == external.path) {
-                canonical.absolutePath
-            } else {
-                canonical.relativeTo(base).path.replace(File.separatorChar, '/')
+            val file = normalizedFile(candidate)
+            val path = file.absolutePath
+            val base = roots.firstOrNull { path == it.path || path.startsWith(it.path + File.separator) }
+            if (base == null) {
+                if (!canReadSystemData) continue
+                if (external != null && path.startsWith(external.path + File.separator) && !sharedStorage()) continue
+            } else if (!canReadSystemData && !file.canRead()) {
+                continue
             }
-            val mime = guessMime(canonical.name)
-            return AttachmentRef(
+            val metadata = hostFiles.metadata(file) ?: continue
+            if (!metadata.isRegularFile) continue
+            val relative = when {
+                base == null -> path
+                external != null && base.path == external.path -> path
+                else -> file.relativeTo(base).path.replace(File.separatorChar, '/')
+            }
+            val mime = guessMime(file.name)
+            return@withContext AttachmentRef(
                 id = relative,
-                name = canonical.name,
+                name = file.name,
                 mime = mime,
-                size = canonical.length(),
-                path = canonical.absolutePath,
-                kind = attachmentKind(mime, canonical.name),
+                size = metadata.size ?: 0L,
+                path = path,
+                kind = attachmentKind(mime, file.name),
             )
         }
-        return null
+        null
     }
 
-    override fun shareIntent(ref: AttachmentRef, root: File): Intent? {
-        val target = file(ref, root)
-        if (!target.isFile) return null
+    override suspend fun shareIntent(ref: AttachmentRef, root: File): Intent? = withContext(Dispatchers.IO) {
+        val target = materialize(ref, root) ?: return@withContext null
         val uri = runCatching {
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.files", target)
-        }.getOrNull() ?: return null
-        return Intent(Intent.ACTION_SEND).apply {
+        }.getOrNull() ?: return@withContext null
+        Intent(Intent.ACTION_SEND).apply {
             type = ref.mime.ifBlank { "application/octet-stream" }
             putExtra(Intent.EXTRA_STREAM, uri)
             putExtra(Intent.EXTRA_TITLE, ref.name)
@@ -143,7 +168,13 @@ class FileAttachmentStore(
         }
     }
 
-    override fun viewIntent(ref: AttachmentRef, root: File): Intent? = fileViewIntent(appContext, file(ref, root), ref.mime)
+    override suspend fun viewIntent(ref: AttachmentRef, root: File): Intent? = withContext(Dispatchers.IO) {
+        val target = materialize(ref, root) ?: return@withContext null
+        fileViewIntent(appContext, target, ref.mime)
+    }
+
+    private fun normalizedFile(file: File): File =
+        hostFiles.canonical(file) ?: runCatching { Paths.get(file.absolutePath).normalize().toFile() }.getOrDefault(file)
 
     private fun isSupportedImage(resolver: ContentResolver, uri: Uri): Boolean {
         val input = runCatching { resolver.openInputStream(uri) }.getOrNull() ?: return false

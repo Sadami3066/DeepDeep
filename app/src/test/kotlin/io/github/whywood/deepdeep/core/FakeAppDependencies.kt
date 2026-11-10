@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
+import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
 import io.github.whywood.deepdeep.data.PersonalizationStore
@@ -18,7 +19,6 @@ import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.data.remote.RemoteConnection
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
-import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
@@ -39,8 +39,8 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
-import io.github.whywood.deepdeep.service.RootBashController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.RootfsBootstrap
 import java.io.File
 
 internal class FakeAppDependencies(
@@ -65,6 +65,8 @@ internal class FakeAppDependencies(
     }
 
     override val attachmentStore: AttachmentStore get() = unavailable("attachmentStore")
+
+    override val hostFiles: HostFiles get() = unavailable("hostFiles")
 
     override val modelConfigStore: ModelSettings get() = unavailable("modelConfigStore")
 
@@ -94,8 +96,6 @@ internal class FakeAppDependencies(
     override val webSearchSettings: WebSearchSettingsStore get() = unavailable("webSearchSettings")
 
     override val linuxEnvironment: LinuxEnvironment get() = unavailable("linuxEnvironment")
-
-    override val rootBash: RootBashController get() = unavailable("rootBash")
 
     override val devPackageManager: DevPackageManager get() = unavailable("devPackageManager")
 
@@ -127,12 +127,12 @@ internal class FakeAppDependencies(
 
     override val processRuntime: ProcessRuntime get() = unavailable("processRuntime")
 
-    override val privilege: PrivilegeController get() = unavailable("privilege")
-
     override val hostAccess: HostAccessController get() = unavailable("hostAccess")
 
     override val hostEnvironmentProvider: HostEnvironmentProvider
         get() = unavailable("hostEnvironmentProvider")
+
+    override val rootfsBootstrap: RootfsBootstrap get() = unavailable("rootfsBootstrap")
 
     private fun unavailable(member: String): Nothing =
         error("FakeAppDependencies.$member 不可用；测试只应访问已注入的成员")

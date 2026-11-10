@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.screen
 
 import io.github.whywood.deepdeep.adb.AdbBootstrap
-import io.github.whywood.deepdeep.privilege.PrivilegeController
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import io.github.whywood.deepdeep.shell.RootShell
 
 interface MainScreenShell {
@@ -11,20 +11,19 @@ interface MainScreenShell {
 }
 
 class PrivilegedMainScreenShell(
-    private val privilege: PrivilegeController,
+    private val access: HostAccessController,
     private val root: RootShell,
     private val adb: AdbBootstrap,
 ) : MainScreenShell {
     override val available: Boolean
-        get() = privilege.state.value.let { it.selected != PrivilegeLevel.NORMAL && it.effective in it.availableBackends }
+        get() = access.state.value.effective.let { it == HostAccess.ADB || it == HostAccess.ROOT }
 
     override suspend fun execute(command: String, timeoutMs: Long): String {
         check(available) { "Main screen system input needs authorized and available ADB or Root" }
-        val state = privilege.state.value
-        val (exitCode, output, truncated, timedOut) = when (state.effective) {
-            PrivilegeLevel.ROOT -> root.execute(command, timeoutMs).let { Result(it.exitCode, it.stdout + it.stderr, it.truncated, it.timedOut) }
-            PrivilegeLevel.ADB -> adb.exec(command, timeoutMs).let { Result(it.exitCode, it.stdout + it.stderr, it.truncated, it.timedOut) }
-            else -> error("Main screen system input is not enabled")
+        val (exitCode, output, truncated, timedOut) = when (access.state.value.effective) {
+            HostAccess.ROOT -> root.execute(command, timeoutMs).let { Result(it.exitCode, it.stdout + it.stderr, it.truncated, it.timedOut) }
+            HostAccess.ADB -> adb.exec(command, timeoutMs).let { Result(it.exitCode, it.stdout + it.stderr, it.truncated, it.timedOut) }
+            HostAccess.LOCAL -> error("Main screen system input is not enabled")
         }
         check(!timedOut && exitCode == 0 && !truncated) {
             "Main screen command did not confirm success (exit=$exitCode, timeout=$timedOut, truncated=$truncated); observe the current screen again and do not rerun automatically. ${output.takeLast(500)}"

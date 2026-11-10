@@ -29,7 +29,7 @@ internal class ServiceGraph(private val deps: ServiceGraphDeps) {
                 deps.host().deliverBackgroundTurn(sessionId, notice, prompt, io.github.whywood.deepdeep.runtime.TurnSource.JOB)
             },
             wakeEnabled = { deps.jobWake.value },
-            runnerFactory = { cwd -> LinuxJobRunner(deps.linuxEnvironmentFor(cwd)) },
+            runnerFactory = { cwd -> LinuxJobRunner(deps.hostEnvironment, cwd) },
             maxRunningPerSession = { 10 },
         )
     }

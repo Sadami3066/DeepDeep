@@ -39,7 +39,7 @@ class AppNavigatorTest {
     fun directionFollowsDepth() {
         assertEquals(1, AppScreenTransition.direction(AppDestination.Chat, AppDestination.Settings))
         assertEquals(-1, AppScreenTransition.direction(AppDestination.Settings, AppDestination.Chat))
-        assertEquals(1, AppScreenTransition.direction(AppDestination.Settings, AppDestination.RuntimeSettings))
+        assertEquals(1, AppScreenTransition.direction(AppDestination.Settings, AppDestination.SystemAccess))
         assertEquals(0, AppScreenTransition.direction(AppDestination.Chat, AppDestination.Chat))
     }
 
@@ -51,7 +51,7 @@ class AppNavigatorTest {
             AppDestination.Providers,
             AppDestination.ProviderDetail("openai"),
             AppDestination.Archived,
-            AppDestination.RuntimeSettings,
+            AppDestination.SystemAccess,
             AppDestination.Skills,
             AppDestination.Timers,
             AppDestination.Miniapp,

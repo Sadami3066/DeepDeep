@@ -1698,9 +1698,15 @@ class ChatViewModelTest {
 
         override fun file(ref: AttachmentRef, root: java.io.File): java.io.File = java.io.File(root, ref.path)
 
-        override fun shareIntent(ref: AttachmentRef, root: java.io.File): Intent? = null
+        override suspend fun materialize(ref: AttachmentRef, root: java.io.File): java.io.File? = file(ref, root)
 
-        override fun resolve(raw: String, root: java.io.File): AttachmentRef? = null
+        override suspend fun delete(ref: AttachmentRef, root: java.io.File): Boolean = file(ref, root).delete()
+
+        override suspend fun shareIntent(ref: AttachmentRef, root: java.io.File): Intent? = null
+
+        override suspend fun resolve(raw: String, root: java.io.File): AttachmentRef? = null
+
+        override fun available(): Boolean = true
     }
 
     private class FakeSettings : ModelSettings {

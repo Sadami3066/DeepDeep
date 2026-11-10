@@ -14,12 +14,11 @@ class AppRoutesTest {
         AppDestination.ProviderDetail("deepseek"),
         AppDestination.Archived,
         AppDestination.Mcp,
-        AppDestination.RuntimeSettings,
+        AppDestination.SystemAccess,
         AppDestination.Personalization,
         AppDestination.Fonts,
         AppDestination.ChatSettings,
         AppDestination.Privacy,
-        AppDestination.Permission,
         AppDestination.AndroidSettings,
         AppDestination.AgentSettings,
         AppDestination.WebSearch,
@@ -43,7 +42,7 @@ class AppRoutesTest {
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(25, allDestinations.size)
+        assertEquals(24, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 

@@ -1,9 +1,8 @@
-package io.github.whywood.deepdeep.privilege
+package io.github.whywood.deepdeep.service
 
 import android.util.Log
 import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.runtime.RootCommandResult
-import io.github.whywood.deepdeep.service.GuiAccessibilityService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

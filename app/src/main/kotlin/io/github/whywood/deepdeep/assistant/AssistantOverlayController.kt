@@ -193,7 +193,7 @@ class AssistantOverlayController(
         withContext(ioDispatcher) {
             refs.mapNotNull { ref ->
                 try {
-                    val file = attachmentStore.file(ref, root)
+                    val file = attachmentStore.materialize(ref, root) ?: return@mapNotNull null
                     normalizeImage(file, ref.mime)
                         ?.let { image -> ImagePart(image.data, image.mimeType, path = file.absolutePath) }
                 } catch (cancelled: CancellationException) {

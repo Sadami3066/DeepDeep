@@ -12,7 +12,6 @@ import io.github.whywood.deepdeep.ui.navigation.routes.WebSearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ChatSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FilesRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
-import io.github.whywood.deepdeep.ui.navigation.routes.PermissionRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PersonalizationRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginPageRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginsRoute
@@ -20,11 +19,11 @@ import io.github.whywood.deepdeep.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProvidersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.RemoteConnectRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.RemoteRoute
-import io.github.whywood.deepdeep.ui.navigation.routes.RuntimeSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanJsonRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SettingsRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.SystemAccessRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.TimersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.MiniappDetailRoute
@@ -96,9 +95,7 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             onBack = onBack,
         )
 
-        AppDestination.RuntimeSettings -> RuntimeSettingsRoute(dependencies, host.scope, onBack)
-
-        AppDestination.Permission -> PermissionRoute(dependencies, host.scope, onBack)
+        AppDestination.SystemAccess -> SystemAccessRoute(dependencies, host.scope, onBack)
 
         AppDestination.AndroidSettings -> AndroidSettingsScreen(onBack = onBack)
 

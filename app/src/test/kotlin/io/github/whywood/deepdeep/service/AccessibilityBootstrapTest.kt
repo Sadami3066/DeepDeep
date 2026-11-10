@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.privilege
+package io.github.whywood.deepdeep.service
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

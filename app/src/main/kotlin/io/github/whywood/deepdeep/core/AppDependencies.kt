@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
+import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
@@ -18,7 +19,6 @@ import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.data.remote.RemoteConnection
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
-import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
@@ -39,8 +39,8 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
-import io.github.whywood.deepdeep.service.RootBashController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.RootfsBootstrap
 import java.io.File
 
 interface AppDependencies :
@@ -51,13 +51,11 @@ interface AppDependencies :
     AdvancedDependencies
 
 interface AdvancedDependencies {
-    val privilege: PrivilegeController
-
-    val rootBash: RootBashController
-
     val hostAccess: HostAccessController
 
     val hostEnvironmentProvider: HostEnvironmentProvider
+
+    val rootfsBootstrap: RootfsBootstrap
 }
 
 interface RuntimeDependencies {
@@ -72,6 +70,8 @@ interface StorageDependencies {
     val homeDir: File
 
     val attachmentStore: AttachmentStore
+
+    val hostFiles: HostFiles
 
     val modelConfigStore: ModelSettings
 

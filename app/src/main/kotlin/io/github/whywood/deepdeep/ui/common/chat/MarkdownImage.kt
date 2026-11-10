@@ -49,6 +49,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.guessMime
+import io.github.whywood.deepdeep.ui.common.LocalHostFiles
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -61,6 +62,7 @@ import io.github.whywood.deepdeep.ui.common.chat.SaveToDownloadsSheet
 import io.github.whywood.deepdeep.ui.common.chat.saveMediaToDownloads
 import io.github.whywood.deepdeep.ui.common.chat.shareMediaFile
 import io.github.whywood.deepdeep.ui.common.chat.shareMediaUrl
+import io.github.whywood.deepdeep.data.HostFiles
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -100,13 +102,30 @@ internal fun MarkdownImage(alt: String, source: String, title: String?, colors: 
             with(density) { 360.dp.roundToPx() }
         }
         val targetWidthPx = (widthPx * 2).coerceAtLeast(1)
+        val hostFiles = LocalHostFiles.current
+        val localResult by produceState<Pair<File?, Boolean>>(
+            initialValue = null to false,
+            key1 = source,
+            key2 = targetWidthPx,
+        ) {
+            val local = markdownLocalFile(source)
+            value = if (local == null) {
+                null to false
+            } else {
+                val readable = withContext(Dispatchers.IO) {
+                    if (local.canRead()) local else hostFiles.stage(local, local.name)
+                }
+                readable to true
+            }
+        }
         val state by produceState<MarkdownImageState>(
             initialValue = MarkdownImageState.Loading,
             key1 = source,
             key2 = targetWidthPx,
+            key3 = localResult,
         ) {
             value = withContext(Dispatchers.IO) {
-                MarkdownImageLoader.load(context.applicationContext, source, targetWidthPx)
+                MarkdownImageLoader.load(context.applicationContext, source, targetWidthPx, localResult.first)
             }
         }
         when (val current = state) {
@@ -120,7 +139,15 @@ internal fun MarkdownImage(alt: String, source: String, title: String?, colors: 
 
             MarkdownImageState.Failed -> ImageFailure(alt, title, colors)
 
-            is MarkdownImageState.Ready -> LoadedImage(current.bitmap, alt, title, source, colors, widthPx)
+            is MarkdownImageState.Ready -> LoadedImage(
+                bitmap = current.bitmap,
+                alt = alt,
+                title = title,
+                source = source,
+                colors = colors,
+                containerWidthPx = widthPx,
+                localFile = localResult.first,
+            )
         }
     }
 }
@@ -201,6 +228,7 @@ private fun LoadedImage(
     source: String,
     colors: DeepDeepColors,
     containerWidthPx: Int,
+    localFile: File?,
 ) {
     var revealed by remember(bitmap) { mutableStateOf(false) }
     var previewVisible by remember(bitmap) { mutableStateOf(false) }
@@ -222,8 +250,8 @@ private fun LoadedImage(
     }
     val label = alt.ifBlank { title.orEmpty() }
     val context = LocalContext.current
-    val saveFile = remember(source) {
-        when {
+    val saveFile = remember(source, localFile) {
+        localFile?.takeIf { it.isFile } ?: when {
             source.startsWith("file://") -> Uri.parse(source).path?.let(::File)?.takeIf { it.isFile }
             source.startsWith("http://", ignoreCase = true) ||
                 source.startsWith("https://", ignoreCase = true) -> null
@@ -379,6 +407,13 @@ private fun ImageFailure(alt: String, title: String?, colors: DeepDeepColors) {
     }
 }
 
+private fun markdownLocalFile(source: String): File? = when {
+    source.startsWith("http://", ignoreCase = true) ||
+        source.startsWith("https://", ignoreCase = true) -> null
+    source.startsWith("file://") -> Uri.parse(source).path?.let(::File)
+    else -> File(source)
+}
+
 private object MarkdownImageLoader {
     private const val MemoryCacheBytes = 24 * 1024 * 1024
     private const val MaxDownloadBytes = 40L * 1024 * 1024
@@ -390,12 +425,14 @@ private object MarkdownImageLoader {
     fun cachedFile(context: Context, source: String): File? =
         diskFile(context, source).takeIf { it.isFile && it.length() > 0L }
 
-    fun load(context: Context, source: String, targetWidthPx: Int): MarkdownImageState {
+    fun load(context: Context, source: String, targetWidthPx: Int, localFile: File?): MarkdownImageState {
         memory.get(source)?.let { return MarkdownImageState.Ready(it) }
         val remote = source.startsWith("http://", ignoreCase = true) ||
             source.startsWith("https://", ignoreCase = true)
         return try {
             val file = when {
+                localFile != null -> localFile
+
                 remote -> download(context, source)
 
                 source.startsWith("file://", ignoreCase = true) -> {

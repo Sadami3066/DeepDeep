@@ -31,4 +31,5 @@
     <string name="files_root_switch">Switch storage location</string>
     <string name="files_root_shared">Shared storage</string>
     <string name="files_root_private">App files</string>
+    <string name="files_root_system">System root</string>
 </resources>

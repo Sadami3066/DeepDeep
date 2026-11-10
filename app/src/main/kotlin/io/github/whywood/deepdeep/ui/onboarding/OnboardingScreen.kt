@@ -64,7 +64,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.runtime.InteractionStyle
 import io.github.whywood.deepdeep.runtime.ModelConfig
@@ -81,8 +81,8 @@ private const val STEP_ACCOUNT = 1
 private const val STEP_PROVIDER = 2
 private const val STEP_PERMISSIONS = 3
 private const val STEP_ENVIRONMENT = 4
-private const val STEP_PRIVILEGE = 5
-private const val LAST_STEP = STEP_PRIVILEGE
+private const val STEP_ACCESS = 5
+private const val LAST_STEP = STEP_ACCESS
 
 @Composable
 fun OnboardingScreen(
@@ -105,11 +105,11 @@ fun OnboardingScreen(
     var providerId by rememberSaveable { mutableStateOf(ProviderCatalog.DEFAULT_PROVIDER_ID) }
     var apiKey by rememberSaveable { mutableStateOf("") }
     var keyState by rememberSaveable { mutableIntStateOf(KEY_STATE_IDLE) }
-    var privilegeName by rememberSaveable { mutableStateOf(PrivilegeLevel.NORMAL.name) }
+    var accessName by rememberSaveable { mutableStateOf(HostAccess.LOCAL.name) }
 
     val tone = TonePreset.entries.firstOrNull { it.name == toneName } ?: TonePreset.CUSTOM
     val language = AppLanguage.fromTag(languageTag)
-    val privilege = PrivilegeLevel.entries.firstOrNull { it.name == privilegeName } ?: PrivilegeLevel.NORMAL
+    val access = HostAccess.entries.firstOrNull { it.name == accessName } ?: HostAccess.LOCAL
     val providers = remember(graph.providerCatalog) { graph.providerCatalog.summaries }
     val provider = remember(providers, providerId) { providers.firstOrNull { it.id == providerId } }
     val deepseek = remember(providers) { providers.firstOrNull { it.id == ProviderCatalog.DEFAULT_PROVIDER_ID } }
@@ -191,9 +191,9 @@ fun OnboardingScreen(
         Handler(Looper.getMainLooper()).post { context.findActivity()?.recreate() }
     }
 
-    fun selectPrivilege(level: PrivilegeLevel) {
-        privilegeName = level.name
-        scope.launch { graph.privilege.select(level) }
+    fun selectAccess(value: HostAccess) {
+        accessName = value.name
+        scope.launch { graph.hostAccess.select(value) }
     }
 
     fun enqueueEnvironment() {
@@ -278,7 +278,7 @@ fun OnboardingScreen(
                 enqueueEnvironment()
                 goNext()
             }
-            STEP_PRIVILEGE -> finish()
+            STEP_ACCESS -> finish()
             else -> goNext()
         }
     }
@@ -287,12 +287,12 @@ fun OnboardingScreen(
         STEP_WELCOME -> stringResource(R.string.onboarding_primary_start)
         STEP_PROVIDER -> stringResource(R.string.onboarding_primary_connect)
         STEP_ENVIRONMENT -> stringResource(R.string.onboarding_primary_start_use)
-        STEP_PRIVILEGE -> stringResource(R.string.onboarding_primary_done)
+        STEP_ACCESS -> stringResource(R.string.onboarding_primary_done)
         else -> stringResource(R.string.onboarding_primary_continue)
     }
     val hint = when (step) {
         STEP_WELCOME -> stringResource(R.string.onboarding_welcome_note)
-        STEP_PRIVILEGE -> stringResource(R.string.onboarding_privilege_note)
+        STEP_ACCESS -> stringResource(R.string.onboarding_access_note)
         else -> null
     }
     val secondaryLabel = when (step) {
@@ -396,13 +396,13 @@ fun OnboardingScreen(
                     },
                 )
 
-                else -> PrivilegeStep(selected = privilege, onSelect = ::selectPrivilege)
+                else -> AccessStep(selected = access, onSelect = ::selectAccess)
             }
         }
         OnboardingFooter(
             primaryLabel = primaryLabel,
             primaryEnabled = primaryEnabled,
-            primaryTestTag = if (step == STEP_PRIVILEGE) "onboarding_privilege_done" else "onboarding_primary",
+            primaryTestTag = if (step == STEP_ACCESS) "onboarding_access_done" else "onboarding_primary",
             onPrimary = ::primaryAction,
             hint = hint,
             secondaryLabel = secondaryLabel,

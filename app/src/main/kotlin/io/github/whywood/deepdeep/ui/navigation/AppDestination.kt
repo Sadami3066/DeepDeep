@@ -36,8 +36,8 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
-    data object RuntimeSettings : AppDestination {
-        override val routeKey: String = "settings/runtime"
+    data object SystemAccess : AppDestination {
+        override val routeKey: String = "settings/access"
         override val depth: Int = 2
     }
 
@@ -78,11 +78,6 @@ sealed interface AppDestination {
 
     data object Privacy : AppDestination {
         override val routeKey: String = "settings/privacy"
-        override val depth: Int = 2
-    }
-
-    data object Permission : AppDestination {
-        override val routeKey: String = "settings/permission"
         override val depth: Int = 2
     }
 
@@ -189,7 +184,7 @@ sealed interface AppDestination {
             routeKey == Settings.routeKey -> Settings
             routeKey == Providers.routeKey -> Providers
             routeKey == Archived.routeKey -> Archived
-            routeKey == RuntimeSettings.routeKey -> RuntimeSettings
+            routeKey == SystemAccess.routeKey -> SystemAccess
             routeKey == Personalization.routeKey -> Personalization
             routeKey == Fonts.routeKey -> Fonts
             routeKey == ChatSettings.routeKey -> ChatSettings
@@ -198,7 +193,6 @@ sealed interface AppDestination {
             routeKey == ScanJson.routeKey -> ScanJson
             routeKey == AssistantSettings.routeKey -> AssistantSettings
             routeKey == Privacy.routeKey -> Privacy
-            routeKey == Permission.routeKey -> Permission
             routeKey == AndroidSettings.routeKey -> AndroidSettings
             routeKey == AgentSettings.routeKey -> AgentSettings
             routeKey == WebSearch.routeKey -> WebSearch

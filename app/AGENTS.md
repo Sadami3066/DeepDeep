@@ -34,7 +34,6 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | [arrange/](src/main/kotlin/io/github/whywood/deepdeep/arrange/AGENTS.md) | 系统日历读写工具；日历权限走系统应用权限页 |
 | [vscreen/](src/main/kotlin/io/github/whywood/deepdeep/vscreen/AGENTS.md) | 虚拟屏特权 helper（协议、传输、引擎） |
 | [adb/](src/main/kotlin/io/github/whywood/deepdeep/adb/AGENTS.md) | 内嵌无线调试 ADB 守护、配对与桥接 |
-| [privilege/](src/main/kotlin/io/github/whywood/deepdeep/privilege/AGENTS.md) | 权限三档（普通/ADB/Root）解析与控制器 |
 | [voice/](src/main/kotlin/io/github/whywood/deepdeep/voice/AGENTS.md) | 语音识别与朗读（ASR/TTS） |
 | `res/` | `strings_*.xml` 按功能分文件、默认中文 + `values-en` 镜像；drawable 图标 |
 

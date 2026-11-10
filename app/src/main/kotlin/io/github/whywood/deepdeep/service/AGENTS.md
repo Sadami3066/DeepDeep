@@ -14,9 +14,10 @@ App 常驻后台的系统接线：前台服务是唯一常驻入口，通知中�
 | `ProcessExitLog.kt` | 记录历史进程退出原因到诊断日志 |
 | `GuiAccessibilityService.kt` | 无障碍服务，为屏幕工具提供节点树 |
 | `GuiAccessibilityState.kt` | 无障碍服务连接与启用状态 |
-| `AppShellExecutor.kt` | 把 Linux 执行器（proot 或 root chroot 的路由结果）适配成 runtime 的 shell 执行器 |
-| `RootBash.kt` | Root bash 模式：开关、权限档与 rootfs 准备状态合成执行模式，按次路由到 proot/chroot，提供重试与重建 |
-| `LinuxJobRunner.kt` | 后台任务在 proot 里的流式命令执行器 |
+| `AppShellExecutor.kt` | 把 Linux 执行器（proot 或 root chroot）适配成 runtime 的 shell 执行器 |
+| `AccessibilityBootstrap.kt` | 无障碍注入计划与系统设置命令拼装 |
+| `AccessibilityBootstrapRunner.kt` | 通过当前 host access（ROOT 走 root shell，否则 ADB）执行无障碍注入并重试 |
+| `LinuxJobRunner.kt` | 后台任务经 `HostEnvironmentProvider.bash(cwd)` 执行的命令运行器 |
 
 ## 要点
 

@@ -18,6 +18,6 @@
 
 ## 要点
 
-- daemon 由 adbd 拉起、跑在 shell(2000)；关闭无线调试或重启后会被系统清理，需要在权限页重新「连接并启动」，不必重新配对。
+- daemon 由 adbd 拉起、跑在 shell(2000)；关闭无线调试或重启后会被系统清理，需要在「设置 → 系统访问」重新「连接并启动」，不必重新配对。
 - 配对码链路：通知 RemoteInput 或 App 输入 → `AgentService.ACTION_PAIRING_CODE` → `AdbBootstrap.handlePairingReply`；配对状态与 token 存 SharedPreferences。
 - 虚拟屏 helper 也由 daemon 拉起（`startHelper`/`killHelper`）；Root 后端不依赖 AdbBootstrap。

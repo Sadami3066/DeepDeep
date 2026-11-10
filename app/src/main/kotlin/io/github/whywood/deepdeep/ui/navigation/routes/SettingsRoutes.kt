@@ -3,26 +3,28 @@ import androidx.compose.runtime.getValue
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.BuildConfig
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.StorageMount
 import io.github.whywood.deepdeep.data.UiPreferences
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.ShellRouteUi
 import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.FontScreen
-import io.github.whywood.deepdeep.ui.settings.PermissionScreen
 import io.github.whywood.deepdeep.ui.settings.PersonalizationScreen
-import io.github.whywood.deepdeep.ui.settings.RuntimeSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SettingsScreen
+import io.github.whywood.deepdeep.ui.settings.SystemAccessScreen
 import io.github.whywood.deepdeep.ui.settings.UsageHabitsScreen
 import io.github.whywood.deepdeep.ui.settings.ScanJsonScreen
 import io.github.whywood.deepdeep.ui.settings.ScanSettingsScreen
@@ -39,8 +41,14 @@ internal fun SettingsRoute(
     archivedCount: Int,
     onBack: () -> Unit,
 ) {
-    val privilegeState by dependencies.privilege.state.collectAsStateWithLifecycle()
-    val linuxState by dependencies.linuxEnvironment.state.collectAsStateWithLifecycle()
+    val hostState by dependencies.hostAccess.state.collectAsStateWithLifecycle()
+    val accessLabel = stringResource(
+        when (hostState.effective) {
+            HostAccess.LOCAL -> R.string.access_level_local
+            HostAccess.ADB -> R.string.access_level_adb
+            HostAccess.ROOT -> R.string.access_level_root
+        },
+    )
     val overlayEntryMode by dependencies.overlayEntryPreferences.mode.collectAsStateWithLifecycle(
         initialValue = OverlayEntryMode.VOICE,
     )
@@ -51,7 +59,6 @@ internal fun SettingsRoute(
         modelName = ui.modelLabel,
         configured = ui.modelConfig.providerId in ui.configuredProviderIds,
         themePreset = ui.themePreset,
-        linuxState = linuxState,
         versionName = BuildConfig.VERSION_NAME,
         fontLabel = if (ui.fontStyle == DdFontStyle.SYSTEM) {
             stringResource(R.string.settings_font_system)
@@ -65,11 +72,10 @@ internal fun SettingsRoute(
         onOpenUsageHabits = { navigator.push(AppDestination.UsageHabits) },
         onOpenScan = { navigator.push(AppDestination.Scan) },
         onOpenProviders = { navigator.push(AppDestination.Providers) },
-        onOpenRuntime = { navigator.push(AppDestination.RuntimeSettings) },
-        onOpenPermission = { navigator.push(AppDestination.Permission) },
+        onOpenAccess = { navigator.push(AppDestination.SystemAccess) },
+        accessLabel = accessLabel,
         onOpenAgentSettings = { navigator.push(AppDestination.AgentSettings) },
         onOpenAndroidSettings = { navigator.push(AppDestination.AndroidSettings) },
-        privilegeLevel = privilegeState.effective,
         onOpenPersonalization = { navigator.push(AppDestination.Personalization) },
         onOpenFonts = { navigator.push(AppDestination.Fonts) },
         onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
@@ -145,7 +151,12 @@ internal fun ScanJsonRoute(onBack: () -> Unit) {
 }
 
 @Composable
-internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: CoroutineScope, onBack: () -> Unit) {
+internal fun SystemAccessRoute(dependencies: AppDependencies, scope: CoroutineScope, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val adbBridge = remember { AdbBridgeRuntime.get(context) }
+    val hostState by dependencies.hostAccess.state.collectAsStateWithLifecycle()
+    val adb by adbBridge.state.collectAsStateWithLifecycle()
+    val rootfs by dependencies.rootfsBootstrap.status.collectAsStateWithLifecycle()
     val linuxState by dependencies.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by dependencies.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val sharedStorageEnabled by dependencies.linuxSettings.sharedStorageEnabled.collectAsStateWithLifecycle(
@@ -155,23 +166,33 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
     val mounts by dependencies.storageMounts.mounts.collectAsStateWithLifecycle(initialValue = emptyList())
     LaunchedEffect(Unit) { dependencies.linuxEnvironment.refreshState() }
     LaunchedEffect(linuxState) { dependencies.devPackageManager.refresh() }
-    RuntimeSettingsScreen(
+    SystemAccessScreen(
+        state = hostState,
+        adb = adb,
+        rootfs = rootfs,
         linuxState = linuxState,
         linuxSupported = dependencies.linuxEnvironment.isSupported,
         linuxEnabled = linuxEnabled,
         sharedStorageEnabled = sharedStorageEnabled,
         mounts = mounts,
         devPackages = devPackages,
-        onBack = onBack,
-        onInstall = { scope.launch { dependencies.linuxEnvironment.install() } },
-        onReset = {
+        onSelect = { access -> scope.launch { dependencies.hostAccess.select(access) } },
+        onRefresh = { scope.launch { dependencies.hostAccess.refresh() } },
+        onPair = { dependencies.hostAccess.startAdbPairing() },
+        onPairingCode = { code -> AgentService.applyPairingCode(context, code) },
+        onConnect = { scope.launch { dependencies.hostAccess.connectAdb() } },
+        onOpenWirelessDebugging = { dependencies.hostAccess.openWirelessDebugging(context) },
+        onRetryRootfs = { scope.launch { dependencies.rootfsBootstrap.ensureReady() } },
+        onRebuildRootfs = { scope.launch { dependencies.rootfsBootstrap.rebuild() } },
+        onLinuxInstall = { scope.launch { dependencies.linuxEnvironment.install() } },
+        onLinuxReset = {
             scope.launch {
                 dependencies.linuxSettings.setEnabled(false)
                 dependencies.linuxEnvironment.reset()
                 dependencies.host.reconfigure()
             }
         },
-        onEnabledChange = { enabled ->
+        onLinuxEnabledChange = { enabled ->
             scope.launch {
                 dependencies.linuxSettings.setEnabled(enabled)
                 dependencies.host.reconfigure()
@@ -182,29 +203,6 @@ internal fun RuntimeSettingsRoute(dependencies: AppDependencies, scope: Coroutin
         onRemoveMount = { id -> scope.launch { dependencies.storageMounts.remove(id) } },
         onInstallBundle = dependencies.devPackageManager::installBundle,
         onRefreshPackages = dependencies.devPackageManager::refresh,
-    )
-}
-
-@Composable
-internal fun PermissionRoute(dependencies: AppDependencies, scope: CoroutineScope, onBack: () -> Unit) {
-    val context = LocalContext.current
-    val state by dependencies.privilege.state.collectAsStateWithLifecycle()
-    val rootBashEnabled by dependencies.rootBash.enabled.collectAsStateWithLifecycle()
-    val rootBashStatus by dependencies.rootBash.status.collectAsStateWithLifecycle()
-    PermissionScreen(
-        state = state,
-        onSelect = { level -> scope.launch { dependencies.privilege.select(level) } },
-        onRefresh = { scope.launch { dependencies.privilege.refresh() } },
-        onPair = { dependencies.privilege.startPairing() },
-        onPairingCode = { code -> AgentService.applyPairingCode(context, code) },
-        onConnect = { scope.launch { dependencies.privilege.connect() } },
-        onOpenWirelessDebugging = { dependencies.privilege.openWirelessDebugging(context) },
-        onProbeRoot = { scope.launch { dependencies.privilege.probeRoot() } },
-        rootBashEnabled = rootBashEnabled,
-        rootBashStatus = rootBashStatus,
-        onRootBashEnabledChange = { enabled -> scope.launch { dependencies.rootBash.setEnabled(enabled) } },
-        onRetryRootBash = { scope.launch { dependencies.rootBash.retry() } },
-        onRebuildRootBash = { scope.launch { dependencies.rootBash.rebuild() } },
         onBack = onBack,
     )
 }

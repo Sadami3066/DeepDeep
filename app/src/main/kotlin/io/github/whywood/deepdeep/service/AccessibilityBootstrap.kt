@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.privilege
+package io.github.whywood.deepdeep.service
 
 internal data class AccessibilitySettingsSnapshot(
     val enabledServices: String?,

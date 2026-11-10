@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.attachmentFile
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.design.DdAlpha
@@ -50,6 +51,7 @@ import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.ui.common.LocalHostFiles
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -87,9 +89,10 @@ private fun ImageAttachmentCard(
     onOpen: (AttachmentRef) -> Unit,
 ) {
     val colors = deepDeepColors()
+    val hostFiles = LocalHostFiles.current
     val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
         val file = attachmentFile(attachment, root)
-        value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
+        value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file, hostFiles) }
     }
     DdPressable(
         onClick = { onOpen(attachment) },
@@ -220,9 +223,10 @@ private fun AttachmentPreviewCard(
     ) {
         when (attachment.kind) {
             AttachmentKind.IMAGE -> {
+                val hostFiles = LocalHostFiles.current
                 val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id) {
                     val file = attachmentFile(attachment, root)
-                    value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file) }
+                    value = withContext(Dispatchers.IO) { decodeThumbnailBitmap(file, hostFiles) }
                 }
                 val image = bitmap
                 if (image == null) {
@@ -240,10 +244,11 @@ private fun AttachmentPreviewCard(
             }
 
             AttachmentKind.TEXT -> {
+                val hostFiles = LocalHostFiles.current
                 val snippet by produceState(initialValue = "", attachment.id) {
                     val file = attachmentFile(attachment, root)
                     value = withContext(Dispatchers.IO) {
-                        runCatching {
+                        hostFiles.readText(file, 900)?.text ?: runCatching {
                             file.bufferedReader().use { reader ->
                                 val buffer = CharArray(900)
                                 val count = reader.read(buffer)
@@ -320,9 +325,10 @@ internal fun AttachmentPreviewDialog(
     )
 }
 
-private fun decodeThumbnailBitmap(file: File): Bitmap? {
+private suspend fun decodeThumbnailBitmap(file: File, hostFiles: HostFiles): Bitmap? {
     AttachmentThumbnails.get(file)?.let { return it }
-    val bitmap = decodeBitmap(file, ThumbnailBitmapLimit) ?: return null
+    val source = if (file.canRead()) file else withContext(Dispatchers.IO) { hostFiles.stage(file, file.name) } ?: return null
+    val bitmap = decodeBitmap(source, ThumbnailBitmapLimit) ?: return null
     AttachmentThumbnails.put(file, bitmap)
     return bitmap
 }

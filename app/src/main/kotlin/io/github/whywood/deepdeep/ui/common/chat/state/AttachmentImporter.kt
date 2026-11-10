@@ -44,7 +44,7 @@ internal class AttachmentImporter(
                 val result = withContext(ioDispatcher) { load() }
                 if (currentSession() != sessionId) {
                     if (result is AttachmentImport.Imported) {
-                        runCatching { attachmentStore.file(result.ref, root).delete() }
+                        runCatching { attachmentStore.delete(result.ref, root) }
                     }
                     return@launch
                 }

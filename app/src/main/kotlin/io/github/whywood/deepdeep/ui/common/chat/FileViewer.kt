@@ -59,6 +59,7 @@ import io.github.whywood.deepdeep.data.TextFileContent
 import io.github.whywood.deepdeep.data.codeLanguageFor
 import io.github.whywood.deepdeep.data.filePreviewKind
 import io.github.whywood.deepdeep.data.fileViewIntent
+import io.github.whywood.deepdeep.ui.common.LocalHostFiles
 import io.github.whywood.deepdeep.data.formatAttachmentSize
 import io.github.whywood.deepdeep.data.readTextLimited
 import io.github.whywood.deepdeep.design.DdHairline
@@ -106,8 +107,92 @@ private val codeSourceStyle = DdType.bodySmall.copy(
     lineHeight = 20.sp,
 )
 
+private sealed interface PreviewFileState {
+    data object Loading : PreviewFileState
+    data object Failed : PreviewFileState
+    data class Ready(val file: File) : PreviewFileState
+}
+
 @Composable
 internal fun FileViewerDialog(
+    file: File,
+    name: String,
+    mime: String,
+    onDismiss: () -> Unit,
+    onShare: (() -> Unit)? = null,
+) {
+    val hostFiles = LocalHostFiles.current
+    val state by produceState<PreviewFileState>(
+        initialValue = if (file.canRead()) PreviewFileState.Ready(file) else PreviewFileState.Loading,
+        file,
+        hostFiles,
+    ) {
+        value = if (file.canRead()) {
+            PreviewFileState.Ready(file)
+        } else {
+            withContext(Dispatchers.IO) { hostFiles.stage(file, name) }
+                ?.let(PreviewFileState::Ready)
+                ?: PreviewFileState.Failed
+        }
+    }
+    when (val current = state) {
+        PreviewFileState.Loading -> FileViewerLoading(onDismiss = onDismiss)
+        PreviewFileState.Failed -> FileViewerFailed(onDismiss = onDismiss)
+        is PreviewFileState.Ready -> FileViewerContent(
+            file = current.file,
+            name = name,
+            mime = mime,
+            onDismiss = onDismiss,
+            onShare = onShare,
+        )
+    }
+}
+
+@Composable
+private fun FileViewerFrame(
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val colors = deepDeepColors()
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        BackHandler(onBack = onDismiss)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(colors.paper)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .testTag("file_viewer"),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun FileViewerLoading(onDismiss: () -> Unit) {
+    FileViewerFrame(onDismiss = onDismiss) {
+        DdSpinner(size = 22.dp, strokeWidth = 2.dp)
+    }
+}
+
+@Composable
+private fun FileViewerFailed(onDismiss: () -> Unit) {
+    FileViewerFrame(onDismiss = onDismiss) {
+        Text(
+            text = stringResource(R.string.files_unreadable),
+            style = DdType.body,
+            color = deepDeepColors().inkSecondary,
+        )
+    }
+}
+
+@Composable
+private fun FileViewerContent(
     file: File,
     name: String,
     mime: String,

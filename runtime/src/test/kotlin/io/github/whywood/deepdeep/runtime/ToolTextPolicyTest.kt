@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep.runtime
 
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
@@ -75,17 +78,14 @@ class ToolTextPolicyTest {
             addAll(miniappTools(store))
             add(miniappEditTool(store))
             add(
-                adbShellTool(
-                    executor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },
-                    enabled = { true },
-                    status = { RootToolStatus.Granted },
-                ),
-            )
-            add(
-                rootShellTool(
-                    executor = RootCommandExecutor { _, _ -> RootCommandResult(0, "", "", false) },
-                    enabled = { true },
-                    status = { RootToolStatus.Granted },
+                systemShellTool(
+                    executor = object : ShellExecutor {
+                        override suspend fun run(
+                            command: String,
+                            timeoutSeconds: Long?,
+                            signal: RunSignal?,
+                        ): ShellResult = ShellResult(output = "", exitCode = 0, truncated = false)
+                    },
                 ),
             )
         }

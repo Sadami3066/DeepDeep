@@ -140,9 +140,11 @@ internal fun AppOverlays(
             onDismissWorkspaceDelete = { overlays.workspaceDeleteTarget = null },
             onDismissAttachmentPreview = { overlays.previewAttachment = null; overlays.previewRoot = null },
             onShareAttachmentPreview = {
-                overlays.previewAttachment?.let { attachment ->
-                    graph.attachmentStore.shareIntent(attachment, overlays.previewRoot ?: attachmentRoot)
-                }?.let { context.startActivity(shareChooser(context, it, shareChooserTitle)) }
+                scope.launch {
+                    overlays.previewAttachment?.let { attachment ->
+                        graph.attachmentStore.shareIntent(attachment, overlays.previewRoot ?: attachmentRoot)
+                    }?.let { context.startActivity(shareChooser(context, it, shareChooserTitle)) }
+                }
             },
             onDismissUsage = { overlays.usageSheetOpen = false },
             onSelectJob = { id ->

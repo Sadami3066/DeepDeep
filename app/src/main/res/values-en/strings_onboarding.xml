@@ -83,15 +83,15 @@
     <string name="onboarding_environment_subtitle">Pick the tool bundles you\'ll use. You can add more later.</string>
     <string name="onboarding_environment_install_label">Work environment</string>
 
-    <string name="onboarding_privilege_title">How much access?</string>
-    <string name="onboarding_privilege_subtitle">Normal mode is enough for everyday use. If you need more later, you can adjust it in Settings.</string>
-    <string name="onboarding_privilege_note">You can adjust these in Settings anytime.</string>
-    <string name="onboarding_privilege_normal">Standard</string>
-    <string name="onboarding_privilege_normal_body">No extra permission needed. You can use bash and common tools right away.</string>
-    <string name="onboarding_privilege_adb">Wireless debugging ADB</string>
-    <string name="onboarding_privilege_adb_body">Pairing is required first; you can continue in Settings → Permissions later.</string>
-    <string name="onboarding_privilege_root">Root</string>
-    <string name="onboarding_privilege_root_body">System authorization is required; you can continue in Settings → Permissions later.</string>
+    <string name="onboarding_access_title">System access</string>
+    <string name="onboarding_access_subtitle">Sets how bash, files, and system commands run. Standard is enough for everyday use.</string>
+    <string name="onboarding_access_note">You can change this later in Settings → System access.</string>
+    <string name="onboarding_access_local">Standard</string>
+    <string name="onboarding_access_local_body">No extra permission needed; bash runs in the app\'s Linux environment.</string>
+    <string name="onboarding_access_adb">Wireless debugging (ADB)</string>
+    <string name="onboarding_access_adb_body">Turn on wireless debugging and pair first; you can finish later in Settings → System access.</string>
+    <string name="onboarding_access_root">Root</string>
+    <string name="onboarding_access_root_body">Requires system authorization; Root Linux is prepared on first use, with progress in Settings → System access.</string>
 
     <string name="personalization_avatar_title">Avatar</string>
     <string name="personalization_avatar_empty">Used when unset</string>

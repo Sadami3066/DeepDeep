@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -35,8 +36,10 @@ import io.github.whywood.deepdeep.ui.common.chat.AttachmentSourceSheet
 import io.github.whywood.deepdeep.ui.common.chat.CameraCaptureSheet
 import io.github.whywood.deepdeep.ui.common.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.common.shareChooser
+import io.github.whywood.deepdeep.ui.common.ProvideHostFiles
 import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.shell.rememberShellConversationStrings
+import kotlinx.coroutines.launch
 
 
 
@@ -104,6 +107,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                 pendingQuestions.filter { it.sessionId == state.sessionId }
             }
             val context = LocalContext.current
+            val scope = rememberCoroutineScope()
             val missingFileMessage = stringResource(R.string.assistant_attach_missing)
             val shareFailedMessage = stringResource(R.string.present_share_failed)
             val shareTitle = stringResource(R.string.assistant_attach_share)
@@ -116,32 +120,37 @@ class AssistantOverlayActivity : ComponentActivity() {
             }
 
             val openFile: (String) -> Unit = { raw ->
-                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                if (resolved == null) {
-                    Toast.makeText(context, missingFileMessage, Toast.LENGTH_SHORT).show()
-                } else {
-                    preview = AssistantOverlayPreview(
-                        attachment = resolved,
-                        file = graph.attachmentStore.file(resolved, attachmentRoot),
-                    )
+                scope.launch {
+                    val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                    if (resolved == null) {
+                        Toast.makeText(context, missingFileMessage, Toast.LENGTH_SHORT).show()
+                    } else {
+                        preview = AssistantOverlayPreview(
+                            attachment = resolved,
+                            file = graph.attachmentStore.file(resolved, attachmentRoot),
+                        )
+                    }
                 }
             }
             val shareFile: (String) -> Unit = { raw ->
-                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                if (resolved == null) {
-                    Toast.makeText(context, missingFileMessage, Toast.LENGTH_SHORT).show()
-                } else {
-                    val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
-                    if (intent != null) {
-                        context.startActivity(shareChooser(context, intent, shareTitle))
+                scope.launch {
+                    val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                    if (resolved == null) {
+                        Toast.makeText(context, missingFileMessage, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, shareFailedMessage, Toast.LENGTH_SHORT).show()
+                        val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
+                        if (intent != null) {
+                            context.startActivity(shareChooser(context, intent, shareTitle))
+                        } else {
+                            Toast.makeText(context, shareFailedMessage, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
 
             DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
+                    ProvideHostFiles(graph.hostFiles) {
                 AssistantOverlayScreen(
                     state = state,
                     pendingQuestions = sessionQuestions,
@@ -189,12 +198,14 @@ class AssistantOverlayActivity : ComponentActivity() {
                         onRetryStart = controller::start,
                         onDismissPreview = { preview = null },
                         onSharePreview = {
-                            preview?.let { current ->
-                                val intent = graph.attachmentStore.shareIntent(current.attachment, attachmentRoot)
-                                if (intent != null) {
-                                    context.startActivity(shareChooser(context, intent, shareTitle))
-                                } else {
-                                    Toast.makeText(context, shareFailedMessage, Toast.LENGTH_SHORT).show()
+                            scope.launch {
+                                preview?.let { current ->
+                                    val intent = graph.attachmentStore.shareIntent(current.attachment, attachmentRoot)
+                                    if (intent != null) {
+                                        context.startActivity(shareChooser(context, intent, shareTitle))
+                                    } else {
+                                        Toast.makeText(context, shareFailedMessage, Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         },
@@ -223,6 +234,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                     )
                 }
                 }
+                    }
             }
         }
     }

@@ -983,17 +983,20 @@ class AssistantOverlayControllerTest {
 
         override suspend fun import(uri: Uri, root: File): AttachmentImport = AttachmentImport.Failed
 
-        override fun file(ref: AttachmentRef, root: File): File =
-            object : File(root, ref.path) {
-                override fun delete(): Boolean {
-                    deletedPaths += ref.path
-                    return true
-                }
-            }
+        override fun file(ref: AttachmentRef, root: File): File = File(root, ref.path)
 
-        override fun shareIntent(ref: AttachmentRef, root: File): Intent? = null
+        override suspend fun materialize(ref: AttachmentRef, root: File): File? = file(ref, root)
 
-        override fun resolve(raw: String, root: File): AttachmentRef? = null
+        override suspend fun delete(ref: AttachmentRef, root: File): Boolean {
+            deletedPaths += ref.path
+            return true
+        }
+
+        override suspend fun shareIntent(ref: AttachmentRef, root: File): Intent? = null
+
+        override suspend fun resolve(raw: String, root: File): AttachmentRef? = null
+
+        override fun available(): Boolean = true
     }
 
     private class FakeProviders(

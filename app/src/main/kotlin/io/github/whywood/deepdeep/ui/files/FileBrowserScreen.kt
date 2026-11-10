@@ -40,6 +40,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.FilePreviewKind
 import io.github.whywood.deepdeep.data.filePreviewKind
 import io.github.whywood.deepdeep.data.formatAttachmentSize
+import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.guessMime
 import io.github.whywood.deepdeep.data.hasSharedStorageAccess
 import io.github.whywood.deepdeep.data.sharedStorageDirectory
@@ -53,6 +54,7 @@ import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.ui.common.LocalHostFiles
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -101,17 +103,26 @@ fun FileBrowserScreen(
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
+    val hostFiles = LocalHostFiles.current
     val sharedRoot = remember { sharedStorageDirectory() }
-    val alternateRoot = if (root.absolutePath == sharedRoot.absolutePath) privateRoot else sharedRoot
-    var browsingAlternate by rememberSaveable { mutableStateOf(false) }
+    val roots = remember(root, privateRoot, sharedRoot, hostFiles) {
+        buildList {
+            add(root)
+            if (privateRoot.absolutePath != root.absolutePath) add(privateRoot)
+            if (sharedRoot.absolutePath != root.absolutePath) add(sharedRoot)
+            if (hostFiles.capabilities().isRoot) add(File("/"))
+        }
+    }
+    val sharedIndex = roots.indexOfFirst { it.absolutePath == sharedRoot.absolutePath }
+    var browsingIndex by rememberSaveable { mutableStateOf(0) }
     var sharedStorageAccess by remember { mutableStateOf(hasSharedStorageAccess(context)) }
     val accessHint = stringResource(R.string.settings_linux_shared_storage_grant)
     val permissionHint = stringResource(R.string.settings_linux_shared_storage_permission)
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         sharedStorageAccess = granted
-        if (granted) {
-            browsingAlternate = true
-        } else {
+        if (granted && sharedIndex >= 0) {
+            browsingIndex = sharedIndex
+        } else if (!granted) {
             Toast.makeText(context, permissionHint, Toast.LENGTH_SHORT).show()
         }
     }
@@ -119,12 +130,13 @@ fun FileBrowserScreen(
         sharedStorageAccess = hasSharedStorageAccess(context)
         onPauseOrDispose {}
     }
+    val requestedRoot = roots.getOrNull(browsingIndex) ?: root
     val activeRoot = if (
-        browsingAlternate && (alternateRoot.absolutePath != sharedRoot.absolutePath || sharedStorageAccess)
+        requestedRoot.absolutePath == sharedRoot.absolutePath && !sharedStorageAccess
     ) {
-        alternateRoot
-    } else {
         root
+    } else {
+        requestedRoot
     }
     val onSharedRoot = activeRoot.absolutePath == sharedRoot.absolutePath
     var relativePath by rememberSaveable(activeRoot.absolutePath) { mutableStateOf("") }
@@ -135,29 +147,35 @@ fun FileBrowserScreen(
         initialValue = FileBrowserListing.Loading,
         activeRoot.absolutePath,
         relativePath,
+        hostFiles,
     ) {
-        value = withContext(Dispatchers.IO) { readFileBrowserDirectory(directory) }
+        value = withContext(Dispatchers.IO) { readFileBrowserDirectory(directory, hostFiles) }
     }
     val canGoUp = relativePath.isNotEmpty()
-    val canSwitchRoot = alternateRoot.absolutePath != root.absolutePath
+    val canSwitchRoot = roots.size > 1
     val goUp = { relativePath = FileBrowserPaths.parentPath(relativePath) }
     val switchRoot = {
-        if (activeRoot.absolutePath != root.absolutePath) {
-            browsingAlternate = false
-        } else if (alternateRoot.absolutePath == sharedRoot.absolutePath && !sharedStorageAccess) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
-            } else {
-                Toast.makeText(context, accessHint, Toast.LENGTH_SHORT).show()
-            }
+        if (browsingIndex != 0) {
+            browsingIndex = 0
         } else {
-            browsingAlternate = true
+            val next = (browsingIndex + 1) % roots.size
+            val target = roots[next]
+            if (target.absolutePath == sharedRoot.absolutePath && !sharedStorageAccess) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                    permissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                } else {
+                    Toast.makeText(context, accessHint, Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                browsingIndex = next
+            }
         }
     }
     val label = when {
         canGoUp -> relativePath
         activeRoot.absolutePath == sharedRoot.absolutePath -> stringResource(R.string.files_root_shared)
         activeRoot.absolutePath == privateRoot.absolutePath -> stringResource(R.string.files_root_private)
+        activeRoot.absolutePath == File.separator -> stringResource(R.string.files_root_system)
         else -> rootLabel.ifBlank { root.name.ifBlank { stringResource(R.string.files_root_private) } }
     }
 
@@ -379,16 +397,16 @@ private fun BrowserMessage(icon: DdIcon, text: String) {
     }
 }
 
-private fun readFileBrowserDirectory(directory: File): FileBrowserListing {
-    val children = runCatching { directory.listFiles() }.getOrNull() ?: return FileBrowserListing.Failed
+private fun readFileBrowserDirectory(directory: File, hostFiles: HostFiles): FileBrowserListing {
+    val children = hostFiles.list(directory) ?: return FileBrowserListing.Failed
     val visible = children.filter { !it.name.startsWith(".") }
     val directories = visible
-        .filter { it.isDirectory }
+        .filter { hostFiles.isDirectory(it) }
         .sortedBy { it.name.lowercase(Locale.US) }
         .map { FileBrowserEntry(it.name, it, directory = true, size = 0L) }
     val files = visible
-        .filter { it.isFile }
+        .filter { hostFiles.isFile(it) }
         .sortedBy { it.name.lowercase(Locale.US) }
-        .map { FileBrowserEntry(it.name, it, directory = false, size = it.length()) }
+        .map { FileBrowserEntry(it.name, it, directory = false, size = hostFiles.length(it)) }
     return FileBrowserListing.Ready(directories + files)
 }

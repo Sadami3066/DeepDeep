@@ -2,8 +2,8 @@ package io.github.whywood.deepdeep.vscreen
 
 import android.content.Context
 import io.github.whywood.deepdeep.adb.AdbBootstrap
-import io.github.whywood.deepdeep.privilege.PrivilegeController
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,17 +12,17 @@ import kotlinx.coroutines.launch
 class PrivilegedLauncher(
     context: Context,
     private val adb: AdbBootstrap,
-    private val privilege: PrivilegeController,
+    private val access: HostAccessController,
 ) {
     private val appContext = context.applicationContext
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun backends(): List<String> {
-        val state = privilege.state.value
+        val state = access.state.value
         return orderedBackends(
             preferredBackend = preferredBackendOf(state.selected),
-            adbAvailable = PrivilegeLevel.ADB in state.availableBackends,
-            rootAvailable = PrivilegeLevel.ROOT in state.availableBackends,
+            adbAvailable = state.adbReady,
+            rootAvailable = state.rootReady,
         )
     }
 
@@ -61,10 +61,10 @@ class PrivilegedLauncher(
     }
 }
 
-internal fun preferredBackendOf(selected: PrivilegeLevel): String? = when (selected) {
-    PrivilegeLevel.NORMAL -> null
-    PrivilegeLevel.ADB -> PrivilegedLauncher.BACKEND_ADB
-    PrivilegeLevel.ROOT -> PrivilegedLauncher.BACKEND_ROOT
+internal fun preferredBackendOf(selected: HostAccess): String? = when (selected) {
+    HostAccess.LOCAL -> null
+    HostAccess.ADB -> PrivilegedLauncher.BACKEND_ADB
+    HostAccess.ROOT -> PrivilegedLauncher.BACKEND_ROOT
 }
 
 internal fun orderedBackends(

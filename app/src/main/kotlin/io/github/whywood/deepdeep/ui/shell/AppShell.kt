@@ -147,12 +147,14 @@ internal fun AppShell(
     val presentOpenFailed = stringResource(R.string.present_open_failed)
     val presentShareFailed = stringResource(R.string.present_share_failed)
     val openWorkspaceFile: (String) -> Unit = { raw ->
-        val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-        if (resolved == null) {
-            Toast.makeText(context, attachmentMissingMessage, Toast.LENGTH_SHORT).show()
-        } else {
-            overlays.previewRoot = attachmentRoot
-            overlays.previewAttachment = resolved
+        scope.launch {
+            val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+            if (resolved == null) {
+                Toast.makeText(context, attachmentMissingMessage, Toast.LENGTH_SHORT).show()
+            } else {
+                overlays.previewRoot = attachmentRoot
+                overlays.previewAttachment = resolved
+            }
         }
     }
     val navigator = rememberAppNavigator()
@@ -467,41 +469,45 @@ internal fun AppShell(
                                                 chatViewModel.openConversationById(sessionId)
                                             },
                         onOpenPresentFile = { raw ->
-                                                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                                                if (resolved == null) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        attachmentMissingMessage,
-                                                        Toast.LENGTH_SHORT,
-                                                    ).show()
-                                                } else if (
-                                                    resolved.kind != AttachmentKind.OTHER ||
-                                                    resolved.mime.startsWith("video/")
-                                                ) {
-                                                    overlays.previewRoot = attachmentRoot
-                                                    overlays.previewAttachment = resolved
-                                                } else {
-                                                    val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
-                                                    val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
-                                                    if (!opened) {
-                                                        Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
+                                                scope.launch {
+                                                    val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                                                    if (resolved == null) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            attachmentMissingMessage,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
+                                                    } else if (
+                                                        resolved.kind != AttachmentKind.OTHER ||
+                                                        resolved.mime.startsWith("video/")
+                                                    ) {
+                                                        overlays.previewRoot = attachmentRoot
+                                                        overlays.previewAttachment = resolved
+                                                    } else {
+                                                        val intent = graph.attachmentStore.viewIntent(resolved, attachmentRoot)
+                                                        val opened = intent != null && runCatching { context.startActivity(intent) }.isSuccess
+                                                        if (!opened) {
+                                                            Toast.makeText(context, presentOpenFailed, Toast.LENGTH_SHORT).show()
+                                                        }
                                                     }
                                                 }
                                             },
                         onSharePresentFile = { raw ->
-                                                val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
-                                                if (resolved == null) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        attachmentMissingMessage,
-                                                        Toast.LENGTH_SHORT,
-                                                    ).show()
-                                                } else {
-                                                    val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
-                                                    if (intent != null) {
-                                                        context.startActivity(shareChooser(context, intent, shareChooserTitle))
+                                                scope.launch {
+                                                    val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
+                                                    if (resolved == null) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            attachmentMissingMessage,
+                                                            Toast.LENGTH_SHORT,
+                                                        ).show()
                                                     } else {
-                                                        Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                                                        val intent = graph.attachmentStore.shareIntent(resolved, attachmentRoot)
+                                                        if (intent != null) {
+                                                            context.startActivity(shareChooser(context, intent, shareChooserTitle))
+                                                        } else {
+                                                            Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                                                        }
                                                     }
                                                 }
                                             },

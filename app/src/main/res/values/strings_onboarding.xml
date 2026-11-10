@@ -83,15 +83,15 @@
     <string name="onboarding_environment_subtitle">挑几个常用的组合，之后也可以再添加。</string>
     <string name="onboarding_environment_install_label">工作环境</string>
 
-    <string name="onboarding_privilege_title">给它多少权限</string>
-    <string name="onboarding_privilege_subtitle">普通模式即可满足日常使用；如果之后需要更高权限，可以在设置中调整。</string>
-    <string name="onboarding_privilege_note">这些设置之后都可以在设置中调整。</string>
-    <string name="onboarding_privilege_normal">普通</string>
-    <string name="onboarding_privilege_normal_body">无需额外授权，即可使用 Linux 环境内的 bash 与常用工具。</string>
-    <string name="onboarding_privilege_adb">无线调试 ADB</string>
-    <string name="onboarding_privilege_adb_body">需要先完成配对；之后可以前往 设置 → 权限 继续配置。</string>
-    <string name="onboarding_privilege_root">Root</string>
-    <string name="onboarding_privilege_root_body">需要系统授权；之后可以前往 设置 → 权限 继续配置。</string>
+    <string name="onboarding_access_title">系统访问</string>
+    <string name="onboarding_access_subtitle">决定 bash、文件与系统命令以什么身份运行；普通档即可满足日常使用。</string>
+    <string name="onboarding_access_note">之后可以在设置 → 系统访问 调整。</string>
+    <string name="onboarding_access_local">普通</string>
+    <string name="onboarding_access_local_body">无需额外授权，bash 在 App 内的 Linux 环境里运行。</string>
+    <string name="onboarding_access_adb">无线调试 ADB</string>
+    <string name="onboarding_access_adb_body">需要先在系统里开启无线调试并完成配对；可稍后在设置 → 系统访问 继续配置。</string>
+    <string name="onboarding_access_root">Root</string>
+    <string name="onboarding_access_root_body">需要系统授权；首次会准备 Root Linux，可在设置 → 系统访问 查看进度。</string>
 
     <string name="personalization_avatar_title">头像</string>
     <string name="personalization_avatar_empty">未设置时用这个</string>

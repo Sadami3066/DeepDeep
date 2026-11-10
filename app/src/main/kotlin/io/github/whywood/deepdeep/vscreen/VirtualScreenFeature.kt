@@ -7,7 +7,7 @@ import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.data.LocalizedContext
-import io.github.whywood.deepdeep.privilege.PrivilegeController
+import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonObject
@@ -45,7 +45,7 @@ class VirtualScreenFeature internal constructor(
     companion object {
         fun install(
             context: Context,
-            privilege: PrivilegeController,
+            access: HostAccessController,
             adb: AdbBootstrap,
         ): VirtualScreenFeature {
             val appContext = context.applicationContext
@@ -53,7 +53,7 @@ class VirtualScreenFeature internal constructor(
             val engine = VirtualScreenRuntime.install(
                 VirtualScreenEngine(
                     localizedContext,
-                    PrivilegedLauncher(appContext, adb, privilege),
+                    PrivilegedLauncher(appContext, adb, access),
                 ),
             )
             return VirtualScreenFeature(EngineScreen(engine))

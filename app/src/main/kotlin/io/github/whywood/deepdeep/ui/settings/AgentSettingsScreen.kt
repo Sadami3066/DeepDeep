@@ -54,7 +54,7 @@ fun AgentSettingsScreen(
     screenOpsReady: Boolean,
     onScreenOpsChange: (Boolean) -> Unit,
     onOpenWebSearch: () -> Unit,
-    onOpenPermission: () -> Unit,
+    onOpenAccess: () -> Unit,
     metadataMode: SessionNamingMode,
     metadataModelLabel: String?,
     metadataModels: List<ModelOption>,
@@ -115,7 +115,7 @@ fun AgentSettingsScreen(
                         text = stringResource(R.string.agent_screen_ops_permission),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(onClick = onOpenPermission)
+                            .clickable(onClick = onOpenAccess)
                             .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = DdSpacing.Sm),
                         style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
                         color = colors.danger,

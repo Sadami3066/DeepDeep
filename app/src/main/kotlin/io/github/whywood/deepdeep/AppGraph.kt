@@ -14,6 +14,7 @@ import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.DevPackageManager
+import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
@@ -42,7 +43,6 @@ import io.github.whywood.deepdeep.graph.ServiceGraph
 import io.github.whywood.deepdeep.graph.ServiceGraphDeps
 import io.github.whywood.deepdeep.graph.isScreenOpsActive
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
-import io.github.whywood.deepdeep.privilege.PrivilegeController
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.host.HostAccessController
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
@@ -70,8 +70,8 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
-import io.github.whywood.deepdeep.service.RootBashController
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
+import io.github.whywood.deepdeep.shell.RootfsBootstrap
 import io.github.whywood.deepdeep.shell.shouldAutoInstallLinux
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -91,7 +91,17 @@ class AppGraph(context: Context) : AppDependencies {
     val activeSessionId = MutableStateFlow<String?>(null)
     private var questionRecoveryLoaded = false
 
-    private val dataGraph by lazy { DataGraph(DataGraphDeps(appContext, uiContext, scope)) }
+    private val dataGraph by lazy {
+        DataGraph(
+            DataGraphDeps(
+                appContext = appContext,
+                uiContext = uiContext,
+                scope = scope,
+                hostEnvironmentProvider = { platformGraph.hostEnvironmentProvider },
+                stagingRoot = File(appContext.cacheDir, "handoff").apply { mkdirs() },
+            ),
+        )
+    }
     private val platformGraph by lazy { PlatformGraph(platformGraphDeps()) }
     private val runtimeGraph by lazy { RuntimeGraph(runtimeGraphDeps()) }
     private val serviceGraph by lazy { ServiceGraph(serviceGraphDeps()) }
@@ -103,6 +113,7 @@ class AppGraph(context: Context) : AppDependencies {
     fun linuxBinds(): () -> List<Pair<File, String>> = platformGraph.linuxBinds()
 
     override val attachmentStore: AttachmentStore get() = dataGraph.attachmentStore
+    override val hostFiles: HostFiles get() = dataGraph.hostFiles
     val themePreferences: ThemePreferences get() = dataGraph.themePreferences
     override val appPreferences: AppPreferences get() = dataGraph.appPreferences
     override val voicePreferences: VoicePreferences get() = dataGraph.voicePreferences
@@ -131,10 +142,9 @@ class AppGraph(context: Context) : AppDependencies {
     override val goalService: GoalService get() = dataGraph.goalService
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
 
-    override val privilege: PrivilegeController get() = platformGraph.privilege
-    override val rootBash: RootBashController get() = platformGraph.rootBash
     override val hostAccess: HostAccessController get() = platformGraph.hostAccess
     override val hostEnvironmentProvider: HostEnvironmentProvider get() = platformGraph.hostEnvironmentProvider
+    override val rootfsBootstrap: RootfsBootstrap get() = platformGraph.rootfsBootstrap
     val adbBridge get() = platformGraph.adbBridge
     override val linuxEnvironment: LinuxEnvironment get() = platformGraph.linuxEnvironment
 
@@ -248,12 +258,9 @@ class AppGraph(context: Context) : AppDependencies {
         questionCenter = dataGraph.questionCenter,
         goalService = dataGraph.goalService,
         miniappStore = dataGraph.miniappStore,
-        privilege = { platformGraph.privilege },
         pluginManager = { pluginManager },
         hostAccess = hostAccess,
         hostEnvironment = hostEnvironmentProvider,
-        shellExecutorFor = platformGraph.shellExecutorFor,
-        linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
         decorateInterrupted = ::decorateInterrupted,
         timerService = { serviceGraph.timerService },
         jobRegistry = { serviceGraph.jobRegistry },
@@ -287,7 +294,7 @@ class AppGraph(context: Context) : AppDependencies {
         installBundledSkills = { syncBundledSkills() },
         prepare = ::prepare,
         jobWake = dataGraph.jobWake,
-        linuxEnvironmentFor = platformGraph::linuxEnvironmentFor,
+        hostEnvironment = platformGraph.hostEnvironmentProvider,
     )
 
     private fun pluginGraphDeps(): PluginGraphDeps = PluginGraphDeps(
@@ -345,7 +352,7 @@ class AppGraph(context: Context) : AppDependencies {
 
     private fun screenOpsActive(): Boolean = isScreenOpsActive(
         screenOps = capabilitySettingsStore.screenOps.value,
-        effective = privilege.state.value.effective,
+        access = hostAccess.state.value.effective,
     )
 
     private suspend fun decorateInterrupted(state: ConversationState, sessionId: String): ConversationState {

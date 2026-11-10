@@ -31,4 +31,5 @@
     <string name="files_root_switch">切换存储位置</string>
     <string name="files_root_shared">共享存储</string>
     <string name="files_root_private">应用文件</string>
+    <string name="files_root_system">系统根目录</string>
 </resources>

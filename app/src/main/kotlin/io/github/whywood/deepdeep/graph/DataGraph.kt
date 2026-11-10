@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.data.appHomeDirectory
 import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.FileAttachmentStore
+import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.FontPreferences
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
@@ -67,7 +68,8 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val apiKeyStore = ApiKeyStore(secretStore)
     val oauthCredentialStore = OAuthCredentialStore(secretStore)
     val modelConfigStore = ModelConfigStore(deps.appContext)
-    val attachmentStore = FileAttachmentStore(deps.appContext, homeDir) { sharedStorage.value }
+    val hostFiles = HostFiles(deps.hostEnvironmentProvider, deps.stagingRoot)
+    val attachmentStore = FileAttachmentStore(deps.appContext, homeDir, hostFiles) { sharedStorage.value }
     val linuxSettings = LinuxSettingsStore(deps.appContext)
     val storageMountStore = StorageMountStore(File(deps.appContext.filesDir, "storage-mounts.json"))
     val workspaceToolPolicies = WorkspaceToolPolicyStore(File(deps.appContext.filesDir, "workspace-tool-policies.json"))

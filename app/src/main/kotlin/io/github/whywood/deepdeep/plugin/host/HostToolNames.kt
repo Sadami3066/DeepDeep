@@ -6,8 +6,7 @@ internal object HostToolNames {
     private val hostTools = setOf(
         "ask_user_question",
         "present",
-        "adb_shell",
-        "root_shell",
+        "system_shell",
         "get_goal",
         "create_goal",
         "update_goal",

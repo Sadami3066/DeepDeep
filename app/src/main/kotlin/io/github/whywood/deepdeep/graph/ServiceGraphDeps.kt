@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.runtime.QuestionCenter
 import io.github.whywood.deepdeep.runtime.TimerStore
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
@@ -25,5 +26,5 @@ internal class ServiceGraphDeps(
     val installBundledSkills: suspend () -> Unit,
     val prepare: suspend () -> Unit,
     val jobWake: StateFlow<Boolean>,
-    val linuxEnvironmentFor: (String?) -> LinuxEnvironment,
+    val hostEnvironment: HostEnvironmentProvider,
 )

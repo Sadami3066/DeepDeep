@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
 import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import io.github.whywood.deepdeep.DeepDeepApplication
 import io.github.whywood.deepdeep.screen.GuiAccessibilityActions
 import io.github.whywood.deepdeep.runtime.JobRegistry
@@ -24,6 +25,9 @@ import io.github.whywood.deepdeep.screen.ScreenRouter
 import io.github.whywood.deepdeep.screen.VirtualEngineBackend
 import io.github.whywood.deepdeep.screen.screenTools
 import io.github.whywood.deepdeep.service.AppShellExecutor
+import io.github.whywood.deepdeep.host.LocalHostEnvironment
+import io.github.whywood.deepdeep.runtime.host.HostEnvironment
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.service.GuiAccessibilityState
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
@@ -57,7 +61,12 @@ class ToolContractDeviceTest {
     }
     private fun linux() = LinuxEnvironment(context, graph.homeDir, extraBinds = graph.linuxBinds())
     private fun tools(environment: LinuxEnvironment): Map<String, CodingTool> = PiSessionEngine(
-        graph.homeDir, graph.agentDir, graph.credentials, transport, AppShellExecutor(environment), graph.providerCatalog as ProviderCatalog,
+        workspace = graph.homeDir,
+        agentDir = graph.agentDir,
+        credentials = graph.credentials,
+        transport = transport,
+        shellExecutor = AppShellExecutor(environment),
+        providers = graph.providerCatalog as ProviderCatalog,
     ).availableTools().associateBy { it.name }
     private fun io.github.whywood.deepdeep.sdk.agent.AgentToolResult.text() = content.filterIsInstance<TextContent>().joinToString("\n") { it.text }
     private suspend fun run(tool: CodingTool, args: JsonObject = buildJsonObject {}) = tool.execute("device", args, null, null)
@@ -151,7 +160,13 @@ class ToolContractDeviceTest {
             assertTrue(running.await().exceptionOrNull() is RequestAbortedException)
             assertTrue(environment.execute("kill -0 $pid 2>/dev/null").exitCode != 0)
             pidFile.delete()
-            val registry = JobRegistry(this, LinuxJobRunner(environment), notifier = { _, _, _ -> })
+            val environmentProvider = object : HostEnvironmentProvider {
+                override fun current(): HostEnvironment = LocalHostEnvironment(
+                    prootBash = { AppShellExecutor(environment) },
+                    sharedStorageEnabled = { false },
+                )
+            }
+            val registry = JobRegistry(this, LinuxJobRunner(environmentProvider, null), notifier = { _, _, _ -> })
             registry.start("contract", "echo $$ > '${pidFile.absolutePath}'; sleep 60", "neutral")
             withTimeout(5000) { while (!pidFile.exists() || pidFile.length() == 0L) delay(30) }
             val jobPid = pidFile.readText().trim().toLong()
@@ -160,12 +175,26 @@ class ToolContractDeviceTest {
             assertTrue(environment.execute("kill -0 $jobPid 2>/dev/null").exitCode != 0)
             val root = io.github.whywood.deepdeep.shell.RootShell()
             assertEquals(io.github.whywood.deepdeep.shell.RootStatus.Granted, root.probe())
-            val rootTool = io.github.whywood.deepdeep.runtime.rootShellTool(
-                executor = io.github.whywood.deepdeep.runtime.RootCommandExecutor { command, timeout ->
-                    val result = root.execute(command, timeout)
-                    io.github.whywood.deepdeep.runtime.RootCommandResult(result.exitCode, result.stdout, result.stderr, result.truncated, result.timedOut)
-                }, enabled = { true }, status = { io.github.whywood.deepdeep.runtime.RootToolStatus.Granted },
-            )
+            val rootExecutor = object : io.github.whywood.deepdeep.runtime.DetailedShellExecutor {
+                override suspend fun runDetailed(command: String, timeoutSeconds: Long?, signal: RunSignal?): io.github.whywood.deepdeep.runtime.CommandResult {
+                    signal?.throwIfAborted()
+                    val seconds = (timeoutSeconds ?: 15L).coerceIn(1L, 600L)
+                    val result = kotlinx.coroutines.coroutineScope {
+                        val execution = async { root.execute(command, seconds * 1000) }
+                        val unsubscribe = signal?.onAbort { execution.cancel() }
+                        try { execution.await() } catch (error: kotlinx.coroutines.CancellationException) {
+                            if (signal?.isAborted == true) throw RequestAbortedException(signal.reason)
+                            throw error
+                        } finally { unsubscribe?.invoke() }
+                    }
+                    signal?.throwIfAborted()
+                    val output = listOfNotNull(result.stdout.takeIf { it.isNotEmpty() }, result.stderr.takeIf { it.isNotEmpty() }).joinToString("\n")
+                    return io.github.whywood.deepdeep.runtime.CommandResult(output = output, exitCode = result.exitCode.takeIf { it >= 0 }, truncated = result.truncated, timedOut = result.timedOut)
+                }
+
+                override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult = error("unused")
+            }
+            val rootTool = io.github.whywood.deepdeep.runtime.systemShellTool(rootExecutor)
             val rootTimeout = run(rootTool, buildJsonObject { put("command", "printf root-partial; sleep 20"); put("timeoutMs", 1000) })
             assertEquals(true, rootTimeout.isError)
             assertTrue(rootTimeout.text(), rootTimeout.text().contains("root-partial") && rootTimeout.text().contains("timed out"))
@@ -183,9 +212,9 @@ class ToolContractDeviceTest {
 
     @Test
     fun mainScreenWorksAndRefsCannotCrossDisplays() = runBlocking {
-        graph.privilege.refresh()
+        graph.hostAccess.refresh()
         ensureAccessibilityConnected()
-        val engine = VirtualScreenEngine(context, PrivilegedLauncher(context, graph.adbBridge, graph.privilege))
+        val engine = VirtualScreenEngine(context, PrivilegedLauncher(context, graph.adbBridge, graph.hostAccess))
         val virtual = ScreenRouter(AccessibilityScreenBackend(GuiAccessibilityActions()), VirtualEngineBackend { engine }, AndroidScreenAppCatalog(context))
         val main = io.github.whywood.deepdeep.screen.MainScreenController(
             GuiAccessibilityActions(), AndroidScreenAppCatalog(context),
@@ -195,7 +224,7 @@ class ToolContractDeviceTest {
                     .getDisplay(0).getRealMetrics(metrics)
                 metrics.widthPixels to metrics.heightPixels
             }, { virtual.status() },
-            io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(graph.privilege, io.github.whywood.deepdeep.shell.RootShell(), graph.adbBridge),
+            io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(graph.hostAccess, io.github.whywood.deepdeep.shell.RootShell(), graph.adbBridge),
         )
         val fixture = InstrumentationRegistry.getInstrumentation().context.packageName
         val tools = screenTools(virtual, File(context.filesDir, "gui/screenshots"), main).associateBy { it.name }
@@ -245,8 +274,8 @@ class ToolContractDeviceTest {
 
     @Test
     fun virtualScreenHandlesNeutralChineseFormWithoutMainFallback() = runBlocking {
-        graph.privilege.refresh()
-        val engine = VirtualScreenEngine(context, PrivilegedLauncher(context, graph.adbBridge, graph.privilege))
+        graph.hostAccess.refresh()
+        val engine = VirtualScreenEngine(context, PrivilegedLauncher(context, graph.adbBridge, graph.hostAccess))
         val controller = ScreenRouter(AccessibilityScreenBackend(GuiAccessibilityActions()), VirtualEngineBackend { engine }, AndroidScreenAppCatalog(context), { GuiAccessibilityState.isEnabled(context) })
         val screenshotDir = File(context.filesDir, "gui/screenshots")
         val tools = screenTools(controller, screenshotDir).associateBy { it.name }

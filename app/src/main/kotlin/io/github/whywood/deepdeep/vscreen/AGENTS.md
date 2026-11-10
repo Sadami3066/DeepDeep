@@ -17,7 +17,7 @@
 | `VirtualScreenIdle.kt` | 15 分钟无操作自动关屏策略 |
 | `VirtualScreenCorrelation.kt` | 请求/响应 id 对账与截图闸门 |
 | `VirtualScreenTransportLog.kt` | 传输事件与断线的结构化日志 |
-| `PrivilegedLauncher.kt` | 按当前特权后端启动/清理 helper 进程 |
+| `PrivilegedLauncher.kt` | 按当前 host access（ADB/Root）启动/清理 helper 进程 |
 
 ## 要点
 

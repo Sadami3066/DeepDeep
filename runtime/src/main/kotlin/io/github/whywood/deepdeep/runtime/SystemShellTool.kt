@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.runtime
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.bashTool
 import io.github.whywood.deepdeep.sdk.coding.tools.textResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
@@ -13,10 +12,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import okio.Path.Companion.toPath
 import kotlin.math.ceil
 
-private val adbShellParameters: JsonObject = buildJsonObject {
+private val systemShellParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
         putJsonObject("command") {
@@ -31,65 +29,12 @@ private val adbShellParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("command")) })
 }
 
-internal fun privilegedShellTool(
-    name: String,
-    description: String,
-    parameters: JsonObject,
-    executor: RootCommandExecutor,
-    enabled: () -> Boolean,
-    disabledMessage: String,
-    status: () -> RootToolStatus,
-    unavailableMessage: String,
-    failureMessage: String,
-): CodingTool {
-    val delegate = deepDeepBashTool(RootShellAdapter(executor))
-    return CodingTool(
-        name = name,
-        description = description,
-        parameters = parameters,
-        label = name,
-        promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
-        execute = { toolCallId, args, signal, onUpdate ->
-            signal?.throwIfAborted()
-            when {
-                !enabled() -> textResult(disabledMessage, isError = true)
-                status() == RootToolStatus.Unsupported -> textResult(unavailableMessage, isError = true)
-                else -> try {
-                    delegate.execute(toolCallId, args.shellArguments(), signal, onUpdate)
-                } catch (aborted: RequestAbortedException) {
-                    throw aborted
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (error: Exception) {
-                    textResult(error.message ?: failureMessage, isError = true)
-                }
-            }
-        },
-    )
-}
-
-fun adbShellTool(
-    executor: RootCommandExecutor,
-    enabled: () -> Boolean,
-    status: () -> RootToolStatus,
-): CodingTool = privilegedShellTool(
-    name = "adb_shell",
-    description = "Run a shell command with Android shell privileges and return its exit code and combined output. On rooted devices the command can elevate with su.",
-    parameters = adbShellParameters,
-    executor = executor,
-    enabled = enabled,
-    disabledMessage = "ADB shell is unavailable: wireless debugging is not connected.",
-    status = status,
-    unavailableMessage = "ADB shell is unavailable on this device.",
-    failureMessage = "adb_shell execution failed",
-)
-
 fun systemShellTool(executor: ShellExecutor): CodingTool {
     val delegate = deepDeepBashTool(executor)
     return CodingTool(
         name = "system_shell",
         description = "Run a command in the Android system shell and return the exit code with merged stdout and stderr. Use it for Android system operations such as pm, cmd, settings, dumpsys, am and getprop; use bash for ordinary Linux work.",
-        parameters = adbShellParameters,
+        parameters = systemShellParameters,
         label = "system_shell",
         promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
         execute = { toolCallId, args, signal, onUpdate ->
@@ -107,7 +52,7 @@ fun systemShellTool(executor: ShellExecutor): CodingTool {
     )
 }
 
-internal fun JsonObject.shellArguments(): JsonObject {
+private fun JsonObject.shellArguments(): JsonObject {
     val command = (this["command"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty()
     if (command.isEmpty()) throw IllegalArgumentException("command must not be empty")
     val timeoutMillis = shellTimeoutMillis().coerceIn(1, MAX_SHELL_TIMEOUT_MILLIS)
@@ -123,11 +68,8 @@ private fun JsonObject.shellTimeoutMillis(): Long {
     return raw.toLongOrNull() ?: throw IllegalArgumentException("timeoutMs must be an integer")
 }
 
-internal const val DEFAULT_SHELL_TIMEOUT_MILLIS = 15_000L
-internal const val MAX_SHELL_TIMEOUT_MILLIS = 120_000L
-internal const val DEFAULT_SHELL_TIMEOUT_SECONDS = 15L
-internal const val MIN_SHELL_TIMEOUT_SECONDS = 1L
-internal const val MAX_SHELL_TIMEOUT_SECONDS = 120L
+private const val DEFAULT_SHELL_TIMEOUT_MILLIS = 15_000L
+private const val MAX_SHELL_TIMEOUT_MILLIS = 120_000L
 
-internal const val SYSTEM_SHELL_GUIDELINE =
+private const val SYSTEM_SHELL_GUIDELINE =
     "System shell output may already be truncated upstream; never claim a complete log when none is available."

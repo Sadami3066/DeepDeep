@@ -87,7 +87,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.ui.common.rememberAvatarBitmap
@@ -727,9 +727,9 @@ private fun SelectionMark(selected: Boolean) {
 }
 
 @Composable
-internal fun PrivilegeStep(
-    selected: PrivilegeLevel,
-    onSelect: (PrivilegeLevel) -> Unit,
+internal fun AccessStep(
+    selected: HostAccess,
+    onSelect: (HostAccess) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -737,37 +737,37 @@ internal fun PrivilegeStep(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = DdSpacing.Xxl)
-            .testTag("onboarding_step_privilege"),
+            .testTag("onboarding_step_access"),
     ) {
         Spacer(Modifier.height(DdSpacing.Sm))
         StepHeading(
-            title = stringResource(R.string.onboarding_privilege_title),
-            subtitle = stringResource(R.string.onboarding_privilege_subtitle),
+            title = stringResource(R.string.onboarding_access_title),
+            subtitle = stringResource(R.string.onboarding_access_subtitle),
         )
         Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
-            PrivilegeRow(
-                level = PrivilegeLevel.NORMAL,
-                body = stringResource(R.string.onboarding_privilege_normal_body),
-                selected = selected == PrivilegeLevel.NORMAL,
+            AccessRow(
+                access = HostAccess.LOCAL,
+                body = stringResource(R.string.onboarding_access_local_body),
+                selected = selected == HostAccess.LOCAL,
                 onSelect = onSelect,
-                testTag = "onboarding_privilege_normal",
+                testTag = "onboarding_access_local",
             )
             DdHairline()
-            PrivilegeRow(
-                level = PrivilegeLevel.ADB,
-                body = stringResource(R.string.onboarding_privilege_adb_body),
-                selected = selected == PrivilegeLevel.ADB,
+            AccessRow(
+                access = HostAccess.ADB,
+                body = stringResource(R.string.onboarding_access_adb_body),
+                selected = selected == HostAccess.ADB,
                 onSelect = onSelect,
-                testTag = "onboarding_privilege_adb",
+                testTag = "onboarding_access_adb",
             )
             DdHairline()
-            PrivilegeRow(
-                level = PrivilegeLevel.ROOT,
-                body = stringResource(R.string.onboarding_privilege_root_body),
-                selected = selected == PrivilegeLevel.ROOT,
+            AccessRow(
+                access = HostAccess.ROOT,
+                body = stringResource(R.string.onboarding_access_root_body),
+                selected = selected == HostAccess.ROOT,
                 onSelect = onSelect,
-                testTag = "onboarding_privilege_root",
+                testTag = "onboarding_access_root",
             )
         }
         Spacer(Modifier.height(DdSpacing.Xxl))
@@ -943,18 +943,18 @@ private fun PermissionRow(
 }
 
 @Composable
-private fun PrivilegeRow(
-    level: PrivilegeLevel,
+private fun AccessRow(
+    access: HostAccess,
     body: String,
     selected: Boolean,
-    onSelect: (PrivilegeLevel) -> Unit,
+    onSelect: (HostAccess) -> Unit,
     testTag: String,
 ) {
     DdListRow(
-        title = privilegeLabel(level),
+        title = accessLabel(access),
         subtitle = body,
         subtitleMaxLines = 2,
-        onClick = { onSelect(level) },
+        onClick = { onSelect(access) },
         modifier = Modifier
             .testTag(testTag)
             .semantics { this.selected = selected },
@@ -982,11 +982,11 @@ private fun languageLabel(language: AppLanguage): String = stringResource(
 )
 
 @Composable
-private fun privilegeLabel(level: PrivilegeLevel): String = stringResource(
-    when (level) {
-        PrivilegeLevel.NORMAL -> R.string.onboarding_privilege_normal
-        PrivilegeLevel.ADB -> R.string.onboarding_privilege_adb
-        PrivilegeLevel.ROOT -> R.string.onboarding_privilege_root
+private fun accessLabel(access: HostAccess): String = stringResource(
+    when (access) {
+        HostAccess.LOCAL -> R.string.onboarding_access_local
+        HostAccess.ADB -> R.string.onboarding_access_adb
+        HostAccess.ROOT -> R.string.onboarding_access_root
     },
 )
 

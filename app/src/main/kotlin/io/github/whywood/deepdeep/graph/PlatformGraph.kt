@@ -1,10 +1,11 @@
 package io.github.whywood.deepdeep.graph
 
+import android.content.Intent
 import android.os.Process
+import android.provider.Settings
 import android.system.Os
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.adb.AdbBridgeRuntime
-import io.github.whywood.deepdeep.data.PrivilegePreferences
 import io.github.whywood.deepdeep.host.AdbHostEnvironment
 import io.github.whywood.deepdeep.host.AppHostAccessController
 import io.github.whywood.deepdeep.host.AppHostEnvironmentProvider
@@ -12,10 +13,8 @@ import io.github.whywood.deepdeep.host.HostAccessPreferences
 import io.github.whywood.deepdeep.host.LocalHostEnvironment
 import io.github.whywood.deepdeep.host.RootBashReadiness
 import io.github.whywood.deepdeep.host.RootHostEnvironment
-import io.github.whywood.deepdeep.privilege.PrivilegeController
-import io.github.whywood.deepdeep.privilege.PrivilegeControllerImpl
 import io.github.whywood.deepdeep.runtime.McpPluginBridge
-import io.github.whywood.deepdeep.runtime.RootCommandExecutor
+import io.github.whywood.deepdeep.runtime.RootCommandResult
 import io.github.whywood.deepdeep.runtime.createRootFileSystem
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell
@@ -25,9 +24,9 @@ import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutionException
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.deepdeep.service.AccessibilityBootstrapRunner
 import io.github.whywood.deepdeep.service.AppShellExecutor
-import io.github.whywood.deepdeep.service.RootBashController
-import io.github.whywood.deepdeep.service.RoutingLinuxExecutor
+import io.github.whywood.deepdeep.service.accessibilityServiceComponent
 import io.github.whywood.deepdeep.shell.ChrootExecutor
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
@@ -44,21 +43,6 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
     val rootShell = RootShell()
     val adbBridge: AdbBootstrap = AdbBridgeRuntime.install(deps.appContext)
 
-    private val privilegeImpl by lazy {
-        PrivilegeControllerImpl(
-            preferences = PrivilegePreferences(deps.appContext) { deps.linuxSettings.isRootEnabled() },
-            rootShell = rootShell,
-            adbBridge = adbBridge,
-            scope = deps.scope,
-        ) {
-            deps.scope.launch { deps.pluginManager().refreshAndSyncSkills() }
-            deps.syncBundledSkills()
-            deps.host().reconfigure()
-        }
-    }
-    val privilege: PrivilegeController get() = privilegeImpl
-    val adbExecutor: RootCommandExecutor get() = privilegeImpl.adbExecutor
-
     val linuxEnvironment = LinuxEnvironment(
         deps.appContext,
         deps.homeDir,
@@ -69,24 +53,13 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
     private val shellEnvironments = mutableMapOf<String, LinuxEnvironment>()
     private val chrootExecutors = mutableMapOf<String, ChrootExecutor>()
 
-    private val rootfsBootstrap: RootfsBootstrap by lazy {
+    val rootfsBootstrap: RootfsBootstrap by lazy {
         RootfsBootstrap(
             appRootfsDir = File(deps.appContext.filesDir, "linux/rootfs"),
             statusFile = File(deps.appContext.filesDir, "linux/rootfs-bootstrap.state"),
             scratchDir = File(deps.appContext.cacheDir, "root-bash"),
         )
     }
-
-    private val rootBashController: RootBashController by lazy {
-        RootBashController(
-            scope = deps.scope,
-            settings = deps.linuxSettings,
-            privilege = privilegeImpl,
-            bootstrap = rootfsBootstrap,
-        )
-    }
-
-    val rootBash: RootBashController get() = rootBashController
 
     private val hostAccessPreferences: HostAccessPreferences by lazy {
         HostAccessPreferences(deps.appContext)
@@ -96,18 +69,44 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
         AppHostAccessController(
             scope = deps.scope,
             preferences = hostAccessPreferences,
-            rootProbe = {
-                privilegeImpl.probeRoot() == RootStatus.Granted
-            },
+            rootProbe = { rootShell.probe() == RootStatus.Granted },
             adbStorage = adbBridge.state,
-            connectAdbAction = { privilegeImpl.connect() },
-            startPairingAction = { privilegeImpl.startPairing() },
-            openWirelessDebuggingAction = { context -> privilegeImpl.openWirelessDebugging(context) },
+            connectAdbAction = { adbBridge.connectAndStart() },
+            startPairingAction = { deps.scope.launch { adbBridge.startPairing() } },
+            openWirelessDebuggingAction = { context ->
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            },
             onChanged = {
                 deps.scope.launch { deps.pluginManager().refreshAndSyncSkills() }
                 deps.syncBundledSkills()
                 deps.host().reconfigure()
+                accessibilityBootstrap.onPrivilegeReady()
             },
+        )
+    }
+
+    private val accessibilityBootstrap by lazy {
+        AccessibilityBootstrapRunner(
+            component = accessibilityServiceComponent(),
+            exec = { command, timeoutMillis ->
+                if (hostAccess.state.value.effective == HostAccess.ROOT) {
+                    val result = rootShell.execute(command, timeoutMillis)
+                    RootCommandResult(
+                        exitCode = result.exitCode,
+                        stdout = result.stdout,
+                        stderr = result.stderr,
+                        truncated = result.truncated,
+                        timedOut = result.timedOut,
+                    )
+                } else {
+                    adbBridge.exec(command, timeoutMillis)
+                }
+            },
+            isEnabled = { hostAccess.state.value.effective != HostAccess.LOCAL },
+            scope = deps.scope,
         )
     }
 
@@ -115,6 +114,7 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
         deps.scope.launch {
             hostAccess.state.map { it.effective }.distinctUntilChanged().collect { effective ->
                 if (effective == HostAccess.ROOT) rootfsBootstrap.ensureReady()
+                accessibilityBootstrap.onPrivilegeReady()
             }
         }
     }
@@ -223,26 +223,12 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
         }
     }
 
-    val shellExecutorFor: suspend (File) -> AppShellExecutor? = { cwd ->
-        if (!deps.linuxSettings.isEnabled()) {
-            null
-        } else {
-            val routing = RoutingLinuxExecutor(
-                proot = linuxEnvironmentFor(cwd.absolutePath),
-                chroot = chrootExecutorFor(cwd),
-                mode = { rootBashController.mode.value },
-                failureReason = { rootBashController.failureReason() },
-            )
-            AppShellExecutor(routing)
-        }
-    }
-
     val virtualScreenFeature: VirtualScreenFeature by lazy {
-        VirtualScreenFeature.install(deps.uiContext, privilege, adbBridge)
+        VirtualScreenFeature.install(deps.uiContext, hostAccess, adbBridge)
     }
 
     private val mainShell: PrivilegedMainScreenShell by lazy {
-        PrivilegedMainScreenShell(privilege, rootShell, adbBridge)
+        PrivilegedMainScreenShell(hostAccess, rootShell, adbBridge)
     }
 
     val screenToolset: ScreenToolset by lazy {

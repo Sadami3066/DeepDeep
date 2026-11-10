@@ -82,9 +82,12 @@ internal fun filePreviewKind(name: String, mime: String): FilePreviewKind {
 
 internal fun codeLanguageFor(name: String): String? = codeLanguages[fileExtension(name)]
 
-internal data class TextFileContent(val text: String, val truncated: Boolean)
+data class TextFileContent(val text: String, val truncated: Boolean)
 
-internal fun readTextLimited(file: File, limitBytes: Int = TEXT_PREVIEW_LIMIT_BYTES): TextFileContent? {
+internal fun readTextLimited(
+    file: File,
+    limitBytes: Int = TEXT_PREVIEW_LIMIT_BYTES,
+): TextFileContent? {
     if (!file.isFile) return null
     return runCatching {
         val limit = limitBytes.coerceAtLeast(1)

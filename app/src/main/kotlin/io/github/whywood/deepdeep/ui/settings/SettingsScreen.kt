@@ -45,7 +45,6 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OverlayEntryMode
-import io.github.whywood.deepdeep.privilege.PrivilegeLevel
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
@@ -63,7 +62,6 @@ import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.ui.common.AvatarBadge
 
 private const val TABLER_ICONS_URL = "https://github.com/tabler/tabler-icons"
@@ -81,7 +79,6 @@ fun SettingsScreen(
     modelName: String?,
     configured: Boolean,
     themePreset: ThemePreset,
-    linuxState: LinuxInstallState,
     versionName: String,
     fontLabel: String,
     onBack: () -> Unit,
@@ -91,11 +88,10 @@ fun SettingsScreen(
     onOpenUsageHabits: () -> Unit = {},
     onOpenScan: () -> Unit = {},
     onOpenProviders: () -> Unit,
-    onOpenRuntime: () -> Unit,
-    onOpenPermission: () -> Unit = {},
+    onOpenAccess: () -> Unit = {},
+    accessLabel: String? = null,
     onOpenAgentSettings: () -> Unit = {},
     onOpenAndroidSettings: () -> Unit = {},
-    privilegeLevel: PrivilegeLevel = PrivilegeLevel.NORMAL,
     onOpenPersonalization: () -> Unit,
     onOpenFonts: () -> Unit,
     onOpenPrivacy: () -> Unit,
@@ -161,17 +157,11 @@ fun SettingsScreen(
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.Shield,
-                    title = stringResource(R.string.settings_privilege),
-                    value = stringResource(
-                        when (privilegeLevel) {
-                            PrivilegeLevel.NORMAL -> R.string.permission_level_normal
-                            PrivilegeLevel.ADB -> R.string.permission_level_adb
-                            PrivilegeLevel.ROOT -> R.string.permission_level_root
-                        },
-                    ),
-                    onClick = onOpenPermission,
+                    title = stringResource(R.string.settings_access),
+                    value = accessLabel,
+                    onClick = onOpenAccess,
                     showChevron = true,
-                    modifier = Modifier.testTag("settings_permission"),
+                    modifier = Modifier.testTag("settings_access"),
                 )
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
@@ -180,15 +170,6 @@ fun SettingsScreen(
                     onClick = onOpenAgentSettings,
                     showChevron = true,
                     modifier = Modifier.testTag("settings_agent"),
-                )
-                DdRowDivider(leadingInset = SettingsDividerInset)
-                DdListRow(
-                    icon = DdIcons.Terminal,
-                    title = stringResource(R.string.settings_environment),
-                    value = linuxShortLabel(linuxState),
-                    onClick = onOpenRuntime,
-                    showChevron = true,
-                    modifier = Modifier.testTag("settings_environment"),
                 )
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
@@ -324,14 +305,6 @@ private fun SettingsSectionLabel(text: String) {
         style = DdType.micro,
         color = deepDeepColors().inkTertiary,
     )
-}
-
-@Composable
-private fun linuxShortLabel(state: LinuxInstallState): String = when (state) {
-    LinuxInstallState.NotInstalled -> stringResource(R.string.settings_linux_status_not_installed)
-    LinuxInstallState.Installing -> stringResource(R.string.settings_linux_status_installing)
-    is LinuxInstallState.Installed -> state.version
-    is LinuxInstallState.Failed -> stringResource(R.string.settings_linux_status_failed, state.message)
 }
 
 @Composable
@@ -653,12 +626,4 @@ private fun LicenseRow(title: String, subtitle: String, onClick: () -> Unit) {
             DdIcon(icon = DdIcons.External, tint = colors.inkTertiary, size = 16.dp)
         }
     }
-}
-
-@Composable
-private fun linuxStatusLabel(state: LinuxInstallState): String = when (state) {
-    LinuxInstallState.NotInstalled -> stringResource(R.string.settings_linux_status_not_installed)
-    LinuxInstallState.Installing -> stringResource(R.string.settings_linux_status_installing)
-    is LinuxInstallState.Installed -> stringResource(R.string.settings_linux_status_installed, state.version)
-    is LinuxInstallState.Failed -> stringResource(R.string.settings_linux_status_failed, state.message)
 }

@@ -8,7 +8,7 @@ import org.junit.Test
 class HostToolNamesTest {
     private val expected = setOf(
         "read", "write", "edit", "bash",
-        "ask_user_question", "present", "adb_shell", "root_shell",
+        "ask_user_question", "present", "system_shell",
         "get_goal", "create_goal", "update_goal",
         "job_start", "job_output", "job_list", "job_kill",
         "timer_create", "timer_list", "timer_update", "timer_delete",
