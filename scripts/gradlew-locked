@@ -6,10 +6,19 @@ LOCK_FILE="${TMPDIR:-/tmp}/deepdeep-build.lock"
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   echo "[build] 另一个构建正在运行，等待中…" >&2
-  flock -w 3600 9 || { echo "[build] 等待构建锁超时（60 分钟）" >&2; exit 1; }
+  flock -w 7200 9 || { echo "[build] 等待构建锁超时（2 小时）" >&2; exit 1; }
 fi
 
-exec ./gradlew \
-  --max-workers="${DEEPDEEP_GRADLE_WORKERS:-1}" \
-  -Dorg.gradle.jvmargs="${DEEPDEEP_GRADLE_JVMARGS:--Xmx1536m -XX:MaxMetaspaceSize=512m}" \
-  "$@"
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    -Dorg.gradle.jvmargs=*|-Pkotlin.daemon.jvmargs=*)
+      echo "[build] 忽略内存参数覆盖：$arg（统一使用 gradle.properties 的 profile）" >&2
+      ;;
+    *)
+      args+=("$arg")
+      ;;
+  esac
+done
+
+exec ./gradlew ${args[@]+"${args[@]}"}

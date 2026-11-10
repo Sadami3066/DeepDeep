@@ -8,13 +8,16 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 
 - 产品能力与边界：[docs/USER_GUIDE.md](docs/USER_GUIDE.md)；开发与构建：[docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)；插件作者文档：[docs/PLUGIN_DEV.md](docs/PLUGIN_DEV.md)；变更记录：[CHANGELOG.md](CHANGELOG.md)
 - 内部设计记录与完整功能边界只在本地 `docs/DECISIONS.md`、`docs/GUIDE.md`、`docs/plan.md`（已被 `docs/.gitignore` 忽略，不随仓库分发）；新机器从作者备份恢复
-- 构建脚本：`scripts/`（`check.sh` 完整验证、`gradlew-locked` 全局串行锁、`dev-setup.sh` 首次环境）
+- 构建脚本：`scripts/`（`build.sh` 日常构建入口、`check.sh` 完整验证、`gradlew-locked` 全局串行锁、`dev-setup.sh` 首次环境）
 - `assets/` 是设计源素材与第三方图标，**不是** App 运行时资源（运行时资源在 `app/src/main/assets` 与各模块 `res/`）
 - `reference/`、`.agents/` 是本机参考源码与 git worktree，不进版本库，别在里面改
 
 ## 命令
 
 ```bash
+./scripts/build.sh quick       # 日常编译（固定内存 profile，只保留一个 Gradle daemon）
+./scripts/build.sh test        # 定向单测
+./scripts/build.sh stop        # 收工回收 Gradle/Kotlin daemon 内存
 ./scripts/check.sh --full      # 交付前完整验证：编译 + 单测 + lint + 模块/包边界 + APK + ABI 基线
 ./scripts/check.sh --device    # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh        # 真机插件端到端（sample 安装→启用→工具→卡片→停用→卸载）
@@ -32,6 +35,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 - 用户可见文案全部在 `app/src/main/res/values*/strings_*.xml`，默认中文、`values-en` 同步；代码里不拼文案。
 - 目标与后台任务只在进程内存，重启清空；Linux 是 proot 用户空间，不是安全沙箱。
 - 本地分发，release 变体用 debug 证书签名（换签 = 卸载重装 = 丢数据，见本地 `docs/DECISIONS.md`）。
+- 构建内存 profile 只在 `gradle.properties` 维护（Gradle 3g / Kotlin 2g / workers 2）；`gradlew-locked` 会丢弃 `-Dorg.gradle.jvmargs`、`-Pkotlin.daemon.jvmargs` 覆盖，避免 JVM 参数不同导致 daemon 增殖。
 
 ## 规则
 

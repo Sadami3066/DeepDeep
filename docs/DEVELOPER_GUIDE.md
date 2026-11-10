@@ -6,7 +6,7 @@
 
 - JDK 17 或更新
 - Android SDK Platform 36、build-tools 36.0.0
-- 仓库自带 Gradle wrapper；不要直接跑 `./gradlew`，统一走 `scripts/gradlew-locked`，避免本机并发构建 OOM
+- 仓库自带 Gradle wrapper；日常构建走 `scripts/build.sh`，底层统一 `scripts/gradlew-locked`，不要直接跑 `./gradlew`，避免本机并发构建 OOM。内存参数只在 `gradle.properties` 维护，`gradlew-locked` 会忽略命令行覆盖，防止 daemon 增殖。
 
 首次环境：
 
@@ -19,6 +19,11 @@
 ## 构建与验证
 
 ```bash
+./scripts/build.sh quick        # 日常编译（固定内存 profile，单 Gradle daemon）
+./scripts/build.sh test         # 定向单测
+./scripts/build.sh check        # 完整验证（等价 check.sh --full）
+./scripts/build.sh release      # 完整验证后构建 release APK
+./scripts/build.sh stop         # 回收 Gradle/Kotlin daemon 内存
 ./scripts/check.sh              # 编译 + 单测 + lint + 模块/包边界 + APK
 ./scripts/check.sh --full       # 再加插件 SDK ABI 基线
 ./scripts/check.sh --device     # 再加覆盖安装到手机并启动
@@ -26,6 +31,8 @@
 ./scripts/plugin-bundles-e2e.sh # 四个官方插件包回归（需先构建插件仓库）
 ./scripts/plugin-api-abi.sh     # 单独校验插件 SDK ABI（--update 更新基线）
 ```
+
+Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Kotlin 2g / workers 2）；`gradlew-locked` 用 flock 串行化构建并丢弃 `-Dorg.gradle.jvmargs`、`-Pkotlin.daemon.jvmargs` 覆盖。长时间不构建时用 `build.sh stop` 回收内存。
 
 只改文档不需要构建。
 
