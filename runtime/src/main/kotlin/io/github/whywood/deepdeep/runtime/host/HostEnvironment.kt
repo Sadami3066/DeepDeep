@@ -14,6 +14,7 @@ interface HostEnvironment {
     val capabilities: HostCapabilities
     val sharedStorageEnabled: Boolean
     fun bash(cwd: String): ShellExecutor
+    fun bashStreaming(cwd: String): StreamingShellExecutor? = null
     val files: FileSystem
     val system: ShellExecutor?
     val promptLines: List<String>

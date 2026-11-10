@@ -34,7 +34,20 @@ class ChrootExecutor internal constructor(
         require(maxOutputBytes > 0) { "maxOutputBytes must be positive" }
     }
 
-    override suspend fun execute(command: String, timeoutMillis: Long): LinuxResult {
+    override suspend fun execute(command: String, timeoutMillis: Long): LinuxResult =
+        runCommand(command, timeoutMillis, null)
+
+    suspend fun executeStreaming(
+        command: String,
+        timeoutMillis: Long,
+        onOutputLine: (String) -> Unit,
+    ): LinuxResult = runCommand(command, timeoutMillis, onOutputLine)
+
+    private suspend fun runCommand(
+        command: String,
+        timeoutMillis: Long,
+        onOutputLine: ((String) -> Unit)?,
+    ): LinuxResult {
         require(command.isNotBlank()) { "command must not be blank" }
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         val resolv = runCatching { resolvConf() }.getOrNull()
@@ -45,7 +58,15 @@ class ChrootExecutor internal constructor(
             resolvConf = resolv,
         )
         val startedAt = System.nanoTime()
-        val process = runner.run(suCommand, timeoutMillis, stdin = command)
+        val callback = onOutputLine?.let { handler ->
+            { line: String ->
+                try {
+                    handler(line)
+                } catch (_: Exception) {
+                }
+            }
+        }
+        val process = runner.run(suCommand, timeoutMillis, stdin = command, onOutputLine = callback)
         val durationMillis = (System.nanoTime() - startedAt) / 1_000_000
         if (!process.started) throw IOException("su is not available")
         val combined = mergeOutput(process.stdout, process.stderr)

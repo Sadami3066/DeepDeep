@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
-| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果；`stream` 目前为命令完成后一次性按行推送（结束发 `Exit`，慢消费者丢弃的行数记入插件日志）；`available` 由注入的 lambda 决定 |
+| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送）；当前环境无流式实现时回退为命令完成后一次性推送（结束发 `Exit`，慢消费者丢弃的行数记入插件日志）；`available` 由注入的 lambda 决定 |
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
 | `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限 |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |

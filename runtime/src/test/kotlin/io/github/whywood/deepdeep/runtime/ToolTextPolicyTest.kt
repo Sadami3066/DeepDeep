@@ -78,15 +78,15 @@ class ToolTextPolicyTest {
             addAll(miniappTools(store))
             add(miniappEditTool(store))
             add(
-                systemShellTool(
-                    executor = object : ShellExecutor {
+                systemShellTool {
+                    object : ShellExecutor {
                         override suspend fun run(
                             command: String,
                             timeoutSeconds: Long?,
                             signal: RunSignal?,
                         ): ShellResult = ShellResult(output = "", exitCode = 0, truncated = false)
-                    },
-                ),
+                    }
+                },
             )
         }
     }

@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.host.AdbHostEnvironment
 import io.github.whywood.deepdeep.host.AppHostAccessController
 import io.github.whywood.deepdeep.host.AppHostEnvironmentProvider
 import io.github.whywood.deepdeep.host.HostAccessPreferences
+import io.github.whywood.deepdeep.host.LinuxStreamingShellExecutor
 import io.github.whywood.deepdeep.host.LocalHostEnvironment
 import io.github.whywood.deepdeep.host.RootBashReadiness
 import io.github.whywood.deepdeep.host.RootHostEnvironment
@@ -121,22 +122,39 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
 
     val hostEnvironmentProvider: AppHostEnvironmentProvider by lazy {
         val sharedStorage = { deps.sharedStorage.value }
+        val rootDirectory: (String) -> File = { cwd ->
+            cwd.takeIf { it.isNotBlank() }?.let(::File) ?: deps.homeDir
+        }
         val prootBash: (String) -> ShellExecutor = { cwd ->
             AppShellExecutor(linuxEnvironmentFor(cwd.ifBlank { null }))
         }
+        val prootStreaming = { cwd: String ->
+            val environment = linuxEnvironmentFor(cwd.ifBlank { null })
+            LinuxStreamingShellExecutor { command, timeoutMillis, onOutputLine ->
+                environment.executeStreaming(command, timeoutMillis, onOutputLine)
+            }
+        }
+        val chrootStreaming = { cwd: String ->
+            val executor = chrootExecutorFor(rootDirectory(cwd))
+            LinuxStreamingShellExecutor { command, timeoutMillis, onOutputLine ->
+                executor.executeStreaming(command, timeoutMillis, onOutputLine)
+            }
+        }
         AppHostEnvironmentProvider(
             accessController = hostAccess,
-            local = LocalHostEnvironment(prootBash = prootBash, sharedStorageEnabled = sharedStorage),
+            local = LocalHostEnvironment(
+                prootBash = prootBash,
+                sharedStorageEnabled = sharedStorage,
+                prootBashStreaming = prootStreaming,
+            ),
             adb = AdbHostEnvironment(
                 prootBash = prootBash,
                 sharedStorageEnabled = sharedStorage,
                 adbShell = adbSystemShell,
+                prootBashStreaming = prootStreaming,
             ),
             root = RootHostEnvironment(
-                chrootBash = { cwd ->
-                    val directory = cwd.takeIf { it.isNotBlank() }?.let(::File) ?: deps.homeDir
-                    AppShellExecutor(chrootExecutorFor(directory))
-                },
+                chrootBash = { cwd -> AppShellExecutor(chrootExecutorFor(rootDirectory(cwd))) },
                 rootFiles = createRootFileSystem(Process.myUid(), Os.getgid()),
                 rootShell = rootSystemShell,
                 sharedStorageEnabled = sharedStorage,
@@ -148,6 +166,7 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
                         RootfsState.Idle -> RootBashReadiness.PREPARING
                     }
                 },
+                chrootStreaming = chrootStreaming,
             ),
         )
     }

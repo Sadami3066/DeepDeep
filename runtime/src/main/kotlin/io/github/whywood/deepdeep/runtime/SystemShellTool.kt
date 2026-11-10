@@ -29,18 +29,23 @@ private val systemShellParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("command")) })
 }
 
-fun systemShellTool(executor: ShellExecutor): CodingTool {
-    val delegate = deepDeepBashTool(executor)
-    return CodingTool(
-        name = "system_shell",
-        description = "Run a command in the Android system shell and return the exit code with merged stdout and stderr. Use it for Android system operations such as pm, cmd, settings, dumpsys, am and getprop; use bash for ordinary Linux work.",
-        parameters = systemShellParameters,
-        label = "system_shell",
-        promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
-        execute = { toolCallId, args, signal, onUpdate ->
-            signal?.throwIfAborted()
+fun systemShellTool(executor: () -> ShellExecutor?): CodingTool = CodingTool(
+    name = "system_shell",
+    description = "Run a command in the Android system shell and return the exit code with merged stdout and stderr. Use it for Android system operations such as pm, cmd, settings, dumpsys, am and getprop; use bash for ordinary Linux work. The tool fails while the active access tier has no system shell (local access).",
+    parameters = systemShellParameters,
+    label = "system_shell",
+    promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
+    execute = { toolCallId, args, signal, onUpdate ->
+        signal?.throwIfAborted()
+        val current = executor()
+        if (current == null) {
+            textResult(
+                "The system shell is not available in the current access tier. Switch to wireless debugging (ADB) or Root access to run Android system commands, or use bash for Linux work.",
+                isError = true,
+            )
+        } else {
             try {
-                delegate.execute(toolCallId, args.shellArguments(), signal, onUpdate)
+                deepDeepBashTool(current).execute(toolCallId, args.shellArguments(), signal, onUpdate)
             } catch (aborted: RequestAbortedException) {
                 throw aborted
             } catch (cancelled: CancellationException) {
@@ -48,9 +53,9 @@ fun systemShellTool(executor: ShellExecutor): CodingTool {
             } catch (error: Exception) {
                 textResult(error.message ?: "system_shell execution failed", isError = true)
             }
-        },
-    )
-}
+        }
+    },
+)
 
 private fun JsonObject.shellArguments(): JsonObject {
     val command = (this["command"] as? JsonPrimitive)?.contentOrNull?.trim().orEmpty()

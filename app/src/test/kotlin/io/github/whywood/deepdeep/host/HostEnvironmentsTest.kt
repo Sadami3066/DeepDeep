@@ -2,6 +2,8 @@ package io.github.whywood.deepdeep.host
 
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.host.HostCapabilities
+import io.github.whywood.deepdeep.runtime.host.StreamingShellExecutor
+import io.github.whywood.deepdeep.runtime.host.StreamingShellResult
 import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
@@ -118,8 +120,56 @@ class HostEnvironmentsTest {
         assertTrue(environment.sharedStorageEnabled)
     }
 
+    @Test
+    fun localAndAdbEnvironmentsExposeStreamingShellOnlyWhenProvided() {
+        val streaming = FakeStreamingShell()
+        val local = LocalHostEnvironment(
+            prootBash = { FakeShell() },
+            sharedStorageEnabled = { false },
+        )
+        assertNull(local.bashStreaming("/tmp"))
+
+        val streamingLocal = LocalHostEnvironment(
+            prootBash = { FakeShell() },
+            sharedStorageEnabled = { false },
+            prootBashStreaming = { streaming },
+        )
+        assertSame(streaming, streamingLocal.bashStreaming("/tmp"))
+
+        val adb = AdbHostEnvironment(
+            prootBash = { FakeShell() },
+            sharedStorageEnabled = { false },
+            adbShell = FakeShell(),
+            prootBashStreaming = { streaming },
+        )
+        assertSame(streaming, adb.bashStreaming("/tmp"))
+    }
+
+    @Test
+    fun rootStreamingRequiresReadyState() {
+        val streaming = FakeStreamingShell()
+        val preparing = rootEnvironment(
+            readiness = { RootBashReadiness.PREPARING },
+            chrootStreaming = { streaming },
+        )
+        val error = assertThrows(HostAccessUnavailableException::class.java) {
+            preparing.bashStreaming("/")
+        }
+        assertEquals("Root Linux is being prepared", error.message)
+
+        val ready = rootEnvironment(
+            readiness = { RootBashReadiness.READY },
+            chrootStreaming = { streaming },
+        )
+        assertSame(streaming, ready.bashStreaming("/"))
+
+        val defaultReady = rootEnvironment(readiness = { RootBashReadiness.READY })
+        assertNull(defaultReady.bashStreaming("/"))
+    }
+
     private fun rootEnvironment(
         readiness: () -> RootBashReadiness,
+        chrootStreaming: (String) -> StreamingShellExecutor? = { null },
     ): RootHostEnvironment {
         val rootShell = FakeShell()
         return RootHostEnvironment(
@@ -128,6 +178,21 @@ class HostEnvironmentsTest {
             rootShell = rootShell,
             sharedStorageEnabled = { true },
             readiness = readiness,
+            chrootStreaming = chrootStreaming,
+        )
+    }
+
+    private class FakeStreamingShell : StreamingShellExecutor {
+        override suspend fun execute(
+            command: String,
+            timeoutMillis: Long,
+            onOutputLine: (String) -> Unit,
+        ): StreamingShellResult = StreamingShellResult(
+            exitCode = 0,
+            output = "",
+            truncated = false,
+            timedOut = false,
+            durationMillis = 0,
         )
     }
 

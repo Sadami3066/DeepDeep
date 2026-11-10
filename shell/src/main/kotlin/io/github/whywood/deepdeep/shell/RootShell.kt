@@ -38,6 +38,13 @@ internal data class RootProcessResult(
 
 internal fun interface RootCommandRunner {
     suspend fun run(command: String, timeoutMillis: Long, stdin: String?): RootProcessResult
+
+    suspend fun run(
+        command: String,
+        timeoutMillis: Long,
+        stdin: String?,
+        onOutputLine: ((String) -> Unit)?,
+    ): RootProcessResult = run(command, timeoutMillis, stdin)
 }
 
 class RootShell internal constructor(
@@ -84,6 +91,14 @@ class RootShell internal constructor(
 
 internal class ProcessRootCommandRunner : RootCommandRunner {
     override suspend fun run(command: String, timeoutMillis: Long, stdin: String?): RootProcessResult =
+        run(command, timeoutMillis, stdin, null)
+
+    override suspend fun run(
+        command: String,
+        timeoutMillis: Long,
+        stdin: String?,
+        onOutputLine: ((String) -> Unit)?,
+    ): RootProcessResult =
         runInterruptible(Dispatchers.IO) {
             val commandPid = File.createTempFile("deepdeep-root-", ".pid")
             val process = startRootProcess(wrapRootCommand(command, timeoutMillis, commandPid))
@@ -91,8 +106,13 @@ internal class ProcessRootCommandRunner : RootCommandRunner {
             val budget = AtomicInteger(MAX_OUTPUT_BYTES + 1)
             val stdout = ByteArrayOutputStream()
             val stderr = ByteArrayOutputStream()
-            val stdoutReader = startReader("root-shell-stdout", process.inputStream, stdout, budget)
-            val stderrReader = startReader("root-shell-stderr", process.errorStream, stderr, budget)
+            val callback = onOutputLine?.let { handler ->
+                val lock = Any()
+                val lineCallback: (String) -> Unit = { line -> synchronized(lock) { handler(line) } }
+                lineCallback
+            }
+            val stdoutReader = startReader("root-shell-stdout", process.inputStream, stdout, budget, callback)
+            val stderrReader = startReader("root-shell-stderr", process.errorStream, stderr, budget, callback)
             runCatching {
                 process.outputStream.use { output ->
                     if (stdin != null) output.write(stdin.toByteArray(Charsets.UTF_8))
@@ -143,7 +163,9 @@ internal class ProcessRootCommandRunner : RootCommandRunner {
         stream: InputStream,
         sink: ByteArrayOutputStream,
         budget: AtomicInteger,
+        onOutputLine: ((String) -> Unit)?,
     ): Thread = Thread({
+        val lines = onOutputLine?.let { LineChunkBuffer() }
         try {
             stream.use { input ->
                 val buffer = ByteArray(READER_BUFFER_BYTES)
@@ -156,9 +178,12 @@ internal class ProcessRootCommandRunner : RootCommandRunner {
                     if (read < 0) break
                     val allowed = reserve(budget, read)
                     if (allowed > 0) sink.write(buffer, 0, allowed)
+                    if (lines != null && onOutputLine != null) lines.accept(buffer, read, onOutputLine)
                 }
             }
         } catch (_: IOException) {
+        } finally {
+            if (lines != null && onOutputLine != null) lines.finish(onOutputLine)
         }
     }, name).apply {
         isDaemon = true

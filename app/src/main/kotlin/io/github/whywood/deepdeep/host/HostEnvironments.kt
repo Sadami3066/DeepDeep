@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.host
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.host.HostEnvironment
+import io.github.whywood.deepdeep.runtime.host.StreamingShellExecutor
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import okio.FileSystem
 
@@ -35,6 +36,7 @@ private val rootPromptLines = listOf(
 class LocalHostEnvironment(
     private val prootBash: (String) -> ShellExecutor,
     sharedStorageEnabled: () -> Boolean,
+    private val prootBashStreaming: (String) -> StreamingShellExecutor? = { null },
 ) : HostEnvironment {
     private val sharedStorage = sharedStorageEnabled
 
@@ -46,12 +48,14 @@ class LocalHostEnvironment(
     override val promptLines = localPromptLines
 
     override fun bash(cwd: String): ShellExecutor = prootBash(cwd)
+    override fun bashStreaming(cwd: String): StreamingShellExecutor? = prootBashStreaming(cwd)
 }
 
 class AdbHostEnvironment(
     private val prootBash: (String) -> ShellExecutor,
     sharedStorageEnabled: () -> Boolean,
     private val adbShell: ShellExecutor,
+    private val prootBashStreaming: (String) -> StreamingShellExecutor? = { null },
 ) : HostEnvironment {
     private val sharedStorage = sharedStorageEnabled
 
@@ -63,6 +67,7 @@ class AdbHostEnvironment(
     override val promptLines = adbPromptLines
 
     override fun bash(cwd: String): ShellExecutor = prootBash(cwd)
+    override fun bashStreaming(cwd: String): StreamingShellExecutor? = prootBashStreaming(cwd)
 }
 
 class RootHostEnvironment(
@@ -71,6 +76,7 @@ class RootHostEnvironment(
     private val rootShell: ShellExecutor,
     sharedStorageEnabled: () -> Boolean,
     private val readiness: () -> RootBashReadiness,
+    private val chrootStreaming: (String) -> StreamingShellExecutor? = { null },
 ) : HostEnvironment {
     private val sharedStorage = sharedStorageEnabled
 
@@ -86,6 +92,11 @@ class RootHostEnvironment(
     override fun bash(cwd: String): ShellExecutor {
         requireReady()
         return chrootBash(cwd)
+    }
+
+    override fun bashStreaming(cwd: String): StreamingShellExecutor? {
+        requireReady()
+        return chrootStreaming(cwd)
     }
 
     override val files: FileSystem

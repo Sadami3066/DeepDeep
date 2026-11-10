@@ -46,7 +46,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `ToolVariants.kt` | 从统一工具派生具名变体并校验参数 |
 | `CommandResult.kt` | 命令结果模型与可带详细输出的执行器 |
 | `DeepDeepBashTool.kt` | bash 工具：执行、截尾、退出码与超时；描述与模式无关，模式与路径布局由系统提示词环境段说明 |
-| `SystemShellTool.kt` | system_shell 工具：Android 系统命令，合并输出与超时/退出码 |
+| `SystemShellTool.kt` | system_shell 工具：Android 系统命令，合并输出与超时/退出码；执行器由 provider 每次调用时解析，当前档位没有系统 Shell 时返回错误提示切换档位 |
 | `RootCommands.kt` | Root 命令结果模型与执行器接口（AdbBootstrap、无障碍注入等共用） |
 | `AskUserQuestionTool.kt` | 结构化提问：1–5 题，等答最多 10 分钟 |
 | `QuestionCenter.kt` | 待答问题的状态流、回答/取消与持久化钩子 |

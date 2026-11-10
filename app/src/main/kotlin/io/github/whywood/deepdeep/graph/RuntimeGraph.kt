@@ -84,9 +84,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
     private fun builtInTools(binding: SessionBinding): List<CodingTool> = buildList {
         add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
-        if (deps.hostAccess.state.value.effective == HostAccess.ADB) {
-            add(systemShellTool(deps.hostEnvironment.current().system!!))
-        }
+        add(systemShellTool { deps.hostEnvironment.current().system })
         add(todoWriteTool(
             sessionId = { binding.current()?.sessionId },
             post = deps.postCustomMessage,
