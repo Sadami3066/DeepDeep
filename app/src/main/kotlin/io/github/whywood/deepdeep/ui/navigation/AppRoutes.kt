@@ -74,7 +74,6 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
 
         is AppDestination.Files -> FilesRoute(
             rootPath = destination.rootPath,
-            chat = host.chat,
             onOpenFile = host.onOpenFile,
             onBack = onBack,
         )

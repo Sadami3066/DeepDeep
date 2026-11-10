@@ -46,6 +46,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `host/HostEnvironment.kt` | 宿主环境契约：`HostCapabilities`（bash 是否可用、系统 shell、Root 文件、屏幕控制、Root Linux 就绪）、`HostEnvironment`（bash/bashStreaming/files/system/promptLines）、`HostEnvironmentProvider`、`HostAccessUnavailableException` |
 | `host/StreamingShell.kt` | 流式 shell 契约：`StreamingShellExecutor` 与结果模型 |
 | `host/DynamicHostAccess.kt` | 执行时解析包装：`DynamicShellExecutor`/`DynamicFileSystem` 每次调用向 `HostEnvironmentProvider` 现查当前环境，避免会话级快照 |
+| `RootFileSystem.kt` | su 支撑的 okio FileSystem：读写、stat、目录操作全经 root runner；列目录时一次 `stat` 批量取回类型与大小并缓存元数据，供文件浏览器等逐项分类 |
 
 `PiSessionEngine` 只依赖 `HostEnvironmentProvider`：会话的工具（bash/文件）与提示词环境段在每次执行/每轮开始时动态解析当前环境，不在建会话时缓存。
 

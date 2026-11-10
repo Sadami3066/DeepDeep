@@ -115,10 +115,57 @@ class RootFileSystemTest {
 
             assertNull(rootFs.listOrNull(dir / "missing"))
             assertTrue(rootFs.listOrNull(nested)!!.isEmpty())
-            assertTrue(commands.any { it.startsWith("ls -1A -- ") })
+            assertTrue(commands.any { it.startsWith("stat -c ") && it.contains("-- ") })
         } finally {
             cleanup(dir)
         }
+    }
+
+    @Test
+    fun listCachesEntryMetadataWithoutExtraRootCommands() {
+        val commands = mutableListOf<String>()
+        val rootFs = RootFileSystem(RootFileRunner { command ->
+            commands += command
+            ProcessBuilder("sh", "-c", command).start()
+        })
+        val dir = tempDir()
+        try {
+            rootFs.createDirectories(dir / "sub")
+            rootFs.write(dir / "a.txt") { writeUtf8("abc") }
+
+            val entries = rootFs.list(dir)
+            assertEquals(2, entries.size)
+
+            commands.clear()
+            val file = entries.first { it.name == "a.txt" }
+            val sub = entries.first { it.name == "sub" }
+            assertFalse(rootFs.metadataOrNull(file)!!.isDirectory)
+            assertEquals(3L, rootFs.metadataOrNull(file)!!.size)
+            assertTrue(rootFs.metadataOrNull(sub)!!.isDirectory)
+            assertTrue(commands.isEmpty())
+        } finally {
+            cleanup(dir)
+        }
+    }
+
+    @Test
+    fun listNormalizesDoubleSlashNamesWhenCachingMetadata() {
+        val commands = mutableListOf<String>()
+        val rootFs = RootFileSystem(RootFileRunner { command ->
+            commands += command
+            FakeProcess(
+                stdout = ByteArrayInputStream("directory|0|//data\nregular file|3|//data/file.txt\n".toByteArray()),
+                stderr = ByteArrayInputStream(ByteArray(0)),
+                exitCode = 0,
+            )
+        })
+        val entries = rootFs.list("/".toPath())
+        assertEquals(listOf("/data", "/data/file.txt"), entries.map { it.toString() })
+
+        commands.clear()
+        assertTrue(rootFs.metadataOrNull("/data".toPath())!!.isDirectory)
+        assertEquals(3L, rootFs.metadataOrNull("/data/file.txt".toPath())!!.size)
+        assertTrue(commands.isEmpty())
     }
 
     @Test
@@ -138,7 +185,7 @@ class RootFileSystemTest {
             val expected = setOf(dir / "top.txt", dir / "a", nested, nested / "file.txt")
             assertEquals(expected.map { it.toString() }.toSet(), rootFs.listRecursively(dir).map { it.toString() }.toSet())
             assertFalse(rootFs.listRecursively(dir).map { it.toString() }.contains(dir.toString()))
-            assertTrue(commands.any { it.startsWith("ls -1A -- ") })
+            assertTrue(commands.any { it.startsWith("stat -c ") && it.contains("-- ") })
 
             val walked = rootFs.listRecursively(dir, followSymlinks = true).map { it.toString() }.toSet()
             assertTrue(walked.containsAll(expected.map { it.toString() }))

@@ -50,7 +50,10 @@ internal class RootFileSystem(
     private val appGid: Int = -1,
 ) : ForwardingFileSystem(FileSystem.SYSTEM) {
 
+    private val listed = java.util.concurrent.ConcurrentHashMap<String, FileMetadata>()
+
     override fun metadataOrNull(path: Path): FileMetadata? {
+        listed[path.toString()]?.let { return it }
         val quoted = quote(path)
         val result = run("stat -c '%F|%s' -- $quoted")
         if (result.exitCode != 0) return null
@@ -96,6 +99,20 @@ internal class RootFileSystem(
                 extras = emptyMap(),
             )
         }
+    }
+
+    private fun listedMetadata(type: String, size: Long?): FileMetadata {
+        val directory = type == "directory"
+        return FileMetadata(
+            isRegularFile = !directory && !type.contains("link"),
+            isDirectory = directory,
+            symlinkTarget = null,
+            size = if (directory || type.contains("link")) null else size,
+            createdAtMillis = null,
+            lastModifiedAtMillis = null,
+            lastAccessedAtMillis = null,
+            extras = emptyMap(),
+        )
     }
 
     override fun canonicalize(path: Path): Path {
@@ -173,12 +190,22 @@ internal class RootFileSystem(
     }
 
     override fun list(dir: Path): List<Path> {
-        val result = run("ls -1A -- ${quote(dir)}")
-        if (result.exitCode != 0) throw IOException("root list failed: ${result.stderr.trim()}")
-        return result.stdout.lineSequence()
-            .filter { it.isNotBlank() }
-            .map { dir / it }
-            .toList()
+        val quoted = quote(dir)
+        val result = run("stat -c '%F|%s|%n' -- $quoted/* $quoted/.[!.]* $quoted/..?* 2>/dev/null")
+        val lines = result.stdout.lineSequence().filter { it.isNotBlank() }.toList()
+        if (lines.isEmpty()) {
+            if (result.exitCode != 0 && metadataOrNull(dir)?.isDirectory != true) {
+                throw IOException("root list failed: ${result.stderr.trim()}")
+            }
+            return emptyList()
+        }
+        return lines.mapNotNull { line ->
+            val parts = line.split('|', limit = 3)
+            val raw = parts.getOrNull(2) ?: return@mapNotNull null
+            val path = raw.toPath()
+            listed[path.toString()] = listedMetadata(parts[0], parts[1].trim().toLongOrNull())
+            path
+        }
     }
 
     override fun listOrNull(dir: Path): List<Path>? = runCatching { list(dir) }.getOrNull()
@@ -268,6 +295,7 @@ internal class RootFileSystem(
     private data class Result(val exitCode: Int, val stdout: String, val stderr: String)
 
     private fun run(command: String): Result {
+        listed.clear()
         val process = runner.start(command)
         val stdout = ByteArrayOutputStream()
         val stderr = ByteArrayOutputStream()
