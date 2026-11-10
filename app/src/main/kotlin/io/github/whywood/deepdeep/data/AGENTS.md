@@ -27,6 +27,7 @@
 | `MarketPresets.kt` | 技能/连接器/插件的市场本地预设（名称/说明/标签/类型）与纯函数 `filterMarketPresets` |
 | `OnboardingPreferences.kt` | 新手引导开始/完成标记（SharedPreferences） |
 | `OverlayEntryPreferences.kt` | 助手浮层入口方式（语音/拍照/无）DataStore |
+| `PluginPackageIntake.kt` | 判定外部传入文件是否为 `.ddp` 插件包（自定义 MIME 或文件名后缀，忽略大小写） |
 | `PersonalizationStore.kt` | 昵称、交互风格、语气与附加指令 DataStore |
 | `ProfileAvatarStore.kt` | 头像裁成 512 方图存 files/profile，revision 通知刷新 |
 | [remote/](remote/AGENTS.md) | 远程连接：电脑与入口模型、配对链接解析、加密凭据、证书固定、网关请求与连接协调（详见子包文档） |

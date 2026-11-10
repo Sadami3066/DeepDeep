@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.plugins
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -88,6 +89,8 @@ internal fun PluginsScreen(
     onOpenPluginPage: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     pluginsRoot: File? = null,
+    pendingImportUri: String? = null,
+    onPendingImportHandled: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -114,6 +117,26 @@ internal fun PluginsScreen(
             trustPublisher = false
             importError = null
         }
+    }
+
+    val unreadableMessage = stringResource(R.string.plugins_import_unreadable)
+    val invalidMessage = stringResource(R.string.plugins_import_invalid)
+    LaunchedEffect(pendingImportUri) {
+        val uri = pendingImportUri?.let(Uri::parse) ?: return@LaunchedEffect
+        val file = withContext(Dispatchers.IO) { copyToCache(context, uri) }
+        if (file == null) {
+            Toast.makeText(context, unreadableMessage, Toast.LENGTH_SHORT).show()
+        } else {
+            val inspected = holder.inspectExternal(file)
+            if (inspected == null) {
+                Toast.makeText(context, invalidMessage, Toast.LENGTH_SHORT).show()
+            } else {
+                inspection = inspected
+                trustPublisher = false
+                importError = null
+            }
+        }
+        onPendingImportHandled()
     }
 
     LaunchedEffect(Unit) { holder.load() }

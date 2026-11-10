@@ -35,11 +35,19 @@ import io.github.whywood.deepdeep.ui.plugins.PluginPageHost
 import io.github.whywood.deepdeep.ui.plugins.PluginsScreen
 
 @Composable
-internal fun PluginsRoute(dependencies: AppDependencies, navigator: AppNavigator, onBack: () -> Unit) {
+internal fun PluginsRoute(
+    dependencies: AppDependencies,
+    navigator: AppNavigator,
+    onBack: () -> Unit,
+    pendingImportUri: String? = null,
+    onPendingImportHandled: () -> Unit = {},
+) {
     PluginsScreen(
         manager = dependencies.pluginManager,
         marketRepository = dependencies.marketRepository,
         onBack = onBack,
+        pendingImportUri = pendingImportUri,
+        onPendingImportHandled = onPendingImportHandled,
         onOpenPluginPage = { pluginId, pageId ->
             navigator.push(AppDestination.PluginPage(pluginId, pageId))
         },

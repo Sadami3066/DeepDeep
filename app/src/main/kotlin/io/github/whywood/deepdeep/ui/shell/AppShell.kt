@@ -98,11 +98,14 @@ internal fun AppShell(
     onDeepDestinationConsumed: () -> Unit = {},
     pendingShare: SharePayload? = null,
     onShareConsumed: () -> Unit = {},
+    pendingPluginImportUri: String? = null,
+    onPluginImportConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemePresetChange: (ThemePreset) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val overlays = rememberSaveable(saver = AppOverlaysState.Saver) { AppOverlaysState() }
+    var pluginImportUri by remember { mutableStateOf<String?>(null) }
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
     val sessionMissingMessage = stringResource(R.string.chat_error_session_missing)
     val shareImportTimeoutMessage = stringResource(R.string.chat_share_import_timeout)
@@ -231,6 +234,7 @@ internal fun AppShell(
         openSessionId = openSessionId,
         pendingShare = pendingShare,
         pendingDeepDestination = pendingDeepDestination,
+        pendingPluginImportUri = pendingPluginImportUri,
         chat = intakeChat,
         chatSnapshot = {
             val latest = chatViewModel.state.value
@@ -257,6 +261,12 @@ internal fun AppShell(
                 navigator.reset(AppDestination.Chat)
                 deepLinkStack(destination).forEach(navigator::push)
                 onDeepDestinationConsumed()
+            },
+            onPluginImport = { uri ->
+                drawerOpen = false
+                navigator.push(AppDestination.Plugins)
+                pluginImportUri = uri
+                onPluginImportConsumed()
             },
             onShareStaged = { payload ->
                 val staged = withContext(Dispatchers.IO) { graph.shareStaging.stage(payload.streams) }
@@ -594,6 +604,8 @@ internal fun AppShell(
                     onOpenMiniappCreate = ::openMiniappCreate,
                     onOpenFile = openWorkspaceFile,
                     onOpenAssistantSettings = { navigator.push(AppDestination.AssistantSettings) },
+                    pluginImportUri = pluginImportUri,
+                    onPluginImportHandled = { pluginImportUri = null },
                 ),
             )
         }

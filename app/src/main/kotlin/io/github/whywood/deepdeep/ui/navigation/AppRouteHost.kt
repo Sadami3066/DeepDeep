@@ -41,6 +41,8 @@ internal class AppRouteHost(
     val onOpenMiniappCreate: () -> Unit,
     val onOpenFile: (String) -> Unit,
     val onOpenAssistantSettings: () -> Unit,
+    val pluginImportUri: String? = null,
+    val onPluginImportHandled: () -> Unit = {},
 ) {
     fun back() {
         navigator.pop()

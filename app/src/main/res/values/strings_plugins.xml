@@ -56,6 +56,8 @@
     <string name="plugins_error_busy">另一个插件操作正在进行</string>
     <string name="plugins_error_unknown">插件不存在或已被移除</string>
 
+    <string name="plugins_import_unreadable">无法读取插件包</string>
+    <string name="plugins_import_invalid">不是有效的插件包</string>
     <string name="plugins_import_title">导入插件</string>
     <string name="plugins_import_version">版本</string>
     <string name="plugins_import_size">大小</string>

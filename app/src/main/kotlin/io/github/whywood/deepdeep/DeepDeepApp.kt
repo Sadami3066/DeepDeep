@@ -27,6 +27,8 @@ internal fun DeepDeepApp(
     onDeepDestinationConsumed: () -> Unit = {},
     pendingShare: SharePayload? = null,
     onShareConsumed: () -> Unit = {},
+    pendingPluginImportUri: String? = null,
+    onPluginImportConsumed: () -> Unit = {},
     onActiveSessionChanged: (String?) -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
     onThemePresetChange: (ThemePreset) -> Unit,
@@ -58,6 +60,8 @@ internal fun DeepDeepApp(
             onDeepDestinationConsumed = onDeepDestinationConsumed,
             pendingShare = pendingShare,
             onShareConsumed = onShareConsumed,
+            pendingPluginImportUri = pendingPluginImportUri,
+            onPluginImportConsumed = onPluginImportConsumed,
             onFontStyleChange = onFontStyleChange,
             onThemePresetChange = onThemePresetChange,
         )

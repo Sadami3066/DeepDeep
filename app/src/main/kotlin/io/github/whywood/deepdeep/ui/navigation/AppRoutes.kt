@@ -145,7 +145,13 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             onReconnect = { server -> dependencies.host.reconnectMcp(server) },
         )
 
-        AppDestination.Plugins -> PluginsRoute(dependencies, host.navigator, onBack)
+        AppDestination.Plugins -> PluginsRoute(
+            dependencies = dependencies,
+            navigator = host.navigator,
+            onBack = onBack,
+            pendingImportUri = host.pluginImportUri,
+            onPendingImportHandled = host.onPluginImportHandled,
+        )
 
         is AppDestination.PluginPage -> PluginPageRoute(
             destination = destination,

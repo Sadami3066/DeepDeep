@@ -45,6 +45,7 @@ data class ShellIntakeChatState(
 data class ShellIntakeActions(
     val onOpenSession: (String) -> Unit, val onSessionMissing: () -> Unit,
     val onRefreshSessions: () -> Unit, val onApplyDeepLink: (AppDestination) -> Unit,
+    val onPluginImport: (String) -> Unit,
     val onShareStaged: suspend (SharePayload) -> Unit, val onShareTimeout: () -> Unit,
 )
 
@@ -110,6 +111,7 @@ internal fun ShellIntakeHost(
     openSessionId: String?,
     pendingShare: SharePayload?,
     pendingDeepDestination: AppDestination?,
+    pendingPluginImportUri: String?,
     chat: ShellIntakeChatState,
     chatSnapshot: () -> ShellIntakeChatState,
     actions: ShellIntakeActions,
@@ -167,6 +169,10 @@ internal fun ShellIntakeHost(
             DeepLinkIntake.Idle, DeepLinkIntake.WaitingForReady -> Unit
             is DeepLinkIntake.Apply -> actions.onApplyDeepLink(intake.destination)
         }
+    }
+
+    LaunchedEffect(pendingPluginImportUri) {
+        pendingPluginImportUri?.let(actions.onPluginImport)
     }
 }
 

@@ -52,7 +52,7 @@ cp -R template my-plugin
 
 产物文件名由模块名决定：`<module>/build/plugin/<module>.ddp`。模块只编 `debug` 变体，`release` 不开 minify；`.ddp` 由 debug APK 重打包而来。
 
-安装：把 `.ddp` 传到手机，插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
+安装：把 `.ddp` 传到手机，可以直接在文件管理器里用 DeepDeep 打开、把文件分享给 DeepDeep，或在插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
 
 真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-e2e.sh` 用插件工程的 `sample/` 跑安装→启用→工具→停用→卸载；`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
 

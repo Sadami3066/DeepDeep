@@ -56,6 +56,8 @@
     <string name="plugins_error_busy">Another plugin operation is running</string>
     <string name="plugins_error_unknown">Plugin does not exist or was removed</string>
 
+    <string name="plugins_import_unreadable">Could not read the plugin package</string>
+    <string name="plugins_import_invalid">Not a valid plugin package</string>
     <string name="plugins_import_title">Import plugin</string>
     <string name="plugins_import_version">Version</string>
     <string name="plugins_import_size">Size</string>

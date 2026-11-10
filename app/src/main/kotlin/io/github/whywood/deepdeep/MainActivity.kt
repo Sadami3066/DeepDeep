@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.OpenableColumns
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -23,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OnboardingPreferences
+import io.github.whywood.deepdeep.data.PluginPackageIntake
 import io.github.whywood.deepdeep.data.MAX_SHARE_STREAMS
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.parseSharePayload
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
     private val pendingSessionId = mutableStateOf<String?>(null)
     private val pendingDeepDestination = mutableStateOf<AppDestination?>(null)
     private val pendingShare = mutableStateOf<SharePayload?>(null)
+    private val pendingPluginImportUri = mutableStateOf<String?>(null)
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguagePreferences.wrap(newBase))
@@ -76,6 +79,8 @@ class MainActivity : ComponentActivity() {
                         onDeepDestinationConsumed = { pendingDeepDestination.value = null },
                         pendingShare = pendingShare.value,
                         onShareConsumed = { pendingShare.value = null },
+                        pendingPluginImportUri = pendingPluginImportUri.value,
+                        onPluginImportConsumed = { pendingPluginImportUri.value = null },
                         onActiveSessionChanged = { graph.activeSessionId.value = it },
                         onFontStyleChange = { style ->
                             graph.fontPreferences.save(style)
@@ -102,6 +107,7 @@ class MainActivity : ComponentActivity() {
             outState.putString(EXTRA_SHARE_TEXT, payload.text)
             outState.putString(EXTRA_SHARE_TITLE, payload.title)
         }
+        pendingPluginImportUri.value?.let { outState.putString(EXTRA_PLUGIN_IMPORT_URI, it) }
     }
 
     override fun onStart() {
@@ -124,7 +130,20 @@ class MainActivity : ComponentActivity() {
             when (val link = DeepLink.parse(intent.dataString.orEmpty())) {
                 is DeepLink.Session -> pendingSessionId.value = link.sessionId
                 is DeepLink.Page -> pendingDeepDestination.value = link.destination
-                null -> Unit
+                null -> {
+                    val data = intent.data
+                    if (data != null) {
+                        if (isPluginPackage(data, intent.type)) {
+                            pendingPluginImportUri.value = data.toString()
+                        } else {
+                            pendingShare.value = parseSharePayload(
+                                action = Intent.ACTION_VIEW,
+                                type = intent.type,
+                                streamUris = listOf(data.toString()),
+                            )
+                        }
+                    }
+                }
             }
             return
         }
@@ -152,6 +171,14 @@ class MainActivity : ComponentActivity() {
         if (streams.size + clipStreams.size > MAX_SHARE_STREAMS) {
             Toast.makeText(this, R.string.share_error_too_many, Toast.LENGTH_SHORT).show()
         }
+        val intakeUris = streams + clipStreams
+        if (intakeUris.size == 1) {
+            val single = Uri.parse(intakeUris.first())
+            if (isPluginPackage(single, intent.type)) {
+                pendingPluginImportUri.value = single.toString()
+                return
+            }
+        }
         val payload = parseSharePayload(
             action = action,
             type = intent.type,
@@ -168,6 +195,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun restoreIntake(savedInstanceState: Bundle) {
+        savedInstanceState.getString(EXTRA_PLUGIN_IMPORT_URI)?.let { pendingPluginImportUri.value = it }
         val streams = savedInstanceState.getStringArrayList(EXTRA_SHARE_STREAMS).orEmpty()
         val text = savedInstanceState.getString(EXTRA_SHARE_TEXT).orEmpty()
         val title = savedInstanceState.getString(EXTRA_SHARE_TITLE).orEmpty()
@@ -180,6 +208,15 @@ class MainActivity : ComponentActivity() {
         )
         if (!payload.isEmpty) pendingShare.value = payload
     }
+
+    private fun isPluginPackage(uri: Uri, mimeType: String?): Boolean =
+        PluginPackageIntake.isPluginPackage(resolveDisplayName(uri), mimeType)
+
+    private fun resolveDisplayName(uri: Uri): String? = runCatching {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getString(0) else null
+        }
+    }.getOrNull() ?: uri.lastPathSegment
 
     private fun startAgentService() {
         AgentService.start(this)
@@ -200,5 +237,6 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SHARE_STREAMS = "io.github.whywood.deepdeep.extra.SHARE_STREAMS"
         const val EXTRA_SHARE_TEXT = "io.github.whywood.deepdeep.extra.SHARE_TEXT"
         const val EXTRA_SHARE_TITLE = "io.github.whywood.deepdeep.extra.SHARE_TITLE"
+        const val EXTRA_PLUGIN_IMPORT_URI = "io.github.whywood.deepdeep.extra.PLUGIN_IMPORT_URI"
     }
 }
