@@ -85,11 +85,61 @@ internal sealed interface MarkdownImageState {
     data object Failed : MarkdownImageState
 }
 
+private sealed interface MarkdownAnimatedFile {
+    data object Loading : MarkdownAnimatedFile
+    data object Failed : MarkdownAnimatedFile
+    data class Ready(val file: File) : MarkdownAnimatedFile
+}
+
+internal suspend fun readableMarkdownLocalFile(
+    localFile: File?,
+    isHostFile: (File) -> Boolean,
+    canRead: (File) -> Boolean,
+    stage: suspend (File) -> File?,
+): File? {
+    if (localFile == null || !isHostFile(localFile)) return null
+    return if (canRead(localFile)) localFile else stage(localFile)
+}
+
 @Composable
 internal fun MarkdownImage(alt: String, source: String, title: String?, colors: DeepDeepColors) {
-    val animated = remember(source) { animatedImageFile(source) }
-    if (animated != null) {
-        AnimatedMarkdownImage(file = animated, alt = alt, title = title, colors = colors)
+    val hostFiles = LocalHostFiles.current
+    val localFile = remember(source) { markdownLocalFile(source) }
+    if (localFile != null && isAnimatedImageName(localFile.name)) {
+        val shape = DdShapes.Medium
+        val animatedFile by produceState<MarkdownAnimatedFile>(
+            initialValue = MarkdownAnimatedFile.Loading,
+            key1 = source,
+            key2 = hostFiles,
+        ) {
+            value = withContext(Dispatchers.IO) {
+                val readable = readableMarkdownLocalFile(
+                    localFile = localFile,
+                    isHostFile = hostFiles::isFile,
+                    canRead = File::canRead,
+                    stage = { file -> hostFiles.stage(file, file.name) },
+                )
+                readable?.let(MarkdownAnimatedFile::Ready) ?: MarkdownAnimatedFile.Failed
+            }
+        }
+        when (val current = animatedFile) {
+            MarkdownAnimatedFile.Loading -> Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp)
+                    .clip(shape)
+                    .background(colors.wash),
+            )
+
+            MarkdownAnimatedFile.Failed -> ImageFailure(alt, title, colors)
+
+            is MarkdownAnimatedFile.Ready -> AnimatedMarkdownImage(
+                file = current.file,
+                alt = alt,
+                title = title,
+                colors = colors,
+            )
+        }
         return
     }
     val context = LocalContext.current
@@ -102,20 +152,20 @@ internal fun MarkdownImage(alt: String, source: String, title: String?, colors: 
             with(density) { 360.dp.roundToPx() }
         }
         val targetWidthPx = (widthPx * 2).coerceAtLeast(1)
-        val hostFiles = LocalHostFiles.current
         val localResult by produceState<Pair<File?, Boolean>>(
             initialValue = null to false,
             key1 = source,
             key2 = targetWidthPx,
+            key3 = hostFiles,
         ) {
-            val local = markdownLocalFile(source)
-            value = if (local == null) {
-                null to false
-            } else {
-                val readable = withContext(Dispatchers.IO) {
-                    if (local.canRead()) local else hostFiles.stage(local, local.name)
-                }
-                readable to true
+            value = withContext(Dispatchers.IO) {
+                val readable = readableMarkdownLocalFile(
+                    localFile = localFile,
+                    isHostFile = hostFiles::isFile,
+                    canRead = File::canRead,
+                    stage = { file -> hostFiles.stage(file, file.name) },
+                )
+                readable to (localFile != null)
             }
         }
         val state by produceState<MarkdownImageState>(

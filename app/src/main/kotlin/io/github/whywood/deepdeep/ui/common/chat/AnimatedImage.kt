@@ -27,9 +27,11 @@ internal fun animatedImageFile(source: String): File? {
         else -> File(source)
     } ?: return null
     if (!file.isFile) return null
-    val extension = file.name.substringAfterLast('.', "").lowercase(Locale.US)
-    return file.takeIf { extension in ANIMATED_IMAGE_EXTENSIONS }
+    return file.takeIf { isAnimatedImageName(it.name) }
 }
+
+internal fun isAnimatedImageName(name: String): Boolean =
+    name.substringAfterLast('.', "").lowercase(Locale.US) in ANIMATED_IMAGE_EXTENSIONS
 
 internal fun imageBounds(file: File): Pair<Int, Int>? {
     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
