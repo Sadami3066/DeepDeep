@@ -27,8 +27,15 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("ln -s /storage/emulated/0"))
         assertTrue(script.contains("\$TMP/data"))
         assertTrue(script.contains("\$TMP/vendor"))
+        assertTrue(script.contains("\$TMP/proc"))
+        assertTrue(script.contains("\$TMP/sys"))
+        assertTrue(script.contains("\$TMP/dev"))
         assertTrue(script.contains(".deepdeep-empty"))
         assertTrue(script.contains("cp \"\$RUN_SCRIPT\" \"\$LINUX/run.sh\""))
+
+        val probe = "/system/bin/chroot \"\$ROOT\" /bin/bash -c 'echo DEEPDEEP_PROBE_OK' >/dev/null 2>&1"
+        assertTrue(script.contains(probe))
+        assertTrue(script.indexOf(probe) < script.indexOf("echo DEEPDEEP_ALREADY"))
     }
 
     @Test
@@ -56,6 +63,9 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("DEEPDEEP_CWD=\"\$1\""))
         assertTrue(script.contains("mkdir -p \"\$ROOT\$1\""))
         assertTrue(script.contains("mount --rbind \"\$1\" \"\$ROOT\$1\""))
+        assertTrue(script.contains("\$ROOT/proc"))
+        assertTrue(script.contains("\$ROOT/sys"))
+        assertTrue(script.contains("\$ROOT/dev"))
         assertFalse(script.contains("/work"))
     }
 
@@ -70,6 +80,27 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("CST-8"))
         assertTrue(script.contains("/usr/share/zoneinfo/"))
         assertTrue(script.contains("cd -- \"\${DEEPDEEP_CWD:-/}\""))
+    }
+
+    @Test
+    fun failedReasonSurvivesRestart() {
+        val dir = kotlin.io.path.createTempDirectory("rootfs-failed-status").toFile()
+        try {
+            val statusFile = File(dir, "state")
+            statusFile.writeText("failed:busybox not found")
+            val bootstrap = RootfsBootstrap(
+                appRootfsDir = File(dir, "app-rootfs"),
+                statusFile = statusFile,
+                scratchDir = File(dir, "scratch"),
+                linuxDir = File(dir, "linux"),
+                runner = RootCommandRunner { _, _, _ -> RootProcessResult(0, "", "", false, true) },
+                ioDispatcher = Dispatchers.Unconfined,
+            )
+
+            assertEquals(RootfsState.Failed("busybox not found"), bootstrap.cachedStatus().state)
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test

@@ -1,13 +1,12 @@
 package io.github.whywood.deepdeep.host
 
 import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccessUnavailableException
 import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.host.HostEnvironment
 import io.github.whywood.deepdeep.runtime.host.StreamingShellExecutor
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import okio.FileSystem
-
-class HostAccessUnavailableException(message: String) : IllegalStateException(message)
 
 enum class RootBashReadiness {
     PREPARING,
@@ -64,7 +63,7 @@ class AdbHostEnvironment(
 
     override val access = HostAccess.ADB
     override val capabilities: HostCapabilities
-        get() = HostCapabilities(hasSystemShell = true, bashAvailable = bashAvailable())
+        get() = HostCapabilities(hasSystemShell = true, bashAvailable = bashAvailable(), hasScreenControl = true)
     override val sharedStorageEnabled: Boolean get() = sharedStorage()
     override val files: FileSystem = FileSystem.SYSTEM
     override val system: ShellExecutor = adbShell
@@ -86,12 +85,17 @@ class RootHostEnvironment(
 
     override val access = HostAccess.ROOT
     override val capabilities: HostCapabilities
-        get() = HostCapabilities(
-            isRoot = true,
-            hasSystemShell = true,
-            canReadSystemData = true,
-            bashAvailable = readiness() == RootBashReadiness.READY,
-        )
+        get() {
+            val ready = readiness() == RootBashReadiness.READY
+            return HostCapabilities(
+                isRoot = true,
+                hasSystemShell = true,
+                canReadSystemData = true,
+                bashAvailable = ready,
+                hasScreenControl = true,
+                rootLinuxReady = ready,
+            )
+        }
     override val sharedStorageEnabled: Boolean get() = sharedStorage()
     override val promptLines = rootPromptLines
 

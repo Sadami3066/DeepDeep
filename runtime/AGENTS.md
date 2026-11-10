@@ -43,7 +43,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | 文件 | 职责 |
 |---|---|
 | `host/HostAccess.kt` | 系统访问档位契约：`HostAccess`（LOCAL/ADB/ROOT）、`HostAccessState`、只降级不自动升级的 `resolveHostAccess` 与 `HostAccessController` |
-| `host/HostEnvironment.kt` | 宿主环境契约：`HostCapabilities`（含 bash 是否可用）、`HostEnvironment`（bash/bashStreaming/files/system/promptLines）、`HostEnvironmentProvider` |
+| `host/HostEnvironment.kt` | 宿主环境契约：`HostCapabilities`（bash 是否可用、系统 shell、Root 文件、屏幕控制、Root Linux 就绪）、`HostEnvironment`（bash/bashStreaming/files/system/promptLines）、`HostEnvironmentProvider`、`HostAccessUnavailableException` |
 | `host/StreamingShell.kt` | 流式 shell 契约：`StreamingShellExecutor` 与结果模型 |
 | `host/DynamicHostAccess.kt` | 执行时解析包装：`DynamicShellExecutor`/`DynamicFileSystem` 每次调用向 `HostEnvironmentProvider` 现查当前环境，避免会话级快照 |
 

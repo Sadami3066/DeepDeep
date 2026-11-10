@@ -2,6 +2,8 @@ package io.github.whywood.deepdeep.data
 
 import androidx.annotation.StringRes
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.runtime.host.HostAccessUnavailableException
+import io.github.whywood.deepdeep.runtime.host.HostEnvironment
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import java.util.concurrent.atomic.AtomicBoolean
@@ -59,18 +61,23 @@ class DevPackageManager(
 
     fun refresh() {
         if (running.get()) return
-        if (!ready()) {
-            _state.update { it.copy(installed = emptySet(), checking = false) }
+        val environment = environmentOrNull()
+        if (environment == null || !ready()) {
+            _state.update { it.copy(checking = false) }
             return
         }
         running.set(true)
         _state.update { it.copy(checking = true, error = null) }
         scope.launch {
             try {
-                val installed = queryInstalled()
+                val installed = queryInstalled(environment)
                 _state.update { it.copy(installed = installed, checking = false) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (unavailable: HostAccessUnavailableException) {
+                _state.update {
+                    it.copy(checking = false, error = strings.text(R.string.dev_error_linux_missing))
+                }
             } catch (error: Exception) {
                 _state.update {
                     it.copy(
@@ -107,7 +114,8 @@ class DevPackageManager(
     fun uninstallPackage(packageId: String) {
         val packageInfo = DevPackageCatalog.packageById(packageId) ?: return
         if (running.get()) return
-        if (!ready()) {
+        val environment = environmentOrNull()
+        if (environment == null || !ready()) {
             _state.update { it.copy(error = strings.text(R.string.dev_error_linux_missing)) }
             return
         }
@@ -120,14 +128,16 @@ class DevPackageManager(
                 )
             }
             try {
-                val result = execute("apk del $packageId", TIMEOUT_UNINSTALL_SECONDS)
+                val result = execute(environment, "apk del $packageId", TIMEOUT_UNINSTALL_SECONDS)
                 if (result.exitCode != 0) {
                     _state.update { it.copy(error = failureMessage(result)) }
                 } else {
-                    _state.update { it.copy(installed = queryInstalled()) }
+                    _state.update { it.copy(installed = queryInstalled(environment)) }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (unavailable: HostAccessUnavailableException) {
+                _state.update { it.copy(error = strings.text(R.string.dev_error_linux_missing)) }
             } catch (error: Exception) {
                 _state.update { it.copy(error = error.message ?: error.javaClass.simpleName) }
             } finally {
@@ -154,7 +164,8 @@ class DevPackageManager(
             _state.update { it.copy(error = strings.text(R.string.dev_error_busy)) }
             return
         }
-        if (!ready()) {
+        val environment = environmentOrNull()
+        if (environment == null || !ready()) {
             _state.update { it.copy(error = strings.text(R.string.dev_error_linux_missing)) }
             return
         }
@@ -175,19 +186,19 @@ class DevPackageManager(
                     val stage = strings.text(R.string.dev_stage_mirror)
                     _state.update { it.copy(operation = it.operation?.copy(stage = stage)) }
                     notifier.notifyInstall(label, stage, null)
-                    val mirror = execute(writeRepositoriesCommand(mirrorUrls), TIMEOUT_UPDATE_SECONDS)
+                    val mirror = execute(environment, writeRepositoriesCommand(mirrorUrls), TIMEOUT_UPDATE_SECONDS)
                     if (mirror.exitCode != 0) throw IllegalStateException(failureMessage(mirror))
                 }
                 val updateStage = strings.text(R.string.dev_stage_updating)
                 _state.update { it.copy(operation = it.operation?.copy(stage = updateStage)) }
                 notifier.notifyInstall(label, updateStage, null)
-                val update = execute("apk update", TIMEOUT_UPDATE_SECONDS)
+                val update = execute(environment, "apk update", TIMEOUT_UPDATE_SECONDS)
                 if (update.exitCode != 0) throw IllegalStateException(failureMessage(update))
                 if (ids.isNotEmpty()) {
                     val stage = strings.text(R.string.dev_stage_installing)
                     _state.update { it.copy(operation = it.operation?.copy(stage = stage)) }
                     notifier.notifyInstall(label, stage, null)
-                    val result = execute("apk add ${ids.joinToString(" ")}", TIMEOUT_INSTALL_SECONDS)
+                    val result = execute(environment, "apk add ${ids.joinToString(" ")}", TIMEOUT_INSTALL_SECONDS)
                     if (result.exitCode != 0) throw IllegalStateException(failureMessage(result))
                 }
                 downloads.forEachIndexed { index, download ->
@@ -201,21 +212,25 @@ class DevPackageManager(
                         it.copy(operation = it.operation?.copy(stage = stage, progress = progress))
                     }
                     notifier.notifyInstall(label, stage, progress)
-                    val downloadResult = execute(download.installCommand(), TIMEOUT_DOWNLOAD_SECONDS)
+                    val downloadResult = execute(environment, download.installCommand(), TIMEOUT_DOWNLOAD_SECONDS)
                     if (downloadResult.exitCode != 0) throw IllegalStateException(failureMessage(downloadResult))
                 }
                 if (!postInstall.isNullOrBlank()) {
                     val stage = strings.text(R.string.dev_stage_python)
                     _state.update { it.copy(operation = it.operation?.copy(stage = stage, progress = null)) }
                     notifier.notifyInstall(label, stage, null)
-                    val post = execute(postInstall, TIMEOUT_POST_SECONDS)
+                    val post = execute(environment, postInstall, TIMEOUT_POST_SECONDS)
                     if (post.exitCode != 0) throw IllegalStateException(failureMessage(post))
                 }
-                val installed = queryInstalled()
+                val installed = queryInstalled(environment)
                 _state.update { it.copy(installed = installed, operation = null) }
                 notifier.notifyInstallFinished(label, success = true)
             } catch (cancelled: CancellationException) {
                 throw cancelled
+            } catch (unavailable: HostAccessUnavailableException) {
+                val message = strings.text(R.string.dev_error_linux_missing)
+                _state.update { it.copy(error = message, operation = null) }
+                notifier.notifyInstallFinished(label, success = false, error = message)
             } catch (error: Exception) {
                 val message = error.message ?: error.javaClass.simpleName
                 _state.update { it.copy(error = message, operation = null) }
@@ -226,10 +241,10 @@ class DevPackageManager(
         }
     }
 
-    private suspend fun queryInstalled(): Set<String> {
+    private suspend fun queryInstalled(environment: HostEnvironment): Set<String> {
         val names = DevPackageCatalog.packages.joinToString(" ") { it.id }
         val command = "for p in $names; do apk info -e \"\$p\" >/dev/null 2>&1 && echo \"\$p\"; done; true"
-        val result = execute(command, TIMEOUT_QUERY_SECONDS)
+        val result = execute(environment, command, TIMEOUT_QUERY_SECONDS)
         if (result.exitCode != 0) return emptySet()
         return result.output.lineSequence()
             .map { it.trim() }
@@ -238,8 +253,10 @@ class DevPackageManager(
             .intersect(DevPackageCatalog.packages.mapTo(mutableSetOf()) { it.id })
     }
 
-    private suspend fun execute(command: String, timeoutSeconds: Long): ShellResult =
-        hostEnvironment.current().bash(workingDirectory()).run(command, timeoutSeconds, null)
+    private suspend fun execute(environment: HostEnvironment, command: String, timeoutSeconds: Long): ShellResult =
+        environment.bash(workingDirectory()).run(command, timeoutSeconds, null)
+
+    private fun environmentOrNull(): HostEnvironment? = runCatching { hostEnvironment.current() }.getOrNull()
 
     private fun workingDirectory(): String = cwd().ifBlank { "/" }
 

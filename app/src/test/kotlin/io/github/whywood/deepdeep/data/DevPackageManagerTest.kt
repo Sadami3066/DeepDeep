@@ -90,15 +90,54 @@ class DevPackageManagerTest {
     }
 
     @Test
-    fun refreshClearsInstalledPackagesWhenEnvironmentIsNotReady() = runBlocking {
-        val executor = RecordingExecutor()
+    fun refreshKeepsInstalledPackagesWhenEnvironmentIsNotReady() = runBlocking {
+        val executor = RecordingExecutor { command ->
+            if (command.contains("apk info")) ShellResult("curl\n", 0, false) else ShellResult("", 0, false)
+        }
         val provider = providerFor(mapOf(HostAccess.LOCAL to executor))
-        val manager = managerFor(provider, ready = { false })
+        var readyNow = true
+        val manager = managerFor(provider, ready = { readyNow })
 
         manager.refreshAndAwait()
+        assertEquals(setOf("curl"), manager.state.value.installed)
 
-        assertTrue(manager.state.value.installed.isEmpty())
-        assertTrue(executor.commands.isEmpty())
+        val commandsBefore = executor.commands.size
+        readyNow = false
+        manager.refreshAndAwait()
+
+        assertEquals(setOf("curl"), manager.state.value.installed)
+        assertEquals(commandsBefore, executor.commands.size)
+        assertNull(manager.state.value.error)
+    }
+
+    @Test
+    fun installKeepsInitialEnvironmentWhenAccessLevelChangesMidOperation() = runBlocking {
+        val localExecutor = RecordingExecutor()
+        val rootExecutor = RecordingExecutor()
+        val provider = FakeHostEnvironmentProvider(
+            mapOf(
+                HostAccess.LOCAL to FakeHostEnvironment(HostAccess.LOCAL, localExecutor),
+                HostAccess.ROOT to FakeHostEnvironment(HostAccess.ROOT, rootExecutor),
+            ),
+        )
+        provider.selected = HostAccess.LOCAL
+        localExecutor.respond = { command ->
+            if (command == "apk update") provider.selected = HostAccess.ROOT
+            if (command.contains("apk info")) ShellResult("curl\n", 0, false) else ShellResult("", 0, false)
+        }
+        val manager = managerFor(provider)
+
+        manager.installBundle(DevPackageCatalog.bundleById("base")!!)
+        withTimeout(10_000) {
+            manager.state.first { it.operation == null && (it.installed.isNotEmpty() || it.error != null) }
+        }
+
+        assertNull(manager.state.value.error)
+        assertEquals(1, provider.calls)
+        assertTrue(localExecutor.commands.contains("apk update"))
+        assertTrue(localExecutor.commands.any { it.startsWith("apk add ") })
+        assertTrue(localExecutor.commands.any { it.contains("apk info") })
+        assertTrue(rootExecutor.commands.isEmpty())
     }
 
     @Test
@@ -135,7 +174,7 @@ class DevPackageManagerTest {
 }
 
 private class RecordingExecutor(
-    private val respond: (String) -> ShellResult = { ShellResult("", 0, false) },
+    var respond: (String) -> ShellResult = { ShellResult("", 0, false) },
 ) : ShellExecutor {
     val commands = mutableListOf<String>()
     var lastCwd: String? = null
@@ -166,8 +205,12 @@ private class FakeHostEnvironmentProvider(
     private val environments: Map<HostAccess, HostEnvironment>,
 ) : HostEnvironmentProvider {
     var selected: HostAccess = HostAccess.LOCAL
+    var calls: Int = 0
 
-    override fun current(): HostEnvironment = environments.getValue(selected)
+    override fun current(): HostEnvironment {
+        calls += 1
+        return environments.getValue(selected)
+    }
 }
 
 private class RecordingNotifier : DevPackageNotifier {

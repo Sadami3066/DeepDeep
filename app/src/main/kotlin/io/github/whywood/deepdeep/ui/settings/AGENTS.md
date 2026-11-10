@@ -29,6 +29,6 @@
 
 - Screen 不持有全局状态、数据落在 `data/` 的 `*Preferences`/`*Store`；除 `SettingsGroup` 被插件页、小米云、工作区设置页复用外，其余 Screen 只由 `AppRoutes.kt` 路由，新增入口要加 `AppDestination` 分支。
 - Provider 凭据经 `graph.credentials` 写入并立即发布 authKinds，默认模型由 `core/ModelSelection` 纠正；设置页不直接改 `modelConfigStore`。
-- 屏幕操作开关在 Agent 设置页：运行时注入 `screen_*` / `virtual_screen` 工具与 `deepdeep-gui` 随包技能的条件是开关开启且当前生效档为 ADB 或 Root，门槛判断见 `graph/RuntimeGraph.kt` 的 `isScreenOpsActive`；开关变化经 `AppGraph` 触发随包技能重同步与会话重建，开关开启但未生效时在开关下方显示橙色提示并可点入系统访问页。
+- 屏幕操作开关在 Agent 设置页：运行时注入 `screen_*` / `virtual_screen` 工具与 `deepdeep-gui` 随包技能的条件是开关开启且当前宿主环境 `capabilities.hasScreenControl`，门槛判断见 `graph/RuntimeGraph.kt` 的 `isScreenOpsActive`；开关变化经 `AppGraph` 触发随包技能重同步与会话重建，开关开启但未生效时在开关下方显示橙色提示并可点入系统访问页。
 - 系统访问页按所选档位组织内容：三档都显示开发组合分区（标题带当前生效档位），普通/无线调试档另有 Linux 环境，无线调试档额外显示配对入口，Root 档显示 Root Linux 准备状态与重试/重建并隐藏 Linux 分区；开发组合在普通/无线调试档经 proot、Root 档经 Root Linux 执行，环境是否就绪由装配层传入；降级原因只由 runtime 的 `resolveHostAccess` 给出，页面不自行推导。选中档位生效为 Root 时由装配层自动准备 Root Linux（`rootfsBootstrap.ensureReady`），不再提供独立开关。
 - 扫一扫策略由 `ui/common/scan` 承载：官方内置 `assets/scan/strategies.json`（只读），自定义与版本迁移落 `files/scan/strategies.json`。

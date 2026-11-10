@@ -120,8 +120,7 @@ class HostFiles(
 
     fun stage(file: File, name: String): File? {
         if (!isFile(file)) return null
-        val size = length(file)
-        if (size <= 0L || size > STAGE_MAX_BYTES) return null
+        if (length(file) > STAGE_MAX_BYTES) return null
         stagingRoot.mkdirs()
         pruneStaging()
         val directory = File(stagingRoot, UUID.randomUUID().toString().replace("-", "").take(8))
@@ -172,7 +171,7 @@ class HostFiles(
         const val STAGE_CHUNK = 64L * 1024L
         const val STAGE_MAX_BYTES = 2L * 1024L * 1024L * 1024L
         const val STAGE_MAX_AGE_MS = 60L * 60L * 1000L
-        const val EXPORT_TIMEOUT_SECONDS = 600L
+        const val EXPORT_TIMEOUT_SECONDS = 1800L
         const val EXPORT_PRUNE_TIMEOUT_SECONDS = 120L
     }
 }

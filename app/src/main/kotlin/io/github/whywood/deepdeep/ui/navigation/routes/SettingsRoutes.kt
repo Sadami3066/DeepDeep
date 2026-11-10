@@ -18,8 +18,6 @@ import io.github.whywood.deepdeep.data.StorageMount
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.service.AgentService
-import io.github.whywood.deepdeep.shell.LinuxInstallState
-import io.github.whywood.deepdeep.shell.RootfsState
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.ShellRouteUi
 import io.github.whywood.deepdeep.ui.settings.ChatSettingsScreen
@@ -165,9 +163,8 @@ internal fun SystemAccessRoute(dependencies: AppDependencies, scope: CoroutineSc
         initialValue = false,
     )
     val devPackages by dependencies.devPackageManager.state.collectAsStateWithLifecycle()
-    val devPackagesAvailable = when (hostState.effective) {
-        HostAccess.ROOT -> rootfs.state is RootfsState.Ready
-        else -> linuxState is LinuxInstallState.Installed
+    val devPackagesAvailable = remember(hostState.effective, linuxState, rootfs.state) {
+        dependencies.hostEnvironmentProvider.current().capabilities.bashAvailable
     }
     val mounts by dependencies.storageMounts.mounts.collectAsStateWithLifecycle(initialValue = emptyList())
     LaunchedEffect(Unit) { dependencies.linuxEnvironment.refreshState() }

@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.graph
 
-import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,18 +8,18 @@ import org.junit.Test
 class ScreenOpsActivationTest {
     @Test
     fun inactiveWhenScreenOpsOff() {
-        assertFalse(isScreenOpsActive(false, HostAccess.ADB))
-        assertFalse(isScreenOpsActive(false, HostAccess.ROOT))
+        assertFalse(isScreenOpsActive(false, HostCapabilities(hasScreenControl = true)))
+        assertFalse(isScreenOpsActive(false, HostCapabilities()))
     }
 
     @Test
-    fun inactiveWithoutHostAccess() {
-        assertFalse(isScreenOpsActive(true, HostAccess.LOCAL))
+    fun inactiveWithoutScreenControl() {
+        assertFalse(isScreenOpsActive(true, HostCapabilities(bashAvailable = true)))
     }
 
     @Test
-    fun activeWithAdbOrRoot() {
-        assertTrue(isScreenOpsActive(true, HostAccess.ADB))
-        assertTrue(isScreenOpsActive(true, HostAccess.ROOT))
+    fun activeWithScreenControl() {
+        assertTrue(isScreenOpsActive(true, HostCapabilities(hasSystemShell = true, hasScreenControl = true)))
+        assertTrue(isScreenOpsActive(true, HostCapabilities(isRoot = true, hasScreenControl = true)))
     }
 }

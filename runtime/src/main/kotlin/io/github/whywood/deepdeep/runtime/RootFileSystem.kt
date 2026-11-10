@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import okio.Buffer
+import okio.FileHandle
 import okio.FileMetadata
 import okio.FileSystem
 import okio.ForwardingFileSystem
@@ -54,6 +55,7 @@ internal class RootFileSystem(
         val result = run("stat -c '%F|%s' -- $quoted")
         if (result.exitCode != 0) return null
         val line = result.stdout.lineSequence().firstOrNull() ?: return null
+        if (line.isBlank()) return null
         val type = line.substringBefore('|')
         val size = line.substringAfter('|', "").trim().toLongOrNull()
         return when {
@@ -96,6 +98,14 @@ internal class RootFileSystem(
         }
     }
 
+    override fun canonicalize(path: Path): Path {
+        val result = run("readlink -f -- ${quote(path)}")
+        if (result.exitCode != 0) throw IOException("root canonicalize failed: ${result.stderr.trim()}")
+        val value = result.stdout.trimEnd('\n')
+        if (value.isEmpty()) throw IOException("root canonicalize failed")
+        return value.toPath()
+    }
+
     override fun source(path: Path): Source {
         val process = runner.start("cat -- ${quote(path)}")
         val input = process.inputStream.source().buffer()
@@ -136,6 +146,32 @@ internal class RootFileSystem(
         }
     }
 
+    override fun appendingSink(file: Path, mustExist: Boolean): Sink {
+        val quoted = quote(file)
+        val command = if (mustExist) {
+            "[ -e $quoted ] || exit 3; cat >> $quoted"
+        } else {
+            "cat >> $quoted"
+        }
+        val process = runner.start(command)
+        val output = process.outputStream.sink().buffer()
+        return object : Sink {
+            override fun write(source: Buffer, byteCount: Long) = output.write(source, byteCount)
+
+            override fun flush() = output.flush()
+
+            override fun timeout(): Timeout = Timeout.NONE
+
+            override fun close() {
+                runCatching { output.close() }
+                if (!waitForProcess(process)) {
+                    throw IOException("root append failed: ${readError(process)}")
+                }
+                chown(file)
+            }
+        }
+    }
+
     override fun list(dir: Path): List<Path> {
         val result = run("ls -1A -- ${quote(dir)}")
         if (result.exitCode != 0) throw IOException("root list failed: ${result.stderr.trim()}")
@@ -152,14 +188,14 @@ internal class RootFileSystem(
             val result = run("find -L ${quote(dir)} -print")
             if (result.exitCode != 0) return emptySequence()
             return result.stdout.lineSequence()
-                .filter { it.isNotBlank() }
+                .filter { it.isNotBlank() && it != dir.toString() }
                 .map { it.toPath() }
                 .toList()
                 .asSequence()
         }
         return sequence {
             val queue = ArrayDeque<Path>()
-            queue.addLast(dir)
+            listOrNull(dir)?.forEach { queue.addLast(it) }
             while (queue.isNotEmpty()) {
                 val current = queue.removeFirst()
                 yield(current)
@@ -172,7 +208,7 @@ internal class RootFileSystem(
     }
 
     override fun createDirectory(dir: Path, mustCreate: Boolean) {
-        val result = run(createDirectoryCommand(dir.toString(), mustCreate, chownTarget()))
+        val result = run(createDirectoryCommand(dir.toString(), mustCreate, if (shouldChown(dir)) chownTarget() else null))
         if (result.exitCode != 0) throw IOException("root mkdir failed: ${result.stderr.trim()}")
     }
 
@@ -180,6 +216,24 @@ internal class RootFileSystem(
         val result = run("mv -f -- ${quote(source)} ${quote(target)}")
         if (result.exitCode != 0) throw IOException("root move failed: ${result.stderr.trim()}")
     }
+
+    override fun copy(source: Path, target: Path) {
+        val quotedSource = quote(source)
+        val quotedTarget = quote(target)
+        val result = run("[ -f $quotedSource ] || exit 4; [ ! -e $quotedTarget ] || exit 3; cp -- $quotedSource $quotedTarget")
+        if (result.exitCode != 0) throw IOException("root copy failed: ${result.stderr.trim()}")
+    }
+
+    override fun createSymlink(source: Path, target: Path) {
+        val result = run("ln -s -- ${quote(target)} ${quote(source)}")
+        if (result.exitCode != 0) throw IOException("root symlink failed: ${result.stderr.trim()}")
+    }
+
+    override fun openReadOnly(file: Path): FileHandle =
+        throw UnsupportedOperationException("root file handles are not supported")
+
+    override fun openReadWrite(file: Path, mustCreate: Boolean, mustExist: Boolean): FileHandle =
+        throw UnsupportedOperationException("root file handles are not supported")
 
     override fun delete(path: Path, mustExist: Boolean) {
         val quoted = quote(path)
@@ -193,9 +247,15 @@ internal class RootFileSystem(
     }
 
     private fun chown(path: Path) {
+        if (!shouldChown(path)) return
         val target = chownTarget() ?: return
         val result = run("chown $target -- ${quote(path)}")
         if (result.exitCode != 0) throw IOException("root chown failed: ${result.stderr.trim()}")
+    }
+
+    private fun shouldChown(path: Path): Boolean {
+        val value = path.toString()
+        return value.startsWith("/data/data/") || value.startsWith("/data/user/0/")
     }
 
     private fun chownTarget(): String? = when {

@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
-| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送）；当前环境无流式实现时回退为命令完成后一次性推送（结束发 `Exit`，慢消费者丢弃的行数记入插件日志）；`available` 由注入的 lambda 决定 |
+| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果（合并输出在 `stdout`，`stderr` 恒空）；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送，24 小时超时），当前环境无流式实现时回退为命令完成后一次性推送；输出经无界 channel 背压排队，不丢弃行；`available` 由注入的 lambda 决定 |
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
 | `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限 |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |
@@ -29,7 +29,7 @@
 
 - 每个插件一份 `PluginServices`：`AppGraph` 的 `servicesFactory(pluginId, dataDir, pluginScope)` 用 `PluginServiceDependencies` + `buildPluginServices` 构造；`deps.pluginId` 决定密钥命名空间、文件根目录、通知 id/频道、日志 tag、总线发布者；`deps.pluginDataDir` 默认 `<files>/plugins/<id>/data`，与 `PluginPaths` 一致。
 - 跨插件共享的服务（`PluginBus` 实例、`HttpTransport`、`EncryptedSecretStore` 等）由 AppGraph 构造一次放进 deps；deps 是 data class，可 `copy(pluginId=..., pluginDataDir=...)` 派生每个插件的依赖。
-- 映射损失（有意为之的薄适配）：Linux `stderr` 恒空（proot 合并输出）；`TimerTrigger.Daily/Weekly` 以 cron 表达式往返（plugin-api 只有 Once/Cron）；`ScreenService.status` 非 suspend，所以首次访问起启动后台轮询（1s）跟随虚拟屏/无障碍后端变化，并在 start/stop 后立即刷新，节点树扁平无 children，`scroll(deltaY)` 只按符号取方向并按 300px/步折算步数；Miniapp 三个 agent 操作只返回 accepted，不暴露事件流（用 scan 观察结果）；MCP 工具列表/调用缺省为空/错误，需 AppGraph 注入回调；`SessionService` 没有 open-session 方法，故未接打开会话回调。
+- 映射损失（有意为之的薄适配）：Linux `stderr` 恒空（run.sh 已 `2>&1` 合并输出，内容落在 `stdout`）；`TimerTrigger.Daily/Weekly` 以 cron 表达式往返（plugin-api 只有 Once/Cron）；`ScreenService.status` 非 suspend，所以首次访问起启动后台轮询（1s）跟随虚拟屏/无障碍后端变化，并在 start/stop 后立即刷新，节点树扁平无 children，`scroll(deltaY)` 只按符号取方向并按 300px/步折算步数；Miniapp 三个 agent 操作只返回 accepted，不暴露事件流（用 scan 观察结果）；MCP 工具列表/调用缺省为空/错误，需 AppGraph 注入回调；`SessionService` 没有 open-session 方法，故未接打开会话回调。
 - 通知频道名复用 `R.string.plugins_title`：本目录不新增 res；需要独立文案时在 `res/values*/strings_*.xml` 补字符串后替换。分享 chooser 标题复用 `R.string.files_share`。
 - `UiService` 的四个能力都要真实接线：AppGraph 注入 `openUrl`/`toast`/`share`/`openPage` 回调（后两者转 `PluginUiBridge`）；任一未注入时插件调用得到 `PluginServiceUnavailable`，不得静默 no-op。
 - `PluginUiBridge` 的 FileProvider 分享依赖 `res/xml/file_paths.xml` 中的 `plugins/`、`gui/`、`home/` 等路径；新增可分享目录要同步该文件。

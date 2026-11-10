@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.host
 
 import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccessUnavailableException
 import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.host.StreamingShellExecutor
 import io.github.whywood.deepdeep.runtime.host.StreamingShellResult
@@ -29,6 +30,8 @@ class HostEnvironmentsTest {
         assertEquals(HostCapabilities(), environment.capabilities)
         assertSame(FileSystem.SYSTEM, environment.files)
         assertNull(environment.system)
+        assertFalse(environment.capabilities.hasScreenControl)
+        assertFalse(environment.capabilities.rootLinuxReady)
         assertSame(prootShell, environment.bash("/tmp"))
         assertEquals(1, environment.promptLines.size)
         assertTrue(environment.promptLines.single().contains("proot"))
@@ -48,6 +51,7 @@ class HostEnvironmentsTest {
         assertTrue(environment.capabilities.hasSystemShell)
         assertFalse(environment.capabilities.isRoot)
         assertFalse(environment.capabilities.canReadSystemData)
+        assertTrue(environment.capabilities.hasScreenControl)
         assertSame(FileSystem.SYSTEM, environment.files)
         assertSame(adbShell, environment.system)
         assertSame(prootShell, environment.bash("/tmp"))
@@ -98,7 +102,17 @@ class HostEnvironmentsTest {
         )
 
         assertEquals(HostAccess.ROOT, environment.access)
-        assertEquals(HostCapabilities(isRoot = true, hasSystemShell = true, canReadSystemData = true, bashAvailable = true), environment.capabilities)
+        assertEquals(
+            HostCapabilities(
+                isRoot = true,
+                hasSystemShell = true,
+                canReadSystemData = true,
+                bashAvailable = true,
+                hasScreenControl = true,
+                rootLinuxReady = true,
+            ),
+            environment.capabilities,
+        )
         assertSame(rootFiles, environment.files)
         assertSame(rootShell, environment.system)
         assertSame(rootShell, environment.bash("/"))
@@ -121,6 +135,8 @@ class HostEnvironmentsTest {
 
         val root = rootEnvironment(readiness = { RootBashReadiness.PREPARING })
         assertFalse(root.capabilities.bashAvailable)
+        assertFalse(root.capabilities.rootLinuxReady)
+        assertTrue(root.capabilities.hasScreenControl)
     }
 
     @Test

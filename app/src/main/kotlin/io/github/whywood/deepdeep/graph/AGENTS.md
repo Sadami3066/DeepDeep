@@ -18,5 +18,5 @@ AppGraph 拆出的装配子图：把一组相关的全局依赖的构造与接�
 - 构造顺序：`DataGraph` → `PlatformGraph` → `RuntimeGraph` → `ServiceGraph`；`host` 需要 `timerService` / `jobRegistry`，`ServiceGraph` 需要 `host` / `conversationStore`，两边都用 lambda 打破循环，首次访问时才落定。
 - `AppGraph` 只保留 `AppDependencies` 委托、`pluginGraph`、`prepare`、中断提示装饰与运行时事件转发；新增子图时沿用 `internal class XxxGraph(private val deps: XxxGraphDeps)` + `val` 产出。
 - 新增依赖时只加 `XxxGraphDeps` 字段并在 `AppGraph` 侧赋值；`AppGraph` 的属性保持 `private`，不为子图放宽可见性。
-- 屏幕操作门控：`RuntimeGraph.isScreenOpsActive(screenOps, access)` 同时要求开关开启与 host access 生效档为 ADB/ROOT；`PlatformGraph` 权限变化回调与 `AppGraph` 的开关回调先通过 `syncBundledSkills` 同步（含删除）`deepdeep-gui` 技能，再 `host.reconfigure()` 重建会话。
+- 屏幕操作门控：`RuntimeGraph.isScreenOpsActive(screenOps, capabilities)` 同时要求开关开启与当前 `HostEnvironment.capabilities.hasScreenControl`（ADB / Root 档）；`PlatformGraph` 权限变化回调与 `AppGraph` 的开关回调先通过 `syncBundledSkills` 同步（含删除）`deepdeep-gui` 技能，再 `host.reconfigure()` 重建会话。
 - `graph/` 包不得 import `AppGraph`；插件生命周期、状态、服务实现仍在 `app/.../plugin/**`。

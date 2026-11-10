@@ -42,6 +42,9 @@ class AppHostAccessController(
                 notifyIfChanged()
             }
         }
+        scope.launch {
+            adbStorage.collect { notifyIfChanged() }
+        }
     }
 
     override suspend fun select(access: HostAccess) {

@@ -86,9 +86,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
                 hostEnvironment = hostEnvironment,
                 defaultWorkspace = deps.defaultWorkspace,
                 availableProvider = deps.bashAvailable,
-            ) { dropped ->
-                logs.warn("linux stream dropped $dropped output lines")
-            }
+            )
         },
         screen = if (deps.screen != null || deps.virtualScreen != null) {
             ScreenPluginService(

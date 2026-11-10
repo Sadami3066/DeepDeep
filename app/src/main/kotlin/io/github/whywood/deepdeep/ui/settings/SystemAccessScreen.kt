@@ -93,6 +93,7 @@ fun SystemAccessScreen(
 ) {
     val colors = deepDeepColors()
     var showPairingDialog by remember { mutableStateOf(false) }
+    var showRebuildDialog by remember { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) {
         onRefresh()
         onPauseOrDispose {}
@@ -193,20 +194,33 @@ fun SystemAccessScreen(
                                 modifier = Modifier.testTag("access_root_retry"),
                             )
                         }
-                        if (rootfs.state !is RootfsState.Preparing) {
+                        val rebuilding = rootfs.state is RootfsState.Preparing
+                        DdHairline()
+                        DdListRow(
+                            title = stringResource(R.string.access_root_rebuild),
+                            subtitle = if (rebuilding) {
+                                stringResource(R.string.access_root_rebuild_wait)
+                            } else {
+                                null
+                            },
+                            subtitleMaxLines = 2,
+                            showChevron = true,
+                            enabled = !rebuilding,
+                            onClick = { showRebuildDialog = true },
+                            modifier = Modifier.testTag("access_root_rebuild"),
+                        )
+                        if (linuxState !is LinuxInstallState.Installed) {
                             DdHairline()
-                            DdListRow(
-                                title = stringResource(R.string.access_root_rebuild),
-                                showChevron = true,
-                                onClick = onRebuildRootfs,
-                                modifier = Modifier.testTag("access_root_rebuild"),
-                            )
-                        }
-                        if (linuxState !is LinuxInstallState.Installed && linuxState !is LinuxInstallState.Installing) {
-                            DdHairline()
+                            val installing = linuxState is LinuxInstallState.Installing
                             DdListRow(
                                 title = stringResource(R.string.access_root_install_linux),
+                                subtitle = if (installing) {
+                                    stringResource(R.string.access_root_linux_installing)
+                                } else {
+                                    null
+                                },
                                 showChevron = true,
+                                enabled = !installing,
                                 onClick = onLinuxInstall,
                                 modifier = Modifier.testTag("access_root_install_linux"),
                             )
@@ -328,6 +342,35 @@ fun SystemAccessScreen(
             adb = adb,
             onDismiss = { showPairingDialog = false },
             onConfirm = onPairingCode,
+        )
+    }
+    if (showRebuildDialog) {
+        DdDialog(
+            onDismissRequest = { showRebuildDialog = false },
+            modifier = Modifier.testTag("access_root_rebuild_dialog"),
+            title = stringResource(R.string.access_root_rebuild),
+            content = {
+                Text(
+                    text = stringResource(R.string.access_root_rebuild_message),
+                    style = DdType.bodySmall,
+                    color = colors.inkSecondary,
+                )
+            },
+            actions = {
+                DdTextAction(
+                    text = stringResource(R.string.access_root_rebuild_cancel),
+                    onClick = { showRebuildDialog = false },
+                    color = colors.inkSecondary,
+                )
+                DdTextAction(
+                    text = stringResource(R.string.access_root_rebuild_confirm),
+                    onClick = {
+                        showRebuildDialog = false
+                        onRebuildRootfs()
+                    },
+                    color = colors.danger,
+                )
+            },
         )
     }
 }

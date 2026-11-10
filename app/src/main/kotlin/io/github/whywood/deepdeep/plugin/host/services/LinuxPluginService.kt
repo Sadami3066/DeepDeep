@@ -7,15 +7,15 @@ import io.github.whywood.deepdeep.runtime.CommandResult
 import io.github.whywood.deepdeep.runtime.DetailedShellExecutor
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.shell.LinuxResult as ShellLinuxResult
-import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 
 internal class LinuxPluginService(
     private val hostEnvironment: HostEnvironmentProvider,
     private val defaultWorkspace: () -> String,
     private val availableProvider: () -> Boolean,
-    private val onOutputDropped: (Long) -> Unit = {},
 ) : LinuxService {
     override val available: Boolean
         get() = availableProvider()
@@ -51,7 +51,6 @@ internal class LinuxPluginService(
                 )
             }
         },
-        onOutputDropped = onOutputDropped,
     )
 
     private suspend fun executeDetailed(command: String, cwd: String?, timeoutMs: Long): CommandResult {
@@ -78,19 +77,18 @@ internal class LinuxPluginService(
         if (timeoutMs <= 0L) null else (timeoutMs + 999L) / 1000L
 
     private companion object {
-        const val STREAM_TIMEOUT_MS = 10 * 60 * 1000L
+        const val STREAM_TIMEOUT_MS = 24 * 60 * 60 * 1000L
     }
 }
 
 internal fun linuxStream(
     execute: suspend (onLine: (String) -> Unit) -> ShellLinuxResult,
-    onOutputDropped: (Long) -> Unit = {},
 ): Flow<LinuxChunk> = callbackFlow {
-    val dropped = AtomicLong()
-    val result = execute { line ->
-        if (trySend(LinuxChunk.Stdout(line)).isFailure) dropped.incrementAndGet()
-    }
-    if (dropped.get() > 0) onOutputDropped(dropped.get())
-    send(LinuxChunk.Exit(result.exitCode))
+    val pending = Channel<LinuxChunk>(Channel.UNLIMITED)
+    val pump = launch { for (chunk in pending) send(chunk) }
+    val result = execute { line -> pending.trySend(LinuxChunk.Stdout(line)) }
+    pending.send(LinuxChunk.Exit(result.exitCode))
+    pending.close()
+    pump.join()
     close()
 }

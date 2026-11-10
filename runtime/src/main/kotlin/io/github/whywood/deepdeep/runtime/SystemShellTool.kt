@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import io.github.whywood.deepdeep.runtime.host.HostAccessUnavailableException
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
@@ -37,22 +38,27 @@ fun systemShellTool(executor: () -> ShellExecutor?): CodingTool = CodingTool(
     promptGuidelines = listOf(SYSTEM_SHELL_GUIDELINE),
     execute = { toolCallId, args, signal, onUpdate ->
         signal?.throwIfAborted()
-        val current = executor()
-        if (current == null) {
+        try {
+            val current = executor()
+            if (current == null) {
+                textResult(
+                    "The system shell is not available in the current access tier. Switch to wireless debugging (ADB) or Root access to run Android system commands, or use bash for Linux work.",
+                    isError = true,
+                )
+            } else {
+                deepDeepBashTool(current).execute(toolCallId, args.shellArguments(), signal, onUpdate)
+            }
+        } catch (aborted: RequestAbortedException) {
+            throw aborted
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (unavailable: HostAccessUnavailableException) {
             textResult(
-                "The system shell is not available in the current access tier. Switch to wireless debugging (ADB) or Root access to run Android system commands, or use bash for Linux work.",
+                "The active access environment is not ready (${unavailable.message ?: "still preparing"}). Retry once it becomes available.",
                 isError = true,
             )
-        } else {
-            try {
-                deepDeepBashTool(current).execute(toolCallId, args.shellArguments(), signal, onUpdate)
-            } catch (aborted: RequestAbortedException) {
-                throw aborted
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                textResult(error.message ?: "system_shell execution failed", isError = true)
-            }
+        } catch (error: Exception) {
+            textResult(error.message ?: "system_shell execution failed", isError = true)
         }
     },
 )

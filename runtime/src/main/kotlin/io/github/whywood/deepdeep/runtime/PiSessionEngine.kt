@@ -29,6 +29,8 @@ import java.io.File
 import java.time.OffsetDateTime
 import io.github.whywood.deepdeep.runtime.host.DynamicFileSystem
 import io.github.whywood.deepdeep.runtime.host.DynamicShellExecutor
+import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccessUnavailableException
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import okio.FileSystem
 import okio.Path
@@ -68,6 +70,12 @@ class PiSessionEngine(
         extraSystemPromptSections: Map<String, String> = emptyMap(),
     ): AgentSession {
         runCatching { java.io.File(agentDirectory.toFile(), "SYSTEM.md").delete() }
+        hostEnvironment?.let { provider ->
+            val environment = provider.current()
+            if (environment.access == HostAccess.ROOT && !environment.capabilities.rootLinuxReady) {
+                throw HostAccessUnavailableException("Root Linux is not ready; retry after preparation finishes")
+            }
+        }
         try {
             memory?.ensure()
             memory?.refresh("session_start")
@@ -126,7 +134,7 @@ class PiSessionEngine(
                 modelId = session?.model?.id ?: modelId,
                 now = OffsetDateTime.now(),
                 pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
-                environmentLines = runCatching { hostEnvironment?.current()?.promptLines }.getOrNull(),
+                environmentLines = hostEnvironment?.current()?.promptLines,
                 extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(
                         "paths",

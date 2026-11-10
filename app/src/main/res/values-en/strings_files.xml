@@ -7,7 +7,7 @@
     <string name="files_export_action">Export to Downloads</string>
     <string name="files_export_done">Saved to Downloads</string>
     <string name="files_export_done_path">Exported to %1$s</string>
-    <string name="files_export_failed">Export failed</string>
+    <string name="files_export_failed">Export failed. Try again.</string>
     <string name="files_back">Back</string>
     <string name="files_preview">Preview</string>
     <string name="files_source">Source</string>

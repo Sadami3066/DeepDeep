@@ -115,6 +115,24 @@ class AppHostAccessControllerTest {
     }
 
     @Test
+    fun adbConnectionChangesNotifyWhenEffectiveAccessChanges() = runTest {
+        val fixture = Fixture(backgroundScope, initial = HostAccess.ADB)
+        runCurrent()
+        val baseline = fixture.notifications.size
+        assertEquals(HostAccess.LOCAL, fixture.controller.state.value.effective)
+
+        fixture.adbState.value = AdbBridgeState(daemon = true)
+        runCurrent()
+        assertEquals(HostAccess.ADB, fixture.controller.state.value.effective)
+        assertEquals(baseline + 1, fixture.notifications.size)
+
+        fixture.adbState.value = AdbBridgeState(daemon = false)
+        runCurrent()
+        assertEquals(HostAccess.LOCAL, fixture.controller.state.value.effective)
+        assertEquals(baseline + 2, fixture.notifications.size)
+    }
+
+    @Test
     fun refreshOnlyProbesRootWhenRootIsSelected() = runTest {
         val fixture = Fixture(backgroundScope)
 

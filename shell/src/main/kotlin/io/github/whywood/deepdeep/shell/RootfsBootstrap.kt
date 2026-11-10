@@ -131,7 +131,12 @@ class RootfsBootstrap internal constructor(
 
     private fun initialStatus(): RootfsStatus {
         val raw = runCatching { statusFile.readText().trim() }.getOrNull()
-        return if (raw == STATUS_READY) RootfsStatus(RootfsState.Ready) else RootfsStatus(RootfsState.Idle)
+        return when {
+            raw == STATUS_READY -> RootfsStatus(RootfsState.Ready)
+            raw != null && raw.startsWith(STATUS_FAILED_PREFIX) ->
+                RootfsStatus(RootfsState.Failed(raw.removePrefix(STATUS_FAILED_PREFIX)))
+            else -> RootfsStatus(RootfsState.Idle)
+        }
     }
 
     private fun persistStatus(value: String) {
@@ -190,7 +195,7 @@ class RootfsBootstrap internal constructor(
             appendLine("PROFILE=${ChrootExecutor.shellQuote(ChrootExecutor.suPath(profileFile.absolutePath))}")
             appendLine("mkdir -p \"\$LINUX\"")
             appendLine("chmod 700 \"\$LINUX\" 2>/dev/null || true")
-            appendLine("if [ -f \"\$ROOT/.deepdeep-ready\" ] && [ -x \"\$ROOT/bin/bash\" ]; then")
+            appendLine("if [ -f \"\$ROOT/.deepdeep-ready\" ] && [ -x \"\$ROOT/bin/bash\" ] && /system/bin/chroot \"\$ROOT\" /bin/bash -c 'echo DEEPDEEP_PROBE_OK' >/dev/null 2>&1; then")
             appendLine("  cp \"\$RUN_SCRIPT\" \"\$LINUX/run.sh\" || { echo $PREPARE_COPY_FAILED; exit 12; }")
             appendLine("  chmod 700 \"\$LINUX/run.sh\"")
             appendLine("  cp \"\$PROFILE\" \"\$ROOT/etc/profile.d/deepdeep.sh\" 2>/dev/null || true")
@@ -206,7 +211,7 @@ class RootfsBootstrap internal constructor(
             appendLine("rm -rf \"\$TMP\"")
             appendLine("mkdir -p \"\$TMP\"")
             appendLine("\"\$BB\" cp -a \"\$APP_ROOT/.\" \"\$TMP/\" || { echo $PREPARE_COPY_FAILED; exit 12; }")
-            appendLine("mkdir -p \"\$TMP/data\" \"\$TMP/system\" \"\$TMP/vendor\" \"\$TMP/product\" \"\$TMP/system_ext\" \"\$TMP/odm\" \"\$TMP/.deepdeep-empty\" \"\$TMP/storage/emulated/0\" \"\$TMP/etc/profile.d\"")
+            appendLine("mkdir -p \"\$TMP/data\" \"\$TMP/system\" \"\$TMP/vendor\" \"\$TMP/product\" \"\$TMP/system_ext\" \"\$TMP/odm\" \"\$TMP/proc\" \"\$TMP/sys\" \"\$TMP/dev\" \"\$TMP/.deepdeep-empty\" \"\$TMP/storage/emulated/0\" \"\$TMP/etc/profile.d\"")
             appendLine("rm -rf \"\$TMP/sdcard\"")
             appendLine("ln -s /storage/emulated/0 \"\$TMP/sdcard\"")
             appendLine("cp \"\$PROFILE\" \"\$TMP/etc/profile.d/deepdeep.sh\"")
@@ -243,7 +248,7 @@ class RootfsBootstrap internal constructor(
                 appendLine("mount -t sysfs sysfs \"\$ROOT/sys\"")
                 appendLine("mount --rbind /dev \"\$ROOT/dev\"")
                 appendLine("if [ -d /dev/binderfs ]; then mount --rbind /dev/binderfs \"\$ROOT/dev/binderfs\" 2>/dev/null || true; fi")
-                appendLine("mkdir -p \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data\" \"\$ROOT/system\" \"\$ROOT/vendor\" \"\$ROOT/product\" \"\$ROOT/system_ext\" \"\$ROOT/odm\" \"\$ROOT/storage/emulated/0\"")
+                appendLine("mkdir -p \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data\" \"\$ROOT/system\" \"\$ROOT/vendor\" \"\$ROOT/product\" \"\$ROOT/system_ext\" \"\$ROOT/odm\" \"\$ROOT/proc\" \"\$ROOT/sys\" \"\$ROOT/dev\" \"\$ROOT/storage/emulated/0\"")
                 appendLine("mount --rbind /data \"\$ROOT/data\"")
                 appendLine("mount --bind \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data/adb/deepdeep\"")
                 appendLine("for d in system vendor product system_ext odm; do if [ -d \"/\$d\" ]; then mkdir -p \"\$ROOT/\$d\"; mount --rbind \"/\$d\" \"\$ROOT/\$d\"; mount -o remount,bind,ro \"\$ROOT/\$d\" 2>/dev/null || true; fi; done")

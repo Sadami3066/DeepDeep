@@ -17,4 +17,5 @@
 - `refresh()` 只重新探测 Root；ADB 是否可用以注入的 `adbStorage` 为准。
 - `select()` 先取变更前状态，再写偏好并探测 Root，仅在 `effective` 或 Root 就绪状态变化时调用 `onChanged()`。
 - Root 环境在准备中或失败时 `bash()` / `files` / `system` 抛 `HostAccessUnavailableException`；`effective` 已可能是 ROOT，调用方需提示可重试。
+- `capabilities` 暴露 `bashAvailable`、`hasScreenControl`、`rootLinuxReady` 等派生能力，消费者按能力判断而不是按 `access` 档位判断。
 - `promptLines` 是给模型的英文环境说明，可留在本包常量里，不走 `res` 文案。

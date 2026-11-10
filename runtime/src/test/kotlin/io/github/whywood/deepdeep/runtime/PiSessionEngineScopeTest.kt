@@ -13,6 +13,11 @@ import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.sdk.coding.tools.FileMutationQueue
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccessUnavailableException
+import io.github.whywood.deepdeep.runtime.host.HostCapabilities
+import io.github.whywood.deepdeep.runtime.host.FakeHostEnvironment
+import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.sdk.coding.tools.defaultCodingTools
 import java.io.File
 import java.io.IOException
@@ -199,6 +204,45 @@ class PiSessionEngineScopeTest {
                 providers = catalog,
             )
             assertNull(withoutShell.availableTools().firstOrNull { it.name == "bash" })
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun createSessionFailsWhenRootEnvironmentIsNotReady() = runTest {
+        val root = Files.createTempDirectory("deepdeep-engine-host").toFile()
+        val workspace = File(root, "workspace").apply { mkdirs() }
+        val agentDir = File(root, "agent").apply { mkdirs() }
+        val engine = PiSessionEngine(
+            workspace = workspace,
+            agentDir = agentDir,
+            credentials = credentials,
+            transport = transport,
+            hostEnvironment = object : HostEnvironmentProvider {
+                override fun current() = FakeHostEnvironment(
+                    access = HostAccess.ROOT,
+                    capabilities = HostCapabilities(isRoot = true, rootLinuxReady = false),
+                )
+            },
+            providers = ProviderCatalog(transport, credentials),
+            fs = FileSystem.SYSTEM,
+        )
+        try {
+            val failure = runCatching {
+                engine.createSession(
+                    file = null,
+                    config = null,
+                    shellEnabled = false,
+                    mcpEnabled = false,
+                )
+            }.exceptionOrNull()
+
+            assertTrue(failure is HostAccessUnavailableException)
+            assertEquals(
+                "Root Linux is not ready; retry after preparation finishes",
+                failure?.message,
+            )
         } finally {
             root.deleteRecursively()
         }

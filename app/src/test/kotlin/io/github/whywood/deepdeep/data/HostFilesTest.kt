@@ -4,7 +4,9 @@ import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.host.HostEnvironment
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
+import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
 import java.io.ByteArrayInputStream
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -129,6 +131,35 @@ class HostFilesTest {
     }
 
     @Test
+    fun stagesEmptyFile() {
+        val staging = temporaryFolder.newFolder("staging")
+        val source = temporaryFolder.newFile("empty.bin")
+        val hostFiles = hostFiles(staging)
+
+        val staged = hostFiles.stage(source, "empty.bin")
+
+        assertNotNull(staged)
+        assertTrue(staged!!.isFile)
+        assertEquals(0L, staged.length())
+        assertTrue(staged.absolutePath.startsWith(staging.absolutePath))
+    }
+
+    @Test
+    fun exportToSharedStorageFailsWhenCopyTimesOut() = runBlocking {
+        val source = temporaryFolder.newFile("video.mp4").apply { writeBytes(ByteArray(8)) }
+        val hostFiles = HostFiles(
+            hostEnvironment = {
+                object : HostEnvironmentProvider {
+                    override fun current(): HostEnvironment = RootHostEnvironment
+                }
+            },
+            stagingRoot = temporaryFolder.newFolder("staging"),
+        )
+
+        assertNull(hostFiles.exportToSharedStorage(source, "video.mp4"))
+    }
+
+    @Test
     fun exportToSharedStorageIsUnavailableOutsideRoot() = runBlocking {
         val hostFiles = hostFiles(temporaryFolder.newFolder("staging"))
 
@@ -150,6 +181,25 @@ class HostFilesTest {
         override val sharedStorageEnabled: Boolean = false
         override val files: FileSystem = FileSystem.SYSTEM
         override val system: ShellExecutor? = null
+        override val promptLines: List<String> = emptyList()
+
+        override fun bash(cwd: String): ShellExecutor = error("unused")
+    }
+
+    private object RootHostEnvironment : HostEnvironment {
+        override val access: HostAccess = HostAccess.ROOT
+        override val capabilities: HostCapabilities = HostCapabilities(
+            isRoot = true,
+            hasSystemShell = true,
+            canReadSystemData = true,
+            bashAvailable = true,
+        )
+        override val sharedStorageEnabled: Boolean = true
+        override val files: FileSystem = FileSystem.SYSTEM
+        override val system: ShellExecutor = object : ShellExecutor {
+            override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult =
+                ShellResult("", null, false)
+        }
         override val promptLines: List<String> = emptyList()
 
         override fun bash(cwd: String): ShellExecutor = error("unused")

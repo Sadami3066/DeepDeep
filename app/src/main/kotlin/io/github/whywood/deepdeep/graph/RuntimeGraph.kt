@@ -31,7 +31,7 @@ import io.github.whywood.deepdeep.runtime.miniappEditTool
 import io.github.whywood.deepdeep.runtime.miniappLookup
 import io.github.whywood.deepdeep.runtime.miniappTools
 import io.github.whywood.deepdeep.runtime.presentTool
-import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.systemShellTool
 import io.github.whywood.deepdeep.runtime.timerTools
 import io.github.whywood.deepdeep.service.LinuxJobRunner
@@ -97,7 +97,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
         add(miniappEditTool(deps.miniappStore))
         addAll(memoryTools(memoryStore) { binding.current()?.sessionId })
-        if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.hostAccess.state.value.effective)) {
+        if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.hostEnvironment.current().capabilities)) {
             addAll(deps.screenTools())
             addAll(deps.virtualScreenTools())
         }
@@ -251,5 +251,5 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     }
 }
 
-internal fun isScreenOpsActive(screenOps: Boolean, access: HostAccess): Boolean =
-    screenOps && (access == HostAccess.ADB || access == HostAccess.ROOT)
+internal fun isScreenOpsActive(screenOps: Boolean, capabilities: HostCapabilities): Boolean =
+    screenOps && capabilities.hasScreenControl
