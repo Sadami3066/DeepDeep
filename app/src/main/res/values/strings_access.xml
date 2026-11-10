@@ -30,7 +30,9 @@
     <string name="access_root_failed">准备失败，可以重试</string>
     <string name="access_root_retry">重试准备</string>
     <string name="access_root_rebuild">重建 Root Linux</string>
-    <string name="access_root_hint">Root 档使用独立快照，不使用上面的 Linux 环境。</string>
+    <string name="access_root_hint">Root 档使用独立快照；基础 Linux 未安装时，可在本页先安装。</string>
+    <string name="access_root_install_linux">安装基础 Linux</string>
+    <string name="access_root_failed_reason">准备失败：%1$s</string>
     <string name="access_error_wireless_debugging_disabled">无线调试未开启</string>
     <string name="access_error_pairing_code_invalid">配对码不正确</string>
     <string name="access_error_no_pairing_service">请先在系统中打开无线调试配对页</string>

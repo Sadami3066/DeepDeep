@@ -172,8 +172,7 @@ internal class RootFileSystem(
     }
 
     override fun createDirectory(dir: Path, mustCreate: Boolean) {
-        val command = if (mustCreate) "mkdir -- ${quote(dir)}" else "mkdir -p -- ${quote(dir)}"
-        val result = run(command)
+        val result = run(createDirectoryCommand(dir.toString(), mustCreate, chownTarget()))
         if (result.exitCode != 0) throw IOException("root mkdir failed: ${result.stderr.trim()}")
     }
 
@@ -194,14 +193,16 @@ internal class RootFileSystem(
     }
 
     private fun chown(path: Path) {
-        val target = when {
-            appUid >= 0 && appGid >= 0 -> "$appUid:$appGid"
-            appUid >= 0 -> "$appUid"
-            appGid >= 0 -> ":$appGid"
-            else -> return
-        }
+        val target = chownTarget() ?: return
         val result = run("chown $target -- ${quote(path)}")
         if (result.exitCode != 0) throw IOException("root chown failed: ${result.stderr.trim()}")
+    }
+
+    private fun chownTarget(): String? = when {
+        appUid >= 0 && appGid >= 0 -> "$appUid:$appGid"
+        appUid >= 0 -> "$appUid"
+        appGid >= 0 -> ":$appGid"
+        else -> null
     }
 
     private data class Result(val exitCode: Int, val stdout: String, val stderr: String)
@@ -251,8 +252,21 @@ internal class RootFileSystem(
 
     private fun quote(path: Path): String = "'" + path.toString().replace("'", "'\\''") + "'"
 
-    private companion object {
+    internal companion object {
         private const val DEFAULT_TIMEOUT_MILLIS = 30_000L
+
+        internal fun createDirectoryCommand(path: String, mustCreate: Boolean, chownTo: String?): String {
+            val quoted = "'" + path.replace("'", "'\\''") + "'"
+            if (chownTo == null) {
+                return if (mustCreate) "mkdir -- $quoted" else "mkdir -p -- $quoted"
+            }
+            if (mustCreate) {
+                return "mkdir -- $quoted && { chown $chownTo -- $quoted || true; }"
+            }
+            return "t=$quoted; top=''; p=\$t; " +
+                "while [ ! -e \"\$p\" ]; do top=\$p; p=\$(dirname -- \"\$p\"); done; " +
+                "mkdir -p -- \"\$t\" && { [ -z \"\$top\" ] || chown -R $chownTo -- \"\$top\" || true; }"
+        }
     }
 }
 

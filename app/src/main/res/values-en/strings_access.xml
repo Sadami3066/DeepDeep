@@ -30,7 +30,9 @@
     <string name="access_root_failed">Preparation failed; you can retry</string>
     <string name="access_root_retry">Retry preparation</string>
     <string name="access_root_rebuild">Rebuild Root Linux</string>
-    <string name="access_root_hint">The Root tier uses its own snapshot, not the Linux environment above.</string>
+    <string name="access_root_hint">The Root tier uses its own snapshot. If the base Linux environment is missing, install it on this page.</string>
+    <string name="access_root_install_linux">Install base Linux</string>
+    <string name="access_root_failed_reason">Preparation failed: %1$s</string>
     <string name="access_error_wireless_debugging_disabled">Wireless debugging is off</string>
     <string name="access_error_pairing_code_invalid">Incorrect pairing code</string>
     <string name="access_error_no_pairing_service">Open the wireless debugging pairing screen first</string>

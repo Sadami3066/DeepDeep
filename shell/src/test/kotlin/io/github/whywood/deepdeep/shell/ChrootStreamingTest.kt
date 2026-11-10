@@ -59,7 +59,7 @@ class ChrootStreamingTest {
     }
 
     @Test
-    fun executeStreamingBoundsOutputAndWritesFullLog() = runBlocking {
+    fun executeStreamingBoundsOutputWithoutLog() = runBlocking {
         val dir = tempDir()
         try {
             val runner = object : RootCommandRunner {
@@ -83,7 +83,7 @@ class ChrootStreamingTest {
             val streamed = executor(dir, runner, maxOutputBytes = 16).executeStreaming("cat", 5_000) {}
             assertTrue(streamed.truncated)
             assertEquals("klmnopqrstuvwxyz", streamed.output)
-            assertTrue(File(streamed.fullOutputPath!!).isFile)
+            assertNull(streamed.fullOutputPath)
         } finally {
             dir.deleteRecursively()
         }
@@ -194,7 +194,6 @@ class ChrootStreamingTest {
     ): ChrootExecutor = ChrootExecutor(
         linuxDir = File(dir, "linux"),
         workspaceDir = File(dir, "workspace"),
-        logDir = File(dir, "logs"),
         sharedStorageEnabled = { false },
         resolvConf = { null },
         maxOutputBytes = maxOutputBytes,

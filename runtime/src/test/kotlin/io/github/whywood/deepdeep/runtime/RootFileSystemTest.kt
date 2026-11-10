@@ -189,6 +189,29 @@ class RootFileSystemTest {
     }
 
     @Test
+    fun createDirectoryChownsNewAppOwnedDirectoryTree() {
+        val commands = mutableListOf<String>()
+        val rootFs = RootFileSystem(
+            runner = RootFileRunner { command ->
+                commands += command
+                ProcessBuilder("sh", "-c", command).start()
+            },
+            appUid = 10123,
+            appGid = 10123,
+        )
+        val dir = tempDir()
+        try {
+            val nested = dir / "owned" / "nested"
+            rootFs.createDirectories(nested)
+            assertTrue(rootFs.exists(nested))
+            val command = commands.first { it.contains("mkdir -p -- ") }
+            assertTrue(command.contains("chown -R 10123:10123"))
+        } finally {
+            cleanup(dir)
+        }
+    }
+
+    @Test
     fun chownsWithSeparateUidAndGid() {
         val commands = mutableListOf<String>()
         val rootFs = RootFileSystem(

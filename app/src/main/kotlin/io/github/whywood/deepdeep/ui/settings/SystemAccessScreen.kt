@@ -181,7 +181,7 @@ fun SystemAccessScreen(
                         DdListRow(
                             title = stringResource(R.string.access_root_state),
                             subtitle = rootfsText(rootfs),
-                            subtitleMaxLines = 2,
+                            subtitleMaxLines = 3,
                             modifier = Modifier.testTag("access_root_state"),
                         )
                         if (rootfs.state is RootfsState.Failed) {
@@ -200,6 +200,15 @@ fun SystemAccessScreen(
                                 showChevron = true,
                                 onClick = onRebuildRootfs,
                                 modifier = Modifier.testTag("access_root_rebuild"),
+                            )
+                        }
+                        if (linuxState !is LinuxInstallState.Installed && linuxState !is LinuxInstallState.Installing) {
+                            DdHairline()
+                            DdListRow(
+                                title = stringResource(R.string.access_root_install_linux),
+                                showChevron = true,
+                                onClick = onLinuxInstall,
+                                modifier = Modifier.testTag("access_root_install_linux"),
                             )
                         }
                         if (!state.rootReady) {
@@ -468,11 +477,9 @@ private fun fallbackText(fallback: HostAccessFallback): Int = when (fallback) {
 }
 
 @Composable
-private fun rootfsText(rootfs: RootfsStatus): String = stringResource(
-    when (rootfs.state) {
-        RootfsState.Idle -> R.string.access_root_idle
-        RootfsState.Preparing -> R.string.access_root_preparing
-        RootfsState.Ready -> R.string.access_root_ready
-        is RootfsState.Failed -> R.string.access_root_failed
-    },
-)
+private fun rootfsText(rootfs: RootfsStatus): String = when (val state = rootfs.state) {
+    RootfsState.Idle -> stringResource(R.string.access_root_idle)
+    RootfsState.Preparing -> stringResource(R.string.access_root_preparing)
+    RootfsState.Ready -> stringResource(R.string.access_root_ready)
+    is RootfsState.Failed -> stringResource(R.string.access_root_failed_reason, state.reason)
+}

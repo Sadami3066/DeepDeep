@@ -57,9 +57,6 @@ class RootfsBootstrap internal constructor(
     suspend fun rebuild(): RootfsStatus = mutex.withLock {
         val current = _status.value.state
         if (current is RootfsState.Preparing) return@withLock RootfsStatus(current)
-        if (!appRootfsDir.isDirectory || !File(appRootfsDir, BASH_BINARY).exists()) {
-            return@withLock fail("Linux environment is not installed yet")
-        }
         publish(RootfsState.Preparing)
         val cleanup = withContext(ioDispatcher) {
             runCatching {
@@ -82,9 +79,6 @@ class RootfsBootstrap internal constructor(
     }
 
     private suspend fun prepareLocked(): RootfsStatus {
-        if (!appRootfsDir.isDirectory || !File(appRootfsDir, BASH_BINARY).exists()) {
-            return fail("Linux environment is not installed yet")
-        }
         publish(RootfsState.Preparing)
         val result = withContext(ioDispatcher) {
             runCatching {
@@ -172,7 +166,6 @@ class RootfsBootstrap internal constructor(
         const val DEFAULT_LINUX_DIR = "/data/adb/deepdeep/linux"
         private const val ROOTFS_DIR_NAME = "rootfs"
         private const val TEMP_ROOTFS_DIR_NAME = "rootfs.tmp"
-        private const val BASH_BINARY = "bin/bash"
         private const val PREPARE_TIMEOUT_MILLIS = 10 * 60 * 1000L
         private const val STATUS_READY = "ready"
         private const val STATUS_FAILED_PREFIX = "failed:"

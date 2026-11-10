@@ -30,18 +30,20 @@ private val rootPromptLines = listOf(
     "- /sdcard = /storage/emulated/0 (rw), same data as /data/media/0.",
     "- /proc /sys /dev: host.",
     "Android system commands run directly via the root shell capability.",
-    "read, edit and write reach the same native tree as bash; pass absolute paths without an /android prefix.",
+    "read, edit and write use the Android host filesystem; bash runs inside the Alpine chroot. Workspace, /data and /storage paths are shared; /etc, /root and /usr differ between them.",
 )
 
 class LocalHostEnvironment(
     private val prootBash: (String) -> ShellExecutor,
     sharedStorageEnabled: () -> Boolean,
     private val prootBashStreaming: (String) -> StreamingShellExecutor? = { null },
+    private val bashAvailable: () -> Boolean = { false },
 ) : HostEnvironment {
     private val sharedStorage = sharedStorageEnabled
 
     override val access = HostAccess.LOCAL
-    override val capabilities = HostCapabilities()
+    override val capabilities: HostCapabilities
+        get() = HostCapabilities(bashAvailable = bashAvailable())
     override val sharedStorageEnabled: Boolean get() = sharedStorage()
     override val files: FileSystem = FileSystem.SYSTEM
     override val system: ShellExecutor? = null
@@ -56,11 +58,13 @@ class AdbHostEnvironment(
     sharedStorageEnabled: () -> Boolean,
     private val adbShell: ShellExecutor,
     private val prootBashStreaming: (String) -> StreamingShellExecutor? = { null },
+    private val bashAvailable: () -> Boolean = { false },
 ) : HostEnvironment {
     private val sharedStorage = sharedStorageEnabled
 
     override val access = HostAccess.ADB
-    override val capabilities = HostCapabilities(hasSystemShell = true)
+    override val capabilities: HostCapabilities
+        get() = HostCapabilities(hasSystemShell = true, bashAvailable = bashAvailable())
     override val sharedStorageEnabled: Boolean get() = sharedStorage()
     override val files: FileSystem = FileSystem.SYSTEM
     override val system: ShellExecutor = adbShell
@@ -81,11 +85,13 @@ class RootHostEnvironment(
     private val sharedStorage = sharedStorageEnabled
 
     override val access = HostAccess.ROOT
-    override val capabilities = HostCapabilities(
-        isRoot = true,
-        hasSystemShell = true,
-        canReadSystemData = true,
-    )
+    override val capabilities: HostCapabilities
+        get() = HostCapabilities(
+            isRoot = true,
+            hasSystemShell = true,
+            canReadSystemData = true,
+            bashAvailable = readiness() == RootBashReadiness.READY,
+        )
     override val sharedStorageEnabled: Boolean get() = sharedStorage()
     override val promptLines = rootPromptLines
 

@@ -83,7 +83,7 @@ class HostFiles(
 
     suspend fun exportToSharedStorage(file: File, name: String): File? = withContext(Dispatchers.IO) {
         if (!capabilities().isRoot) return@withContext null
-        val executor = environment()?.system ?: return@withContext null
+        val executor = runCatching { environment()?.system }.getOrNull() ?: return@withContext null
         if (!isFile(file)) return@withContext null
         val token = UUID.randomUUID().toString().replace("-", "").take(8)
         val target = exportTarget(SHARED_EXPORT_DIRECTORY, token, name)

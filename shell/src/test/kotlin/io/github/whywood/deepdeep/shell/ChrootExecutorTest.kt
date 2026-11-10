@@ -62,7 +62,6 @@ class ChrootExecutorTest {
             val executor = ChrootExecutor(
                 linuxDir = File(dir, "linux"),
                 workspaceDir = File(dir, "workspace"),
-                logDir = File(dir, "logs"),
                 sharedStorageEnabled = { true },
                 resolvConf = { null },
                 maxOutputBytes = 1024,
@@ -93,7 +92,6 @@ class ChrootExecutorTest {
             val executor = ChrootExecutor(
                 linuxDir = File(dir, "linux"),
                 workspaceDir = File(dir, "workspace"),
-                logDir = File(dir, "logs"),
                 sharedStorageEnabled = { false },
                 resolvConf = { null },
                 maxOutputBytes = 16,
@@ -106,7 +104,7 @@ class ChrootExecutorTest {
 
             assertTrue(result.truncated)
             assertEquals("klmnopqrstuvwxyz", result.output)
-            assertTrue(File(result.fullOutputPath!!).isFile)
+            assertEquals(null, result.fullOutputPath)
         } finally {
             dir.deleteRecursively()
         }
