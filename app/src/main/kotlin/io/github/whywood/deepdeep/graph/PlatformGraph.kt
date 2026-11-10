@@ -29,6 +29,7 @@ import io.github.whywood.deepdeep.service.AccessibilityBootstrapRunner
 import io.github.whywood.deepdeep.service.AppShellExecutor
 import io.github.whywood.deepdeep.service.accessibilityServiceComponent
 import io.github.whywood.deepdeep.shell.ChrootExecutor
+import io.github.whywood.deepdeep.shell.LinuxInstallState
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootShell
 import io.github.whywood.deepdeep.shell.RootStatus
@@ -146,12 +147,14 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
                 prootBash = prootBash,
                 sharedStorageEnabled = sharedStorage,
                 prootBashStreaming = prootStreaming,
+                bashAvailable = { linuxInstalled() },
             ),
             adb = AdbHostEnvironment(
                 prootBash = prootBash,
                 sharedStorageEnabled = sharedStorage,
                 adbShell = adbSystemShell,
                 prootBashStreaming = prootStreaming,
+                bashAvailable = { linuxInstalled() },
             ),
             root = RootHostEnvironment(
                 chrootBash = { cwd -> AppShellExecutor(chrootExecutorFor(rootDirectory(cwd))) },
@@ -170,6 +173,9 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
             ),
         )
     }
+
+    private fun linuxInstalled(): Boolean =
+        linuxEnvironment.state.value is LinuxInstallState.Installed
 
     private val adbSystemShell: ShellExecutor = object : ShellExecutor {
         override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult {
@@ -235,7 +241,6 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
             ChrootExecutor(
                 linuxDir = File(RootfsBootstrap.DEFAULT_LINUX_DIR),
                 workspaceDir = cwd,
-                logDir = File(deps.appContext.cacheDir, "tool-output"),
                 sharedStorageEnabled = { deps.sharedStorage.value },
                 resolvConf = { linuxEnvironmentFor(cwd.absolutePath).exportResolvConf() },
             )
@@ -247,7 +252,7 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
     }
 
     private val mainShell: PrivilegedMainScreenShell by lazy {
-        PrivilegedMainScreenShell(hostAccess, rootShell, adbBridge)
+        PrivilegedMainScreenShell(hostEnvironmentProvider)
     }
 
     val screenToolset: ScreenToolset by lazy {

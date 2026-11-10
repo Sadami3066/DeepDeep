@@ -19,8 +19,6 @@ import io.github.whywood.deepdeep.plugin.host.declaredOnly
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
-import io.github.whywood.deepdeep.runtime.host.HostAccess
-import io.github.whywood.deepdeep.shell.LinuxInstallState
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -89,10 +87,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             installationId = { deps.installationId.get() },
             hostEnvironment = deps.hostEnvironment,
             defaultWorkspace = { deps.homeDir.absolutePath },
-            linuxAvailable = {
-                deps.hostEnvironment.current().access == HostAccess.ROOT ||
-                    deps.linuxEnvironment.state.value is LinuxInstallState.Installed
-            },
+            bashAvailable = { deps.hostEnvironment.current().capabilities.bashAvailable },
             files = { deps.hostEnvironment.current().files },
             secrets = deps.secretStore,
             network = deps.httpTransport,

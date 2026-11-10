@@ -43,7 +43,7 @@ data class PluginServiceDependencies(
     val installationId: suspend () -> String = { "" },
     val hostEnvironment: HostEnvironmentProvider? = null,
     val defaultWorkspace: () -> String = { pluginDataDir.absolutePath },
-    val linuxAvailable: () -> Boolean = { false },
+    val bashAvailable: () -> Boolean = { false },
     val files: () -> FileSystem = { FileSystem.SYSTEM },
     val secrets: EncryptedSecretStore? = null,
     val network: HttpTransport? = null,
@@ -85,7 +85,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
             LinuxPluginService(
                 hostEnvironment = hostEnvironment,
                 defaultWorkspace = deps.defaultWorkspace,
-                availableProvider = deps.linuxAvailable,
+                availableProvider = deps.bashAvailable,
             ) { dropped ->
                 logs.warn("linux stream dropped $dropped output lines")
             }

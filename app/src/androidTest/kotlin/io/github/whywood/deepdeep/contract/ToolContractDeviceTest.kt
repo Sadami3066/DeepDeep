@@ -194,7 +194,7 @@ class ToolContractDeviceTest {
 
                 override suspend fun run(command: String, timeoutSeconds: Long?, signal: RunSignal?): ShellResult = error("unused")
             }
-            val rootTool = io.github.whywood.deepdeep.runtime.systemShellTool(rootExecutor)
+            val rootTool = io.github.whywood.deepdeep.runtime.systemShellTool { rootExecutor }
             val rootTimeout = run(rootTool, buildJsonObject { put("command", "printf root-partial; sleep 20"); put("timeoutMs", 1000) })
             assertEquals(true, rootTimeout.isError)
             assertTrue(rootTimeout.text(), rootTimeout.text().contains("root-partial") && rootTimeout.text().contains("timed out"))
@@ -224,7 +224,7 @@ class ToolContractDeviceTest {
                     .getDisplay(0).getRealMetrics(metrics)
                 metrics.widthPixels to metrics.heightPixels
             }, { virtual.status() },
-            io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(graph.hostAccess, io.github.whywood.deepdeep.shell.RootShell(), graph.adbBridge),
+            io.github.whywood.deepdeep.screen.PrivilegedMainScreenShell(graph.hostEnvironmentProvider),
         )
         val fixture = InstrumentationRegistry.getInstrumentation().context.packageName
         val tools = screenTools(virtual, File(context.filesDir, "gui/screenshots"), main).associateBy { it.name }

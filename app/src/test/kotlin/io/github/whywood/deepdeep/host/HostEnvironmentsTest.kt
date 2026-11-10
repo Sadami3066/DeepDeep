@@ -98,13 +98,29 @@ class HostEnvironmentsTest {
         )
 
         assertEquals(HostAccess.ROOT, environment.access)
-        assertEquals(HostCapabilities(isRoot = true, hasSystemShell = true, canReadSystemData = true), environment.capabilities)
+        assertEquals(HostCapabilities(isRoot = true, hasSystemShell = true, canReadSystemData = true, bashAvailable = true), environment.capabilities)
         assertSame(rootFiles, environment.files)
         assertSame(rootShell, environment.system)
         assertSame(rootShell, environment.bash("/"))
         assertEquals(7, environment.promptLines.size)
         assertTrue(environment.promptLines.any { it.contains("/data (rw)") })
         assertTrue(environment.promptLines.any { it.contains("root shell capability") })
+    }
+
+    @Test
+    fun bashAvailabilityFollowsTheCurrentEnvironment() {
+        var installed = false
+        val local = LocalHostEnvironment(
+            prootBash = { FakeShell() },
+            sharedStorageEnabled = { false },
+            bashAvailable = { installed },
+        )
+        assertFalse(local.capabilities.bashAvailable)
+        installed = true
+        assertTrue(local.capabilities.bashAvailable)
+
+        val root = rootEnvironment(readiness = { RootBashReadiness.PREPARING })
+        assertFalse(root.capabilities.bashAvailable)
     }
 
     @Test
