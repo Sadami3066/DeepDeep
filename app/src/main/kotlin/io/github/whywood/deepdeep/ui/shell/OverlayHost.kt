@@ -69,6 +69,7 @@ data class ShellOverlayActions(
     val onConfirmWorkspaceRename: (String) -> Unit, val onDismissWorkspaceRename: () -> Unit,
     val onConfirmWorkspaceDelete: () -> Unit, val onDismissWorkspaceDelete: () -> Unit,
     val onDismissAttachmentPreview: () -> Unit, val onShareAttachmentPreview: () -> Unit,
+    val onExportAttachmentPreview: () -> Unit,
     val onDismissUsage: () -> Unit, val onSelectJob: (String) -> Unit,
     val onCloseJobOutput: () -> Unit, val onKillJob: (String) -> Unit,
     val onClearSettledJobs: () -> Unit, val onDismissJobs: () -> Unit,
@@ -142,6 +143,7 @@ internal fun OverlayHost(
                     overlay.attachment, overlay.file,
                     onDismiss = overlayActions.onDismissAttachmentPreview,
                     onShare = overlayActions.onShareAttachmentPreview,
+                    onExport = overlayActions.onExportAttachmentPreview,
                 )
 
                 is ShellOverlay.Usage -> UsageSheet(overlay.usage, overlayActions.onDismissUsage)

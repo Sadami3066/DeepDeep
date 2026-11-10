@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
 import java.io.ByteArrayInputStream
 import java.io.File
+import kotlinx.coroutines.runBlocking
 import okio.FileSystem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -89,6 +90,49 @@ class HostFilesTest {
         assertFalse(hostFiles.available())
         assertNull(hostFiles.list(temporaryFolder.root))
         assertEquals(HostCapabilities(), hostFiles.capabilities())
+    }
+
+    @Test
+    fun exportTargetLivesUnderTokenDirectoryAndSanitizesName() {
+        val target = exportTarget(SHARED_EXPORT_DIRECTORY, "abcd1234", "../evil name.txt")
+
+        assertEquals(File(SHARED_EXPORT_DIRECTORY, "abcd1234"), target.parentFile)
+        assertEquals(".._evil_name.txt", target.name)
+    }
+
+    @Test
+    fun exportCommandsQuotePathsAndPruneExpiredFiles() {
+        val source = File("/data/local/tmp/it's a file.bin")
+        val target = File(SHARED_EXPORT_DIRECTORY, "1234/it's a file.bin")
+
+        val copy = exportCopyCommand(source, target)
+        assertTrue(copy.startsWith("mkdir -p '"))
+        assertTrue(copy.contains(shellQuote(source.absolutePath)))
+        assertTrue(copy.contains("cp -f"))
+        assertTrue(copy.contains(shellQuote(target.absolutePath)))
+        assertEquals("'it'\\''s a file.bin'", shellQuote("it's a file.bin"))
+
+        val prune = exportPruneCommand(SHARED_EXPORT_DIRECTORY)
+        assertEquals(
+            "find '${SHARED_EXPORT_DIRECTORY}' -mindepth 1 -maxdepth 1 -mmin +1440 -exec rm -rf {} +",
+            prune,
+        )
+    }
+
+    @Test
+    fun exceedsStageLimitOnlyAboveTwoGigabytes() {
+        val hostFiles = hostFiles(temporaryFolder.newFolder("staging"))
+        val twoGigabytes = 2L * 1024L * 1024L * 1024L
+
+        assertFalse(hostFiles.exceedsStageLimit(twoGigabytes))
+        assertTrue(hostFiles.exceedsStageLimit(twoGigabytes + 1))
+    }
+
+    @Test
+    fun exportToSharedStorageIsUnavailableOutsideRoot() = runBlocking {
+        val hostFiles = hostFiles(temporaryFolder.newFolder("staging"))
+
+        assertNull(hostFiles.exportToSharedStorage(File(temporaryFolder.root, "video.mp4"), "video.mp4"))
     }
 
     private fun hostFiles(staging: File): HostFiles = HostFiles(

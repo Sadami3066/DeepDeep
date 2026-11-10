@@ -11,11 +11,14 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
+import io.github.whywood.deepdeep.data.AttachmentExport
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.exportShareIntent
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
@@ -85,6 +88,8 @@ internal fun AppOverlays(
     val scope = rememberCoroutineScope()
     val privateWorkspacesDir = remember(context) { File(context.filesDir, "workspaces").absolutePath }
     val shareChooserTitle = stringResource(R.string.assistant_attach_share)
+    val exportDone = stringResource(R.string.files_export_done)
+    val exportDonePathFormat = stringResource(R.string.files_export_done_path)
     val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
     LaunchedEffect(overlays.jobsSheetOpen, overlays.selectedJobId) {
         val id = overlays.selectedJobId
@@ -144,6 +149,28 @@ internal fun AppOverlays(
                     overlays.previewAttachment?.let { attachment ->
                         graph.attachmentStore.shareIntent(attachment, overlays.previewRoot ?: attachmentRoot)
                     }?.let { context.startActivity(shareChooser(context, it, shareChooserTitle)) }
+                }
+            },
+            onExportAttachmentPreview = {
+                scope.launch {
+                    val attachment = overlays.previewAttachment ?: return@launch
+                    when (val export = graph.attachmentStore.export(attachment, overlays.previewRoot ?: attachmentRoot)) {
+                        null -> Toast.makeText(context, R.string.files_export_failed, Toast.LENGTH_SHORT).show()
+                        is AttachmentExport.SharedStorage -> {
+                            Toast.makeText(
+                                context,
+                                String.format(exportDonePathFormat, export.file.absolutePath),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            exportShareIntent(context, export, attachment.name, attachment.mime)
+                                ?.let { context.startActivity(shareChooser(context, it, shareChooserTitle)) }
+                        }
+                        is AttachmentExport.Download -> Toast.makeText(
+                            context,
+                            R.string.files_export_done,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                 }
             },
             onDismissUsage = { overlays.usageSheetOpen = false },

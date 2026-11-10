@@ -25,6 +25,11 @@ sealed interface AttachmentImport {
     data object Failed : AttachmentImport
 }
 
+sealed interface AttachmentExport {
+    data class SharedStorage(val file: File) : AttachmentExport
+    data class Download(val uri: Uri, val name: String) : AttachmentExport
+}
+
 interface AttachmentStore {
     suspend fun import(uri: Uri, root: File): AttachmentImport
     fun file(ref: AttachmentRef, root: File): File
@@ -34,6 +39,7 @@ interface AttachmentStore {
     suspend fun viewIntent(ref: AttachmentRef, root: File): Intent? = null
     suspend fun resolve(raw: String, root: File): AttachmentRef?
     fun available(): Boolean
+    suspend fun export(ref: AttachmentRef, root: File): AttachmentExport? = null
 }
 
 class FileAttachmentStore(
@@ -173,6 +179,17 @@ class FileAttachmentStore(
         fileViewIntent(appContext, target, ref.mime)
     }
 
+    override suspend fun export(ref: AttachmentRef, root: File): AttachmentExport? = withContext(Dispatchers.IO) {
+        val target = file(ref, root)
+        if (hostFiles.capabilities().isRoot) {
+            hostFiles.exportToSharedStorage(target, ref.name)?.let(AttachmentExport::SharedStorage)
+        } else {
+            if (!hostFiles.isFile(target)) return@withContext null
+            saveStreamToDownloads(appContext, ref.name, ref.mime) { hostFiles.openStream(target) }
+                ?.let { AttachmentExport.Download(it, ref.name) }
+        }
+    }
+
     private fun normalizedFile(file: File): File =
         hostFiles.canonical(file) ?: runCatching { Paths.get(file.absolutePath).normalize().toFile() }.getOrDefault(file)
 
@@ -226,6 +243,24 @@ internal fun attachmentRoots(
     sharedStorageEnabled: Boolean,
 ): List<File> = listOfNotNull(root, home, external?.takeIf { sharedStorageEnabled })
     .mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
+
+internal fun exportShareIntent(
+    context: Context,
+    export: AttachmentExport,
+    name: String,
+    mime: String,
+): Intent? = runCatching {
+    val uri = when (export) {
+        is AttachmentExport.SharedStorage -> FileProvider.getUriForFile(context, "${context.packageName}.files", export.file)
+        is AttachmentExport.Download -> export.uri
+    }
+    Intent(Intent.ACTION_SEND).apply {
+        type = mime.ifBlank { "application/octet-stream" }
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_TITLE, name)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+}.getOrNull()
 
 internal fun fileViewIntent(context: Context, file: File, mime: String): Intent? = runCatching {
     if (!file.isFile) return@runCatching null

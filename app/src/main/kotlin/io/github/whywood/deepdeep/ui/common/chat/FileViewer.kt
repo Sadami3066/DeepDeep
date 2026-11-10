@@ -69,6 +69,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.common.chat.AnimatedImage
@@ -120,6 +121,7 @@ internal fun FileViewerDialog(
     mime: String,
     onDismiss: () -> Unit,
     onShare: (() -> Unit)? = null,
+    onExport: (() -> Unit)? = null,
 ) {
     val hostFiles = LocalHostFiles.current
     val state by produceState<PreviewFileState>(
@@ -137,7 +139,7 @@ internal fun FileViewerDialog(
     }
     when (val current = state) {
         PreviewFileState.Loading -> FileViewerLoading(onDismiss = onDismiss)
-        PreviewFileState.Failed -> FileViewerFailed(onDismiss = onDismiss)
+        PreviewFileState.Failed -> FileViewerFailed(onDismiss = onDismiss, onExport = onExport)
         is PreviewFileState.Ready -> FileViewerContent(
             file = current.file,
             name = name,
@@ -181,13 +183,24 @@ private fun FileViewerLoading(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun FileViewerFailed(onDismiss: () -> Unit) {
+private fun FileViewerFailed(onDismiss: () -> Unit, onExport: (() -> Unit)? = null) {
     FileViewerFrame(onDismiss = onDismiss) {
-        Text(
-            text = stringResource(R.string.files_unreadable),
-            style = DdType.body,
-            color = deepDeepColors().inkSecondary,
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(DdSpacing.Md),
+        ) {
+            Text(
+                text = stringResource(R.string.files_unreadable),
+                style = DdType.body,
+                color = deepDeepColors().inkSecondary,
+            )
+            if (onExport != null) {
+                DdTextAction(
+                    text = stringResource(R.string.files_export_action),
+                    onClick = onExport,
+                )
+            }
+        }
     }
 }
 

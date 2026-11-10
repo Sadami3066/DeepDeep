@@ -4,6 +4,10 @@
     <string name="files_empty">Empty folder</string>
     <string name="files_up">Up</string>
     <string name="files_unreadable">Could not read this folder</string>
+    <string name="files_export_action">Export to Downloads</string>
+    <string name="files_export_done">Saved to Downloads</string>
+    <string name="files_export_done_path">Exported to %1$s</string>
+    <string name="files_export_failed">Export failed</string>
     <string name="files_back">Back</string>
     <string name="files_preview">Preview</string>
     <string name="files_source">Source</string>

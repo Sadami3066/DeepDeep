@@ -7,6 +7,8 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okio.Buffer
 import okio.FileMetadata
 import okio.FileSystem
@@ -75,6 +77,24 @@ class HostFiles(
             }
             TextFileContent(String(buffer, 0, size, Charsets.UTF_8), truncated)
         }
+    }
+
+    fun exceedsStageLimit(size: Long): Boolean = size > STAGE_MAX_BYTES
+
+    suspend fun exportToSharedStorage(file: File, name: String): File? = withContext(Dispatchers.IO) {
+        if (!capabilities().isRoot) return@withContext null
+        val executor = environment()?.system ?: return@withContext null
+        if (!isFile(file)) return@withContext null
+        val token = UUID.randomUUID().toString().replace("-", "").take(8)
+        val target = exportTarget(SHARED_EXPORT_DIRECTORY, token, name)
+        val copied = runCatching {
+            executor.run(exportCopyCommand(file, target), EXPORT_TIMEOUT_SECONDS, null)
+        }.getOrNull()
+        if (copied?.exitCode != 0 || !isFile(target)) return@withContext null
+        runCatching {
+            executor.run(exportPruneCommand(SHARED_EXPORT_DIRECTORY), EXPORT_PRUNE_TIMEOUT_SECONDS, null)
+        }
+        target
     }
 
     fun write(target: File, input: InputStream, limitBytes: Long): Boolean {
@@ -152,5 +172,24 @@ class HostFiles(
         const val STAGE_CHUNK = 64L * 1024L
         const val STAGE_MAX_BYTES = 2L * 1024L * 1024L * 1024L
         const val STAGE_MAX_AGE_MS = 60L * 60L * 1000L
+        const val EXPORT_TIMEOUT_SECONDS = 600L
+        const val EXPORT_PRUNE_TIMEOUT_SECONDS = 120L
     }
 }
+
+internal const val SHARED_EXPORT_DIRECTORY = "/storage/emulated/0/Download/DeepDeep"
+internal const val EXPORT_MAX_AGE_MINUTES = 24L * 60L
+
+internal fun exportTarget(root: String, token: String, name: String): File =
+    File(File(root, token), sanitizeAttachmentName(name))
+
+internal fun exportCopyCommand(source: File, target: File): String =
+    "mkdir -p " + shellQuote(target.parentFile?.absolutePath.orEmpty()) +
+        " && cp -f " + shellQuote(source.absolutePath) + " " + shellQuote(target.absolutePath)
+
+internal fun exportPruneCommand(root: String): String =
+    "find " + shellQuote(root) + " -mindepth 1 -maxdepth 1 -mmin +" + EXPORT_MAX_AGE_MINUTES +
+        " -exec rm -rf {} +"
+
+internal fun shellQuote(value: String): String =
+    "'" + value.replace("'", "'\\''") + "'"

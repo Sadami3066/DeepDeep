@@ -315,6 +315,7 @@ internal fun AttachmentPreviewDialog(
     file: File,
     onDismiss: () -> Unit,
     onShare: () -> Unit,
+    onExport: (() -> Unit)? = null,
 ) {
     FileViewerDialog(
         file = file,
@@ -322,6 +323,7 @@ internal fun AttachmentPreviewDialog(
         mime = attachment.mime,
         onDismiss = onDismiss,
         onShare = onShare,
+        onExport = onExport,
     )
 }
 

@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.core.resolveAttachmentRoot
+import io.github.whywood.deepdeep.data.AttachmentExport
 import io.github.whywood.deepdeep.data.AttachmentKind
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.PersonalizationUi
@@ -34,6 +35,7 @@ import io.github.whywood.deepdeep.data.ProfileAvatarStore
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.session.SessionExporter
 import io.github.whywood.deepdeep.data.UiPreferences
+import io.github.whywood.deepdeep.data.exportShareIntent
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -146,6 +148,8 @@ internal fun AppShell(
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
     val presentOpenFailed = stringResource(R.string.present_open_failed)
     val presentShareFailed = stringResource(R.string.present_share_failed)
+    val filesExportDone = stringResource(R.string.files_export_done)
+    val filesExportDonePathFormat = stringResource(R.string.files_export_done_path)
     val openWorkspaceFile: (String) -> Unit = { raw ->
         scope.launch {
             val resolved = graph.attachmentStore.resolve(raw, attachmentRoot)
@@ -506,7 +510,21 @@ internal fun AppShell(
                                                         if (intent != null) {
                                                             context.startActivity(shareChooser(context, intent, shareChooserTitle))
                                                         } else {
-                                                            Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                                                            val export = graph.attachmentStore.export(resolved, attachmentRoot)
+                                                            val exportIntent = export?.let {
+                                                                exportShareIntent(context, it, resolved.name, resolved.mime)
+                                                            }
+                                                            if (export != null && exportIntent != null) {
+                                                                val message = if (export is AttachmentExport.SharedStorage) {
+                                                                    String.format(filesExportDonePathFormat, export.file.absolutePath)
+                                                                } else {
+                                                                    filesExportDone
+                                                                }
+                                                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                                                context.startActivity(shareChooser(context, exportIntent, shareChooserTitle))
+                                                            } else {
+                                                                Toast.makeText(context, presentShareFailed, Toast.LENGTH_SHORT).show()
+                                                            }
                                                         }
                                                     }
                                                 }

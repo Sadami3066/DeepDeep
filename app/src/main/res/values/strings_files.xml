@@ -4,6 +4,10 @@
     <string name="files_empty">空目录</string>
     <string name="files_up">上一级</string>
     <string name="files_unreadable">无法读取此目录</string>
+    <string name="files_export_action">导出到下载目录</string>
+    <string name="files_export_done">已保存到下载目录</string>
+    <string name="files_export_done_path">已导出到 %1$s</string>
+    <string name="files_export_failed">导出失败</string>
     <string name="files_back">返回</string>
     <string name="files_preview">预览</string>
     <string name="files_source">源代码</string>
