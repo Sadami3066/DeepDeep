@@ -27,6 +27,8 @@ import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.time.OffsetDateTime
+import io.github.whywood.deepdeep.runtime.host.DynamicFileSystem
+import io.github.whywood.deepdeep.runtime.host.DynamicShellExecutor
 import io.github.whywood.deepdeep.runtime.host.HostEnvironmentProvider
 import okio.FileSystem
 import okio.Path
@@ -88,9 +90,12 @@ class PiSessionEngine(
         val explicitModel = if (restoredModel) null else fallback
         val providerId = if (restoredModel) restoredProviderId!! else fallback.providerId
         val modelId = if (restoredModel) restoredModelId!! else fallback.modelId
-        val environment = hostEnvironment?.let { provider -> runCatching { provider.current() }.getOrNull() }
-        val environmentShell = environment?.let { env -> runCatching { env.bash(cwd.toString()) }.getOrNull() }
-        val activeShell = if (!shellEnabled) null else environmentShell ?: shellExecutor
+        val environmentProvider = hostEnvironment
+        val activeShell = when {
+            !shellEnabled -> null
+            environmentProvider != null -> DynamicShellExecutor { environmentProvider.current().bash(cwd.toString()) }
+            else -> shellExecutor
+        }
         val binding = SessionBinding(supportsChatDelivery)
         var created: AgentSession? = null
         val allTools = buildTools(activeShell, binding) { created }
@@ -185,10 +190,13 @@ class PiSessionEngine(
         PiSessionHandle(this, createSession(file?.toPath(), config))
 
     fun availableTools(): List<CodingTool> {
-        val environmentShell = hostEnvironment?.let { provider ->
-            runCatching { provider.current().bash(cwd.toString()) }.getOrNull()
+        val environmentProvider = hostEnvironment
+        val shell = if (environmentProvider != null) {
+            DynamicShellExecutor { environmentProvider.current().bash(cwd.toString()) }
+        } else {
+            shellExecutor
         }
-        return buildTools(environmentShell ?: shellExecutor, SessionBinding(supportsChatDelivery)) { null }
+        return buildTools(shell, SessionBinding(supportsChatDelivery)) { null }
     }
 
     private fun buildTools(
@@ -196,9 +204,12 @@ class PiSessionEngine(
         binding: SessionBinding,
         session: () -> AgentSession?,
     ): List<CodingTool> = buildList {
-        val fileSystem = hostEnvironment?.let { provider ->
-            runCatching { provider.current().files }.getOrNull()
-        } ?: toolFs
+        val environmentProvider = hostEnvironment
+        val fileSystem = if (environmentProvider != null) {
+            DynamicFileSystem { environmentProvider.current().files }
+        } else {
+            toolFs
+        }
         val defaults = defaultCodingTools(
             cwd = cwd,
             fs = fileSystem,

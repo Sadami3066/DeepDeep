@@ -7,6 +7,7 @@ data class HostCapabilities(
     val isRoot: Boolean = false,
     val hasSystemShell: Boolean = false,
     val canReadSystemData: Boolean = false,
+    val bashAvailable: Boolean = false,
 )
 
 interface HostEnvironment {
