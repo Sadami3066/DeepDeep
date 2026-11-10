@@ -24,6 +24,7 @@ class HostAccessResolverTest {
     fun adbSelectionFallsBackToLocal() {
         val state = resolveHostAccess(HostAccess.ADB, adbReady = false, rootReady = true)
         assertEquals(HostAccess.LOCAL, state.effective)
+        assertEquals(true, state.rootReady)
         assertEquals(HostAccessFallback.ADB_UNAVAILABLE, state.fallback)
     }
 

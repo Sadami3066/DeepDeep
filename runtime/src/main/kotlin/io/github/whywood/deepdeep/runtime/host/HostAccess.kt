@@ -30,7 +30,7 @@ fun resolveHostAccess(
     HostAccess.ADB -> if (adbReady) {
         HostAccessState(selected, HostAccess.ADB, adbReady = true, rootReady = rootReady)
     } else {
-        HostAccessState(selected, HostAccess.LOCAL, fallback = HostAccessFallback.ADB_UNAVAILABLE)
+        HostAccessState(selected, HostAccess.LOCAL, rootReady = rootReady, fallback = HostAccessFallback.ADB_UNAVAILABLE)
     }
     HostAccess.ROOT -> when {
         rootReady -> HostAccessState(selected, HostAccess.ROOT, adbReady = adbReady, rootReady = true)
