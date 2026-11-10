@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -74,25 +75,34 @@ internal data class TodoItem(val content: String, val status: String)
 @Composable
 internal fun TodoPanel(payload: String?, modifier: Modifier = Modifier) {
     val todos = remember(payload) { parseTodos(payload) }
+    var hidden by rememberSaveable { mutableStateOf(ArrayList<String>()) }
     var lastTodos by remember { mutableStateOf(emptyList<TodoItem>()) }
     LaunchedEffect(todos) {
         if (todos.isNotEmpty()) lastTodos = todos
     }
+    val source = todos.ifEmpty { lastTodos }
+    val visibleTodos = remember(source, hidden) { source.filterNot { it.content in hidden } }
     AnimatedVisibility(
-        visible = todos.isNotEmpty(),
+        visible = visibleTodos.isNotEmpty(),
         modifier = modifier,
         enter = fadeIn(tween(DdMotion.FAST)) +
             expandVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
         exit = fadeOut(tween(DdMotion.FAST)) +
             shrinkVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
     ) {
-        TodoPanelContent(todos = todos.ifEmpty { lastTodos })
+        TodoPanelContent(
+            todos = visibleTodos,
+            onDelete = { content ->
+                if (content !in hidden) hidden = ArrayList(hidden + content)
+            },
+        )
     }
 }
 
 @Composable
-private fun TodoPanelContent(todos: List<TodoItem>) {
+private fun TodoPanelContent(todos: List<TodoItem>, onDelete: (String) -> Unit) {
     val colors = deepDeepColors()
+    val deleteLabel = stringResource(R.string.assistant_todo_delete)
     var expanded by rememberSaveable { mutableStateOf(false) }
     val chevronRotation = animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -199,7 +209,7 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
                                 .verticalScroll(scrollState),
                         ) {
                             todos.forEach { todo ->
-                                TodoPanelRow(todo)
+                                TodoPanelRow(todo = todo, deleteLabel = deleteLabel, onDelete = onDelete)
                             }
                         }
                     }
@@ -210,11 +220,19 @@ private fun TodoPanelContent(todos: List<TodoItem>) {
 }
 
 @Composable
-private fun TodoPanelRow(todo: TodoItem) {
+private fun TodoPanelRow(todo: TodoItem, deleteLabel: String, onDelete: (String) -> Unit) {
     val colors = deepDeepColors()
     val completed = todo.status == CompletedStatus
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg, vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(DdShapes.Small)
+            .combinedClickable(
+                onClick = {},
+                onLongClickLabel = deleteLabel,
+                onLongClick = { onDelete(todo.content) },
+            )
+            .padding(horizontal = DdSpacing.Lg, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StatusDot(

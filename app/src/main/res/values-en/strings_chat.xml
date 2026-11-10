@@ -44,6 +44,7 @@
     <string name="assistant_process">Process</string>
     <string name="assistant_process_reasoning">%1$d thoughts</string>
     <string name="assistant_process_tools">%1$d tools</string>
+    <string name="assistant_process_tool_group">Ran %1$d tools</string>
     <string name="assistant_quote">Quote</string>
     <string name="assistant_quote_remove">Remove quote</string>
     <string name="assistant_reasoning">Thinking</string>
@@ -117,8 +118,6 @@
     <string name="chat_notice_goal_round">Goal · round %1$d/%2$d</string>
     <string name="chat_notice_goal_completed">Goal completed</string>
     <string name="chat_notice_goal_blocked">Goal blocked</string>
-    <string name="chat_notice_job">Background job · %1$s</string>
-    <string name="chat_notice_job_failed">Background job failed · %1$s</string>
     <string name="chat_notice_interrupted_questions">Questions interrupted from the last session: %1$d. They can no longer be answered; tell me to continue</string>
     <string name="chat_notice_interrupted_run">Runs interrupted from the last session: %1$d. Their result is unknown; tell me to continue</string>
     <string name="chat_cmd_compact">Compact context</string>
@@ -147,4 +146,5 @@
     <string name="chat_font_size_preview">This is sample text; the size applies to chat content.</string>
     <string name="assistant_todo_title">Tasks</string>
     <string name="assistant_todo_progress">%1$d/%2$d</string>
+    <string name="assistant_todo_delete">Delete</string>
 </resources>

@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,7 @@ import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
@@ -62,6 +64,9 @@ import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import io.github.whywood.deepdeep.ui.common.chat.MiniappChatCard
 import io.github.whywood.deepdeep.ui.common.chat.parseRegisteredMiniapp
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -80,6 +85,20 @@ private data class BubbleContent(
     val quote: String?,
     val body: String,
 )
+
+private val messageTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+@Composable
+private fun rememberMessageTime(timestamp: Long): String? = remember(timestamp) {
+    if (timestamp <= 0L) {
+        null
+    } else {
+        Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault())
+            .toLocalTime()
+            .format(messageTimeFormatter)
+    }
+}
 
 @Composable
 internal fun ChatTurn(
@@ -287,20 +306,41 @@ private fun JobFinishedNotice(notice: TurnNotice.JobFinished) {
     val colors = deepDeepColors()
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = DdSpacing.Xxs),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
     ) {
-        DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 12.dp)
-        Spacer(Modifier.width(5.dp))
-        Text(
-            text = stringResource(
-                if (notice.failed) R.string.chat_notice_job_failed else R.string.chat_notice_job,
-                notice.label,
-            ),
-            style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
-            color = colors.inkTertiary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .clip(DdShapes.Row)
+                .background(colors.wash)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DdIcon(
+                icon = DdIcons.Terminal,
+                tint = if (notice.failed) colors.danger else colors.inkTertiary,
+                size = 13.dp,
+            )
+            Spacer(Modifier.width(DdSpacing.Sm))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(
+                        if (notice.failed) R.string.chat_job_card_failed else R.string.chat_job_card_done,
+                    ),
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp),
+                    color = colors.ink,
+                )
+                if (notice.label.isNotBlank()) {
+                    Text(
+                        text = notice.label,
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -351,12 +391,14 @@ private fun UserBubble(
     val displayText = remember(parsed.text) { stripSkillInvocation(parsed.text) }
     val content = remember(displayText) { splitQuoted(displayText) }
     val body = content.body.ifBlank { invocation?.let { "/skill:${it.name}" }.orEmpty() }
+    val reminderStyle = message.reminder != null || message.injectedSource == TurnSource.REMINDER
+    val time = rememberMessageTime(message.startedAt)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
         Column(
-            modifier = Modifier.widthIn(max = 560.dp),
+            modifier = Modifier.fillMaxWidth(0.7f),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -392,8 +434,22 @@ private fun UserBubble(
                 ) {
                     Column(
                         Modifier
-                            .clip(UserBubbleShape)
-                            .background(colors.userBubble)
+                            .then(
+                                if (reminderStyle) {
+                                    Modifier
+                                        .clip(DdShapes.Row)
+                                        .background(colors.raised)
+                                        .border(
+                                            width = 1.dp,
+                                            color = colors.hairline.copy(alpha = DdAlpha.Hairline),
+                                            shape = DdShapes.Row,
+                                        )
+                                } else {
+                                    Modifier
+                                        .clip(UserBubbleShape)
+                                        .background(colors.userBubble)
+                                },
+                            )
                             .padding(horizontal = 15.dp, vertical = 11.dp),
                     ) {
                         if (content.quote != null) {
@@ -404,11 +460,18 @@ private fun UserBubble(
                             Text(
                                 text = body,
                                 style = DdType.body,
-                                color = colors.onUserBubble,
+                                color = if (reminderStyle) colors.ink else colors.onUserBubble,
                             )
                         }
                     }
                 }
+            }
+            if (time != null) {
+                Text(
+                    text = time,
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                    color = colors.inkTertiary,
+                )
             }
         }
     }
@@ -519,6 +582,38 @@ private fun AssistantTurn(
                 onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
             ) {
                 ChatMarkdown(answer, onFileClick = onOpenFile, live = message.streaming)
+            }
+        }
+        if (!message.streaming && answer.isNotEmpty()) {
+            val time = rememberMessageTime(message.startedAt)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = DdSpacing.Sm),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
+            ) {
+                DdIconButton(
+                    icon = DdIcons.Copy,
+                    onClick = { onCopyOutput(answer) },
+                    contentDescription = stringResource(R.string.chat_message_copy),
+                    size = 28.dp,
+                    iconSize = 15.dp,
+                    tint = colors.inkTertiary,
+                )
+                DdIconButton(
+                    icon = DdIcons.Share,
+                    onClick = { sharePlainText(context, answer) },
+                    contentDescription = stringResource(R.string.chat_message_share),
+                    size = 28.dp,
+                    iconSize = 15.dp,
+                    tint = colors.inkTertiary,
+                )
+                if (time != null) {
+                    Text(
+                        text = time,
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                        color = colors.inkTertiary,
+                    )
+                }
             }
         }
         if (presentedItems.isNotEmpty() && !message.streaming) {

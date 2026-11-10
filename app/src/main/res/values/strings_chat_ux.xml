@@ -8,4 +8,9 @@
     <string name="assistant_process_replying">正在回复</string>
     <string name="assistant_ux_queue_remove">撤回</string>
     <string name="assistant_ux_queue_send">直接发送</string>
+    <string name="chat_message_copy">复制</string>
+    <string name="chat_message_share">分享</string>
+    <string name="chat_message_share_failed">无法分享</string>
+    <string name="chat_job_card_done">后台任务完成</string>
+    <string name="chat_job_card_failed">后台任务失败</string>
 </resources>

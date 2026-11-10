@@ -79,7 +79,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -106,7 +105,6 @@ import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.GoalView
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ProviderSummary
@@ -261,7 +259,6 @@ fun ChatScreen(
             layout(placeable.width, placeable.height + inset) { placeable.place(0, 0) }
         }
     }
-    var overlayHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
@@ -345,7 +342,7 @@ fun ChatScreen(
     }
 
     LaunchedEffect(controller) {
-        snapshotFlow { animatedBottomInset.value to overlayHeightPx }.collect {
+        snapshotFlow { animatedBottomInset.value }.collect {
             controller.anchorToBottom()
         }
     }
@@ -445,9 +442,7 @@ fun ChatScreen(
                     loaded = state.historyLoaded,
                     nickname = nickname,
                     avatar = avatar,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = with(density) { overlayHeightPx.toDp() }),
+                    modifier = Modifier.fillMaxSize(),
                 )
             } else {
                 CompositionLocalProvider(LocalDensity provides chatDensity) {
@@ -465,9 +460,7 @@ fun ChatScreen(
                             start = 14.dp,
                             end = 14.dp,
                             top = 6.dp,
-                            bottom = with(chatDensity) {
-                                (overlayHeightPx + DdSpacing.Md.roundToPx()).toDp()
-                            },
+                            bottom = with(chatDensity) { DdSpacing.Sm.roundToPx().toDp() },
                         ),
                         verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxl),
                     ) {
@@ -487,7 +480,7 @@ fun ChatScreen(
                                         onRetry = onRetry,
                                         attachmentRoot = attachmentRoot,
                                         autoCollapseProcess = autoCollapseProcess,
-                                        pendingQuestions = stablePendingQuestions,
+                                        pendingQuestions = emptyList(),
                                         onAnswerQuestion = onAnswerQuestion,
                                         onOpenPresentFile = onOpenPresentFile,
                                         onSharePresentFile = onSharePresentFile,
@@ -502,13 +495,7 @@ fun ChatScreen(
                             }
                         }
                         stablePendingQuestions
-                            .firstOrNull { pending ->
-                                messages.none { message ->
-                                    message.steps.any { step ->
-                                        step is AssistantStep.Tool && step.trace.toolCallId == pending.toolCallId
-                                    }
-                                }
-                            }
+                            .firstOrNull()
                             ?.let { pending ->
                                 item(key = "pending-question-${pending.requestId}") {
                                     Box(
@@ -529,12 +516,10 @@ fun ChatScreen(
                     }
                 }
             }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .onSizeChanged { overlayHeightPx = it.height },
-            ) {
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
                 if (controller.showJumpToBottom) {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(bottom = DdSpacing.Sm),
@@ -662,7 +647,6 @@ fun ChatScreen(
                     modifier = Modifier.padding(top = 6.dp, bottom = DdSpacing.Sm),
                 )
             }
-        }
         }
     }
 }

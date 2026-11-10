@@ -8,4 +8,9 @@
     <string name="assistant_process_replying">Replying</string>
     <string name="assistant_ux_queue_remove">Remove</string>
     <string name="assistant_ux_queue_send">Send now</string>
+    <string name="chat_message_copy">Copy</string>
+    <string name="chat_message_share">Share</string>
+    <string name="chat_message_share_failed">Couldn\'t share</string>
+    <string name="chat_job_card_done">Background job finished</string>
+    <string name="chat_job_card_failed">Background job failed</string>
 </resources>

@@ -11,6 +11,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,11 +31,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -160,6 +163,9 @@ internal fun ProcessSection(
     val terminatedStatus = semanticStatus.takeIf {
         !message.streaming && (it == ProcessStatus.Stopped || it == ProcessStatus.Failed)
     }
+    val processNodes = remember(message.steps, excludedStepId) {
+        groupProcessSteps(message.steps.filter { step -> step.id != excludedStepId })
+    }
     Column(Modifier.fillMaxWidth()) {
         DdPressable(
             onClick = { expansionOverride = if (expanded) 0 else 1 },
@@ -207,28 +213,38 @@ internal fun ProcessSection(
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, bottom = DdSpacing.Xs),
-                verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
+                Modifier.fillMaxWidth().padding(top = DdSpacing.Xs, bottom = DdSpacing.Sm),
+                verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
             ) {
-                message.steps.filter { step -> step.id != excludedStepId }.forEach { step ->
-                    when (step) {
-                        is AssistantStep.Reasoning -> ReasoningCard(
-                            step = step,
-                            active = step.id == activeReasoningId,
-                            onToggle = { onToggleStep(step.id) },
-                            terminatedStatus = terminatedStatus.takeIf { step.id == lastReasoningId },
-                        )
+                processNodes.forEach { node ->
+                    when (node) {
+                        is ProcessNode.Single -> when (val step = node.step) {
+                            is AssistantStep.Reasoning -> ReasoningCard(
+                                step = step,
+                                active = step.id == activeReasoningId,
+                                onToggle = { onToggleStep(step.id) },
+                                terminatedStatus = terminatedStatus.takeIf { step.id == lastReasoningId },
+                            )
 
-                        is AssistantStep.Tool -> ProcessToolStep(
-                            step = step,
+                            is AssistantStep.Tool -> ProcessToolStep(
+                                step = step,
+                                onToggleStep = onToggleStep,
+                                onCopyOutput = onCopyOutput,
+                                onFileClick = onFileClick,
+                            )
+
+                            is AssistantStep.Text -> ChatMarkdown(
+                                text = step.text.trim(),
+                                modifier = Modifier.padding(start = DdSpacing.Xxs, top = DdSpacing.Xxs, bottom = DdSpacing.Xs),
+                                onFileClick = onFileClick,
+                            )
+                        }
+
+                        is ProcessNode.ToolRun -> ToolRunGroup(
+                            tools = node.tools,
+                            messageId = message.id,
                             onToggleStep = onToggleStep,
                             onCopyOutput = onCopyOutput,
-                            onFileClick = onFileClick,
-                        )
-
-                        is AssistantStep.Text -> ChatMarkdown(
-                            text = step.text.trim(),
-                            modifier = Modifier.padding(start = DdSpacing.Xxs, top = DdSpacing.Xxs, bottom = DdSpacing.Xs),
                             onFileClick = onFileClick,
                         )
                     }
@@ -240,6 +256,129 @@ internal fun ProcessSection(
                 steps = message.steps,
                 excludedStepId = excludedStepId,
             )
+        }
+    }
+}
+
+private const val ToolGroupMinCount = 3
+
+private sealed interface ProcessNode {
+    data class Single(val step: AssistantStep) : ProcessNode
+    data class ToolRun(val tools: List<AssistantStep.Tool>) : ProcessNode
+}
+
+private fun groupProcessSteps(steps: List<AssistantStep>): List<ProcessNode> {
+    val nodes = mutableListOf<ProcessNode>()
+    var index = 0
+    while (index < steps.size) {
+        val step = steps[index]
+        if (step is AssistantStep.Tool) {
+            var end = index
+            while (end < steps.size && steps[end] is AssistantStep.Tool) end++
+            val tools = steps.subList(index, end).filterIsInstance<AssistantStep.Tool>()
+            if (tools.size >= ToolGroupMinCount) {
+                nodes += ProcessNode.ToolRun(tools)
+            } else {
+                tools.forEach { nodes += ProcessNode.Single(it) }
+            }
+            index = end
+        } else {
+            nodes += ProcessNode.Single(step)
+            index++
+        }
+    }
+    return nodes
+}
+
+@Composable
+private fun ToolRunGroup(
+    tools: List<AssistantStep.Tool>,
+    messageId: Long,
+    onToggleStep: (Long) -> Unit,
+    onCopyOutput: (String) -> Unit,
+    onFileClick: (String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    val firstToolId = tools.first().id
+    var expanded by rememberSaveable(messageId, firstToolId) { mutableStateOf(false) }
+    val rotation = animateFloatAsState(
+        targetValue = if (expanded) 90f else 0f,
+        animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
+        label = "tool-group-chevron",
+    )
+    val running = tools.any { it.trace.status == ToolActivityStatus.RUNNING }
+    val failed = tools.any { it.trace.status == ToolActivityStatus.FAILED }
+    val dotTint = when {
+        failed -> colors.danger
+        running -> colors.warning
+        else -> colors.inkTertiary.copy(alpha = DdAlpha.Muted)
+    }
+    val state = stringResource(
+        if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
+    )
+    val title = stringResource(R.string.assistant_process_tool_group, tools.size)
+    Column(Modifier.fillMaxWidth()) {
+        DdPressable(
+            onClick = { expanded = !expanded },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 32.dp)
+                .semantics { stateDescription = state }
+                .testTag("tool_group_$firstToolId"),
+            shape = DdShapes.Small,
+            contentDescription = title,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier
+                        .size(6.dp)
+                        .clip(DdShapes.Pill)
+                        .background(dotTint),
+                )
+                Spacer(Modifier.width(DdSpacing.Sm))
+                Text(
+                    text = title,
+                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                    color = colors.inkSecondary,
+                )
+                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(DdSpacing.Sm))
+                DdIcon(
+                    icon = DdIcons.ChevronRight,
+                    modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
+                    tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
+                    size = 12.dp,
+                )
+                Spacer(Modifier.width(DdSpacing.Xxs))
+            }
+        }
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(
+                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                expandFrom = Alignment.Top,
+            ) + fadeIn(tween(DdMotion.FAST)),
+            exit = shrinkVertically(
+                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                shrinkTowards = Alignment.Top,
+            ) + fadeOut(tween(DdMotion.FAST)),
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, start = DdSpacing.Sm),
+                verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
+            ) {
+                tools.forEach { tool ->
+                    ProcessToolStep(
+                        step = tool,
+                        onToggleStep = onToggleStep,
+                        onCopyOutput = onCopyOutput,
+                        onFileClick = onFileClick,
+                    )
+                }
+            }
         }
     }
 }

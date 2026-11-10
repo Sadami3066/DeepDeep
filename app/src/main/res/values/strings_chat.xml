@@ -44,6 +44,7 @@
     <string name="assistant_process">过程</string>
     <string name="assistant_process_reasoning">%1$d 个思考</string>
     <string name="assistant_process_tools">%1$d 个工具</string>
+    <string name="assistant_process_tool_group">执行了 %1$d 个工具</string>
     <string name="assistant_quote">引用</string>
     <string name="assistant_quote_remove">取消引用</string>
     <string name="assistant_reasoning">思考</string>
@@ -117,8 +118,6 @@
     <string name="chat_notice_goal_round">目标 · 第 %1$d/%2$d 轮</string>
     <string name="chat_notice_goal_completed">目标已完成</string>
     <string name="chat_notice_goal_blocked">目标已阻塞</string>
-    <string name="chat_notice_job">后台任务 · %1$s</string>
-    <string name="chat_notice_job_failed">后台任务失败 · %1$s</string>
     <string name="chat_notice_interrupted_questions">上次有 %1$d 个提问未完成，已失效；可以让我继续</string>
     <string name="chat_notice_interrupted_run">上次有 %1$d 次运行被中断，结果未知；可以让我继续</string>
     <string name="chat_cmd_compact">压缩上下文</string>
@@ -147,4 +146,5 @@
     <string name="chat_font_size_preview">这是一段示例正文，字号会应用到聊天内容。</string>
     <string name="assistant_todo_title">任务清单</string>
     <string name="assistant_todo_progress">%1$d/%2$d</string>
+    <string name="assistant_todo_delete">删除</string>
 </resources>
