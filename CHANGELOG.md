@@ -2,6 +2,7 @@
 
 ## HEAD (since m2)
 
+- feat: 插件 API v2：`plugin-api` 升 0.8.0 / `PLUGIN_API_LEVEL = 5`，删除 `host.privilege()`、`PrivilegeService` 与清单 `requiresPrivilege`，能力清单收敛为 17 项；`host.linux()`/`host.files()` 不再单独提权，执行身份由「权限」档位（普通/无线调试/Root）统一决定，Root 档为 uid 0 chroot 与原生文件系统 [插件] [运行时] [架构]
 - feat: 小程序支持添加到桌面：查看页「⋯ → 添加到桌面」生成带 emoji 图标的快捷方式，点击直达小程序；已存在/已添加/需系统权限三种反馈，权限未开可一键去设置 [小程序] [界面]
 - feat: 远程连接：抽屉「远程连接」管理多台电脑，扫码/粘贴配对、证书固定、局域网与远程双入口（按 installationId 合并、自动回退）、状态圆点与使用教程，连接页注入手机样式；远程入口走 WebView 浏览器通道以适配按 TLS 客户端指纹过滤的网络；电脑端复用 dsh-mobile，零桌面改动，新增 `data/remote` 存储与单元测试 [界面] [数据]
 - feat: web_search 支持 Exa/Tavily/Brave/Serper 服务商密钥，按顺序尝试并自动回退 DeepSeek；Agent 设置「能力」新增搜索服务配置页，密钥存入本机加密存储 [工具] [界面]

@@ -8,18 +8,18 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.7.0`、`PLUGIN_API_LEVEL = 4`、`BASELINE_API_LEVEL = 4`、`HOST_UI_API_LEVEL = 1`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.8.0`、`PLUGIN_API_LEVEL = 5`、`BASELINE_API_LEVEL = 5`、`HOST_UI_API_LEVEL = 1`。
 
 插件工程包含三类参考（`template/` 与官方插件公开，`sample/`、`interop/` 用于宿主回归）：
 
 - `sample/`：最小插件（两个工具 + 自定义消息卡 + 插件页面），用于宿主真机回归。
 - `template/`：完整模板（工具 + partial 更新 + 会话感知工具 + 技能 + hooks + 工具卡槽位 + 插件页面），复制为新模块即起点。
-- `interop/`：接口全覆盖测试插件（全部生命周期、hooks、18 个宿主服务、两类槽位、插件页面），用于联调与回归，也是 SDK 的使用样例。
+- `interop/`：接口全覆盖测试插件（全部生命周期、hooks、17 个宿主服务、两类槽位、插件页面），用于联调与回归，也是 SDK 的使用样例。
 
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api:0.7.0`、`design:0.6.0`），不需要本地 mavenLocal 发布。
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api:0.8.0`、`design:0.6.0`），不需要本地 mavenLocal 发布。
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
@@ -52,7 +52,7 @@ cp -R template my-plugin
 
 产物文件名由模块名决定：`<module>/build/plugin/<module>.ddp`。模块只编 `debug` 变体，`release` 不开 minify；`.ddp` 由 debug APK 重打包而来。
 
-安装：把 `.ddp` 传到手机，插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、是否要求特权、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
+安装：把 `.ddp` 传到手机，插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
 
 真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-e2e.sh` 用插件工程的 `sample/` 跑安装→启用→工具→停用→卸载；`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
 
@@ -73,7 +73,7 @@ cp -R template my-plugin
 
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.sadami3066.deepdeep:plugin-api:0.7.0`（`api()` 传递 `io.github.sadami3066.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.sadami3066.deepdeep:plugin-api:0.8.0`（`api()` 传递 `io.github.sadami3066.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
 - 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
 - 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
@@ -88,7 +88,7 @@ cp -R template my-plugin
 |---|---|---|---|
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
-| `apiLevel` | int | 否（默认 4） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 4..4）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（4）处理 |
+| `apiLevel` | int | 否（默认 5） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（5）处理 |
 | `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`）；比较只看 `major.minor.patch`、忽略后缀，所以 `0.2.0-dev` 宿主满足 `minHostVersion: "0.2.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
@@ -101,7 +101,6 @@ cp -R template my-plugin
 | `publisher` | object | 否 | `{ "name": ..., "keyId": ... }`。`name` 是展示名（如 `milous`），导入确认与已安装信息里直接显示；缺失时界面回落到签名 `keyId` 前 12 位。`keyId` 只作说明，发布者身份与信任始终以签名文件 `META-INF/plugin-signature.json` 里的 `keyId` 为准 |
 | `provides` | object | 否 | 贡献预检，见下；必须与实际贡献一致 |
 | `capabilities` | string[] | 是 | 插件需要的宿主服务清单，见下；缺失或含未知项拒绝装载 |
-| `requiresPrivilege` | bool | 否（默认 false） | 需要 ADB/Root 能力，确认页与信息弹窗标黄提示 |
 | `defaultEnabled` | bool | 否（默认 true） | 首次安装后是否默认启用 |
 
 清单不支持 `source`/`installable`/`sizeLabel`/`tintIcon` 等字段：来源固定按外部 `.ddp` 处理，体积由宿主按包体展示，图标统一用 asset 图片。未知字段忽略，错误的标量类型退化为默认值后交给校验报错。
@@ -120,7 +119,6 @@ cp -R template my-plugin
 | wire 名 | 服务访问器 |
 |---|---|
 | `linux` | `host.linux()` |
-| `privilege` | `host.privilege()` |
 | `screen` | `host.screen()` |
 | `notifications` | `host.notifications()` |
 | `secrets` | `host.secrets()` |
@@ -250,7 +248,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 
 安装入口只有一个：插件页「导入插件」选择本地 `.ddp`。宿主先做包读取与验签（失败直接拒绝），确认页展示清单与发布者信息；用户确认后写入 TOFU 信任库、解包到版本目录、记录安装并立即装载启用。
 
-- 首装是唯一信任决策点：确认页展示发布者名/`keyId`、整包 sha256、体积、将提供的能力与是否要求特权，并写明「插件拥有 App 全部权限」。确认后 `keyId → publicKey` 记入 TOFU 信任库。
+- 首装是唯一信任决策点：确认页展示发布者名/`keyId`、整包 sha256、体积、将提供的能力，并写明「插件拥有 App 全部权限」。确认后 `keyId → publicKey` 记入 TOFU 信任库。
 - 每次装载前用安装记录里的 `bundleSha256` 复核包体，并重算 canonical digest 验签；不匹配则拒绝并记入插件行的错误文本。
 - **更新必须同钥**：`id` 相同的新版本必须用同一 `keyId` 签名，否则按「发布者不匹配」拒绝。
 - 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录；当前没有忙碌会话时立即激活，有忙碌会话时相位保持 `PENDING_RESTART`，等会话全部结束后自动激活（进程重启后也会继续激活）；激活走准备 → 校验 → 提交 → 换装的阶段序列，校验阶段会调用 `onUpgrade(fromVersion)` 并预生成贡献；准备/校验失败会丢弃暂存版本并删除坏版本目录，旧版本继续可用；提交写盘失败保留暂存版本到下次启动重试。
@@ -295,7 +293,7 @@ sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一
 
 插件的登录、CLI 安装、连接状态等全部由插件自己管理：状态写在 `host.dataDir`/`host.secrets()`，界面画在插件页面里；宿主不再提供安装/连接/设置/状态/动作/详情行回调，也没有面向模型的插件连接工具。页面里的操作改变能力后调用 `host.requestContributionsRefresh()`，宿主会重新物化贡献并在安全点重建会话（忙碌会话在本轮结束后生效），工具/技能/提示词/页面随即更新。
 
-`host` 是插件唯一入口（`PluginHost`）：`manifest`、`context`（宿主注入的 App 上下文）、`dataDir`、`assetsDir`、`scope`、`text`、18 个宿主服务访问器（见「宿主服务」）与 `requestContributionsRefresh()`。
+`host` 是插件唯一入口（`PluginHost`）：`manifest`、`context`（宿主注入的 App 上下文）、`dataDir`、`assetsDir`、`scope`、`text`、17 个宿主服务访问器（见「宿主服务」）与 `requestContributionsRefresh()`。
 
 ### 每插件作用域
 
@@ -636,7 +634,7 @@ val result = host.chat().sendMessage(
 
 ## 宿主服务
 
-`PluginHost` 暴露 18 个服务访问器；宿主没提供该服务时**抛 `PluginServiceUnavailable`**（不是返回 null），插件应 `runCatching` 后降级。服务已装配但当前不可用（如未装 Linux、未授权 ADB）时，通常通过 `available`/`enabled` 字段或明确异常表达。
+`PluginHost` 暴露 17 个服务访问器；宿主没提供该服务时**抛 `PluginServiceUnavailable`**（不是返回 null），插件应 `runCatching` 后降级。服务已装配但当前不可用（如未装 Linux、未授权 ADB）时，通常通过 `available`/`enabled` 字段或明确异常表达。
 
 ```kotlin
 val linux = runCatching { host.linux() }.getOrNull()
@@ -648,12 +646,11 @@ if (linux == null || !linux.available) {
 | 访问器 | 主要能力 | 不可用/失败时 |
 |---|---|---|
 | `linux()` | `available`、`exec(command, cwd, timeoutMs)`、`stream(command)` → `LinuxResult`/`LinuxChunk` | 未安装/未启用运行环境时 `available=false`；`exec` 记录超时与输出截断；stderr 并入 stdout（`LinuxResult.stderr` 恒为空，失败看 `exitCode` 与输出末尾） |
-| `privilege()` | `state`（selected/effective/rootGranted/adbConnected）、`observe()`、`shell(command)` | 未选 ADB/Root 或后端未就绪时 `shell` 抛 `IllegalStateException` |
 | `screen()` | `status`、`startVirtual/stopVirtual`、`observe`、`screenshot`、`apps`、`launch`、`tap/tapNode/swipe/scroll/type/key`、`waitFor` | 未授权时能力标记为不可用，调用抛异常；`status` 是同步快照，首次读取会启动宿主侧后台刷新（无停止接口） |
 | `notifications()` | `enabled`、`notify(PluginNotification)`、`updateProgress`、`cancel` | 通知权限未开时 `enabled=false`，发布被静默忽略；`notify` 不返回是否成功 |
 | `secrets()` | `get/put/remove/clear`，按插件 id 命名空间加密存储 | 宿主未提供时抛 `PluginServiceUnavailable` |
 | `network()` | `request(method,url,headers,body,timeoutMs)`、`download(url,targetPath,expectedSha256,onProgress)`；扩展 `get`/`post` | 网络错误抛异常；响应体上限 2 MB、下载上限 512 MB |
-| `files()` | 插件数据/工作区文件：`list/readText/writeText/readBytes/writeBytes/delete/exists/resolve` | 相对路径相对插件 `dataDir`；绝对路径原样使用 |
+| `files()` | 插件数据/工作区文件：`list/readText/writeText/readBytes/writeBytes/delete/exists/resolve` | 相对路径相对插件 `dataDir`；绝对路径按当前档位解析（Root 档为原生文件系统，见「执行身份与环境」） |
 | `sessions()` | `active`、`observe()`（含 busy 变化）、`list()`、`prompt(text, sessionId?)` | 无活动会话时 `prompt` 返回 false |
 | `jobs()` | `observe()`、`start(command,label,cwd,sessionId)`、`read(jobId)`、`kill(jobId)` | 无会话/宿主未提供时 `start` 返回 null；没有 `list()`，一次性读取用 `observe().first()` |
 | `timers()` | `schedule(TimerRequest)`（`Once`/`Cron`）、`list()`、`cancel(id)` | 参数非法/宿主未提供时返回 null 或抛异常 |
@@ -670,7 +667,6 @@ if (linux == null || !linux.available) {
 
 ```kotlin
 host.linux().exec("ls -la", cwd = host.dataDir.absolutePath)
-host.privilege().state.effective
 host.screen().status.virtual.available
 host.notifications().notify(PluginNotification(id = "sync", title = "同步", body = "完成"))
 host.secrets().put("token", value)
@@ -689,6 +685,21 @@ host.logs().info("plugin ready")
 host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(triggerTurn = false, display = ChatDisplay("my.card", buildJsonObject { }, "卡片摘要")))
 ```
 
+### 执行身份与环境
+
+`host.linux()` 与 `host.files()` 的实际执行身份由用户在「权限」页选择的档位决定（普通 / 无线调试（ADB）/ Root），插件不能自行选择或提升：
+
+| 档位 | `linux()` | `files()` |
+|---|---|---|
+| 普通（LOCAL） | App 沙箱内的 PRoot Alpine，与 App 同 UID | 插件 `dataDir` 与工作区；绝对路径仍受 Android 沙箱约束 |
+| 无线调试（ADB） | 同上；系统命令改由宿主 `system_shell` 走 ADB | 同上 |
+| Root | 真 root chroot（uid 0），Android 路径是原生路径（`/data`、`/system`、`/sdcard`） | 原生文件系统，绝对路径直接生效 |
+
+- 代码要能在三档下运行：不要自行提权，也不要假设当前一定是 root；命令退出码非 0、文件读写失败都按普通失败处理并给出可读原因。
+- Root 档启动时可能在「准备中」或「准备失败」，此时调用 `linux()`/`files()` 会抛 `IllegalStateException`（消息含 `Root Linux is being prepared` / `Root Linux preparation failed`）；提示用户稍后重试，不要崩溃。
+- 清单不再声明 `requiresPrivilege`；需要系统能力时只声明对应 `capabilities`（如 `screen`），由宿主在用户选择的档位下注入服务。
+- 提示词里的环境说明由宿主按档位生成；插件 `promptSections` 不要写死“已获得 root”之类的假设。
+
 **总线**：`host.bus().publish(PluginBusEvent(topic, publisher, payload))` 广播给所有插件；`subscribe("topic")` 拿 `Flow`，同时 `PluginHooks.busEvent(...)` 观察类回调也能收到。`publisher` 由宿主按插件 id 覆盖。事件只用于插件间协作与轻量通知，不要用它传大载荷或做同步 RPC。
 
 ## 页面与状态
@@ -698,23 +709,23 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 - 页面由 `PluginUiContributions.pages` 声明，`PluginPage.content` 就是页面内容（宿主直接渲染，不经过槽位）；列表里点整行进入第一个页面，多页面在页面内部自行切换（如 `host.ui().openPage(...)` 只能打开本插件自己的页面）。
 - 插件数据写在 `host.dataDir`（`host.files()` 相对路径以它为根），机密凭据写 `host.secrets()`，不要在页面里缓存需要跨进程保留的状态。
 - 页面里做完安装/登录/开关等会影响工具或技能的动作后调用 `host.requestContributionsRefresh()`：宿主重跑一次物化并触发会话重建，贡献在安全点生效。例如插件在页面里装好 CLI 后再返回工具列表，下一次会话就能看到新工具。
-- 页面可以调用 18 个宿主服务；需要独立返回栈或全屏的流程仍由插件自己组织页面层级，不能注册 Activity。
+- 页面可以调用 17 个宿主服务；需要独立返回栈或全屏的流程仍由插件自己组织页面层级，不能注册 Activity。
 - `PluginPage.content` 不接收 `SlotState`；需要活跃会话/传递上下文时在页面里调 `host.sessions().active` 或自己保存界面状态。
 - `host.requestContributionsRefresh()` 是异步触发、不等待完成；需要在界面上确认结果时用插件自己的状态标记，不要假设返回时就已物化。
 - `network().get`/`post` 与 `PluginAvailability.isReady` 是扩展函数；显式 import 风格下要分别 import `get`/`post`/`isReady`（或整包 `io.github.whywood.deepdeep.plugin.api.*`）。
 
 ## ABI 与版本
 
-- `PLUGIN_API_LEVEL = 4`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..4` 内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 4`。
+- `PLUGIN_API_LEVEL = 5`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 5` 处理。
 - `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`），所以 `minHostVersion: "0.2.0"` 在当前开发版宿主上通过。
-- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.7.0`）与 `PLUGIN_API_LEVEL` 独立维护。
+- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.8.0`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
 - Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用该插件的 UI，不拒绝插件。
 
 ## 安全模型
 
-- **同进程、同 UID、无沙箱**：插件代码与 App 代码同等权限，能读写 App 私有数据、访问已授权的系统能力（日历、无障碍、ADB/Root 桥）、反射宿主内部类、起线程、结束进程。同进程没有可信的权限收窄机制，`requiresPrivilege` 只是提示，不是边界。
+- **同进程、同 UID、无沙箱**：插件代码与 App 代码同等权限，能读写 App 私有数据、访问已授权的系统能力（日历、无障碍、ADB/Root 桥）、反射宿主内部类、起线程、结束进程。同进程没有可信的权限收窄机制，签名与 `capabilities` 都只用于声明和展示，不是沙箱。
 - **安装即信任**：首装确认页必须让用户明确「插件拥有 App 全部权限」；签名只解决「包有没有被篡改、是不是同一个发布者」，不解决「作者是否可信」。`capabilities` 只声明插件会用到的服务并限制访问器注入，不是沙箱。
 - **适用来源**：可信的第一方/个人插件包；第三方工具源用 MCP，不走 `.ddp`。
 - **完整性**：安装记录钉死整包 sha256，每次装载前复核；canonical digest 验签防篡改；更新必须同 `keyId`；失败保留上一可用版本。
