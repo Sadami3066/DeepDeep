@@ -81,30 +81,51 @@ class AppHostAccessControllerTest {
     }
 
     @Test
-    fun notificationsOnlyFireWhenEffectiveAccessOrRootReadinessChanges() = runTest {
+    fun notificationsOnlyFireWhenEffectiveAccessOrSelectionChanges() = runTest {
         val fixture = Fixture(backgroundScope)
 
         fixture.controller.refresh()
         assertEquals(0, fixture.notifications.size)
 
-        fixture.controller.select(HostAccess.LOCAL)
-        assertEquals(0, fixture.notifications.size)
-
-        fixture.rootReady = true
-        fixture.controller.refresh()
-        assertEquals(1, fixture.notifications.size)
-
-        fixture.controller.refresh()
-        assertEquals(1, fixture.notifications.size)
-
-        fixture.rootReady = false
-        fixture.controller.refresh()
-        assertEquals(2, fixture.notifications.size)
-
         fixture.adbState.value = AdbBridgeState(daemon = true)
         fixture.controller.select(HostAccess.ADB)
         runCurrent()
+        assertEquals(HostAccess.ADB, fixture.controller.state.value.effective)
+        assertEquals(1, fixture.notifications.size)
+
+        fixture.controller.refresh()
+        runCurrent()
+        assertEquals(1, fixture.notifications.size)
+
+        fixture.controller.select(HostAccess.ROOT)
+        runCurrent()
+        assertEquals(HostAccess.ADB, fixture.controller.state.value.effective)
+        assertEquals(2, fixture.notifications.size)
+
+        fixture.rootReady = true
+        fixture.controller.refresh()
+        runCurrent()
+        assertEquals(HostAccess.ROOT, fixture.controller.state.value.effective)
         assertEquals(3, fixture.notifications.size)
+
+        fixture.controller.select(HostAccess.LOCAL)
+        runCurrent()
+        assertEquals(HostAccess.LOCAL, fixture.controller.state.value.effective)
+        assertEquals(4, fixture.notifications.size)
+    }
+
+    @Test
+    fun refreshOnlyProbesRootWhenRootIsSelected() = runTest {
+        val fixture = Fixture(backgroundScope)
+
+        fixture.controller.refresh()
+        fixture.controller.select(HostAccess.ADB)
+        runCurrent()
+        assertEquals(0, fixture.rootProbeCalls)
+
+        fixture.controller.select(HostAccess.ROOT)
+        runCurrent()
+        assertEquals(1, fixture.rootProbeCalls)
     }
 
     @Test
@@ -147,12 +168,13 @@ class AppHostAccessControllerTest {
         var connectRequests = 0
         var pairingRequests = 0
         var rootReady = false
+        var rootProbeCalls = 0
         var rootProbe: suspend () -> Boolean = { rootReady }
 
         val controller = AppHostAccessController(
             scope = scope,
             preferences = preferences,
-            rootProbe = { rootProbe() },
+            rootProbe = { rootProbeCalls++; rootProbe() },
             adbStorage = adbState,
             connectAdbAction = { connectRequests++ },
             startPairingAction = { pairingRequests++ },

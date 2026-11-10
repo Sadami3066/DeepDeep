@@ -31,21 +31,30 @@ class AppHostAccessController(
         resolveHostAccess(access, adb.daemon, root)
     }.stateIn(scope, SharingStarted.Eagerly, HostAccessState())
 
+    private var lastNotified = HostAccessState()
+
     init {
         scope.launch {
-            preferences.selected.collect { selected.value = it }
+            preferences.selected.collect { access ->
+                if (selected.value == access) return@collect
+                selected.value = access
+                if (access == HostAccess.ROOT) probeRoot()
+                notifyIfChanged()
+            }
         }
     }
 
     override suspend fun select(access: HostAccess) {
-        val before = currentState()
         selected.value = access
         preferences.setSelected(access)
-        applyRootProbe(before)
+        if (access == HostAccess.ROOT) probeRoot()
+        notifyIfChanged()
     }
 
     override suspend fun refresh() {
-        applyRootProbe(currentState())
+        if (selected.value != HostAccess.ROOT) return
+        probeRoot()
+        notifyIfChanged()
     }
 
     override suspend fun connectAdb() {
@@ -60,11 +69,14 @@ class AppHostAccessController(
         openWirelessDebuggingAction(context)
     }
 
-    private suspend fun applyRootProbe(before: HostAccessState) {
-        val beforeRootReady = rootReady.value
+    private suspend fun probeRoot() {
         rootReady.value = runCatching { rootProbe() }.getOrDefault(false)
-        val after = currentState()
-        if (beforeRootReady != rootReady.value || before.effective != after.effective) {
+    }
+
+    private suspend fun notifyIfChanged() {
+        val current = currentState()
+        if (current.selected != lastNotified.selected || current.effective != lastNotified.effective) {
+            lastNotified = current
             onChanged()
         }
     }
