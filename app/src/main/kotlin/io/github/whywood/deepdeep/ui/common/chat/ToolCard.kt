@@ -7,8 +7,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -62,6 +65,7 @@ import kotlinx.serialization.json.JsonPrimitive
 internal object ProcessRowMetrics {
     val IconSize = 13.dp
     val IconGap = 6.dp
+    val DotSize = 6.dp
     val ChevronSize = 12.dp
     val OuterInset = DdSpacing.Xs
     val InnerInset = DdSpacing.Sm
@@ -128,10 +132,9 @@ internal fun ToolCard(
                 .testTag("tool_toggle_${tool.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(
-                icon = toolIcon(toolIconKind(tool.name)),
+            ToolRowIcon(
+                kind = toolIconKind(tool.name),
                 tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
-                size = ProcessRowMetrics.IconSize,
             )
             Spacer(Modifier.width(ProcessRowMetrics.IconGap))
             Text(
@@ -421,7 +424,24 @@ private fun toolArgsPreview(raw: JsonObject?, legacy: Map<String, String>): Stri
     return value.replace('\n', ' ').trim()
 }
 
-private fun toolIcon(kind: ToolIconKind): DdIcon = when (kind) {
+@Composable
+private fun ToolRowIcon(kind: ToolIconKind, tint: Color) {
+    val icon = toolIcon(kind)
+    if (icon != null) {
+        DdIcon(icon = icon, tint = tint, size = ProcessRowMetrics.IconSize)
+        return
+    }
+    Box(Modifier.size(ProcessRowMetrics.IconSize), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(ProcessRowMetrics.DotSize)
+                .clip(DdShapes.Pill)
+                .background(tint),
+        )
+    }
+}
+
+private fun toolIcon(kind: ToolIconKind): DdIcon? = when (kind) {
     ToolIconKind.Book -> DdIcons.Book
     ToolIconKind.Pen -> DdIcons.Pen
     ToolIconKind.Terminal -> DdIcons.Terminal
@@ -433,5 +453,5 @@ private fun toolIcon(kind: ToolIconKind): DdIcon = when (kind) {
     ToolIconKind.Folder -> DdIcons.Folder
     ToolIconKind.Target -> DdIcons.Target
     ToolIconKind.Check -> DdIcons.Check
-    ToolIconKind.RadioOff -> DdIcons.RadioOff
+    ToolIconKind.Dot -> null
 }

@@ -34,10 +34,10 @@ class ToolPresentationTest {
     }
 
     @Test
-    fun toolIconKindFallsBackToRadioOff() {
-        assertEquals(ToolIconKind.RadioOff, toolIconKind("unknown_tool"))
-        assertEquals(ToolIconKind.RadioOff, toolIconKind("mcp__github__create_issue"))
-        assertEquals(ToolIconKind.RadioOff, toolIconKind("present"))
+    fun toolIconKindFallsBackToDot() {
+        assertEquals(ToolIconKind.Dot, toolIconKind("unknown_tool"))
+        assertEquals(ToolIconKind.Dot, toolIconKind("mcp__github__create_issue"))
+        assertEquals(ToolIconKind.Dot, toolIconKind("present"))
     }
 
     @Test

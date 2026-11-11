@@ -14,7 +14,7 @@ internal enum class ToolIconKind {
     Folder,
     Target,
     Check,
-    RadioOff,
+    Dot,
 }
 
 internal fun toolIconKind(name: String): ToolIconKind = when {
@@ -29,7 +29,7 @@ internal fun toolIconKind(name: String): ToolIconKind = when {
     name == "grep" -> ToolIconKind.File
     name == "todo_write" -> ToolIconKind.Check
     name.endsWith("_goal") -> ToolIconKind.Target
-    else -> ToolIconKind.RadioOff
+    else -> ToolIconKind.Dot
 }
 
 internal fun toolUsedLabel(format: String, name: String): String =

@@ -345,7 +345,7 @@ private fun ToolRunGroup(
             Box(Modifier.size(ProcessRowMetrics.IconSize), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
-                        .size(6.dp)
+                        .size(ProcessRowMetrics.DotSize)
                         .clip(DdShapes.Pill)
                         .background(dotTint),
                 )
