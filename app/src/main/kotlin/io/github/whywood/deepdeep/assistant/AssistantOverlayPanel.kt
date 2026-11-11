@@ -286,6 +286,7 @@ internal fun AssistantOverlayPanel(
                                     onRetry = actions.onRetry,
                                     attachmentRoot = config.attachmentRoot,
                                     autoCollapseProcess = config.autoCollapseProcess,
+                                    processDetail = config.processDetail,
                                     pendingQuestions = pendingQuestions,
                                     onAnswerQuestion = actions.onAnswerQuestion,
                                     onOpenPresentFile = actions.onOpenFile,

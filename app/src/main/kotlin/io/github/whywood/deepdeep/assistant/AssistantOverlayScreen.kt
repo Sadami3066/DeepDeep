@@ -58,6 +58,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.OverlayEntryMode
+import io.github.whywood.deepdeep.data.ProcessDetail
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -82,6 +83,7 @@ internal data class AssistantOverlayConfig(
     val autoSpeak: Boolean = false,
     val entryMode: OverlayEntryMode = OverlayEntryMode.NONE,
     val autoCollapseProcess: Boolean = true,
+    val processDetail: ProcessDetail = ProcessDetail.DETAILED,
     val chatFontScale: Float = 1f,
     val language: AppLanguage = AppLanguage.CHINESE,
     val attachmentRoot: File = File("/"),

@@ -573,6 +573,7 @@ internal fun AppShell(
                     ),
                     scrollAnchorFor = chatViewModel::scrollAnchorFor,
                     autoCollapseProcess = uiPreferences.autoCollapseProcess,
+                    processDetail = uiPreferences.processDetail,
                     chatFontScale = uiPreferences.chatFontScale,
                     voiceLanguage = appLanguage,
                 )

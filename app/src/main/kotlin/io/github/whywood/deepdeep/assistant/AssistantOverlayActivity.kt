@@ -160,6 +160,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                         autoSpeak = autoSpeak,
                         entryMode = overlayEntryMode,
                         autoCollapseProcess = uiPreferences.autoCollapseProcess,
+                        processDetail = uiPreferences.processDetail,
                         chatFontScale = uiPreferences.chatFontScale,
                         language = language,
                         attachmentRoot = attachmentRoot,

@@ -99,6 +99,7 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.ProcessDetail
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
@@ -203,6 +204,7 @@ fun ChatScreen(
     scrollAnchorFor: (String) -> ScrollAnchor?,
     modifier: Modifier = Modifier,
     autoCollapseProcess: Boolean = true,
+    processDetail: ProcessDetail = ProcessDetail.DETAILED,
     chatFontScale: Float = 1f,
     voiceLanguage: AppLanguage = AppLanguage.SYSTEM,
 ) {
@@ -594,6 +596,7 @@ fun ChatScreen(
                                         onRetry = onRetry,
                                         attachmentRoot = attachmentRoot,
                                         autoCollapseProcess = autoCollapseProcess,
+                                        processDetail = processDetail,
                                         pendingQuestions = emptyList(),
                                         onAnswerQuestion = onAnswerQuestion,
                                         onOpenPresentFile = onOpenPresentFile,

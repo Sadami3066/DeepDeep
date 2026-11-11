@@ -24,7 +24,7 @@
 - 状态单向：ChatViewModel 只把 `ConversationStore.observe()` 的投影、输入草稿、滚动锚点和界面元数据合成 ChatUiState；消息与运行态不在本包归约，也不另存。
 - 共享组件改动要同时看系统助手浮层与悬浮窗：输入卡（`ChatComposer`/`ChatInputField`/`ComposerMetrics`）、`ChatTurn`、`rememberChatScrollController`、`attach`/`normalizeImages` 等由 `ui/common/chat` 提供，浮层与悬浮窗直接复用。
 - 流式渲染：Markdown 经 `MarkdownStreamPlanner` 按稳定前缀分块缓存，只有新增内容才重新解析；改解析/分块要保住流式性能与代码块未闭合时的容错。
-- 布局：输入卡与底部面板是根 Column 的布局兄弟而不是浮层，LazyColumn 视口到面板为止；IME/面板变化靠根 Column 的 bottom inset 与 `ChatScrollController` 贴底，不要再给列表加浮层高度的 contentPadding。
+- 布局：输入卡与底部面板是消息区 Box 上 `align(BottomCenter)` 的浮层，列表按 `overlayHeightPx` 留底部 contentPadding；IME/面板变化靠根 Column 的 bottom inset 与 `ChatScrollController` 贴底；改成根 Column 布局兄弟会破坏浮层视觉（见 d2729d0d 回退）。
 - todo 面板：`todo_write` 的 custom message 只在输入卡上方的 `TodoPanel` 展示（折叠摘要/进度/展开列表），聊天流里过滤掉这类消息，不再内联渲染。
 - 历史折叠：超过 20 条消息只渲染最新窗口（初始 3 条，每次 +20），折叠窗口是 `rememberSaveable(conversationId)` 的界面状态，不写回会话；顶部「加载更早」与到顶下拉都走 `loadEarlier`，跳转用 `ChatScrollController.jumpToItem`，导航段只取用户消息并最多 12 段抽样。
 - 文案与视觉：用户可见字符串在 `res/values*/strings_*.xml`（`ConversationStrings` 只是运行时载体），只使用 `:design` 的 Dd* 组件与 `deepDeepColors`。

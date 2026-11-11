@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AttachmentRef
+import io.github.whywood.deepdeep.data.ProcessDetail
 import io.github.whywood.deepdeep.data.parseAttachmentBlock
 import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
@@ -111,6 +112,7 @@ internal fun ChatTurn(
     onRetry: (Long) -> Unit,
     attachmentRoot: File,
     autoCollapseProcess: Boolean = true,
+    processDetail: ProcessDetail = ProcessDetail.DETAILED,
     pendingQuestions: List<PendingQuestion> = emptyList(),
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit = { _, _ -> },
     onOpenPresentFile: (String) -> Unit = {},
@@ -168,6 +170,7 @@ internal fun ChatTurn(
             onRetry = onRetry,
             attachmentRoot = attachmentRoot,
             autoCollapseProcess = autoCollapseProcess,
+            processDetail = processDetail,
             pendingQuestions = pendingQuestions,
             onAnswerQuestion = onAnswerQuestion,
             onOpenPresentFile = onOpenPresentFile,
@@ -507,6 +510,7 @@ private fun AssistantTurn(
     onRetry: (Long) -> Unit,
     attachmentRoot: File,
     autoCollapseProcess: Boolean,
+    processDetail: ProcessDetail,
     pendingQuestions: List<PendingQuestion>,
     onAnswerQuestion: (PendingQuestion, List<QuestionAnswer>) -> Unit,
     onOpenPresentFile: (String) -> Unit,
@@ -557,6 +561,7 @@ private fun AssistantTurn(
                 onCopyOutput = onCopyOutput,
                 onFileClick = onOpenFile,
                 autoCollapseProcess = autoCollapseProcess,
+                processDetail = processDetail,
                 excludedStepId = excludedStepId,
             )
         }
