@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_history_load_earlier">Load earlier</string>
+    <string name="chat_history_remaining">%1$d more</string>
+    <string name="chat_history_nav">Message navigation</string>
+</resources>

@@ -64,6 +64,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -73,6 +74,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -106,6 +109,7 @@ import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.GoalView
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ProviderSummary
@@ -265,6 +269,25 @@ fun ChatScreen(
     val configured = state.configured
     val messages = state.messages
     val streamMessages = remember(messages) { messages.filterNot { it.customType == "todo_write" } }
+    val sessionKey = state.conversationId.orEmpty()
+    var visibleMessageCount by rememberSaveable(sessionKey) { mutableStateOf(0) }
+    var trackedMessageTotal by remember { mutableIntStateOf(streamMessages.size) }
+    LaunchedEffect(streamMessages.size) {
+        visibleMessageCount = resolveVisibleMessages(visibleMessageCount, trackedMessageTotal, streamMessages.size)
+        trackedMessageTotal = streamMessages.size
+    }
+    val shownMessageCount = resolveVisibleMessages(visibleMessageCount, trackedMessageTotal, streamMessages.size)
+        .coerceIn(0, streamMessages.size)
+    val visibleMessages = remember(streamMessages, shownMessageCount) {
+        if (shownMessageCount >= streamMessages.size) streamMessages else streamMessages.takeLast(shownMessageCount)
+    }
+    val hiddenMessageCount = (streamMessages.size - shownMessageCount).coerceAtLeast(0)
+    val userMessageIndices = remember(streamMessages) {
+        streamMessages.mapIndexedNotNull { index, message ->
+            index.takeIf { message.role == AssistantRole.USER }
+        }
+    }
+    val showMessageNav = userMessageIndices.size >= 2
     val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
@@ -285,6 +308,77 @@ fun ChatScreen(
         }
     }
 
+    fun loadEarlier() {
+        if (hiddenMessageCount <= 0) return
+        val previousShown = shownMessageCount
+        val nextShown = expandVisibleMessages(previousShown, streamMessages.size)
+        if (nextShown <= previousShown) return
+        val itemCountBefore = listState.layoutInfo.totalItemsCount
+        val firstVisibleIndex = listState.firstVisibleItemIndex
+        val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+        visibleMessageCount = nextShown
+        trackedMessageTotal = streamMessages.size
+        scope.launch {
+            var frames = 0
+            while (listState.layoutInfo.totalItemsCount <= itemCountBefore && frames < 120) {
+                withFrameNanos { }
+                frames++
+            }
+            val pillBefore = previousShown < streamMessages.size
+            val pillAfter = nextShown < streamMessages.size
+            val shift = nextShown - previousShown + if (pillBefore && !pillAfter) -1 else 0
+            if (firstVisibleIndex > 0) {
+                listState.scrollToItem((firstVisibleIndex + shift).coerceAtLeast(0), firstVisibleOffset)
+            }
+        }
+    }
+
+    fun jumpToMessage(messageIndex: Int) {
+        if (streamMessages.isEmpty()) return
+        val targetIndex = messageIndex.coerceIn(0, streamMessages.size - 1)
+        val neededShown = streamMessages.size - targetIndex
+        val targetShown = maxOf(shownMessageCount, neededShown).coerceAtMost(streamMessages.size)
+        if (targetShown > shownMessageCount) {
+            visibleMessageCount = targetShown
+            trackedMessageTotal = streamMessages.size
+        }
+        scope.launch {
+            val itemIndex = messageItemIndex(targetIndex, streamMessages.size, targetShown)
+            var frames = 0
+            while (listState.layoutInfo.totalItemsCount <= itemIndex && frames < 120) {
+                withFrameNanos { }
+                frames++
+            }
+            controller.jumpToItem(itemIndex)
+        }
+    }
+
+    val latestLoadEarlier by rememberUpdatedState(::loadEarlier)
+    val latestHasHiddenMessages by rememberUpdatedState(hiddenMessageCount > 0)
+    val overscrollThresholdPx = with(density) { 72.dp.toPx() }
+    val historyOverscroll = remember(overscrollThresholdPx) {
+        object : NestedScrollConnection {
+            private var pull = 0f
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (available.y <= 0f || !latestHasHiddenMessages) {
+                    pull = 0f
+                    return Offset.Zero
+                }
+                pull += available.y
+                if (pull >= overscrollThresholdPx) {
+                    pull = 0f
+                    latestLoadEarlier()
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     var knownCount by remember { mutableIntStateOf(state.messages.size) }
     var knownSessionId by remember { mutableStateOf(state.conversationId) }
     var pendingLocalSend by remember { mutableStateOf(false) }
@@ -295,7 +389,7 @@ fun ChatScreen(
         knownCount = state.messages.size
         knownSessionId = sessionId
         val anchor = latestScrollAnchorFor(sessionId)
-        if (anchor == null || anchor.atBottom) {
+        if (anchor == null || anchor.atBottom || hiddenMessageCount > 0) {
             controller.jumpToBottom(animate = false)
         } else {
             controller.restoreAnchor(anchor.index, anchor.offset)
@@ -454,6 +548,7 @@ fun ChatScreen(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
+                            .nestedScroll(historyOverscroll)
                             .pointerInput(Unit) {
                                 detectTapGestures {
                                     focusManager.clearFocus()
@@ -470,7 +565,20 @@ fun ChatScreen(
                         ),
                         verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxl),
                     ) {
-                        items(streamMessages, key = { it.id }) { message ->
+                        if (hiddenMessageCount > 0) {
+                            item(key = "history-load-earlier") {
+                                Box(
+                                    Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    LoadEarlierPill(
+                                        hiddenCount = hiddenMessageCount,
+                                        onClick = ::loadEarlier,
+                                    )
+                                }
+                            }
+                        }
+                        items(visibleMessages, key = { it.id }) { message ->
                             Box(
                                 Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.TopCenter,
@@ -655,6 +763,20 @@ fun ChatScreen(
                     modifier = Modifier.padding(top = 6.dp, bottom = DdSpacing.Sm),
                 )
             }
+            if (showMessageNav && !state.switchingConversation) {
+                MessageNavBar(
+                    messages = streamMessages,
+                    userMessageIndices = userMessageIndices,
+                    onJump = ::jumpToMessage,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(
+                            top = DdSpacing.Sm,
+                            end = 2.dp,
+                            bottom = with(density) { overlayHeightPx.toDp() } + DdSpacing.Sm,
+                        ),
+                )
+            }
         }
         }
     }
@@ -766,6 +888,37 @@ private fun JumpToBottomChip(
                 text = stringResource(R.string.assistant_jump_bottom),
                 style = DdType.chip,
                 color = colors.inkSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoadEarlierPill(
+    hiddenCount: Int,
+    onClick: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.testTag("chat_load_earlier"),
+        shape = DdShapes.Pill,
+        background = colors.wash,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.chat_history_load_earlier),
+                style = DdType.chip,
+                color = colors.inkSecondary,
+            )
+            Text(
+                text = stringResource(R.string.chat_history_remaining, hiddenCount),
+                style = DdType.chip,
+                color = colors.inkTertiary,
             )
         }
     }

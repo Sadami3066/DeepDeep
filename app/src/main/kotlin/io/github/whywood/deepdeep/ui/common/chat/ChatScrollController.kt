@@ -82,6 +82,16 @@ internal class ChatScrollController(
         if (!listState.canScrollForward) onBottomChanged(true)
     }
 
+    suspend fun jumpToItem(index: Int, offset: Int = 0) {
+        following = false
+        awaitSettled()
+        val count = listState.layoutInfo.totalItemsCount
+        if (count <= 0) return
+        listState.scrollToItem(index.coerceIn(0, count - 1), offset.coerceAtLeast(0))
+        awaitSettled()
+        if (!listState.canScrollForward) onBottomChanged(true)
+    }
+
     suspend fun followContent() {
         if (!following || dragging) return
         val info = listState.layoutInfo
