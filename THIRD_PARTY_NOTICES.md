@@ -89,13 +89,13 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 
 ## 2. 编译进 APK 的代码库
 
-### 2.1 pi2kotlin SDK 0.6.2（DeepDeep-KotlinSDK）
+### 2.1 pi2kotlin SDK 0.6.3（DeepDeep-KotlinSDK）
 
-- 构件：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.2`、`pi-ai-android`、`pi-agent-android`、`pi-mcp-android`（JitPack 构建，版本标签 `v0.6.2`）
+- 构件：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`、`pi-ai-android`、`pi-agent-android`、`pi-mcp-android`（JitPack 构建，版本标签 `v0.6.3`）
 - 版权行：`Copyright (c) 2026 pi2kotlin contributors`、`Copyright (c) 2025 Mario Zechner and pi contributors`
 - 许可证：MIT
-- 来源：<https://github.com/Sadami3066/DeepDeep-KotlinSDK> 标签 `v0.6.2`，提交 `94f300abef96516204358a8fe549f9d774c373df`（`LICENSE`）
-- 本仓库内声明：`gradle/libs.versions.toml`（`pi = "v0.6.2"`，依赖坐标见同文件 `[libraries]`）
+- 来源：<https://github.com/Sadami3066/DeepDeep-KotlinSDK> 标签 `v0.6.3`，提交 `df388d6d737ee079303e4e4acb5776d9ee62746f`（`LICENSE`）
+- 本仓库内声明：`gradle/libs.versions.toml`（`pi = "v0.6.3"`，依赖坐标见同文件 `[libraries]`）
 - 许可全文：`licenses/pi2kotlin-MIT.txt`
 - 说明：上游 AAR/POM 未携带 LICENSE/NOTICE 元数据；本条目构成随二进制分发所需的版权与许可声明。
 
@@ -293,3 +293,4 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 - 2026-11-01：pi2kotlin SDK 升级至 0.4.0，构件与来源提交同步更新。
 - 2026-11-05：新增 Open Runde（Regular/Medium/Semibold，静态 OTF）与 Fredoka（`wght`/`wdth` 可变 TTF）两款 OFL-1.1 字体，补充版权行、上游来源与提交、文件 sha256 及许可全文；默认字体改为 Open Runde。
 - 2026-11-09：pi2kotlin SDK 升级至 0.6.2（JitPack 坐标 `com.github.Sadami3066.DeepDeep-KotlinSDK`），构件、来源提交与版本声明同步更新。
+- 2026-11-11：pi2kotlin SDK 升级至 0.6.3（标签 `v0.6.3`，提交 `df388d6d737ee079303e4e4acb5776d9ee62746f`），构件坐标与版本声明同步更新。

@@ -34,7 +34,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 - 会话以 pi JSONL 为唯一权威（`files/agent/sessions/`），内容只认它；置顶/归档/重命名只是本地元数据，界面状态都是它的事件投影。
 - 用户可见文案全部在 `app/src/main/res/values*/strings_*.xml`，默认中文、`values-en` 同步；代码里不拼文案。
 - 目标与后台任务只在进程内存，重启清空；Linux 是 proot 用户空间，不是安全沙箱。
-- 本地分发，release 变体用 debug 证书签名（换签 = 卸载重装 = 丢数据，见本地 `docs/DECISIONS.md`）。
+- 本地分发，release 变体用 `app/release.keystore` 签名（`keystore.properties` 配置；换签 = 卸载重装 = 丢数据，见 `docs/RELEASE.md`）。
 - 构建内存 profile 只在 `gradle.properties` 维护（Gradle 3g / Kotlin 2g / workers 2）；`gradlew-locked` 会丢弃 `-Dorg.gradle.jvmargs`、`-Pkotlin.daemon.jvmargs` 覆盖，避免 JVM 参数不同导致 daemon 增殖。
 
 ## 规则

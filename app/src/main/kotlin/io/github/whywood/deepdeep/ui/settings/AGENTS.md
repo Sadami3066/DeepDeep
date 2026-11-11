@@ -14,7 +14,7 @@
 | `SystemAccessScreen.kt` | 系统访问：普通/无线调试/Root 三档、当前生效与降级原因、ADB 配对、Root 授权检测、Root Linux 准备状态与重试/重建；三档上方有「权限」小标题；三档都显示开发组合（标题带生效档位），普通/无线调试档另有 Linux 环境 |
 | `PersonalizationScreen.kt` | 个性化：头像、称呼、互动风格、语气、自定义指令 |
 | `AgreementScreen.kt` | 隐私与用户协议：数据与隐私、用户协议、免责声明、开源许可 |
-| `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情、底部「添加自定义服务商」入口；搜索命中自定义服务商时不显示内置分组 |
+| `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情、顶部「添加自定义服务商」入口；搜索命中自定义服务商时不显示内置分组 |
 | `CustomProviderEditorScreen.kt` | 自定义服务商编辑：名称、接口格式、接口地址、API Key、模型列表（行摘要显示能力，点击进模型编辑页）；一键获取模型时按服务商返回自动预填名称、上下文、最大输出与图片支持，已有草稿不覆盖；新建/编辑/删除 |
 | `CustomProviderModelScreen.kt` | 单个模型编辑：模型 ID、显示名、上下文大小、最大输出、图片输入、思考能力与用户多选勾选的思考档位（开启思考后至少选一档才能保存）；读不到的能力留空用默认值 |
 | `ProviderDetailScreen.kt` | 厂商详情：OAuth 登录/退出、API Key 保存/清除 |
