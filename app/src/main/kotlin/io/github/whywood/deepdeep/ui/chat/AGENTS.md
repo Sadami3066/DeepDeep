@@ -8,7 +8,7 @@
 |---|---|
 | `ChatScreen.kt` | 聊天主页面：消息列表、输入卡与底部面板、todo 折叠面板、空状态与回到底部；历史折叠（加载更早）与右侧消息导航条的接线 |
 | `ChatHistoryNav.kt` | 历史折叠与导航段映射的纯逻辑：初始可见窗口、每次展开步长、导航段抽样、消息与列表项下标换算 |
-| `MessageNavBar.kt` | 右侧消息导航条：用户消息竖线段、长按拖动预览与松手跳转 |
+| `MessageNavBar.kt` | 右侧消息导航条：用户消息等距抽样的圆角短横段、点击直达、长按拖动预览与松手跳转、当前段高亮与视口跟随指示 |
 | `ChatViewModel.kt` | 观察 ConversationStore 产出 ChatUiState，驱动发送/停止/切换/重试 |
 | `ChatTopBar.kt` | 顶栏：菜单、定时/任务/用量/文件入口 |
 | `UsageSheet.kt` | 会话用量统计 sheet |
@@ -26,5 +26,5 @@
 - 流式渲染：Markdown 经 `MarkdownStreamPlanner` 按稳定前缀分块缓存，只有新增内容才重新解析；改解析/分块要保住流式性能与代码块未闭合时的容错。
 - 布局：输入卡与底部面板是消息区 Box 上 `align(BottomCenter)` 的浮层，列表按 `overlayHeightPx` 留底部 contentPadding；IME/面板变化靠根 Column 的 bottom inset 与 `ChatScrollController` 贴底；改成根 Column 布局兄弟会破坏浮层视觉（见 d2729d0d 回退）。
 - todo 面板：`todo_write` 的 custom message 只在输入卡上方的 `TodoPanel` 展示（折叠摘要/进度/展开列表），聊天流里过滤掉这类消息，不再内联渲染。
-- 历史折叠：超过 20 条消息只渲染最新窗口（初始 3 条，每次 +20），折叠窗口是 `rememberSaveable(conversationId)` 的界面状态，不写回会话；顶部「加载更早」与到顶下拉都走 `loadEarlier`，跳转用 `ChatScrollController.jumpToItem`，导航段只取用户消息并最多 12 段抽样。
+- 历史折叠：超过 20 条消息只渲染最新窗口（初始 3 条，每次 +20），折叠窗口是 `rememberSaveable(conversationId)` 的界面状态，不写回会话；顶部「加载更早」与到顶下拉都走 `loadEarlier`，跳转用 `ChatScrollController.jumpToItem`，导航段只取用户消息并最多 8 段等距抽样；导航条单击直达对应消息，长按拖动预览后松手跳转，当前可见位置的段用 accent 高亮、左侧小条跟随视口位置。
 - 文案与视觉：用户可见字符串在 `res/values*/strings_*.xml`（`ConversationStrings` 只是运行时载体），只使用 `:design` 的 Dd* 组件与 `deepDeepColors`。

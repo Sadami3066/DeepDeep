@@ -57,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -289,7 +290,29 @@ fun ChatScreen(
             index.takeIf { message.role == AssistantRole.USER }
         }
     }
-    val showMessageNav = userMessageIndices.size >= 2
+    val navSegments = remember(userMessageIndices) {
+        navSegmentIndices(userMessageIndices, ChatHistoryNavMaxSegments)
+    }
+    val showMessageNav = userMessageIndices.size >= 3
+    val navViewport by remember(listState) {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val first = info.visibleItemsInfo.firstOrNull()
+            val position = if (first == null || first.size <= 0) {
+                0f
+            } else {
+                first.index + (-first.offset).toFloat() / first.size
+            }
+            position to info.totalItemsCount
+        }
+    }
+    val navTopMessageIndex = messageIndexForItemIndex(
+        itemIndex = navViewport.first.toInt(),
+        total = streamMessages.size,
+        visible = shownMessageCount,
+    )
+    val navActiveSegment = activeNavSegmentIndex(navSegments, navTopMessageIndex)
+    val navViewportFraction = navIndicatorFraction(navViewport.first, navViewport.second)
     val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
@@ -769,7 +792,9 @@ fun ChatScreen(
             if (showMessageNav && !state.switchingConversation) {
                 MessageNavBar(
                     messages = streamMessages,
-                    userMessageIndices = userMessageIndices,
+                    segments = navSegments,
+                    activeSegmentIndex = navActiveSegment,
+                    viewportFraction = navViewportFraction,
                     onJump = ::jumpToMessage,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)

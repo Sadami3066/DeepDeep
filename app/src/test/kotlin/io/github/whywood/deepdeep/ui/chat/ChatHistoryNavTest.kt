@@ -55,8 +55,8 @@ class ChatHistoryNavTest {
 
     @Test
     fun manyUserSegmentsAreSampledEvenly() {
-        val indices = navSegmentIndices((0 until 100).toList(), 12)
-        assertEquals(12, indices.size)
+        val indices = navSegmentIndices((0 until 100).toList(), ChatHistoryNavMaxSegments)
+        assertEquals(ChatHistoryNavMaxSegments, indices.size)
         assertEquals(0, indices.first())
         assertEquals(99, indices.last())
         assertTrue(indices.zipWithNext().all { (left, right) -> left < right })
@@ -89,5 +89,35 @@ class ChatHistoryNavTest {
         assertEquals(6f, navSegmentCenter(0, 12, 400f, 6f), 0.001f)
         assertEquals(394f, navSegmentCenter(11, 12, 400f, 6f), 0.001f)
         assertEquals(200f, navSegmentCenter(0, 1, 400f, 6f), 0.001f)
+    }
+
+    @Test
+    fun itemIndexMapsBackToMessageIndex() {
+        assertEquals(99, messageIndexForItemIndex(3, 100, 3))
+        assertEquals(50, messageIndexForItemIndex(11, 100, 60))
+        assertEquals(0, messageIndexForItemIndex(0, 100, 100))
+        assertEquals(99, messageIndexForItemIndex(100, 100, 100))
+        assertEquals(0, messageIndexForItemIndex(0, 0, 0))
+    }
+
+    @Test
+    fun activeSegmentFollowsScrollPosition() {
+        val segments = listOf(0, 10, 20, 30)
+        assertEquals(0, activeNavSegmentIndex(segments, 0))
+        assertEquals(0, activeNavSegmentIndex(segments, 9))
+        assertEquals(1, activeNavSegmentIndex(segments, 10))
+        assertEquals(2, activeNavSegmentIndex(segments, 25))
+        assertEquals(3, activeNavSegmentIndex(segments, 99))
+        assertEquals(-1, activeNavSegmentIndex(emptyList(), 5))
+    }
+
+    @Test
+    fun viewportIndicatorSpansTrack() {
+        assertEquals(0f, navIndicatorFraction(0f, 10), 0.001f)
+        assertEquals(1f, navIndicatorFraction(9f, 10), 0.001f)
+        assertEquals(0.5f, navIndicatorFraction(4.5f, 10), 0.001f)
+        assertEquals(0f, navIndicatorFraction(-2f, 10), 0.001f)
+        assertEquals(0f, navIndicatorFraction(5f, 1), 0.001f)
+        assertEquals(0f, navIndicatorFraction(5f, 0), 0.001f)
     }
 }
