@@ -5,7 +5,10 @@ import io.github.whywood.deepdeep.market.MarketArtifact
 import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketInstallState
+import io.github.whywood.deepdeep.market.MarketRequiredAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -138,5 +141,16 @@ class MarketLogicTest {
             "https://sadami3066.github.io/deepdeep-market/icons/a.png",
             marketIconUrl("/icons/a.png"),
         )
+    }
+
+    @Test
+    fun requiredAccessComparesAgainstHostAccess() {
+        assertTrue(MarketRequiredAccess.Normal.satisfiedBy(HostAccess.LOCAL))
+        assertTrue(MarketRequiredAccess.Adb.satisfiedBy(HostAccess.ADB))
+        assertTrue(MarketRequiredAccess.Adb.satisfiedBy(HostAccess.ROOT))
+        assertFalse(MarketRequiredAccess.Adb.satisfiedBy(HostAccess.LOCAL))
+        assertTrue(MarketRequiredAccess.Root.satisfiedBy(HostAccess.ROOT))
+        assertFalse(MarketRequiredAccess.Root.satisfiedBy(HostAccess.LOCAL))
+        assertFalse(MarketRequiredAccess.Root.satisfiedBy(HostAccess.ADB))
     }
 }

@@ -70,6 +70,7 @@ import io.github.whywood.deepdeep.market.MarketPluginMeta
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketSource
 import io.github.whywood.deepdeep.market.MarketState
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,6 +92,7 @@ internal fun MarketTab(
     onInstalled: suspend () -> Unit = {},
     onAuthorizeMcp: (String) -> Unit = {},
     showIcons: Boolean = true,
+    hostAccess: HostAccess = HostAccess.LOCAL,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
@@ -243,6 +245,7 @@ internal fun MarketTab(
             language = language,
             installState = installStates[selected.id],
             installedVersion = repository.installedVersion(selected),
+            hostAccess = hostAccess,
             iconLoader = iconLoader,
             onDismiss = { selectedId = null },
             onInstall = {
@@ -384,13 +387,21 @@ private fun MarketRow(
                 Spacer(Modifier.width(DdSpacing.Md))
             }
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    style = DdType.body.copy(fontWeight = FontWeight.SemiBold),
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = name,
+                        modifier = Modifier.weight(1f, fill = false),
+                        style = DdType.body.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val requiredAccess = entry.plugin?.requiredAccess
+                    if (requiredAccess != null) {
+                        Spacer(Modifier.width(DdSpacing.Xs))
+                        MarketAccessTag(requiredAccess)
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = listOfNotNull(entry.summary(language).takeIf { it.isNotBlank() }, publisher).joinToString(" · "),
@@ -441,6 +452,7 @@ private fun MarketDetailSheet(
     language: String,
     installState: MarketInstallState?,
     installedVersion: String?,
+    hostAccess: HostAccess,
     iconLoader: MarketIconLoader,
     onDismiss: () -> Unit,
     onInstall: () -> Unit,
@@ -511,12 +523,23 @@ private fun MarketDetailSheet(
                 } else {
                     listOfNotNull(entry.version.takeIf { it.isNotBlank() }, sizeText).joinToString(" · ")
                 }
-                if (subtitle.isNotEmpty()) {
-                    Text(
-                        text = subtitle,
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
+                val requiredAccess = entry.plugin?.requiredAccess
+                if (subtitle.isNotEmpty() || requiredAccess != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (subtitle.isNotEmpty()) {
+                            Text(
+                                text = subtitle,
+                                style = DdType.bodySmall,
+                                color = colors.inkTertiary,
+                            )
+                        }
+                        if (requiredAccess != null) {
+                            if (subtitle.isNotEmpty()) {
+                                Spacer(Modifier.width(DdSpacing.Sm))
+                            }
+                            MarketAccessTag(requiredAccess)
+                        }
+                    }
                 }
             }
             DdIconButton(
@@ -560,6 +583,15 @@ private fun MarketDetailSheet(
                 metaRows.forEach { (label, value) ->
                     MarketMetaRow(label = label, value = value)
                 }
+            }
+            val requiredAccess = entry.plugin?.requiredAccess
+            if (requiredAccess != null && !requiredAccess.satisfiedBy(hostAccess)) {
+                Spacer(Modifier.height(DdSpacing.Md))
+                Text(
+                    text = stringResource(R.string.market_access_insufficient),
+                    style = DdType.bodySmall,
+                    color = colors.warning,
+                )
             }
             val previews = entry.plugin?.previewUrls.orEmpty()
             if (previews.isNotEmpty()) {

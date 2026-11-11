@@ -115,4 +115,8 @@
     <string name="market_auth_help">了解更多</string>
     <string name="market_oauth_hint">已加入，去连接器完成授权</string>
     <string name="market_oauth_action">去连接器完成授权</string>
+    <string name="market_access_normal">普通</string>
+    <string name="market_access_adb">ADB</string>
+    <string name="market_access_root">Root</string>
+    <string name="market_access_insufficient">当前权限不足，插件未必能用</string>
 </resources>

@@ -84,6 +84,40 @@ class MarketRegistryParserTest {
     }
 
     @Test
+    fun parsesPluginRequiredAccess() {
+        assertEquals(
+            MarketRequiredAccess.Normal,
+            MarketRegistryParser.parse(registry().encodeToByteArray()).entries[0].plugin?.requiredAccess,
+        )
+        assertEquals(
+            MarketRequiredAccess.Adb,
+            MarketRegistryParser.parse(registry(requiredAccess = "adb").encodeToByteArray()).entries[0].plugin?.requiredAccess,
+        )
+        assertEquals(
+            MarketRequiredAccess.Root,
+            MarketRegistryParser.parse(registry(requiredAccess = "root").encodeToByteArray()).entries[0].plugin?.requiredAccess,
+        )
+        assertEquals(
+            MarketRequiredAccess.Normal,
+            MarketRegistryParser.parse(registry(requiredAccess = "normal").encodeToByteArray()).entries[0].plugin?.requiredAccess,
+        )
+    }
+
+    @Test
+    fun invalidRequiredAccessFallsBackToNormal() {
+        val plugin = MarketRegistryParser.parse(registry(requiredAccess = "superuser").encodeToByteArray()).entries[0]
+        assertEquals(MarketRequiredAccess.Normal, plugin.plugin?.requiredAccess)
+    }
+
+    @Test
+    fun acceptsLegacySchemaWithRequiredAccess() {
+        val json = registry(requiredAccess = "adb").replace("\"schemaVersion\": 3", "\"schemaVersion\": 2")
+        val plugin = MarketRegistryParser.parse(json.encodeToByteArray()).entries[0]
+        assertEquals(2, MarketRegistryParser.parse(json.encodeToByteArray()).schemaVersion)
+        assertEquals(MarketRequiredAccess.Adb, plugin.plugin?.requiredAccess)
+    }
+
+    @Test
     fun parsesApiKeyAuth() {
         val json = registry(mcpAuthType = "apiKey")
         val mcp = MarketRegistryParser.parse(json.encodeToByteArray()).entries[2]
@@ -167,6 +201,7 @@ class MarketRegistryParserTest {
         mcpAuthType: String = "oauth",
         apiKeyHeader: String? = "Authorization",
         previews: String? = null,
+        requiredAccess: String? = null,
     ): String {
         val secondId = if (duplicateId) "io.example.plugin" else "example-skill"
         val auth = when (mcpAuthType) {
@@ -190,7 +225,7 @@ class MarketRegistryParserTest {
               "tags": {"zh": ["插件"], "en": ["Plugin"]},
               "version": "1.0.0",
               "artifact": {"url": "https://example.com/p.ddp", "sha256": "$sha256", "size": 1024},
-              "plugin": {"apiLevel": 4, "minHostVersion": "0.2.0", "publisherKeyId": "plugin-key", "publisherName": "milous"${if (previews == null) "" else ", \"previews\": $previews"}}
+              "plugin": {"apiLevel": 4, "minHostVersion": "0.2.0", "publisherKeyId": "plugin-key", "publisherName": "milous"${if (requiredAccess == null) "" else ", \"requiredAccess\": \"$requiredAccess\""}${if (previews == null) "" else ", \"previews\": $previews"}}
             },
             {
               "type": "skill",

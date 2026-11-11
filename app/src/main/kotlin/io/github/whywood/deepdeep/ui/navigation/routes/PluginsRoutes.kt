@@ -42,9 +42,11 @@ internal fun PluginsRoute(
     pendingImportUri: String? = null,
     onPendingImportHandled: () -> Unit = {},
 ) {
+    val hostState by dependencies.hostAccess.state.collectAsStateWithLifecycle()
     PluginsScreen(
         manager = dependencies.pluginManager,
         marketRepository = dependencies.marketRepository,
+        hostAccess = hostState.effective,
         onBack = onBack,
         pendingImportUri = pendingImportUri,
         onPendingImportHandled = onPendingImportHandled,

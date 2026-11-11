@@ -54,6 +54,11 @@ internal object MarketRegistryParser {
                 minHostVersion = it.string("minHostVersion"),
                 publisherKeyId = it.string("publisherKeyId"),
                 publisherName = it.string("publisherName"),
+                requiredAccess = when (it.string("requiredAccess")) {
+                    "adb" -> MarketRequiredAccess.Adb
+                    "root" -> MarketRequiredAccess.Root
+                    else -> MarketRequiredAccess.Normal
+                },
                 previewUrls = (it["previews"] as? JsonArray)
                     ?.mapNotNull { element -> (element as? JsonPrimitive)?.contentOrNull }
                     ?.filter { url -> url.startsWith("https://") }

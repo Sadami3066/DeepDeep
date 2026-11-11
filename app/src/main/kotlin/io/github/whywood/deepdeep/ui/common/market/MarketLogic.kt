@@ -3,6 +3,8 @@ package io.github.whywood.deepdeep.ui.common.market
 import io.github.whywood.deepdeep.market.MarketDefaults
 import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketInstallState
+import io.github.whywood.deepdeep.market.MarketRequiredAccess
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import java.util.Locale
 
 internal enum class MarketEntryStatus { Install, Installed, Update, Installing, Failed }
@@ -59,4 +61,10 @@ internal fun marketIconUrl(icon: String?): String? {
     val path = icon?.trim().orEmpty()
     if (path.isEmpty()) return null
     return MarketDefaults.PAGE_BASE_URL + path.trimStart('/')
+}
+
+internal fun MarketRequiredAccess.satisfiedBy(access: HostAccess): Boolean = when (this) {
+    MarketRequiredAccess.Normal -> true
+    MarketRequiredAccess.Adb -> access != HostAccess.LOCAL
+    MarketRequiredAccess.Root -> access == HostAccess.ROOT
 }

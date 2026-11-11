@@ -72,10 +72,15 @@ import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.plugin.manager.PluginSnapshot
 import io.github.whywood.deepdeep.plugin.manager.PluginsUiState
 import io.github.whywood.deepdeep.market.MarketEntryType
+import io.github.whywood.deepdeep.market.MarketRequiredAccess
 import io.github.whywood.deepdeep.market.MarketRepository
+import io.github.whywood.deepdeep.market.MarketState
+import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.market.MarketAccessTag
 import io.github.whywood.deepdeep.ui.common.market.MarketRefreshButton
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
+import io.github.whywood.deepdeep.ui.common.market.satisfiedBy
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -85,6 +90,7 @@ import kotlinx.coroutines.withContext
 internal fun PluginsScreen(
     manager: PluginManagerFacade,
     marketRepository: MarketRepository,
+    hostAccess: HostAccess,
     onBack: () -> Unit,
     onOpenPluginPage: (String, String) -> Unit,
     modifier: Modifier = Modifier,
@@ -165,6 +171,7 @@ internal fun PluginsScreen(
         onUninstall = { snapshot -> uninstallTarget = snapshot },
         onImport = { importPicker.launch(arrayOf("*/*")) },
         marketRepository = marketRepository,
+        hostAccess = hostAccess,
         onMarketInstalled = { holder.refresh() },
         modifier = modifier,
     )
@@ -261,10 +268,17 @@ private fun PluginsContent(
     onUninstall: (PluginSnapshot) -> Unit,
     onImport: () -> Unit,
     marketRepository: MarketRepository,
+    hostAccess: HostAccess,
     onMarketInstalled: suspend () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val marketState by marketRepository.state.collectAsStateWithLifecycle()
+    val requiredAccessById = remember(marketState) {
+        (marketState as? MarketState.Ready)?.registry?.entries.orEmpty()
+            .mapNotNull { entry -> entry.plugin?.requiredAccess?.let { access -> entry.id to access } }
+            .toMap()
+    }
     val visible = filterPlugins(state.plugins, query)
     val interactive = pluginListInteractive(state)
     val showMarket = tab == MARKET_TAB_MARKET
@@ -337,6 +351,7 @@ private fun PluginsContent(
                 testTagPrefix = "plugins",
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 onInstalled = onMarketInstalled,
+                hostAccess = hostAccess,
             )
         } else {
             LazyColumn(
@@ -374,6 +389,8 @@ private fun PluginsContent(
                             PluginRow(
                                 snapshot = snapshot,
                                 pluginsRoot = pluginsRoot,
+                                requiredAccess = requiredAccessById[snapshot.id],
+                                hostAccess = hostAccess,
                                 interactive = interactive && snapshot.id !in togglingIds,
                                 onOpenPage = {
                                     snapshot.pages.firstOrNull()?.let { page ->
@@ -445,6 +462,8 @@ private fun EmptyPlugins() {
 private fun PluginRow(
     snapshot: PluginSnapshot,
     pluginsRoot: File?,
+    requiredAccess: MarketRequiredAccess?,
+    hostAccess: HostAccess,
     interactive: Boolean,
     onOpenPage: () -> Unit,
     onToggle: (Boolean) -> Unit,
@@ -463,6 +482,11 @@ private fun PluginRow(
             ?: snapshot.summary
         snapshot.phase == PluginPhaseUi.PENDING_RESTART -> stringResource(R.string.plugins_phase_pending_restart)
         else -> snapshot.summary
+    }
+    val accessHint = if (requiredAccess != null && !requiredAccess.satisfiedBy(hostAccess)) {
+        stringResource(R.string.market_access_insufficient)
+    } else {
+        null
     }
     var menuOpen by remember(snapshot.id) { mutableStateOf(false) }
     DdPressable(
@@ -486,18 +510,29 @@ private fun PluginRow(
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = snapshot.name,
-                    style = DdType.body,
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = snapshot.name,
+                        modifier = Modifier.weight(1f, fill = false),
+                        style = DdType.body,
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (requiredAccess != null) {
+                        Spacer(Modifier.width(DdSpacing.Xs))
+                        MarketAccessTag(requiredAccess)
+                    }
+                }
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = failure ?: description,
+                    text = failure ?: accessHint ?: description,
                     style = DdType.bodySmall,
-                    color = if (failure != null) colors.danger else colors.inkTertiary,
+                    color = when {
+                        failure != null -> colors.danger
+                        accessHint != null -> colors.warning
+                        else -> colors.inkTertiary
+                    },
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )

@@ -21,11 +21,14 @@ data class MarketArtifact(
     val size: Long,
 )
 
+enum class MarketRequiredAccess { Normal, Adb, Root }
+
 data class MarketPluginMeta(
     val apiLevel: Int,
     val minHostVersion: String?,
     val publisherKeyId: String?,
     val publisherName: String? = null,
+    val requiredAccess: MarketRequiredAccess = MarketRequiredAccess.Normal,
     val previewUrls: List<String> = emptyList(),
 )
 
