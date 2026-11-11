@@ -131,12 +131,13 @@ class AppGraph(context: Context) : AppDependencies {
     override val providerCatalog: ProviderDirectory get() = dataGraph.providerCatalog
     override val customProviderStore: CustomProviderStore get() = dataGraph.customProviderStore
 
+    override fun configuredProviderIds(): Set<String> =
+        credentials.authKinds.value.keys + customProviderStore.entries.value.map { it.id }
+
     override fun reloadCustomProviders() {
         dataGraph.reloadCustomProviders()
         scope.launch {
-            dataGraph.modelSelection.ensure(
-                credentials.authKinds.value.keys + dataGraph.customProviderStore.entries.value.map { it.id },
-            )
+            dataGraph.modelSelection.ensure(configuredProviderIds())
         }
     }
     override val providerOAuthService: ProviderOAuthService get() = dataGraph.providerOAuthService
@@ -261,6 +262,7 @@ class AppGraph(context: Context) : AppDependencies {
         workspaceStore = dataGraph.workspaceStore,
         providerCatalog = dataGraph.providerCatalog,
         credentials = dataGraph.credentials,
+        configuredProviderIds = ::configuredProviderIds,
         httpTransport = dataGraph.httpTransport,
         personalizationStore = dataGraph.personalizationStore,
         linuxSettings = dataGraph.linuxSettings,
@@ -351,9 +353,7 @@ class AppGraph(context: Context) : AppDependencies {
             importDebugKey()
         }
         credentials.preloadAll()
-        dataGraph.modelSelection.ensure(
-            credentials.authKinds.value.keys + dataGraph.customProviderStore.entries.value.map { it.id },
-        )
+        dataGraph.modelSelection.ensure(configuredProviderIds())
     }
 
     private suspend fun syncBundledSkills() {

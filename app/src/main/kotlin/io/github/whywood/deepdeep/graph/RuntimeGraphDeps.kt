@@ -37,6 +37,7 @@ internal class RuntimeGraphDeps(
     val workspaceStore: WorkspaceStore,
     val providerCatalog: ProviderCatalog,
     val credentials: SdkCredentialStore,
+    val configuredProviderIds: () -> Set<String>,
     val httpTransport: HttpTransport,
     val personalizationStore: PersonalizationStore,
     val linuxSettings: LinuxSettingsStore,

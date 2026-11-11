@@ -158,7 +158,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             runRoot = File(deps.appContext.filesDir, "agent-runs"),
             appToolContext = appToolContext,
             defaultConfig = { deps.modelConfigStore.read() },
-            configuredProviders = { deps.credentials.authKinds.value.keys },
+            configuredProviders = deps.configuredProviderIds,
             personalization = { deps.personalizationStore.read().toRuntime() },
             pluginPromptBody = { deps.pluginManager().promptBody() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
@@ -186,7 +186,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             goalDriver = deps.goalService,
             titleNamer = SessionTitleService(
                 catalog = deps.providerCatalog,
-                credentials = deps.credentials,
+                configuredProviders = deps.configuredProviderIds,
                 preferences = deps.appPreferences,
             ),
             sessionCleaner = { sessionId: String ->

@@ -4,17 +4,16 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.SessionNamingMode
 import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
-import io.github.whywood.deepdeep.runtime.SdkCredentialStore
 import io.github.whywood.deepdeep.runtime.SessionTitleNamer
 
 class SessionTitleService(
     private val catalog: ProviderCatalog,
-    private val credentials: SdkCredentialStore,
+    private val configuredProviders: () -> Set<String>,
     private val preferences: AppPreferences,
 ) : SessionTitleNamer {
     override suspend fun title(firstUserText: String): String? {
         val values = preferences.read()
-        val configured = credentials.authKinds.value.keys
+        val configured = configuredProviders()
         val candidates = when (values.metadataMode) {
             SessionNamingMode.AUTO -> SessionTitleModels.candidates(
                 configured.flatMap { providerId -> catalog.models(providerId) },

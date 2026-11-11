@@ -118,6 +118,8 @@ internal class FakeAppDependencies(
 
     override val customProviderStore: CustomProviderStore get() = unavailable("customProviderStore")
 
+    override fun configuredProviderIds(): Set<String> = unavailable("configuredProviderIds")
+
     override fun reloadCustomProviders(): Nothing = unavailable("reloadCustomProviders")
 
     override val credentials: SdkCredentialStore get() = unavailable("credentials")

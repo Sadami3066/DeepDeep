@@ -123,7 +123,7 @@ internal fun AppShell(
     val avatarBitmap by rememberAvatarBitmap(avatarKey) { avatarStore.load() }
     val customProviders by graph.customProviderStore.entries.collectAsStateWithLifecycle(initialValue = emptyList())
     val configuredProviders = remember(authKinds, customProviders) {
-        authKinds.keys + customProviders.map { it.id }.toSet()
+        graph.configuredProviderIds()
     }
     val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
         graph.providerCatalog.summaries.filter { it.id in configuredProviders }

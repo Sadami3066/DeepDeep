@@ -138,6 +138,8 @@ interface ServiceDependencies {
 
     fun reloadCustomProviders()
 
+    fun configuredProviderIds(): Set<String>
+
     val credentials: SdkCredentialStore
 
     val providerOAuthService: ProviderOAuthService
