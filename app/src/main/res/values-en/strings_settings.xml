@@ -312,4 +312,10 @@
     <string name="settings_custom_provider_error_api_key">Enter an API key</string>
     <string name="settings_custom_provider_error_models">Add at least one model</string>
     <string name="settings_custom_provider_error_model_id">Model ID cannot be empty</string>
+    <string name="settings_provider_custom_section">Custom providers</string>
+    <string name="settings_custom_provider_discover">Fetch models</string>
+    <string name="settings_custom_provider_discovering">Fetching…</string>
+    <string name="settings_custom_provider_discover_missing">Fill in the base URL and API key first</string>
+    <string name="settings_custom_provider_discover_empty">The endpoint returned no models</string>
+    <string name="settings_custom_provider_discover_failed">Could not fetch models; check the URL and key</string>
 </resources>

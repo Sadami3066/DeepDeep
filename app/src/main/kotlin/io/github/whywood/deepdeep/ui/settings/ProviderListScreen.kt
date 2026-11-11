@@ -45,6 +45,7 @@ import io.github.whywood.deepdeep.ui.common.ProviderIcon
 @Composable
 fun ProviderListScreen(
     providers: List<ProviderSummary>,
+    customProviderIds: Set<String>,
     configuredProviderIds: Set<String>,
     onBack: () -> Unit,
     onAddCustomProvider: () -> Unit,
@@ -63,13 +64,15 @@ fun ProviderListScreen(
             }
             .sortedBy { it.name.lowercase() }
     }
+    val customProviders = filtered.filter { it.id in customProviderIds }
+    val builtinProviders = filtered.filterNot { it.id in customProviderIds }
     val countLabel = stringResource(
         if (query.isBlank()) {
             R.string.settings_provider_all_count
         } else {
             R.string.settings_provider_result_count
         },
-        filtered.size,
+        builtinProviders.size,
     )
 
     DdPageScaffold(
@@ -104,26 +107,11 @@ fun ProviderListScreen(
                 fieldTestTag = "provider_search_field",
             )
             Spacer(Modifier.height(DdSpacing.Lg))
-            DdSectionLabel(countLabel, Modifier.padding(start = DdSpacing.Xs))
+            DdSectionLabel(
+                stringResource(R.string.settings_provider_custom_section),
+                Modifier.padding(start = DdSpacing.Xs),
+            )
             Spacer(Modifier.height(10.dp))
-            DdGroupCard {
-                if (filtered.isEmpty()) {
-                    DdEmptyState(
-                        text = stringResource(R.string.settings_provider_no_result),
-                        modifier = Modifier.padding(vertical = DdSpacing.Xl),
-                    )
-                } else {
-                    filtered.forEachIndexed { index, provider ->
-                        ProviderRow(
-                            provider = provider,
-                            configured = provider.id in configuredProviderIds,
-                            onClick = { onProviderClick(provider.id) },
-                        )
-                        if (index != filtered.lastIndex) DdHairline()
-                    }
-                }
-            }
-            Spacer(Modifier.height(DdSpacing.Lg))
             DdGroupCard {
                 DdListRow(
                     title = stringResource(R.string.settings_provider_add_custom),
@@ -131,6 +119,37 @@ fun ProviderListScreen(
                     onClick = onAddCustomProvider,
                     showChevron = true,
                 )
+                if (customProviders.isNotEmpty()) {
+                    DdHairline()
+                    customProviders.forEachIndexed { index, provider ->
+                        ProviderRow(
+                            provider = provider,
+                            configured = provider.id in configuredProviderIds,
+                            onClick = { onProviderClick(provider.id) },
+                        )
+                        if (index != customProviders.lastIndex) DdHairline()
+                    }
+                }
+            }
+            Spacer(Modifier.height(DdSpacing.Lg))
+            DdSectionLabel(countLabel, Modifier.padding(start = DdSpacing.Xs))
+            Spacer(Modifier.height(10.dp))
+            DdGroupCard {
+                if (builtinProviders.isEmpty()) {
+                    DdEmptyState(
+                        text = stringResource(R.string.settings_provider_no_result),
+                        modifier = Modifier.padding(vertical = DdSpacing.Xl),
+                    )
+                } else {
+                    builtinProviders.forEachIndexed { index, provider ->
+                        ProviderRow(
+                            provider = provider,
+                            configured = provider.id in configuredProviderIds,
+                            onClick = { onProviderClick(provider.id) },
+                        )
+                        if (index != builtinProviders.lastIndex) DdHairline()
+                    }
+                }
             }
             Spacer(Modifier.height(DdSpacing.Huge))
         }

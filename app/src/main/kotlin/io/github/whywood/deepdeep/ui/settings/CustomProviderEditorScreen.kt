@@ -1,7 +1,12 @@
 package io.github.whywood.deepdeep.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,15 +21,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.CustomProviderEntry
 import io.github.whywood.deepdeep.data.CustomProviderModel
@@ -57,6 +65,7 @@ fun CustomProviderEditorScreen(
     onBack: () -> Unit,
     onSave: (CustomProviderEntry) -> Unit,
     onDelete: (() -> Unit)? = null,
+    onDiscoverModels: (suspend (String, String, CustomProviderProtocol) -> Result<List<String>>)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -76,6 +85,9 @@ fun CustomProviderEditorScreen(
     var modelIdDraft by remember { mutableStateOf("") }
     var modelNameDraft by remember { mutableStateOf("") }
     var confirmDelete by remember { mutableStateOf(false) }
+    var discovering by remember { mutableStateOf(false) }
+    var discoverError by remember { mutableStateOf<Int?>(null) }
+    val scope = rememberCoroutineScope()
 
     val trimmedName = name.trim()
     val trimmedBaseUrl = baseUrl.trim()
@@ -155,6 +167,12 @@ fun CustomProviderEditorScreen(
                 onValueChange = { name = it },
                 placeholder = stringResource(R.string.settings_custom_provider_name_hint),
             )
+            Text(
+                text = stringResource(R.string.settings_custom_provider_protocol),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+            )
+            Spacer(Modifier.height(6.dp))
             DdGroupCard {
                 ProtocolRow(
                     protocol = protocol,
@@ -166,7 +184,7 @@ fun CustomProviderEditorScreen(
                     },
                 )
             }
-            Spacer(Modifier.height(DdSpacing.Md))
+            Spacer(Modifier.height(12.dp))
             FormField(
                 label = stringResource(R.string.settings_custom_provider_base_url),
                 value = baseUrl,
@@ -202,6 +220,53 @@ fun CustomProviderEditorScreen(
                     title = stringResource(R.string.settings_custom_provider_model_add),
                     icon = DdIcons.Plus,
                     onClick = { openModelEditor(null) },
+                )
+                if (onDiscoverModels != null) {
+                    DdHairline()
+                    DdListRow(
+                        title = stringResource(
+                            if (discovering) {
+                                R.string.settings_custom_provider_discovering
+                            } else {
+                                R.string.settings_custom_provider_discover
+                            },
+                        ),
+                        icon = DdIcons.Search,
+                        enabled = !discovering,
+                        onClick = {
+                            discoverError = null
+                            if (trimmedBaseUrl.isEmpty() || trimmedApiKey.isEmpty()) {
+                                discoverError = R.string.settings_custom_provider_discover_missing
+                            } else {
+                                discovering = true
+                                scope.launch {
+                                    val result = onDiscoverModels(trimmedBaseUrl, trimmedApiKey, protocol)
+                                    discovering = false
+                                    result.fold(
+                                        onSuccess = { ids ->
+                                            if (ids.isEmpty()) {
+                                                discoverError = R.string.settings_custom_provider_discover_empty
+                                            } else {
+                                                models.clear()
+                                                ids.forEach { id -> models.add(ModelDraft(id, id)) }
+                                            }
+                                        },
+                                        onFailure = {
+                                            discoverError = R.string.settings_custom_provider_discover_failed
+                                        },
+                                    )
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+            if (discoverError != null) {
+                Spacer(Modifier.height(DdSpacing.Md))
+                Text(
+                    text = stringResource(discoverError!!),
+                    style = DdType.bodySmall,
+                    color = colors.danger,
                 )
             }
             if (error != null) {
@@ -333,28 +398,21 @@ private fun ProtocolRow(
             DdPressable(
                 onClick = { onExpandedChange(true) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = DdShapes.Row,
                 contentDescription = stringResource(R.string.settings_custom_provider_protocol),
             ) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 60.dp)
-                        .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Md),
+                        .heightIn(min = 52.dp)
+                        .padding(horizontal = DdSpacing.Lg),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_custom_provider_protocol),
-                            style = DdType.body,
-                            color = colors.ink,
-                        )
-                        Text(
-                            text = protocolLabel(protocol),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
-                    }
+                    Text(
+                        text = protocolLabel(protocol),
+                        style = DdType.body,
+                        color = colors.ink,
+                        modifier = Modifier.weight(1f),
+                    )
                     DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
                 }
             }

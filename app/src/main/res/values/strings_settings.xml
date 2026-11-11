@@ -318,4 +318,10 @@
     <string name="settings_custom_provider_error_api_key">请输入 API Key</string>
     <string name="settings_custom_provider_error_models">至少添加一个模型</string>
     <string name="settings_custom_provider_error_model_id">模型 ID 不能为空</string>
+    <string name="settings_provider_custom_section">自定义服务商</string>
+    <string name="settings_custom_provider_discover">一键获取模型</string>
+    <string name="settings_custom_provider_discovering">获取中…</string>
+    <string name="settings_custom_provider_discover_missing">先填写接口地址与 API Key</string>
+    <string name="settings_custom_provider_discover_empty">接口没有返回可用模型</string>
+    <string name="settings_custom_provider_discover_failed">获取模型失败，请检查地址与 Key</string>
 </resources>

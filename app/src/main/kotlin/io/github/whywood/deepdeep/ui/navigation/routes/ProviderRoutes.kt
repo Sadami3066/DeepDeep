@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
+import io.github.whywood.deepdeep.data.ProviderModelDiscovery
 import io.github.whywood.deepdeep.ui.settings.CustomProviderEditorScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderDetailScreen
 import io.github.whywood.deepdeep.ui.settings.ProviderListScreen
@@ -24,6 +25,7 @@ internal fun ProvidersRoute(
     val customProviderIds = remember(customProviders) { customProviders.map { it.id }.toSet() }
     ProviderListScreen(
         providers = dependencies.providerCatalog.summaries,
+        customProviderIds = customProviderIds,
         configuredProviderIds = configuredProviderIds,
         onBack = onBack,
         onAddCustomProvider = { navigator.push(AppDestination.CustomProviderEditor()) },
@@ -46,14 +48,16 @@ internal fun CustomProviderEditorRoute(
 ) {
     val entries by dependencies.customProviderStore.entries.collectAsStateWithLifecycle(initialValue = emptyList())
     val entry = remember(entries, providerId) { entries.firstOrNull { it.id == providerId } }
-    if (providerId != null && entry == null) {
-        LaunchedEffect(providerId) { navigator.pop() }
-        return
+    LaunchedEffect(providerId, entries, entry) {
+        if (providerId != null && entry == null && entries.isNotEmpty()) navigator.pop()
     }
     val scope = rememberCoroutineScope()
     CustomProviderEditorScreen(
         entry = entry,
         onBack = onBack,
+        onDiscoverModels = { baseUrl, apiKey, protocol ->
+            ProviderModelDiscovery.fetch(baseUrl, apiKey, protocol)
+        },
         onSave = { updated ->
             scope.launch {
                 dependencies.customProviderStore.saveEntry(updated)
