@@ -76,7 +76,9 @@ class AssistantOverlayActivity : ComponentActivity() {
                     providers = graph.providerCatalog,
                     attachmentStore = graph.attachmentStore,
                     homeDir = graph.homeDir,
-                    configuredProviders = { graph.credentials.authKinds.value.keys },
+                    configuredProviders = {
+                        graph.credentials.authKinds.value.keys + graph.customProviderStore.entries.value.map { it.id }
+                    },
                     defaultModel = { graph.modelConfigStore.read() },
                     onSessionSelected = { sessionId -> graph.activeSessionId.value = sessionId },
                     initialSessionId = { requestedSessionId },
