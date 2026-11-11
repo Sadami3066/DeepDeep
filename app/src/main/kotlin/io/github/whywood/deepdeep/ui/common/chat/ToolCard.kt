@@ -425,5 +425,5 @@ private fun toolIcon(kind: ToolIconKind): DdIcon = when (kind) {
     ToolIconKind.Folder -> DdIcons.Folder
     ToolIconKind.Target -> DdIcons.Target
     ToolIconKind.Check -> DdIcons.Check
-    ToolIconKind.Plug -> DdIcons.Plug
+    ToolIconKind.RadioOff -> DdIcons.RadioOff
 }

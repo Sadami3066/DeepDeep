@@ -60,7 +60,7 @@ ol{margin:8px 0 0;padding-left:20px}
   </div>
 </header>
 <main>
-  <div class="stats" id="stats">71 个图标 · 7 类 · 62 位图 · 9 矢量 · 72 个 DdIcons 成员</div>
+  <div class="stats" id="stats">72 个图标 · 7 类 · 63 位图 · 9 矢量 · 73 个 DdIcons 成员</div>
 <section class="category" data-category="navigation">
   <div class="cat-head"><h2>导航与方向</h2><span class="cat-id">navigation</span><span class="count">9</span></div>
   <p class="desc">菜单、返回、展开与方向指示</p>
@@ -278,7 +278,7 @@ ol{margin:8px 0 0;padding-left:20px}
 </article></div>
 </section>
 <section class="category" data-category="status">
-  <div class="cat-head"><h2>状态与反馈</h2><span class="cat-id">status</span><span class="count">3</span></div>
+  <div class="cat-head"><h2>状态与反馈</h2><span class="cat-id">status</span><span class="count">4</span></div>
   <p class="desc">确认、提示与通知</p>
   <div class="grid"><article class="card" data-search="确认 confirm status ic_status_confirm 位图 · regular check regular/02_navigation_chat/ic_milo_confirm.png" title="上游：regular/02_navigation_chat/ic_milo_confirm.png">
   <div class="icon"><img class="pic" src="status/confirm.png" alt=""></div>
@@ -303,6 +303,14 @@ ol{margin:8px 0 0;padding-left:20px}
   <div class="res">ic_status_notifications</div>
   <div class="kind">位图 · regular</div>
   <div class="badges"><span class="val">Notifications</span></div>
+</article>
+<article class="card" data-search="未选中状态 radio_off status ic_status_radio_off 位图 · regular radiooff regular/06_control_chat_states/ic_milo_radio_off.png" title="上游：regular/06_control_chat_states/ic_milo_radio_off.png">
+  <div class="icon"><img class="pic" src="status/radio_off.png" alt=""></div>
+  <div class="zh">未选中状态</div>
+  <div class="id">radio_off</div>
+  <div class="res">ic_status_radio_off</div>
+  <div class="kind">位图 · regular</div>
+  <div class="badges"><span class="val">RadioOff</span></div>
 </article></div>
 </section>
 <section class="category" data-category="file">
@@ -672,7 +680,7 @@ ol{margin:8px 0 0;padding-left:20px}
     add.png  archive.png  copy.png  delete.png  download.png  eye.xml  pen.xml  pin.png  play.png
     quote.xml  retry.png  scan.png  search.png  select_all.xml  share.png  stop.png  sync.png
   status/
-    confirm.png  info.png  notifications.png
+    confirm.png  info.png  notifications.png  radio_off.png
   file/
     attachment.png  camera.png  code.png  database.png  plain.png  folder_closed.png
     folder_open.png  image.png  package_box.png  workspace.png
@@ -755,7 +763,7 @@ const update = () => {
     section.hidden = ![...section.querySelectorAll('.card')].some((card) => !card.hidden);
   }
   const categoryCount = sections.filter((section) => !section.hidden).length;
-  stats.textContent = query.length === 0 ? '71 个图标 · 7 类 · 62 位图 · 9 矢量 · 72 个 DdIcons 成员' : `${visible} / ${cards.length} 个图标 · ${categoryCount} 类`;
+  stats.textContent = query.length === 0 ? '72 个图标 · 7 类 · 63 位图 · 9 矢量 · 73 个 DdIcons 成员' : `${visible} / ${cards.length} 个图标 · ${categoryCount} 类`;
 };
 input.addEventListener('input', update);
 </script>

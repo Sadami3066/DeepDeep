@@ -48,6 +48,7 @@
     <string name="assistant_quote">引用</string>
     <string name="assistant_quote_remove">取消引用</string>
     <string name="assistant_reasoning">思考</string>
+    <string name="assistant_reasoning_compact">进行了思考</string>
     <string name="assistant_send">发送</string>
     <string name="assistant_export_session">导出会话</string>
     <string name="assistant_export_done">已导出会话</string>

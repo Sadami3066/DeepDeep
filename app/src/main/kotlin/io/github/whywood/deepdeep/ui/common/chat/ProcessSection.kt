@@ -226,7 +226,7 @@ internal fun ProcessSection(
                             is AssistantStep.Reasoning -> ReasoningCard(
                                 step = step,
                                 active = step.id == activeReasoningId,
-                                onToggle = { onToggleStep(step.id) },
+                                compact = processDetail == ProcessDetail.COMPACT,
                                 terminatedStatus = terminatedStatus.takeIf { step.id == lastReasoningId },
                             )
 
@@ -338,16 +338,21 @@ private fun ToolRunGroup(
             contentDescription = title,
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Xs),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = DdSpacing.Xs)
+                    .padding(horizontal = DdSpacing.Sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    Modifier
-                        .size(6.dp)
-                        .clip(DdShapes.Pill)
-                        .background(dotTint),
-                )
-                Spacer(Modifier.width(DdSpacing.Sm))
+                Box(Modifier.size(13.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .size(6.dp)
+                            .clip(DdShapes.Pill)
+                            .background(dotTint),
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = title,
                     style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),

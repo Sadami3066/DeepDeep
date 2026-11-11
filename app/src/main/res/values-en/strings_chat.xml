@@ -48,6 +48,7 @@
     <string name="assistant_quote">Quote</string>
     <string name="assistant_quote_remove">Remove quote</string>
     <string name="assistant_reasoning">Thinking</string>
+    <string name="assistant_reasoning_compact">Thought</string>
     <string name="assistant_send">Send</string>
     <string name="assistant_export_session">Export chat</string>
     <string name="assistant_export_done">Chat exported</string>

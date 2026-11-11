@@ -54,6 +54,7 @@ object DdIcons {
     val Privacy = DdIcon(R.drawable.ic_system_privacy)
     val Puzzle = DdIcon(R.drawable.ic_ai_plugins)
     val Quote = DdIcon(R.drawable.ic_action_quote)
+    val RadioOff = DdIcon(R.drawable.ic_status_radio_off)
     val Raw = DdIcon(R.drawable.ic_file_code)
     val Refresh = DdIcon(R.drawable.ic_action_retry)
     val Scan = DdIcon(R.drawable.ic_action_scan)
