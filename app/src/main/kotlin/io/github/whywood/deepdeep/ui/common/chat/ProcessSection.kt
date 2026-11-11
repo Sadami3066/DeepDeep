@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -327,47 +329,41 @@ private fun ToolRunGroup(
     )
     val title = stringResource(R.string.assistant_process_tool_group, tools.size)
     Column(Modifier.fillMaxWidth()) {
-        DdPressable(
-            onClick = { expanded = !expanded },
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = ProcessRowMetrics.OuterInset)
                 .heightIn(min = 32.dp)
+                .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
+                .clickable(role = Role.Button, onClick = { expanded = !expanded })
+                .padding(horizontal = ProcessRowMetrics.InnerInset)
                 .testTag("tool_group_$firstToolId"),
-            shape = DdShapes.Small,
-            contentDescription = title,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = DdSpacing.Xs)
-                    .padding(horizontal = DdSpacing.Sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.size(13.dp), contentAlignment = Alignment.Center) {
-                    Box(
-                        Modifier
-                            .size(6.dp)
-                            .clip(DdShapes.Pill)
-                            .background(dotTint),
-                    )
-                }
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = title,
-                    style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-                    color = colors.inkSecondary,
+            Box(Modifier.size(ProcessRowMetrics.IconSize), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .size(6.dp)
+                        .clip(DdShapes.Pill)
+                        .background(dotTint),
                 )
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.width(DdSpacing.Sm))
-                DdIcon(
-                    icon = DdIcons.ChevronRight,
-                    modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
-                    tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
-                    size = 12.dp,
-                )
-                Spacer(Modifier.width(DdSpacing.Xxs))
             }
+            Spacer(Modifier.width(ProcessRowMetrics.IconGap))
+            Text(
+                text = title,
+                style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
+                color = colors.inkSecondary,
+            )
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(DdSpacing.Xs))
+            DdIcon(
+                icon = DdIcons.ChevronRight,
+                modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
+                tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
+                size = ProcessRowMetrics.ChevronSize,
+            )
+            Spacer(Modifier.width(DdSpacing.Xxs))
         }
         AnimatedVisibility(
             visible = expanded,
@@ -381,7 +377,7 @@ private fun ToolRunGroup(
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, start = DdSpacing.Sm),
+                Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs),
                 verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
             ) {
                 tools.forEach { tool ->
