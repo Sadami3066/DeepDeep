@@ -72,7 +72,7 @@ fun ProviderListScreen(
         } else {
             R.string.settings_provider_result_count
         },
-        builtinProviders.size,
+        filtered.size,
     )
 
     DdPageScaffold(
@@ -131,23 +131,25 @@ fun ProviderListScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(DdSpacing.Lg))
-            DdSectionLabel(countLabel, Modifier.padding(start = DdSpacing.Xs))
-            Spacer(Modifier.height(10.dp))
-            DdGroupCard {
-                if (builtinProviders.isEmpty()) {
-                    DdEmptyState(
-                        text = stringResource(R.string.settings_provider_no_result),
-                        modifier = Modifier.padding(vertical = DdSpacing.Xl),
-                    )
-                } else {
-                    builtinProviders.forEachIndexed { index, provider ->
-                        ProviderRow(
-                            provider = provider,
-                            configured = provider.id in configuredProviderIds,
-                            onClick = { onProviderClick(provider.id) },
+            if (builtinProviders.isNotEmpty() || filtered.isEmpty()) {
+                Spacer(Modifier.height(DdSpacing.Lg))
+                DdSectionLabel(countLabel, Modifier.padding(start = DdSpacing.Xs))
+                Spacer(Modifier.height(10.dp))
+                DdGroupCard {
+                    if (builtinProviders.isEmpty()) {
+                        DdEmptyState(
+                            text = stringResource(R.string.settings_provider_no_result),
+                            modifier = Modifier.padding(vertical = DdSpacing.Xl),
                         )
-                        if (index != builtinProviders.lastIndex) DdHairline()
+                    } else {
+                        builtinProviders.forEachIndexed { index, provider ->
+                            ProviderRow(
+                                provider = provider,
+                                configured = provider.id in configuredProviderIds,
+                                onClick = { onProviderClick(provider.id) },
+                            )
+                            if (index != builtinProviders.lastIndex) DdHairline()
+                        }
                     }
                 }
             }
