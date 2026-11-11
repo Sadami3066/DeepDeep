@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -118,7 +120,23 @@ internal fun ReasoningCard(
                     color = terminatedColor,
                 )
             }
-            Spacer(Modifier.weight(1f))
+            val preview = remember(step.text, compact) {
+                if (compact) "" else reasoningPreview(step.text)
+            }
+            if (!expanded && preview.isNotEmpty()) {
+                Spacer(Modifier.width(DdSpacing.Sm))
+                Text(
+                    text = preview,
+                    modifier = Modifier.weight(1f),
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 18.sp),
+                    color = colors.inkTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.width(6.dp))
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
             Spacer(Modifier.width(DdSpacing.Xs))
             DdIcon(
                 icon = DdIcons.ChevronRight,
