@@ -11,7 +11,6 @@ import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.toProviderConfig
-import io.github.whywood.deepdeep.data.customThinkingLevelMap
 import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.FontPreferences

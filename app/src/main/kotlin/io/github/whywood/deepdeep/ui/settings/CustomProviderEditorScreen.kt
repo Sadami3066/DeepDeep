@@ -31,6 +31,7 @@ import io.github.whywood.deepdeep.data.CustomProviderEntry
 import io.github.whywood.deepdeep.data.CustomProviderModel
 import io.github.whywood.deepdeep.data.CustomProviderProtocol
 import io.github.whywood.deepdeep.data.CustomProviderStore
+import io.github.whywood.deepdeep.data.DiscoveredModel
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
@@ -48,9 +49,8 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import kotlinx.coroutines.launch
-
-private const val DEFAULT_THINKING_LEVEL = "max"
 
 private data class ModelDraft(
     val id: String = "",
@@ -59,7 +59,7 @@ private data class ModelDraft(
     val maxTokens: String = "",
     val supportsImages: Boolean = false,
     val reasoning: Boolean = false,
-    val maxThinkingLevel: String = DEFAULT_THINKING_LEVEL,
+    val thinkingLevels: Set<ThinkingLevel> = emptySet(),
 )
 
 private data class ModelEditorRequest(val index: Int, val model: CustomProviderModel?)
@@ -71,7 +71,16 @@ private fun CustomProviderModel.toDraft(): ModelDraft = ModelDraft(
     maxTokens = maxTokens?.toString().orEmpty(),
     supportsImages = supportsImages,
     reasoning = reasoning,
-    maxThinkingLevel = maxThinkingLevel ?: DEFAULT_THINKING_LEVEL,
+    thinkingLevels = thinkingLevels,
+)
+
+private fun DiscoveredModel.toDraft(): ModelDraft = ModelDraft(
+    id = id,
+    name = name.orEmpty(),
+    contextWindow = contextWindow?.toString().orEmpty(),
+    maxTokens = maxTokens?.toString().orEmpty(),
+    supportsImages = supportsImages == true,
+    reasoning = reasoning == true,
 )
 
 private fun ModelDraft.toModel(): CustomProviderModel = CustomProviderModel(
@@ -81,7 +90,7 @@ private fun ModelDraft.toModel(): CustomProviderModel = CustomProviderModel(
     maxTokens = maxTokens.trim().toLongOrNull()?.takeIf { it > 0 },
     supportsImages = supportsImages,
     reasoning = reasoning,
-    maxThinkingLevel = maxThinkingLevel.takeIf { reasoning },
+    thinkingLevels = if (reasoning) thinkingLevels else emptySet(),
 )
 
 private fun formatContextWindow(value: Long?): String? = when {
@@ -97,7 +106,7 @@ fun CustomProviderEditorScreen(
     onBack: () -> Unit,
     onSave: (CustomProviderEntry) -> Unit,
     onDelete: (() -> Unit)? = null,
-    onDiscoverModels: (suspend (String, String, CustomProviderProtocol) -> Result<List<String>>)? = null,
+    onDiscoverModels: (suspend (String, String, CustomProviderProtocol) -> Result<List<DiscoveredModel>>)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -292,15 +301,16 @@ fun CustomProviderEditorScreen(
                                     val result = onDiscoverModels(trimmedBaseUrl, trimmedApiKey, protocol)
                                     discovering = false
                                     result.fold(
-                                        onSuccess = { ids ->
-                                            if (ids.isEmpty()) {
+                                        onSuccess = { discovered ->
+                                            if (discovered.isEmpty()) {
                                                 discoverError = R.string.settings_custom_provider_discover_empty
                                             } else {
                                                 val existing = models.associateBy { it.id.trim() }
-                                                val next = ids.map { it.trim() }
-                                                    .filter { it.isNotEmpty() }
-                                                    .distinct()
-                                                    .map { id -> existing[id] ?: ModelDraft(id = id, name = id) }
+                                                val next = discovered
+                                                    .map { model -> model.copy(id = model.id.trim()) }
+                                                    .filter { model -> model.id.isNotEmpty() }
+                                                    .distinctBy { model -> model.id }
+                                                    .map { model -> existing[model.id] ?: model.toDraft() }
                                                 models.clear()
                                                 models.addAll(next)
                                             }
@@ -380,8 +390,29 @@ private fun modelCapabilitySummary(model: ModelDraft): String? {
     val parts = mutableListOf<String>()
     formatContextWindow(model.contextWindow.trim().toLongOrNull())?.let(parts::add)
     if (model.supportsImages) parts.add(stringResource(R.string.settings_custom_provider_capability_image))
-    if (model.reasoning) parts.add(stringResource(R.string.settings_custom_provider_capability_thinking))
+    if (model.reasoning) {
+        parts.add(
+            if (model.thinkingLevels.isEmpty()) {
+                stringResource(R.string.settings_custom_provider_capability_thinking)
+            } else {
+                stringResource(
+                    R.string.settings_custom_provider_capability_thinking_levels,
+                    thinkingLevelsSummary(model.thinkingLevels),
+                )
+            },
+        )
+    }
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
+@Composable
+private fun thinkingLevelsSummary(levels: Set<ThinkingLevel>): String = buildString {
+    ThinkingLevel.entries.forEach { level ->
+        if (level in levels) {
+            if (isNotEmpty()) append('/')
+            append(thinkingLevelLabel(level))
+        }
+    }
 }
 
 @Composable

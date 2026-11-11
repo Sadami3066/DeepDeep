@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.data
 
+import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.sdk.ai.ModelInputModality
 import io.github.whywood.deepdeep.sdk.coding.models.CustomModelConfig
 import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
@@ -33,7 +34,7 @@ data class CustomProviderModel(
     val maxTokens: Long? = null,
     val supportsImages: Boolean = false,
     val reasoning: Boolean = false,
-    val maxThinkingLevel: String? = null,
+    val thinkingLevels: Set<ThinkingLevel> = emptySet(),
 )
 
 data class CustomProviderEntry(
@@ -45,14 +46,28 @@ data class CustomProviderEntry(
     val models: List<CustomProviderModel>,
 )
 
-internal val CUSTOM_THINKING_LEVELS = listOf("low", "medium", "high", "max")
+private const val SDK_MINIMAL_LEVEL = "minimal"
 
-internal fun customThinkingLevelMap(maxThinkingLevel: String?): Map<String, String>? {
-    val max = maxThinkingLevel?.trim()?.lowercase() ?: return null
-    val index = CUSTOM_THINKING_LEVELS.indexOf(max)
-    if (index < 0) return null
-    return CUSTOM_THINKING_LEVELS.take(index + 1).associateWith { it }
+private val SDK_DEFAULT_THINKING_LEVELS = setOf(
+    ThinkingLevel.OFF,
+    ThinkingLevel.LOW,
+    ThinkingLevel.MEDIUM,
+    ThinkingLevel.HIGH,
+)
+
+internal fun customThinkingLevelMap(levels: Set<ThinkingLevel>): Map<String, String?> = buildMap<String, String?> {
+    if (ThinkingLevel.OFF !in levels) put(ThinkingLevel.OFF.name.lowercase(), null)
+    put(SDK_MINIMAL_LEVEL, null)
+    ThinkingLevel.entries.forEach { level ->
+        if (level == ThinkingLevel.OFF) return@forEach
+        val name = level.name.lowercase()
+        put(name, if (level in levels) name else null)
+    }
 }
+
+@Suppress("UNCHECKED_CAST")
+private fun Set<ThinkingLevel>.toSdkThinkingLevelMap(): Map<String, String> =
+    customThinkingLevelMap(this) as Map<String, String>
 
 class CustomProviderStore(private val file: File) {
     private val mutex = Mutex()
@@ -127,20 +142,28 @@ class CustomProviderStore(private val file: File) {
         val supportsImages =
             input != null && (0 until input.length()).any { index -> input.optString(index) == "image" }
         val reasoning = item.optBoolean("reasoning", false)
-        val levels = item.optJSONObject("thinkingLevelMap")
+        val thinkingLevels = if (reasoning) {
+            thinkingLevelsFromMap(item.optJSONObject("thinkingLevelMap"))
+        } else {
+            emptySet()
+        }
         return CustomProviderModel(
             id = id,
             name = item.optString("name").trim().ifBlank { id },
             contextWindow = item.positiveLong("contextWindow"),
             maxTokens = item.positiveLong("maxTokens"),
             supportsImages = supportsImages,
-            reasoning = reasoning,
-            maxThinkingLevel = if (reasoning) {
-                levels?.let { map -> CUSTOM_THINKING_LEVELS.lastOrNull { map.has(it) } }
-            } else {
-                null
-            },
+            reasoning = reasoning && thinkingLevels.isNotEmpty(),
+            thinkingLevels = thinkingLevels,
         )
+    }
+
+    private fun thinkingLevelsFromMap(levels: JSONObject?): Set<ThinkingLevel> {
+        if (levels == null) return SDK_DEFAULT_THINKING_LEVELS
+        return ThinkingLevel.entries.filterTo(LinkedHashSet()) { level ->
+            val name = level.name.lowercase()
+            if (levels.has(name)) !levels.isNull(name) else level in SDK_DEFAULT_THINKING_LEVELS
+        }
     }
 
     private fun JSONObject.positiveLong(key: String): Long? {
@@ -179,14 +202,13 @@ class CustomProviderStore(private val file: File) {
                                             )
                                             put("reasoning", model.reasoning)
                                             if (model.reasoning) {
-                                                customThinkingLevelMap(model.maxThinkingLevel)?.let { levels ->
-                                                    put(
-                                                        "thinkingLevelMap",
-                                                        JSONObject().apply {
-                                                            levels.forEach { (level, value) -> put(level, value) }
-                                                        },
-                                                    )
-                                                }
+                                                put(
+                                                    "thinkingLevelMap",
+                                                    JSONObject().apply {
+                                                        customThinkingLevelMap(model.thinkingLevels)
+                                                            .forEach { (level, value) -> put(level, value ?: JSONObject.NULL) }
+                                                    },
+                                                )
                                             }
                                         },
                                 )
@@ -220,18 +242,15 @@ class CustomProviderStore(private val file: File) {
             if (modelId.isEmpty()) {
                 null
             } else {
+                val reasoning = model.reasoning && model.thinkingLevels.isNotEmpty()
                 CustomProviderModel(
                     id = modelId,
                     name = model.name.trim().ifBlank { modelId },
                     contextWindow = model.contextWindow?.takeIf { it > 0 },
                     maxTokens = model.maxTokens?.takeIf { it > 0 },
                     supportsImages = model.supportsImages,
-                    reasoning = model.reasoning,
-                    maxThinkingLevel = if (model.reasoning) {
-                        model.maxThinkingLevel?.trim()?.lowercase()?.takeIf { it in CUSTOM_THINKING_LEVELS }
-                    } else {
-                        null
-                    },
+                    reasoning = reasoning,
+                    thinkingLevels = if (reasoning) model.thinkingLevels else emptySet(),
                 )
             }
         }
@@ -264,7 +283,7 @@ internal fun CustomProviderEntry.toProviderConfig(): CustomProviderConfig = Cust
             } else {
                 listOf(ModelInputModality.Text)
             },
-            thinkingLevelMap = if (model.reasoning) customThinkingLevelMap(model.maxThinkingLevel) else null,
+            thinkingLevelMap = if (model.reasoning) model.thinkingLevels.toSdkThinkingLevelMap() else null,
         )
     },
 )

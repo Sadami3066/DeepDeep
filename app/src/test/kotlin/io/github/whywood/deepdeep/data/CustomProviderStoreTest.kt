@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.data
 
 import java.io.File
 import kotlinx.coroutines.test.runTest
+import io.github.whywood.deepdeep.runtime.ThinkingLevel
 import io.github.whywood.deepdeep.sdk.ai.ModelInputModality
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -33,9 +34,21 @@ class CustomProviderStoreTest {
         return providers.getJSONObject(entry().id).getJSONArray("models").getJSONObject(0)
     }
 
+    private fun savedThinkingLevels(): JSONObject = savedModelJson().getJSONObject("thinkingLevelMap")
+
     private fun inputOf(model: JSONObject): List<String> {
         val input = model.getJSONArray("input")
         return (0 until input.length()).map { index -> input.getString(index) }
+    }
+
+    private fun levelKeys(): Set<String> =
+        savedThinkingLevels().keys().asSequence().toSet()
+
+    private fun enabledLevels(): Map<String, String> {
+        val levels = savedThinkingLevels()
+        return levels.keys().asSequence()
+            .filter { key -> !levels.isNull(key) }
+            .associateWith { key -> levels.getString(key) }
     }
 
     @Test
@@ -122,7 +135,7 @@ class CustomProviderStoreTest {
             maxTokens = 8_192,
             supportsImages = true,
             reasoning = true,
-            maxThinkingLevel = "high",
+            thinkingLevels = setOf(ThinkingLevel.OFF, ThinkingLevel.HIGH),
         )
         CustomProviderStore(file).save(listOf(entry().copy(models = listOf(model))))
         val reloaded = CustomProviderStore(file).entries.value.single().models.single()
@@ -132,9 +145,193 @@ class CustomProviderStoreTest {
         assertEquals(8_192L, saved.getLong("maxTokens"))
         assertEquals(listOf("text", "image"), inputOf(saved))
         assertTrue(saved.getBoolean("reasoning"))
-        val levels = saved.getJSONObject("thinkingLevelMap")
-        assertEquals(setOf("low", "medium", "high"), levels.keys().asSequence().toSet())
-        assertEquals("high", levels.getString("high"))
+        assertEquals(setOf("minimal", "low", "medium", "high", "xhigh", "max"), levelKeys())
+        assertEquals(ThinkingLevel.HIGH.name.lowercase(), savedThinkingLevels().getString("high"))
+        assertTrue(savedThinkingLevels().isNull("low"))
+        assertTrue(savedThinkingLevels().isNull("xhigh"))
+        assertTrue(savedThinkingLevels().isNull("max"))
+    }
+
+    @Test
+    fun writesOnlyChosenThinkingLevels() = runTest {
+        val model = CustomProviderModel(
+            id = "gpt-5",
+            name = "GPT-5",
+            reasoning = true,
+            thinkingLevels = setOf(ThinkingLevel.LOW),
+        )
+        CustomProviderStore(file).save(listOf(entry().copy(models = listOf(model))))
+        assertEquals(mapOf("low" to "low"), enabledLevels())
+        assertEquals(setOf("off", "minimal", "low", "medium", "high", "xhigh", "max"), levelKeys())
+        assertTrue(savedThinkingLevels().isNull("off"))
+        assertTrue(savedThinkingLevels().isNull("medium"))
+        assertTrue(savedThinkingLevels().isNull("high"))
+        assertTrue(savedThinkingLevels().isNull("xhigh"))
+        assertTrue(savedThinkingLevels().isNull("max"))
+        assertTrue(savedThinkingLevels().isNull("minimal"))
+    }
+
+    @Test
+    fun writesOffSupportByOmittingKey() = runTest {
+        val withOff = CustomProviderModel(
+            id = "gpt-5",
+            name = "GPT-5",
+            reasoning = true,
+            thinkingLevels = setOf(ThinkingLevel.OFF),
+        )
+        CustomProviderStore(file).save(listOf(entry().copy(models = listOf(withOff))))
+        assertFalse(savedThinkingLevels().has("off"))
+        assertEquals(emptyMap<String, String>(), enabledLevels())
+
+        val withoutOff = withOff.copy(thinkingLevels = setOf(ThinkingLevel.MAX))
+        CustomProviderStore(file).save(listOf(entry().copy(models = listOf(withoutOff))))
+        assertTrue(savedThinkingLevels().isNull("off"))
+        assertEquals(mapOf("max" to "max"), enabledLevels())
+    }
+
+    @Test
+    fun customThinkingLevelMapMatchesSdkSemantics() {
+        assertEquals(
+            mapOf("off" to null, "minimal" to null, "low" to null, "medium" to null, "high" to null, "xhigh" to null, "max" to null),
+            customThinkingLevelMap(emptySet()),
+        )
+        assertEquals(
+            setOf("minimal", "low", "medium", "high", "xhigh", "max"),
+            customThinkingLevelMap(setOf(ThinkingLevel.OFF)).keys,
+        )
+        assertEquals(
+            mapOf(
+                "off" to null,
+                "minimal" to null,
+                "low" to null,
+                "medium" to null,
+                "high" to null,
+                "xhigh" to "xhigh",
+                "max" to "max",
+            ),
+            customThinkingLevelMap(setOf(ThinkingLevel.XHIGH, ThinkingLevel.MAX)),
+        )
+    }
+
+    @Test
+    fun clearsThinkingLevelsWhenReasoningIsOff() = runTest {
+        val model = CustomProviderModel(
+            id = "gpt-5",
+            name = "GPT-5",
+            reasoning = false,
+            thinkingLevels = setOf(ThinkingLevel.LOW, ThinkingLevel.MAX),
+        )
+        CustomProviderStore(file).save(listOf(entry().copy(models = listOf(model))))
+        val reloaded = CustomProviderStore(file).entries.value.single().models.single()
+        assertFalse(reloaded.reasoning)
+        assertEquals(emptySet<ThinkingLevel>(), reloaded.thinkingLevels)
+        assertFalse(savedModelJson().has("thinkingLevelMap"))
+    }
+
+    @Test
+    fun dropsReasoningWhenNoThinkingLevelIsChosen() = runTest {
+        val model = CustomProviderModel(id = "gpt-5", name = "GPT-5", reasoning = true)
+        CustomProviderStore(file).save(listOf(entry().copy(models = listOf(model))))
+        val reloaded = CustomProviderStore(file).entries.value.single().models.single()
+        assertFalse(reloaded.reasoning)
+        assertEquals(emptySet<ThinkingLevel>(), reloaded.thinkingLevels)
+        assertFalse(savedModelJson().has("thinkingLevelMap"))
+    }
+
+    @Test
+    fun readsLegacyMaxThinkingLevelFormat() = runTest {
+        file.parentFile?.mkdirs()
+        file.writeText(
+            """
+            {
+              "providers": {
+                "custom-legacy": {
+                  "name": "Legacy",
+                  "api": "openai-completions",
+                  "baseUrl": "https://api.example.com/v1",
+                  "apiKey": "sk-test",
+                  "models": [
+                    {
+                      "id": "gpt-5",
+                      "name": "GPT-5",
+                      "reasoning": true,
+                      "thinkingLevelMap": {"low": "low", "medium": "medium", "high": "high"}
+                    }
+                  ]
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val model = CustomProviderStore(file).entries.value.single().models.single()
+        assertTrue(model.reasoning)
+        assertEquals(
+            setOf(ThinkingLevel.OFF, ThinkingLevel.LOW, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH),
+            model.thinkingLevels,
+        )
+    }
+
+    @Test
+    fun defaultsToSdkThinkingLevelsWhenMapIsMissing() = runTest {
+        file.parentFile?.mkdirs()
+        file.writeText(
+            """
+            {
+              "providers": {
+                "custom-default": {
+                  "name": "Default",
+                  "api": "openai-completions",
+                  "baseUrl": "https://api.example.com/v1",
+                  "apiKey": "sk-test",
+                  "models": [{"id": "gpt-5", "reasoning": true}]
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val model = CustomProviderStore(file).entries.value.single().models.single()
+        assertTrue(model.reasoning)
+        assertEquals(
+            setOf(ThinkingLevel.OFF, ThinkingLevel.LOW, ThinkingLevel.MEDIUM, ThinkingLevel.HIGH),
+            model.thinkingLevels,
+        )
+    }
+
+    @Test
+    fun dropsReasoningWhenMapHasNoSupportedLevel() = runTest {
+        file.parentFile?.mkdirs()
+        file.writeText(
+            """
+            {
+              "providers": {
+                "custom-none": {
+                  "name": "None",
+                  "api": "openai-completions",
+                  "baseUrl": "https://api.example.com/v1",
+                  "apiKey": "sk-test",
+                  "models": [
+                    {
+                      "id": "gpt-5",
+                      "reasoning": true,
+                      "thinkingLevelMap": {
+                        "off": null,
+                        "minimal": null,
+                        "low": null,
+                        "medium": null,
+                        "high": null,
+                        "xhigh": null,
+                        "max": null
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val model = CustomProviderStore(file).entries.value.single().models.single()
+        assertFalse(model.reasoning)
+        assertEquals(emptySet<ThinkingLevel>(), model.thinkingLevels)
     }
 
     @Test
@@ -149,32 +346,6 @@ class CustomProviderStoreTest {
     }
 
     @Test
-    fun truncatesThinkingLevelMap() {
-        assertEquals(mapOf("low" to "low"), customThinkingLevelMap("low"))
-        assertEquals(
-            listOf("low", "medium", "high", "max"),
-            customThinkingLevelMap("max")?.keys?.toList(),
-        )
-        assertEquals(setOf("low", "medium"), customThinkingLevelMap("MEDIUM")?.keys)
-        assertNull(customThinkingLevelMap(null))
-        assertNull(customThinkingLevelMap("unknown"))
-    }
-
-    @Test
-    fun clearsThinkingLevelWhenReasoningIsOff() = runTest {
-        val model = CustomProviderModel(
-            id = "gpt-5",
-            name = "GPT-5",
-            reasoning = false,
-            maxThinkingLevel = "max",
-        )
-        CustomProviderStore(file).save(listOf(entry().copy(models = listOf(model))))
-        val reloaded = CustomProviderStore(file).entries.value.single().models.single()
-        assertNull(reloaded.maxThinkingLevel)
-        assertFalse(savedModelJson().has("thinkingLevelMap"))
-    }
-
-    @Test
     fun mapsCapabilitiesToSdkConfig() {
         val provider = entry().copy(
             models = listOf(
@@ -185,7 +356,7 @@ class CustomProviderStoreTest {
                     maxTokens = 4_096,
                     supportsImages = true,
                     reasoning = true,
-                    maxThinkingLevel = "high",
+                    thinkingLevels = setOf(ThinkingLevel.HIGH),
                 ),
                 CustomProviderModel(id = "m2", name = "M2"),
             ),
@@ -199,8 +370,18 @@ class CustomProviderStoreTest {
         assertEquals(4_096L, first.maxTokens)
         assertEquals(true, first.reasoning)
         assertEquals(listOf(ModelInputModality.Text, ModelInputModality.Image), first.input)
-        assertEquals(listOf("low", "medium", "high"), first.thinkingLevelMap?.keys?.toList())
-        assertEquals("high", first.thinkingLevelMap?.get("high"))
+        assertEquals(
+            mapOf(
+                "off" to null,
+                "minimal" to null,
+                "low" to null,
+                "medium" to null,
+                "high" to "high",
+                "xhigh" to null,
+                "max" to null,
+            ),
+            first.thinkingLevelMap,
+        )
         val second = config.models[1]
         assertNull(second.contextWindow)
         assertNull(second.maxTokens)
