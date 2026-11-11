@@ -519,7 +519,7 @@ private fun PluginRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (requiredAccess != null) {
+                    if (requiredAccess != null && requiredAccess != MarketRequiredAccess.Normal) {
                         Spacer(Modifier.width(DdSpacing.Xs))
                         MarketAccessTag(requiredAccess)
                     }

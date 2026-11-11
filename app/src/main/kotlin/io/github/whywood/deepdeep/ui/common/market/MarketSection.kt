@@ -68,6 +68,7 @@ import io.github.whywood.deepdeep.market.MarketInstallState
 import io.github.whywood.deepdeep.market.MarketMcpAuthType
 import io.github.whywood.deepdeep.market.MarketPluginMeta
 import io.github.whywood.deepdeep.market.MarketRepository
+import io.github.whywood.deepdeep.market.MarketRequiredAccess
 import io.github.whywood.deepdeep.market.MarketSource
 import io.github.whywood.deepdeep.market.MarketState
 import io.github.whywood.deepdeep.runtime.host.HostAccess
@@ -397,7 +398,7 @@ private fun MarketRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                     val requiredAccess = entry.plugin?.requiredAccess
-                    if (requiredAccess != null) {
+                    if (requiredAccess != null && requiredAccess != MarketRequiredAccess.Normal) {
                         Spacer(Modifier.width(DdSpacing.Xs))
                         MarketAccessTag(requiredAccess)
                     }
@@ -523,7 +524,9 @@ private fun MarketDetailSheet(
                 } else {
                     listOfNotNull(entry.version.takeIf { it.isNotBlank() }, sizeText).joinToString(" · ")
                 }
-                val requiredAccess = entry.plugin?.requiredAccess
+                val requiredAccess = entry.plugin?.requiredAccess?.takeIf {
+                    it != MarketRequiredAccess.Normal
+                }
                 if (subtitle.isNotEmpty() || requiredAccess != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (subtitle.isNotEmpty()) {
