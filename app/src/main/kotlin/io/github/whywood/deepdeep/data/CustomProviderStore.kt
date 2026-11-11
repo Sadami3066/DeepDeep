@@ -65,10 +65,6 @@ internal fun customThinkingLevelMap(levels: Set<ThinkingLevel>): Map<String, Str
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun Set<ThinkingLevel>.toSdkThinkingLevelMap(): Map<String, String> =
-    customThinkingLevelMap(this) as Map<String, String>
-
 class CustomProviderStore(private val file: File) {
     private val mutex = Mutex()
     private val state = MutableStateFlow(readFromDisk())
@@ -283,7 +279,7 @@ internal fun CustomProviderEntry.toProviderConfig(): CustomProviderConfig = Cust
             } else {
                 listOf(ModelInputModality.Text)
             },
-            thinkingLevelMap = if (model.reasoning) model.thinkingLevels.toSdkThinkingLevelMap() else null,
+            thinkingLevelMap = if (model.reasoning) customThinkingLevelMap(model.thinkingLevels) else null,
         )
     },
 )
