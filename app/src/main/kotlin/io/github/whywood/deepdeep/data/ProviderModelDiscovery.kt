@@ -14,7 +14,6 @@ data class DiscoveredModel(
     val contextWindow: Long? = null,
     val maxTokens: Long? = null,
     val supportsImages: Boolean? = null,
-    val reasoning: Boolean? = null,
 )
 
 private val CONTEXT_FIELDS = listOf(
@@ -31,8 +30,6 @@ private val MAX_TOKENS_FIELDS = listOf(
     "outputTokenLimit",
     "maxTokens",
 )
-
-private val REASONING_PARAMETERS = setOf("reasoning", "include_reasoning", "reasoning_effort")
 
 object ProviderModelDiscovery {
     suspend fun fetch(
@@ -86,7 +83,6 @@ object ProviderModelDiscovery {
                         positiveLong(provider, "max_completion_tokens")
                     },
                 supportsImages = imageSupport(item),
-                reasoning = reasoningSupport(item),
             )
         }.distinctBy { it.id }.sortedBy { it.id }
     }.getOrDefault(emptyList())
@@ -111,19 +107,6 @@ private fun imageSupport(item: JSONObject): Boolean? {
         if (capabilities.has("vision")) return capabilities.optBoolean("vision")
     }
     if (item.has("supports_vision")) return item.optBoolean("supports_vision")
-    return null
-}
-
-private fun reasoningSupport(item: JSONObject): Boolean? {
-    item.optJSONArray("supported_parameters")?.let { parameters ->
-        return (0 until parameters.length()).any { index ->
-            parameters.optString(index).trim().lowercase() in REASONING_PARAMETERS
-        }
-    }
-    item.optJSONObject("capabilities")?.let { capabilities ->
-        if (capabilities.has("reasoning")) return capabilities.optBoolean("reasoning")
-    }
-    if (item.has("supports_reasoning")) return item.optBoolean("supports_reasoning")
     return null
 }
 

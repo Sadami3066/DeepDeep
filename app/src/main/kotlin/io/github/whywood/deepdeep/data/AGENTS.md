@@ -31,7 +31,7 @@
 | `PluginPackageIntake.kt` | 判定外部传入文件是否为 `.ddp` 插件包（自定义 MIME 或文件名后缀，忽略大小写） |
 | `PersonalizationStore.kt` | 昵称、交互风格、语气与附加指令 DataStore |
 | `ProfileAvatarStore.kt` | 头像裁成 512 方图存 files/profile，revision 通知刷新 |
-| `ProviderModelDiscovery.kt` | 一键获取服务商的模型列表：解析 `/models` 响应里常见的名称、上下文、最大输出、图片与思考能力字段（解析不到留空，不猜测） |
+| `ProviderModelDiscovery.kt` | 一键获取服务商的模型列表：解析 `/models` 响应里常见的名称、上下文、最大输出与图片支持字段（解析不到留空，不猜测；思考能力不自动填，由用户勾选档位） |
 | [remote/](remote/AGENTS.md) | 远程连接：电脑与入口模型、配对链接解析、加密凭据、证书固定、网关请求与连接协调（详见子包文档） |
 | `SharePayload.kt` | 解析系统分享的 URI/文本（去重、最多 20 条） |
 | `ShareStaging.kt` | 分享附件暂存到 cache token 目录（限额、重名、1 小时清理） |

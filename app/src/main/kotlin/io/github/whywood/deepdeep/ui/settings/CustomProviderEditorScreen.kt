@@ -80,7 +80,6 @@ private fun DiscoveredModel.toDraft(): ModelDraft = ModelDraft(
     contextWindow = contextWindow?.toString().orEmpty(),
     maxTokens = maxTokens?.toString().orEmpty(),
     supportsImages = supportsImages == true,
-    reasoning = reasoning == true,
 )
 
 private fun ModelDraft.toModel(): CustomProviderModel = CustomProviderModel(
@@ -289,6 +288,7 @@ fun CustomProviderEditorScreen(
                                 R.string.settings_custom_provider_discover
                             },
                         ),
+                        subtitle = stringResource(R.string.settings_custom_provider_discover_hint),
                         icon = DdIcons.Search,
                         enabled = !discovering,
                         onClick = {

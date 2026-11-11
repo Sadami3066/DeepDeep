@@ -309,7 +309,7 @@
     <string name="settings_custom_provider_model_name">显示名称</string>
     <string name="settings_custom_provider_model_name_hint">留空则使用模型 ID</string>
     <string name="settings_custom_provider_model_new">新建模型</string>
-    <string name="settings_custom_provider_model_hint">能力会自动获取，读不到的可以手动填写。</string>
+    <string name="settings_custom_provider_model_hint">读不到的能力可以留空，会使用默认值。</string>
     <string name="settings_custom_provider_model_context">上下文大小</string>
     <string name="settings_custom_provider_model_context_hint">如 128000，留空使用默认值</string>
     <string name="settings_custom_provider_model_max_tokens">最大输出</string>
@@ -345,4 +345,5 @@
     <string name="settings_custom_provider_discover_missing">先填写接口地址与 API Key</string>
     <string name="settings_custom_provider_discover_empty">接口没有返回可用模型</string>
     <string name="settings_custom_provider_discover_failed">获取模型失败，请检查地址与 Key</string>
+    <string name="settings_custom_provider_discover_hint">自动读取名称、上下文与图片支持</string>
 </resources>

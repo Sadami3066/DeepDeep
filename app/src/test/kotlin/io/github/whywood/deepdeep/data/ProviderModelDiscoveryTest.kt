@@ -50,12 +50,10 @@ class ProviderModelDiscoveryTest {
         assertEquals(128_000L, gpt.contextWindow)
         assertEquals(16_384L, gpt.maxTokens)
         assertEquals(true, gpt.supportsImages)
-        assertEquals(true, gpt.reasoning)
         val llama = models.getValue("meta/llama")
         assertEquals(8_192L, llama.contextWindow)
         assertNull(llama.maxTokens)
         assertEquals(false, llama.supportsImages)
-        assertEquals(false, llama.reasoning)
     }
 
     @Test
@@ -68,8 +66,7 @@ class ProviderModelDiscoveryTest {
                   "context_window": 200000,
                   "max_output_tokens": 8192,
                   "input_modalities": ["text", "image"],
-                  "supports_vision": true,
-                  "supports_reasoning": true
+                  "supports_vision": true
                 },
                 {
                   "id": "m2",
@@ -80,7 +77,7 @@ class ProviderModelDiscoveryTest {
                   "id": "m3",
                   "max_context_length": 1000000,
                   "maxTokens": 65536,
-                  "capabilities": {"vision": true, "reasoning": true}
+                  "capabilities": {"vision": true}
                 }
               ]
             }
@@ -90,17 +87,14 @@ class ProviderModelDiscoveryTest {
         assertEquals(200_000L, m1.contextWindow)
         assertEquals(8_192L, m1.maxTokens)
         assertEquals(true, m1.supportsImages)
-        assertEquals(true, m1.reasoning)
         val m2 = models.getValue("m2")
         assertEquals(32_000L, m2.contextWindow)
         assertEquals(4_096L, m2.maxTokens)
         assertNull(m2.supportsImages)
-        assertNull(m2.reasoning)
         val m3 = models.getValue("m3")
         assertEquals(1_000_000L, m3.contextWindow)
         assertEquals(65_536L, m3.maxTokens)
         assertEquals(true, m3.supportsImages)
-        assertEquals(true, m3.reasoning)
     }
 
     @Test
@@ -112,7 +106,6 @@ class ProviderModelDiscoveryTest {
         assertNull(model.contextWindow)
         assertNull(model.maxTokens)
         assertNull(model.supportsImages)
-        assertNull(model.reasoning)
     }
 
     @Test
