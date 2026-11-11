@@ -118,5 +118,5 @@
     <string name="market_access_normal">普通</string>
     <string name="market_access_adb">ADB</string>
     <string name="market_access_root">Root</string>
-    <string name="market_access_insufficient">当前权限不足，插件未必能用</string>
+    <string name="market_access_insufficient">当前访问权限低于插件要求，部分功能可能不可用</string>
 </resources>

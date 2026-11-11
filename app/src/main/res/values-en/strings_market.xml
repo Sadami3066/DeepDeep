@@ -118,5 +118,5 @@
     <string name="market_access_normal">Normal</string>
     <string name="market_access_adb">ADB</string>
     <string name="market_access_root">Root</string>
-    <string name="market_access_insufficient">Current access may be too low; the plugin may not work</string>
+    <string name="market_access_insufficient">Current access is below the level this plugin requires; some features may be unavailable</string>
 </resources>
