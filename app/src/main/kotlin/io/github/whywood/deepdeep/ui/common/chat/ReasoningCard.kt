@@ -143,7 +143,12 @@ internal fun ReasoningCard(
                 text = step.text.trim(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = DdSpacing.Xxs, bottom = 6.dp),
+                    .padding(
+                        start = DdSpacing.Md,
+                        end = DdSpacing.Md,
+                        top = DdSpacing.Xxs,
+                        bottom = 6.dp,
+                    ),
                 style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 19.sp),
                 color = colors.inkTertiary,
             )
