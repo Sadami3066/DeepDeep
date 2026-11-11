@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.data
 
+import io.github.whywood.deepdeep.sdk.ai.ModelInputModality
+import io.github.whywood.deepdeep.sdk.coding.models.CustomModelConfig
+import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +29,11 @@ enum class CustomProviderProtocol(val value: String) {
 data class CustomProviderModel(
     val id: String,
     val name: String,
+    val contextWindow: Long? = null,
+    val maxTokens: Long? = null,
+    val supportsImages: Boolean = false,
+    val reasoning: Boolean = false,
+    val maxThinkingLevel: String? = null,
 )
 
 data class CustomProviderEntry(
@@ -36,6 +44,15 @@ data class CustomProviderEntry(
     val apiKey: String,
     val models: List<CustomProviderModel>,
 )
+
+internal val CUSTOM_THINKING_LEVELS = listOf("low", "medium", "high", "max")
+
+internal fun customThinkingLevelMap(maxThinkingLevel: String?): Map<String, String>? {
+    val max = maxThinkingLevel?.trim()?.lowercase() ?: return null
+    val index = CUSTOM_THINKING_LEVELS.indexOf(max)
+    if (index < 0) return null
+    return CUSTOM_THINKING_LEVELS.take(index + 1).associateWith { it }
+}
 
 class CustomProviderStore(private val file: File) {
     private val mutex = Mutex()
@@ -92,7 +109,7 @@ class CustomProviderStore(private val file: File) {
                 val model = modelsElement.optJSONObject(index) ?: continue
                 val modelId = model.optString("id").trim()
                 if (modelId.isEmpty()) continue
-                add(CustomProviderModel(id = modelId, name = model.optString("name").trim().ifBlank { modelId }))
+                add(model(modelId, model))
             }
         }
         return CustomProviderEntry(
@@ -103,6 +120,33 @@ class CustomProviderStore(private val file: File) {
             apiKey = item.optString("apiKey").trim(),
             models = models,
         )
+    }
+
+    private fun model(id: String, item: JSONObject): CustomProviderModel {
+        val input = item.optJSONArray("input")
+        val supportsImages =
+            input != null && (0 until input.length()).any { index -> input.optString(index) == "image" }
+        val reasoning = item.optBoolean("reasoning", false)
+        val levels = item.optJSONObject("thinkingLevelMap")
+        return CustomProviderModel(
+            id = id,
+            name = item.optString("name").trim().ifBlank { id },
+            contextWindow = item.positiveLong("contextWindow"),
+            maxTokens = item.positiveLong("maxTokens"),
+            supportsImages = supportsImages,
+            reasoning = reasoning,
+            maxThinkingLevel = if (reasoning) {
+                levels?.let { map -> CUSTOM_THINKING_LEVELS.lastOrNull { map.has(it) } }
+            } else {
+                null
+            },
+        )
+    }
+
+    private fun JSONObject.positiveLong(key: String): Long? {
+        if (!has(key)) return null
+        val value = optLong(key)
+        return value.takeIf { it > 0 }
     }
 
     private fun writeToDisk(entries: List<CustomProviderEntry>) {
@@ -119,7 +163,33 @@ class CustomProviderStore(private val file: File) {
                         "models",
                         JSONArray().apply {
                             entry.models.forEach { model ->
-                                put(JSONObject().put("id", model.id).put("name", model.name))
+                                put(
+                                    JSONObject()
+                                        .put("id", model.id)
+                                        .put("name", model.name)
+                                        .apply {
+                                            model.contextWindow?.let { put("contextWindow", it) }
+                                            model.maxTokens?.let { put("maxTokens", it) }
+                                            put(
+                                                "input",
+                                                JSONArray().apply {
+                                                    put("text")
+                                                    if (model.supportsImages) put("image")
+                                                },
+                                            )
+                                            put("reasoning", model.reasoning)
+                                            if (model.reasoning) {
+                                                customThinkingLevelMap(model.maxThinkingLevel)?.let { levels ->
+                                                    put(
+                                                        "thinkingLevelMap",
+                                                        JSONObject().apply {
+                                                            levels.forEach { (level, value) -> put(level, value) }
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                        },
+                                )
                             }
                         },
                     ),
@@ -147,7 +217,23 @@ class CustomProviderStore(private val file: File) {
         if (!baseUrl.startsWith("https://") && !baseUrl.startsWith("http://")) return null
         val models = entry.models.mapNotNull { model ->
             val modelId = model.id.trim()
-            if (modelId.isEmpty()) null else CustomProviderModel(modelId, model.name.trim().ifBlank { modelId })
+            if (modelId.isEmpty()) {
+                null
+            } else {
+                CustomProviderModel(
+                    id = modelId,
+                    name = model.name.trim().ifBlank { modelId },
+                    contextWindow = model.contextWindow?.takeIf { it > 0 },
+                    maxTokens = model.maxTokens?.takeIf { it > 0 },
+                    supportsImages = model.supportsImages,
+                    reasoning = model.reasoning,
+                    maxThinkingLevel = if (model.reasoning) {
+                        model.maxThinkingLevel?.trim()?.lowercase()?.takeIf { it in CUSTOM_THINKING_LEVELS }
+                    } else {
+                        null
+                    },
+                )
+            }
         }
         if (models.isEmpty()) return null
         return CustomProviderEntry(id, name, api, baseUrl, apiKey, models)
@@ -159,3 +245,26 @@ class CustomProviderStore(private val file: File) {
         fun newId(): String = "custom-" + UUID.randomUUID().toString().replace("-", "").take(8)
     }
 }
+
+internal fun CustomProviderEntry.toProviderConfig(): CustomProviderConfig = CustomProviderConfig(
+    id = id,
+    name = name,
+    baseUrl = baseUrl,
+    api = api,
+    apiKey = apiKey,
+    models = models.map { model ->
+        CustomModelConfig(
+            id = model.id,
+            name = model.name,
+            contextWindow = model.contextWindow,
+            maxTokens = model.maxTokens,
+            reasoning = model.reasoning.takeIf { it },
+            input = if (model.supportsImages) {
+                listOf(ModelInputModality.Text, ModelInputModality.Image)
+            } else {
+                listOf(ModelInputModality.Text)
+            },
+            thinkingLevelMap = if (model.reasoning) customThinkingLevelMap(model.maxThinkingLevel) else null,
+        )
+    },
+)

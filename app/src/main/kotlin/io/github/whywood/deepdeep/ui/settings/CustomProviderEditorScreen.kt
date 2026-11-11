@@ -1,12 +1,7 @@
 package io.github.whywood.deepdeep.ui.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,21 +13,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.CustomProviderEntry
 import io.github.whywood.deepdeep.data.CustomProviderModel
@@ -50,14 +43,53 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSectionLabel
-import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
+import kotlinx.coroutines.launch
 
-private data class ModelDraft(val id: String, val name: String)
+private const val DEFAULT_THINKING_LEVEL = "max"
+
+private data class ModelDraft(
+    val id: String = "",
+    val name: String = "",
+    val contextWindow: String = "",
+    val maxTokens: String = "",
+    val supportsImages: Boolean = false,
+    val reasoning: Boolean = false,
+    val maxThinkingLevel: String = DEFAULT_THINKING_LEVEL,
+)
+
+private data class ModelEditorRequest(val index: Int, val model: CustomProviderModel?)
+
+private fun CustomProviderModel.toDraft(): ModelDraft = ModelDraft(
+    id = id,
+    name = name,
+    contextWindow = contextWindow?.toString().orEmpty(),
+    maxTokens = maxTokens?.toString().orEmpty(),
+    supportsImages = supportsImages,
+    reasoning = reasoning,
+    maxThinkingLevel = maxThinkingLevel ?: DEFAULT_THINKING_LEVEL,
+)
+
+private fun ModelDraft.toModel(): CustomProviderModel = CustomProviderModel(
+    id = id.trim(),
+    name = name.trim().ifBlank { id.trim() },
+    contextWindow = contextWindow.trim().toLongOrNull()?.takeIf { it > 0 },
+    maxTokens = maxTokens.trim().toLongOrNull()?.takeIf { it > 0 },
+    supportsImages = supportsImages,
+    reasoning = reasoning,
+    maxThinkingLevel = maxThinkingLevel.takeIf { reasoning },
+)
+
+private fun formatContextWindow(value: Long?): String? = when {
+    value == null || value <= 0 -> null
+    value >= 1_000_000 -> "${value / 1_000_000}M"
+    value >= 1000 -> "${value / 1000}K"
+    else -> value.toString()
+}
 
 @Composable
 fun CustomProviderEditorScreen(
@@ -77,13 +109,11 @@ fun CustomProviderEditorScreen(
     var apiKey by remember(entry?.id) { mutableStateOf(entry?.apiKey.orEmpty()) }
     val models = remember(entry?.id) {
         mutableStateListOf<ModelDraft>().apply {
-            entry?.models?.forEach { model -> add(ModelDraft(model.id, model.name)) }
+            entry?.models?.forEach { model -> add(model.toDraft()) }
         }
     }
     var protocolExpanded by remember { mutableStateOf(false) }
-    var editingModel by remember { mutableStateOf<Int?>(null) }
-    var modelIdDraft by remember { mutableStateOf("") }
-    var modelNameDraft by remember { mutableStateOf("") }
+    var modelEditor by remember(entry?.id) { mutableStateOf<ModelEditorRequest?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     var discovering by remember { mutableStateOf(false) }
     var discoverError by remember { mutableStateOf<Int?>(null) }
@@ -92,15 +122,14 @@ fun CustomProviderEditorScreen(
     val trimmedName = name.trim()
     val trimmedBaseUrl = baseUrl.trim()
     val trimmedApiKey = apiKey.trim()
-    val trimmedModels = models.map { ModelDraft(it.id.trim(), it.name.trim()) }
     val error = when {
         trimmedName.isEmpty() -> R.string.settings_custom_provider_error_name
         trimmedBaseUrl.isEmpty() -> R.string.settings_custom_provider_error_base_url
         !trimmedBaseUrl.startsWith("http://") && !trimmedBaseUrl.startsWith("https://") ->
             R.string.settings_custom_provider_error_base_url_scheme
         trimmedApiKey.isEmpty() -> R.string.settings_custom_provider_error_api_key
-        trimmedModels.isEmpty() -> R.string.settings_custom_provider_error_models
-        trimmedModels.any { it.id.isEmpty() } -> R.string.settings_custom_provider_error_model_id
+        models.isEmpty() -> R.string.settings_custom_provider_error_models
+        models.any { it.id.trim().isEmpty() } -> R.string.settings_custom_provider_error_model_id
         else -> null
     }
 
@@ -113,16 +142,34 @@ fun CustomProviderEditorScreen(
                 api = protocol.value,
                 baseUrl = trimmedBaseUrl,
                 apiKey = trimmedApiKey,
-                models = trimmedModels.map { CustomProviderModel(it.id, it.name.ifEmpty { it.id }) },
+                models = models.map { it.toModel() },
             ),
         )
     }
 
-    fun openModelEditor(index: Int?) {
-        editingModel = index ?: models.size
-        val draft = index?.let { models.getOrNull(it) }
-        modelIdDraft = draft?.id.orEmpty()
-        modelNameDraft = draft?.name.orEmpty()
+    val editor = modelEditor
+    if (editor != null) {
+        CustomProviderModelScreen(
+            model = editor.model,
+            onBack = { modelEditor = null },
+            onSave = { model ->
+                if (editor.index < models.size) {
+                    models[editor.index] = model.toDraft()
+                } else {
+                    models.add(model.toDraft())
+                }
+                modelEditor = null
+            },
+            onDelete = if (editor.index < models.size) {
+                {
+                    models.removeAt(editor.index)
+                    modelEditor = null
+                }
+            } else {
+                null
+            },
+        )
+        return
     }
 
     DdPageScaffold(
@@ -209,9 +256,11 @@ fun CustomProviderEditorScreen(
             DdGroupCard {
                 models.forEachIndexed { index, model ->
                     DdListRow(
-                        title = model.id.ifBlank { stringResource(R.string.settings_custom_provider_model_untitled) },
-                        subtitle = model.name.takeIf { it.isNotBlank() && it != model.id },
-                        onClick = { openModelEditor(index) },
+                        title = model.name.trim().ifBlank {
+                            model.id.trim().ifBlank { stringResource(R.string.settings_custom_provider_model_untitled) }
+                        },
+                        subtitle = modelCapabilitySummary(model),
+                        onClick = { modelEditor = ModelEditorRequest(index, model.toModel()) },
                         showChevron = true,
                     )
                     DdHairline()
@@ -219,7 +268,7 @@ fun CustomProviderEditorScreen(
                 DdListRow(
                     title = stringResource(R.string.settings_custom_provider_model_add),
                     icon = DdIcons.Plus,
-                    onClick = { openModelEditor(null) },
+                    onClick = { modelEditor = ModelEditorRequest(models.size, null) },
                 )
                 if (onDiscoverModels != null) {
                     DdHairline()
@@ -247,8 +296,13 @@ fun CustomProviderEditorScreen(
                                             if (ids.isEmpty()) {
                                                 discoverError = R.string.settings_custom_provider_discover_empty
                                             } else {
+                                                val existing = models.associateBy { it.id.trim() }
+                                                val next = ids.map { it.trim() }
+                                                    .filter { it.isNotEmpty() }
+                                                    .distinct()
+                                                    .map { id -> existing[id] ?: ModelDraft(id = id, name = id) }
                                                 models.clear()
-                                                ids.forEach { id -> models.add(ModelDraft(id, id)) }
+                                                models.addAll(next)
                                             }
                                         },
                                         onFailure = {
@@ -291,68 +345,6 @@ fun CustomProviderEditorScreen(
         }
     }
 
-    editingModel?.let { index ->
-        DdDialog(
-            onDismissRequest = { editingModel = null },
-            title = stringResource(
-                if (index < models.size) {
-                    R.string.settings_custom_provider_model_edit
-                } else {
-                    R.string.settings_custom_provider_model_add
-                },
-            ),
-            content = {
-                Column {
-                    FormField(
-                        label = stringResource(R.string.settings_custom_provider_model_id),
-                        value = modelIdDraft,
-                        onValueChange = { modelIdDraft = it },
-                        placeholder = stringResource(R.string.settings_custom_provider_model_id_hint),
-                    )
-                    FormField(
-                        label = stringResource(R.string.settings_custom_provider_model_name),
-                        value = modelNameDraft,
-                        onValueChange = { modelNameDraft = it },
-                        placeholder = stringResource(R.string.settings_custom_provider_model_name_hint),
-                    )
-                }
-            },
-            actions = {
-                if (index < models.size && models.size > 1) {
-                    DdTextAction(
-                        text = stringResource(R.string.settings_custom_provider_delete_action),
-                        onClick = {
-                            models.removeAt(index)
-                            editingModel = null
-                        },
-                        color = colors.danger,
-                    )
-                }
-                DdTextAction(
-                    text = stringResource(R.string.settings_custom_provider_cancel),
-                    onClick = { editingModel = null },
-                    color = colors.inkSecondary,
-                )
-                DdTextAction(
-                    text = stringResource(R.string.settings_custom_provider_confirm),
-                    onClick = {
-                        val id = modelIdDraft.trim()
-                        if (id.isNotEmpty()) {
-                            val next = ModelDraft(id, modelNameDraft.trim().ifEmpty { id })
-                            if (index < models.size) {
-                                models[index] = next
-                            } else {
-                                models.add(next)
-                            }
-                            editingModel = null
-                        }
-                    },
-                    enabled = modelIdDraft.isNotBlank(),
-                )
-            },
-        )
-    }
-
     if (confirmDelete && onDelete != null) {
         DdDialog(
             onDismissRequest = { confirmDelete = false },
@@ -381,6 +373,15 @@ fun CustomProviderEditorScreen(
             },
         )
     }
+}
+
+@Composable
+private fun modelCapabilitySummary(model: ModelDraft): String? {
+    val parts = mutableListOf<String>()
+    formatContextWindow(model.contextWindow.trim().toLongOrNull())?.let(parts::add)
+    if (model.supportsImages) parts.add(stringResource(R.string.settings_custom_provider_capability_image))
+    if (model.reasoning) parts.add(stringResource(R.string.settings_custom_provider_capability_thinking))
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
 @Composable
@@ -445,7 +446,7 @@ private fun protocolLabel(protocol: CustomProviderProtocol): String = stringReso
 )
 
 @Composable
-private fun FormField(
+internal fun FormField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
