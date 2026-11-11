@@ -32,6 +32,7 @@ import io.github.whywood.deepdeep.data.CustomProviderModel
 import io.github.whywood.deepdeep.data.CustomProviderProtocol
 import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.DiscoveredModel
+import io.github.whywood.deepdeep.data.mergeDiscoveredModels
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
@@ -305,14 +306,14 @@ fun CustomProviderEditorScreen(
                                             if (discovered.isEmpty()) {
                                                 discoverError = R.string.settings_custom_provider_discover_empty
                                             } else {
-                                                val existing = models.associateBy { it.id.trim() }
-                                                val next = discovered
-                                                    .map { model -> model.copy(id = model.id.trim()) }
-                                                    .filter { model -> model.id.isNotEmpty() }
-                                                    .distinctBy { model -> model.id }
-                                                    .map { model -> existing[model.id] ?: model.toDraft() }
+                                                val merged = mergeDiscoveredModels(
+                                                    existing = models.toList(),
+                                                    discovered = discovered,
+                                                    idOf = { model -> model.id },
+                                                    create = { model -> model.toDraft() },
+                                                )
                                                 models.clear()
-                                                models.addAll(next)
+                                                models.addAll(merged)
                                             }
                                         },
                                         onFailure = {

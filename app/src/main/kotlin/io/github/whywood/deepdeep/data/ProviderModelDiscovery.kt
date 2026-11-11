@@ -31,6 +31,30 @@ private val MAX_TOKENS_FIELDS = listOf(
     "maxTokens",
 )
 
+internal fun <T> mergeDiscoveredModels(
+    existing: List<T>,
+    discovered: List<DiscoveredModel>,
+    idOf: (T) -> String,
+    create: (DiscoveredModel) -> T,
+): List<T> {
+    val remaining = existing.toMutableList()
+    val merged = ArrayList<T>(existing.size + discovered.size)
+    val seen = HashSet<String>()
+    discovered.forEach { model ->
+        val id = model.id.trim()
+        if (id.isEmpty() || !seen.add(id)) return@forEach
+        val kept = remaining.firstOrNull { item -> idOf(item).trim() == id }
+        if (kept != null) {
+            remaining.remove(kept)
+            merged += kept
+        } else {
+            merged += create(model)
+        }
+    }
+    merged += remaining
+    return merged
+}
+
 object ProviderModelDiscovery {
     suspend fun fetch(
         baseUrl: String,

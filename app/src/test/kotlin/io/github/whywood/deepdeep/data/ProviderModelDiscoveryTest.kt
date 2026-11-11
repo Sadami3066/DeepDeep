@@ -109,6 +109,20 @@ class ProviderModelDiscoveryTest {
     }
 
     @Test
+    fun mergesDiscoveredModelsWithoutDroppingManualDrafts() {
+        val discovered = ProviderModelDiscovery.parseModels(
+            """{"data":[{"id":"m1"},{"id":"m2"},{"id":"m2"}]}""",
+        )
+        val merged = mergeDiscoveredModels(
+            existing = listOf("m1", "manual"),
+            discovered = discovered,
+            idOf = { id -> id },
+            create = { model -> "new:" + model.id },
+        )
+        assertEquals(listOf("m1", "new:m2", "manual"), merged)
+    }
+
+    @Test
     fun returnsEmptyForUnexpectedPayloads() {
         assertEquals(emptyList<DiscoveredModel>(), ProviderModelDiscovery.parseModels("""{"error":{"message":"unauthorized"}}"""))
         assertEquals(emptyList<DiscoveredModel>(), ProviderModelDiscovery.parseModels("not json"))
