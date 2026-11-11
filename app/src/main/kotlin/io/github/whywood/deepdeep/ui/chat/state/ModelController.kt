@@ -76,6 +76,21 @@ internal class ModelController(
 
     fun applyConfig(config: ModelConfig) = applySessionModel(config.toSnapshot())
 
+    fun refreshModels() {
+        val current = state()
+        if (current.providerId.isBlank()) return
+        val options = providers.models(current.providerId)
+        if (options.isEmpty()) return
+        val option = options.firstOrNull { it.id == current.modelId }
+        update {
+            it.copy(
+                modelLabel = option?.displayName ?: it.modelLabel,
+                thinkingLevel = option?.thinkingLevels?.resolveThinkingLevel(it.thinkingLevel) ?: it.thinkingLevel,
+                models = options,
+            )
+        }
+    }
+
     fun adoptConfiguredModel(config: ModelConfig) {
         val current = state()
         if (current.sending || current.switchingConversation) return

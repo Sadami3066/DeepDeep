@@ -128,6 +128,9 @@ internal fun AppShell(
     val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
         graph.providerCatalog.summaries.filter { it.id in configuredProviders }
     }
+    LaunchedEffect(customProviders) {
+        chatViewModel.refreshModelCatalog()
+    }
     val storedModelConfig by graph.modelConfigStore.config.collectAsStateWithLifecycle(initialValue = null)
     val defaultModelConfig = storedModelConfig ?: ModelConfig()
     val defaultProvider = graph.providerCatalog.summary(defaultModelConfig.providerId)
