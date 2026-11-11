@@ -26,8 +26,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 private val NavHitWidth = 24.dp
 private val NavTickWidth = 8.dp
 private val NavTickHeight = 2.dp
-private val NavTickSpacing = 8.dp
-private val NavTickRowHeight = NavTickHeight + NavTickSpacing
+private val NavTickRowHeight = 16.dp
 private val NavTickShape = RoundedCornerShape(NavTickHeight / 2)
 
 @Composable
@@ -53,7 +52,7 @@ internal fun MessageNavBar(
                     .fillMaxWidth()
                     .height(NavTickRowHeight)
                     .clickable(role = Role.Button) { latestOnJump(messageIndex) },
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.CenterEnd,
             ) {
                 Box(
                     Modifier
