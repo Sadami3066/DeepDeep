@@ -32,6 +32,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPageScaffold
+import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
@@ -96,12 +97,6 @@ fun CustomProviderModelScreen(
                 contentDescription = stringResource(R.string.settings_back),
                 tint = colors.ink,
                 iconSize = 21.dp,
-            )
-            Spacer(Modifier.weight(1f))
-            DdTextAction(
-                text = stringResource(R.string.settings_custom_provider_save),
-                onClick = ::save,
-                enabled = error == null && !missingThinkingLevel,
             )
         },
         modifier = modifier,
@@ -196,6 +191,13 @@ fun CustomProviderModelScreen(
                     color = colors.danger,
                 )
             }
+            Spacer(Modifier.height(DdSpacing.Lg))
+            DdPrimaryButton(
+                text = stringResource(R.string.settings_custom_provider_save),
+                onClick = ::save,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = error == null && !missingThinkingLevel,
+            )
             if (onDelete != null) {
                 Spacer(Modifier.height(DdSpacing.Lg))
                 DdGroupCard {

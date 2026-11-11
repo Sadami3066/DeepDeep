@@ -43,6 +43,7 @@ import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPageScaffold
+import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSectionLabel
 import io.github.whywood.deepdeep.design.DdSpacing
@@ -190,12 +191,6 @@ fun CustomProviderEditorScreen(
                 tint = colors.ink,
                 iconSize = 21.dp,
             )
-            Spacer(Modifier.weight(1f))
-            DdTextAction(
-                text = stringResource(R.string.settings_custom_provider_save),
-                onClick = ::save,
-                enabled = error == null,
-            )
         },
         modifier = modifier,
     ) {
@@ -342,6 +337,13 @@ fun CustomProviderEditorScreen(
                     color = colors.danger,
                 )
             }
+            Spacer(Modifier.height(DdSpacing.Lg))
+            DdPrimaryButton(
+                text = stringResource(R.string.settings_custom_provider_save),
+                onClick = ::save,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = error == null,
+            )
             if (onDelete != null) {
                 Spacer(Modifier.height(DdSpacing.Lg))
                 DdGroupCard {
