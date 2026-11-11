@@ -301,15 +301,19 @@ fun ChatScreen(
             }
         }
     }
-    val navTopMessageIndex = messageIndexForItemIndex(
-        itemIndex = navTopItemPosition.toInt(),
-        total = streamMessages.size,
-        visible = shownMessageCount,
-    )
-    val navSegments = remember(userMessageIndices, navTopMessageIndex) {
-        navWindowIndices(userMessageIndices, navTopMessageIndex, ChatHistoryNavMaxTicks)
+    val navAnchorMessageIndex = if (!listState.canScrollForward) {
+        streamMessages.lastIndex.coerceAtLeast(0)
+    } else {
+        messageIndexForItemIndex(
+            itemIndex = navTopItemPosition.toInt(),
+            total = streamMessages.size,
+            visible = shownMessageCount,
+        )
     }
-    val navActiveSegment = activeNavSegmentIndex(navSegments, navTopMessageIndex)
+    val navSegments = remember(userMessageIndices, navAnchorMessageIndex) {
+        navWindowIndices(userMessageIndices, navAnchorMessageIndex, ChatHistoryNavMaxTicks)
+    }
+    val navActiveSegment = activeNavSegmentIndex(navSegments, navAnchorMessageIndex)
     val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
