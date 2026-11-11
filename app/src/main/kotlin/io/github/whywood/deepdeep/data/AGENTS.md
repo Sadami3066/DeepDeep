@@ -12,7 +12,7 @@
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、过程详细度、自动重试、后台唤醒、置顶、字号 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
 | `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素；文件读写经 `HostFiles`（Root 档可读系统目录，其余档自然失败），解析绝对路径时按共享存储开关放行 `/storage/emulated/0` 内文件；分享/预览前把不可读文件暂存到 cache，暂存不了（超大文件）时回退导出到共享存储或系统下载目录 |
-| `CustomProviderStore.kt` | 自定义模型服务商：读写 `files/agent/models.json`（SDK models.json 格式，供 pi 会话与 ProviderCatalog 合并），含模型能力字段（上下文大小、最大输出、图片输入、思考等级 → input/reasoning/thinkingLevelMap），容错解析与临时文件原子替换 |
+| `CustomProviderStore.kt` | 自定义模型服务商：读写 `files/agent/models.json`（SDK models.json 格式，供 pi 会话与 ProviderCatalog 合并），含模型能力字段（上下文大小、最大输出、图片输入、思考档位 → input/reasoning/thinkingLevelMap）；思考档位由用户勾选，写入时选中档位给值、其余显式 null（off 支持时省略键），未勾选任何档位则 reasoning=false；容错解析与临时文件原子替换 |
 | `DevPackageCatalog.kt` | 运行环境可装 Alpine 包与组合清单（体积、描述、安装后命令） |
 | `DevPackageManager.kt` | 运行环境包安装/卸载/检测：每次操作开始时捕获一个 `HostEnvironment`，整次操作的 apk 命令与结果查询都走它（中途切档不跨环境），环境未就绪时保留上次已安装列表、进度与通知 |
 | `Downloads.kt` | 通过 MediaStore 把文件/流存到系统「下载」目录（`saveStreamToDownloads` 供 `HostFiles` 导出的文件复用；读文件走 `HostFiles.openStream`，Root 档同样可用） |
@@ -31,6 +31,7 @@
 | `PluginPackageIntake.kt` | 判定外部传入文件是否为 `.ddp` 插件包（自定义 MIME 或文件名后缀，忽略大小写） |
 | `PersonalizationStore.kt` | 昵称、交互风格、语气与附加指令 DataStore |
 | `ProfileAvatarStore.kt` | 头像裁成 512 方图存 files/profile，revision 通知刷新 |
+| `ProviderModelDiscovery.kt` | 一键获取服务商的模型列表：解析 `/models` 响应里常见的名称、上下文、最大输出、图片与思考能力字段（解析不到留空，不猜测） |
 | [remote/](remote/AGENTS.md) | 远程连接：电脑与入口模型、配对链接解析、加密凭据、证书固定、网关请求与连接协调（详见子包文档） |
 | `SharePayload.kt` | 解析系统分享的 URI/文本（去重、最多 20 条） |
 | `ShareStaging.kt` | 分享附件暂存到 cache token 目录（限额、重名、1 小时清理） |
