@@ -290,29 +290,26 @@ fun ChatScreen(
             index.takeIf { message.role == AssistantRole.USER }
         }
     }
-    val navSegments = remember(userMessageIndices) {
-        navSegmentIndices(userMessageIndices, ChatHistoryNavMaxSegments)
-    }
     val showMessageNav = userMessageIndices.size >= 3
-    val navViewport by remember(listState) {
+    val navTopItemPosition by remember(listState) {
         derivedStateOf {
-            val info = listState.layoutInfo
-            val first = info.visibleItemsInfo.firstOrNull()
-            val position = if (first == null || first.size <= 0) {
+            val first = listState.layoutInfo.visibleItemsInfo.firstOrNull()
+            if (first == null || first.size <= 0) {
                 0f
             } else {
                 first.index + (-first.offset).toFloat() / first.size
             }
-            position to info.totalItemsCount
         }
     }
     val navTopMessageIndex = messageIndexForItemIndex(
-        itemIndex = navViewport.first.toInt(),
+        itemIndex = navTopItemPosition.toInt(),
         total = streamMessages.size,
         visible = shownMessageCount,
     )
+    val navSegments = remember(userMessageIndices, navTopMessageIndex) {
+        navWindowIndices(userMessageIndices, navTopMessageIndex, ChatHistoryNavMaxTicks)
+    }
     val navActiveSegment = activeNavSegmentIndex(navSegments, navTopMessageIndex)
-    val navViewportFraction = navIndicatorFraction(navViewport.first, navViewport.second)
     val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
@@ -791,10 +788,8 @@ fun ChatScreen(
             }
             if (showMessageNav && !state.switchingConversation) {
                 MessageNavBar(
-                    messages = streamMessages,
                     segments = navSegments,
                     activeSegmentIndex = navActiveSegment,
-                    viewportFraction = navViewportFraction,
                     onJump = ::jumpToMessage,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
