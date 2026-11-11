@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,7 +41,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -106,12 +109,13 @@ fun PersonalizationScreen(
             }
         }
     }
-    var initialized by rememberSaveable { mutableStateOf(false) }
     var edited by rememberSaveable { mutableStateOf(false) }
     var nickname by rememberSaveable { mutableStateOf(value.nickname) }
     var interaction by rememberSaveable { mutableStateOf(value.interaction) }
     var tone by rememberSaveable { mutableStateOf(value.tone) }
     var instruction by rememberSaveable { mutableStateOf(value.instruction) }
+    var customInstruction by rememberSaveable { mutableStateOf(value.customInstruction) }
+    val focusManager = LocalFocusManager.current
 
     val warmText = stringResource(R.string.personalization_preset_warm)
     val cuteText = stringResource(R.string.personalization_preset_cute)
@@ -123,12 +127,12 @@ fun PersonalizationScreen(
     )
 
     LaunchedEffect(value) {
-        if (!initialized) {
+        if (!edited) {
             nickname = value.nickname
             interaction = value.interaction
             tone = value.tone
             instruction = value.instruction
-            initialized = true
+            customInstruction = value.customInstruction
         }
     }
 
@@ -137,16 +141,21 @@ fun PersonalizationScreen(
         interaction = interaction,
         tone = tone,
         instruction = instruction,
+        customInstruction = customInstruction,
     )
 
-    LaunchedEffect(nickname, instruction, edited) {
+    fun saveNow() {
+        if (edited) onSave(currentValue())
+    }
+
+    LaunchedEffect(nickname, instruction, customInstruction, edited) {
         if (!edited) return@LaunchedEffect
         delay(300)
         onSave(currentValue())
     }
 
     fun flushAndBack() {
-        if (edited) onSave(currentValue())
+        saveNow()
         onBack()
     }
 
@@ -176,6 +185,12 @@ fun PersonalizationScreen(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        saveNow()
+                        focusManager.clearFocus()
+                    }
+                }
                 .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
             Text(
@@ -262,6 +277,10 @@ fun PersonalizationScreen(
                             edited = true
                         },
                         placeholder = stringResource(R.string.personalization_nickname_hint),
+                        onDone = {
+                            saveNow()
+                            focusManager.clearFocus()
+                        },
                         testTag = "personalization_nickname",
                     )
                     Spacer(Modifier.height(DdSpacing.Sm))
@@ -314,8 +333,10 @@ fun PersonalizationScreen(
                         selected = tone,
                         onSelect = { selected ->
                             tone = selected
-                            if (selected != TonePreset.CUSTOM) {
-                                instruction = toneTexts[selected].orEmpty()
+                            instruction = if (selected == TonePreset.CUSTOM) {
+                                customInstruction
+                            } else {
+                                toneTexts[selected].orEmpty()
                             }
                             edited = true
                             onSave(currentValue())
@@ -328,9 +349,8 @@ fun PersonalizationScreen(
                         value = instruction,
                         onValueChange = { next ->
                             instruction = next
-                            if (tone != TonePreset.CUSTOM && instruction != toneTexts[tone]) {
-                                tone = TonePreset.CUSTOM
-                            }
+                            if (tone != TonePreset.CUSTOM) tone = TonePreset.CUSTOM
+                            customInstruction = next
                             edited = true
                         },
                         placeholder = stringResource(R.string.personalization_instruction_hint),

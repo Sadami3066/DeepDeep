@@ -26,6 +26,7 @@ data class PersonalizationUi(
     val interaction: InteractionStyle = InteractionStyle.BALANCED,
     val tone: TonePreset = TonePreset.CUSTOM,
     val instruction: String = "",
+    val customInstruction: String = "",
 ) {
     fun toRuntime(): Personalization = Personalization(
         nickname = nickname.trim(),
@@ -40,18 +41,23 @@ class PersonalizationStore(context: Context) {
     private val interactionKey = stringPreferencesKey("interaction")
     private val toneKey = stringPreferencesKey("tone")
     private val instructionKey = stringPreferencesKey("instruction")
+    private val customInstructionKey = stringPreferencesKey("custom_instruction")
 
     val personalization: Flow<PersonalizationUi> = store.data
         .map { values ->
+            val tone = TonePreset.entries
+                .firstOrNull { it.name == values[toneKey] }
+                ?: TonePreset.CUSTOM
+            val instruction = values[instructionKey].orEmpty()
             PersonalizationUi(
                 nickname = values[nicknameKey] ?: "Milous",
                 interaction = InteractionStyle.entries
                     .firstOrNull { it.name == values[interactionKey] }
                     ?: InteractionStyle.BALANCED,
-                tone = TonePreset.entries
-                    .firstOrNull { it.name == values[toneKey] }
-                    ?: TonePreset.CUSTOM,
-                instruction = values[instructionKey].orEmpty(),
+                tone = tone,
+                instruction = instruction,
+                customInstruction = values[customInstructionKey]
+                    ?: instruction.takeIf { tone == TonePreset.CUSTOM }.orEmpty(),
             )
         }
         .catch { error ->
@@ -66,6 +72,7 @@ class PersonalizationStore(context: Context) {
             values[interactionKey] = value.interaction.name
             values[toneKey] = value.tone.name
             values[instructionKey] = value.instruction
+            values[customInstructionKey] = value.customInstruction
         }
     }
 
