@@ -47,7 +47,7 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 | `design/` | 主题、图标、通用组件与设计 token |
 | `plugin-api/` | 插件契约与可发布 SDK |
 
-`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.4.0` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
+`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.6.3` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
 
 ## 运行时
 

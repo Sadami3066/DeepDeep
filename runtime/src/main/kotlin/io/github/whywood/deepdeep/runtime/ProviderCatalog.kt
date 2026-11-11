@@ -12,17 +12,53 @@ import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
 import io.github.whywood.deepdeep.sdk.ai.auth.oauth.bundledOAuthFlows
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.sdk.ai.providers.builtinProviders
+import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
+import io.github.whywood.deepdeep.sdk.coding.models.ProviderComposer
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
 
 class ProviderCatalog(
-    transport: HttpTransport,
-    credentials: CredentialStore,
+    private val transport: HttpTransport,
+    private val credentials: CredentialStore,
+    customProviders: List<CustomProviderConfig> = emptyList(),
 ) : ProviderDirectory {
-    private val providerMap: Map<String, Provider> = builtinProviders(transport, credentials)
-        .associateBy { it.id }
-    private val registry = Models(providerMap.toMutableMap())
+    private var providerMap: Map<String, Provider> = buildProviderMap(customProviders)
+    private var registry = Models(providerMap.toMutableMap())
 
-    override val summaries: List<ProviderSummary> = providerMap.values.map { provider ->
+    override var summaries: List<ProviderSummary> = buildSummaries()
+        private set
+
+    fun setCustomProviders(customProviders: List<CustomProviderConfig>) {
+        providerMap = buildProviderMap(customProviders)
+        registry = Models(providerMap.toMutableMap())
+        summaries = buildSummaries()
+    }
+
+    private fun buildProviderMap(customProviders: List<CustomProviderConfig>): Map<String, Provider> {
+        val providers = builtinProviders(transport, credentials).associateBy { it.id }.toMutableMap()
+        if (customProviders.isEmpty()) return providers
+        composeCustomProviders(customProviders).forEach { provider -> providers[provider.id] = provider }
+        return providers
+    }
+
+    private fun composeCustomProviders(customProviders: List<CustomProviderConfig>): List<Provider> {
+        val ids = customProviders.map { it.id }.toSet()
+        val composed = runCatching {
+            runBlocking { ProviderComposer(transport, credentials, customProviders).compose() }
+        }.getOrNull()
+        if (composed != null) {
+            return composed.getProviders().filter { provider -> provider.id in ids }
+        }
+        return customProviders.mapNotNull { config ->
+            runCatching {
+                runBlocking { ProviderComposer(transport, credentials, listOf(config)).compose() }
+                    .getProviders()
+                    .firstOrNull { provider -> provider.id == config.id }
+            }.getOrNull()
+        }
+    }
+
+    private fun buildSummaries(): List<ProviderSummary> = providerMap.values.map { provider ->
         ProviderSummary(
             id = provider.id,
             name = provider.name,

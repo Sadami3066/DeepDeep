@@ -26,6 +26,11 @@ sealed interface AppDestination {
         override val depth: Int = 3
     }
 
+    data class CustomProviderEditor(val id: String? = null) : AppDestination {
+        override val routeKey: String = if (id == null) CUSTOM_PROVIDER_NEW_ROUTE else "$CUSTOM_PROVIDER_PREFIX$id"
+        override val depth: Int = 3
+    }
+
     data object Archived : AppDestination {
         override val routeKey: String = "archived"
         override val depth: Int = 2
@@ -164,6 +169,8 @@ sealed interface AppDestination {
     companion object {
         private const val FILES_PREFIX = "files/"
         private const val PROVIDER_DETAIL_PREFIX = "providers/"
+        private const val CUSTOM_PROVIDER_PREFIX = "providers/custom/"
+        private const val CUSTOM_PROVIDER_NEW_ROUTE = "providers/custom"
         private const val PLUGIN_DETAIL_PREFIX = "plugins/"
         private const val MINIAPP_DETAIL_PREFIX = "miniapp/"
         private const val REMOTE_CONNECT_PREFIX = "remote/"
@@ -225,6 +232,13 @@ sealed interface AppDestination {
             }
 
             routeKey.startsWith(FILES_PREFIX) -> decodeRoutePath(routeKey.removePrefix(FILES_PREFIX))?.let(::Files)
+
+            routeKey == CUSTOM_PROVIDER_NEW_ROUTE -> CustomProviderEditor()
+
+            routeKey.startsWith(CUSTOM_PROVIDER_PREFIX) ->
+                routeKey.removePrefix(CUSTOM_PROVIDER_PREFIX)
+                    .takeIf { it.isNotBlank() }
+                    ?.let { id -> CustomProviderEditor(id) }
 
             routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
                 ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))

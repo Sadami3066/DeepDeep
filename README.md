@@ -168,7 +168,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 ./scripts/check.sh --device   # 再加覆盖安装到手机并启动
 ```
 
-`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.4.0` Release 下载并校验 sha256，不依赖本机 `~/.m2`。所有 Gradle 调用走 `./scripts/gradlew-locked`；本机并发构建可能 OOM。
+`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.6.3` Release 下载并校验 sha256，不依赖本机 `~/.m2`。所有 Gradle 调用走 `./scripts/gradlew-locked`；本机并发构建可能 OOM。
 
 更多内容见 [开发指南](docs/DEVELOPER_GUIDE.md) 与 [插件开发](docs/PLUGIN_DEV.md)。
 

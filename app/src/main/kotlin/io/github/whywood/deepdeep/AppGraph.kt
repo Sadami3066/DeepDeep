@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
+import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.DevPackageManager
@@ -128,6 +129,16 @@ class AppGraph(context: Context) : AppDependencies {
     override val workspaceToolPolicies: WorkspaceToolPolicyStore get() = dataGraph.workspaceToolPolicies
     override val credentials: SdkCredentialStore get() = dataGraph.credentials
     override val providerCatalog: ProviderDirectory get() = dataGraph.providerCatalog
+    override val customProviderStore: CustomProviderStore get() = dataGraph.customProviderStore
+
+    override fun reloadCustomProviders() {
+        dataGraph.reloadCustomProviders()
+        scope.launch {
+            dataGraph.modelSelection.ensure(
+                credentials.authKinds.value.keys + dataGraph.customProviderStore.entries.value.map { it.id },
+            )
+        }
+    }
     override val providerOAuthService: ProviderOAuthService get() = dataGraph.providerOAuthService
     override val mcpConfigStore: McpConfigStore get() = dataGraph.mcpConfigStore
     override val mcpServerProbe: McpServerProbe get() = dataGraph.mcpServerProbe
@@ -340,7 +351,9 @@ class AppGraph(context: Context) : AppDependencies {
             importDebugKey()
         }
         credentials.preloadAll()
-        dataGraph.modelSelection.ensure(credentials.authKinds.value.keys)
+        dataGraph.modelSelection.ensure(
+            credentials.authKinds.value.keys + dataGraph.customProviderStore.entries.value.map { it.id },
+        )
     }
 
     private suspend fun syncBundledSkills() {

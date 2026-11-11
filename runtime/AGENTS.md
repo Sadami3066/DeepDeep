@@ -72,7 +72,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 
 | 文件 | 职责 |
 |---|---|
-| `ProviderCatalog.kt` | 从 pi 内置目录生成 Provider/模型清单与默认配置 |
+| `ProviderCatalog.kt` | 从 pi 内置目录生成 Provider/模型清单与默认配置，并合并 models.json 中的自定义 provider（组合失败的单独隔离） |
 | `ProviderDirectory.kt` | Provider 与模型查询、配置归一接口 |
 | `ProviderOAuthService.kt` | Provider OAuth 登录/登出，复用 pi 流程 |
 | `SdkCredentialStore.kt` | 内存凭据缓存、串行写盘与鉴权种类流 |

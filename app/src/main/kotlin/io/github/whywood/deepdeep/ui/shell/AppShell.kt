@@ -121,7 +121,10 @@ internal fun AppShell(
     val avatarRevision by ProfileAvatarStore.revision.collectAsStateWithLifecycle(initialValue = 0L)
     val avatarKey = remember(avatarRevision) { "profile:${avatarStore.current()?.lastModified() ?: 0L}" }
     val avatarBitmap by rememberAvatarBitmap(avatarKey) { avatarStore.load() }
-    val configuredProviders = authKinds.keys
+    val customProviders by graph.customProviderStore.entries.collectAsStateWithLifecycle(initialValue = emptyList())
+    val configuredProviders = remember(authKinds, customProviders) {
+        authKinds.keys + customProviders.map { it.id }.toSet()
+    }
     val configuredProviderList = remember(graph.providerCatalog.summaries, configuredProviders) {
         graph.providerCatalog.summaries.filter { it.id in configuredProviders }
     }
@@ -132,10 +135,10 @@ internal fun AppShell(
         .firstOrNull { it.id == defaultModelConfig.modelId }
         ?.displayName
         ?: defaultModelConfig.modelId
-    LaunchedEffect(authKinds, storedModelConfig, state.providerId, state.conversationId, state.ready) {
+    LaunchedEffect(configuredProviders, storedModelConfig, state.providerId, state.conversationId, state.ready) {
         val config = storedModelConfig ?: return@LaunchedEffect
-        if (!state.ready || state.providerId.isBlank() || authKinds.isEmpty()) return@LaunchedEffect
-        if (state.providerId in authKinds || config.providerId !in authKinds) return@LaunchedEffect
+        if (!state.ready || state.providerId.isBlank() || configuredProviders.isEmpty()) return@LaunchedEffect
+        if (state.providerId in configuredProviders || config.providerId !in configuredProviders) return@LaunchedEffect
         chatViewModel.adoptConfiguredModel(config)
     }
     val timers by graph.timerService.timers.collectAsStateWithLifecycle()

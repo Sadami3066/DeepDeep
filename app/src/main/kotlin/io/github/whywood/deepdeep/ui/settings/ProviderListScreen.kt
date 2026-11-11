@@ -30,6 +30,7 @@ import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPageScaffold
 import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSearchField
@@ -46,6 +47,7 @@ fun ProviderListScreen(
     providers: List<ProviderSummary>,
     configuredProviderIds: Set<String>,
     onBack: () -> Unit,
+    onAddCustomProvider: () -> Unit,
     onProviderClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -120,6 +122,15 @@ fun ProviderListScreen(
                         if (index != filtered.lastIndex) DdHairline()
                     }
                 }
+            }
+            Spacer(Modifier.height(DdSpacing.Lg))
+            DdGroupCard {
+                DdListRow(
+                    title = stringResource(R.string.settings_provider_add_custom),
+                    icon = DdIcons.Plus,
+                    onClick = onAddCustomProvider,
+                    showChevron = true,
+                )
             }
             Spacer(Modifier.height(DdSpacing.Huge))
         }

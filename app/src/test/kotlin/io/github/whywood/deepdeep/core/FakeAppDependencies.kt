@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
+import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
@@ -114,6 +115,10 @@ internal class FakeAppDependencies(
     override val timerService: TimerService get() = unavailable("timerService")
 
     override val providerCatalog: ProviderDirectory get() = unavailable("providerCatalog")
+
+    override val customProviderStore: CustomProviderStore get() = unavailable("customProviderStore")
+
+    override fun reloadCustomProviders(): Nothing = unavailable("reloadCustomProviders")
 
     override val credentials: SdkCredentialStore get() = unavailable("credentials")
 

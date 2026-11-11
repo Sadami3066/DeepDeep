@@ -166,7 +166,7 @@ Requires JDK 17 or newer, Android SDK Platform 36, and build-tools 36.0.0.
 ./scripts/check.sh --device   # Also install over the device and launch
 ```
 
-The `dev.pi` SDK is downloaded from the pi2kotlin `v0.4.0` release and verified by sha256; it does not depend on a local `~/.m2`. All Gradle calls go through `./scripts/gradlew-locked`; concurrent local builds may run out of memory.
+The `dev.pi` SDK is downloaded from the pi2kotlin `v0.6.3` release and verified by sha256; it does not depend on a local `~/.m2`. All Gradle calls go through `./scripts/gradlew-locked`; concurrent local builds may run out of memory.
 
 See the [Developer Guide](docs/DEVELOPER_GUIDE.md) and [Plugin Development](docs/PLUGIN_DEV.md) for details.
 

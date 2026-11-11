@@ -14,7 +14,8 @@
 | `SystemAccessScreen.kt` | 系统访问：普通/无线调试/Root 三档、当前生效与降级原因、ADB 配对、Root 授权检测、Root Linux 准备状态与重试/重建；三档上方有「权限」小标题；三档都显示开发组合（标题带生效档位），普通/无线调试档另有 Linux 环境 |
 | `PersonalizationScreen.kt` | 个性化：头像、称呼、互动风格、语气、自定义指令 |
 | `AgreementScreen.kt` | 隐私与用户协议：数据与隐私、用户协议、免责声明、开源许可 |
-| `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情 |
+| `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情、底部「添加自定义服务商」入口 |
+| `CustomProviderEditorScreen.kt` | 自定义服务商编辑：名称、接口格式、接口地址、API Key、模型列表；新建/编辑/删除 |
 | `ProviderDetailScreen.kt` | 厂商详情：OAuth 登录/退出、API Key 保存/清除 |
 | `LinuxEnvironmentSection.kt` | Linux 分区：内置环境状态（准备中/失败可重试）、启用开关、共享存储、挂载目录（SAF 选公共存储子目录 + 名称/说明）与占用 |
 | `PublicStoragePicker.kt` | 公共存储 SAF 选择：仅接受 externalstorage+primary，解析为 `/storage/emulated/0` 路径 |

@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PersonalizationRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginPageRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginsRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.CustomProviderEditorRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProvidersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.RemoteConnectRoute
@@ -91,6 +92,13 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             dependencies = dependencies,
             navigator = host.navigator,
             configuredProviderIds = host.ui.configuredProviderIds,
+            onBack = onBack,
+        )
+
+        is AppDestination.CustomProviderEditor -> CustomProviderEditorRoute(
+            dependencies = dependencies,
+            navigator = host.navigator,
+            providerId = destination.id,
             onBack = onBack,
         )
 

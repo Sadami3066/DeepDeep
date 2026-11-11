@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.core
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
+import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
@@ -132,6 +133,10 @@ interface FeatureDependencies {
 
 interface ServiceDependencies {
     val providerCatalog: ProviderDirectory
+
+    val customProviderStore: CustomProviderStore
+
+    fun reloadCustomProviders()
 
     val credentials: SdkCredentialStore
 

@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.graph
 
 import io.github.whywood.deepdeep.sdk.ai.http.okHttpTransport
+import io.github.whywood.deepdeep.sdk.coding.models.CustomModelConfig
+import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
 import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.deepdeep.sdk.mcp.oauth.defaultMcpAuthFile
 import io.github.whywood.deepdeep.core.ModelSelection
@@ -9,6 +11,8 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.appHomeDirectory
 import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
+import io.github.whywood.deepdeep.data.CustomProviderEntry
+import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.FileAttachmentStore
 import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.FontPreferences
@@ -91,7 +95,12 @@ internal class DataGraph(private val deps: DataGraphDeps) {
 
     val httpTransport = okHttpTransport()
     val credentials = SdkCredentialStore(apiKeyStore, oauthCredentialStore, deps.scope)
-    val providerCatalog = ProviderCatalog(httpTransport, credentials)
+    val customProviderStore = CustomProviderStore(File(agentDir, "models.json"))
+    val providerCatalog = ProviderCatalog(
+        httpTransport,
+        credentials,
+        customProviderStore.entries.value.map { entry -> toProviderConfig(entry) },
+    )
     val modelSelection = ModelSelection(providerCatalog, modelConfigStore)
     val installationId = InstallationIdStore(agentDir)
     val providerOAuthService = ProviderOAuthService(
@@ -131,6 +140,18 @@ internal class DataGraph(private val deps: DataGraphDeps) {
         persistence = QuestionPersistence(File(deps.appContext.filesDir, "questions")),
     )
 
+    fun reloadCustomProviders() {
+        providerCatalog.setCustomProviders(customProviderStore.entries.value.map { entry -> toProviderConfig(entry) })
+    }
+
+    private fun toProviderConfig(entry: CustomProviderEntry): CustomProviderConfig = CustomProviderConfig(
+        id = entry.id,
+        name = entry.name,
+        baseUrl = entry.baseUrl,
+        api = entry.api,
+        apiKey = entry.apiKey,
+        models = entry.models.map { model -> CustomModelConfig(id = model.id, name = model.name) },
+    )
 
     init {
         deps.scope.launch {
