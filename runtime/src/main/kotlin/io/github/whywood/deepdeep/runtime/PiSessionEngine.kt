@@ -282,13 +282,15 @@ fun ThinkingLevel.runtimeValue(): String = when (this) {
     ThinkingLevel.LOW -> "low"
     ThinkingLevel.MEDIUM -> "medium"
     ThinkingLevel.HIGH -> "high"
+    ThinkingLevel.XHIGH -> "xhigh"
     ThinkingLevel.MAX -> "max"
 }
 
 internal fun thinkingLevelOf(value: String?): ThinkingLevel = when (value?.trim()?.lowercase()) {
     "minimal", "low" -> ThinkingLevel.LOW
     "medium" -> ThinkingLevel.MEDIUM
-    "high", "xhigh" -> ThinkingLevel.HIGH
+    "high" -> ThinkingLevel.HIGH
+    "xhigh" -> ThinkingLevel.XHIGH
     "max" -> ThinkingLevel.MAX
     else -> ThinkingLevel.OFF
 }
@@ -298,6 +300,7 @@ fun ThinkingLevel.displayName(): String = when (this) {
     ThinkingLevel.LOW -> "低"
     ThinkingLevel.MEDIUM -> "中"
     ThinkingLevel.HIGH -> "高"
+    ThinkingLevel.XHIGH -> "超高"
     ThinkingLevel.MAX -> "最大"
 }
 

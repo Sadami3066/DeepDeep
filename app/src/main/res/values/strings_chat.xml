@@ -63,6 +63,7 @@
     <string name="assistant_stopped">已停止</string>
     <string name="assistant_thinking_max">最大</string>
     <string name="assistant_thinking_high">高</string>
+    <string name="assistant_thinking_xhigh">超高</string>
     <string name="assistant_thinking_low">低</string>
     <string name="assistant_thinking_medium">中</string>
     <string name="assistant_thinking_off">关闭</string>

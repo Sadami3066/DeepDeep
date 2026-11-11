@@ -63,6 +63,7 @@
     <string name="assistant_stopped">Stopped</string>
     <string name="assistant_thinking_max">Max</string>
     <string name="assistant_thinking_high">High</string>
+    <string name="assistant_thinking_xhigh">Extra high</string>
     <string name="assistant_thinking_low">Low</string>
     <string name="assistant_thinking_medium">Medium</string>
     <string name="assistant_thinking_off">Off</string>

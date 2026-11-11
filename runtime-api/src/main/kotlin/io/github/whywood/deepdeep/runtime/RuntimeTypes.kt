@@ -8,7 +8,13 @@ enum class ThinkingLevel {
     LOW,
     MEDIUM,
     HIGH,
+    XHIGH,
     MAX,
+}
+
+fun List<ThinkingLevel>.resolveThinkingLevel(requested: ThinkingLevel): ThinkingLevel {
+    if (requested in this) return requested
+    return firstOrNull { it.ordinal > requested.ordinal } ?: lastOrNull() ?: requested
 }
 
 data class ModelOption(

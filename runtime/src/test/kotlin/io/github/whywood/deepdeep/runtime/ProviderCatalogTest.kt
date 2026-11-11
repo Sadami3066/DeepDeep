@@ -107,4 +107,59 @@ class ProviderCatalogTest {
         assertEquals(null, catalog.summary("custom-test"))
         assertEquals(null, catalog.sdkModel("custom-test", "custom-model"))
     }
+
+    private fun thinkingProviderConfig(): CustomProviderConfig = CustomProviderConfig(
+        id = "custom-thinking",
+        name = "Custom Thinking",
+        baseUrl = "https://api.example.com/v1",
+        api = "openai-completions",
+        apiKey = "sk-test",
+        models = listOf(
+            CustomModelConfig(
+                id = "levels",
+                name = "Levels",
+                reasoning = true,
+                thinkingLevelMap = mapOf(
+                    "off" to null,
+                    "minimal" to null,
+                    "low" to "low",
+                    "medium" to null,
+                    "high" to "high",
+                    "xhigh" to "xhigh",
+                    "max" to null,
+                ),
+            ),
+            CustomModelConfig(id = "plain", name = "Plain", reasoning = false),
+        ),
+    )
+
+    @Test
+    fun exposesOnlySupportedThinkingLevelsForCustomModels() {
+        val catalog = ProviderCatalog(transport, credentials, listOf(thinkingProviderConfig()))
+        val levels = catalog.models("custom-thinking").single { it.id == "levels" }.thinkingLevels
+        assertEquals(
+            listOf(ThinkingLevel.LOW, ThinkingLevel.HIGH, ThinkingLevel.XHIGH),
+            levels,
+        )
+        val plain = catalog.models("custom-thinking").single { it.id == "plain" }
+        assertEquals(listOf(ThinkingLevel.OFF), plain.thinkingLevels)
+    }
+
+    @Test
+    fun resolvesUnsupportedThinkingLevelToClosestSupported() {
+        val catalog = ProviderCatalog(transport, credentials, listOf(thinkingProviderConfig()))
+        val off = catalog.resolveConfig(ModelConfig("custom-thinking", "levels", ThinkingLevel.OFF))
+        assertEquals(ThinkingLevel.LOW, off.thinkingLevel)
+        val max = catalog.resolveConfig(ModelConfig("custom-thinking", "levels", ThinkingLevel.MAX))
+        assertEquals(ThinkingLevel.XHIGH, max.thinkingLevel)
+        val supported = catalog.resolveConfig(ModelConfig("custom-thinking", "levels", ThinkingLevel.HIGH))
+        assertEquals(ThinkingLevel.HIGH, supported.thinkingLevel)
+    }
+
+    @Test
+    fun resolvesThinkingLevelsForBuiltinModels() {
+        val catalog = ProviderCatalog(transport, credentials)
+        val default = catalog.resolveConfig(ModelConfig())
+        assertTrue(default.thinkingLevel in catalog.models(default.providerId).first { it.id == default.modelId }.thinkingLevels)
+    }
 }

@@ -866,6 +866,7 @@ internal fun thinkingLabel(level: ThinkingLevel): String = stringResource(
         ThinkingLevel.LOW -> R.string.assistant_thinking_low
         ThinkingLevel.MEDIUM -> R.string.assistant_thinking_medium
         ThinkingLevel.HIGH -> R.string.assistant_thinking_high
+        ThinkingLevel.XHIGH -> R.string.assistant_thinking_xhigh
         ThinkingLevel.MAX -> R.string.assistant_thinking_max
     },
 )

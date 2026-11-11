@@ -25,6 +25,7 @@ import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.runtime.resolveThinkingLevel
 import io.github.whywood.deepdeep.ui.common.chat.state.AttachmentImportFailure
 import io.github.whywood.deepdeep.ui.common.chat.state.AttachmentImporter
 import io.github.whywood.deepdeep.ui.common.chat.state.MAX_ATTACHMENTS
@@ -306,7 +307,7 @@ class AssistantOverlayController(
         val options = runCatching { providers.models(providerId) }.getOrDefault(emptyList())
         if (options.isEmpty()) return
         val model = options.firstOrNull { it.id == current.modelId } ?: options.first()
-        val thinking = current.thinkingLevel.takeIf { it in model.thinkingLevels } ?: ThinkingLevel.OFF
+        val thinking = model.thinkingLevels.resolveThinkingLevel(current.thinkingLevel)
         applyModel(sessionId, providerId, model.id, thinking)
     }
 
@@ -315,7 +316,7 @@ class AssistantOverlayController(
         val sessionId = current.sessionId ?: return
         val option = current.models.firstOrNull { it.id == modelId } ?: return
         val providerId = current.providerId.ifBlank { option.providerId }
-        val thinking = current.thinkingLevel.takeIf { it in option.thinkingLevels } ?: ThinkingLevel.OFF
+        val thinking = option.thinkingLevels.resolveThinkingLevel(current.thinkingLevel)
         applyModel(sessionId, providerId, option.id, thinking)
     }
 
@@ -421,7 +422,7 @@ class AssistantOverlayController(
             modelId = snapshot.modelId,
             modelLabel = option?.displayName ?: snapshot.modelId,
             models = options,
-            thinkingLevel = snapshot.thinkingLevel.takeIf { it in levels } ?: ThinkingLevel.OFF,
+            thinkingLevel = levels.resolveThinkingLevel(snapshot.thinkingLevel),
             thinkingLevels = levels,
         )
     }

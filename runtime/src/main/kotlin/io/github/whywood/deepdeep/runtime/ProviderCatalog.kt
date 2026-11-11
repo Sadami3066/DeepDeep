@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 import io.github.whywood.deepdeep.sdk.ai.Context
 import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.ModelThinkingLevel
 import io.github.whywood.deepdeep.sdk.ai.Models
 import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
 import io.github.whywood.deepdeep.sdk.ai.Provider
@@ -10,6 +11,7 @@ import io.github.whywood.deepdeep.sdk.ai.TextContent
 import io.github.whywood.deepdeep.sdk.ai.UserMessage
 import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
 import io.github.whywood.deepdeep.sdk.ai.auth.oauth.bundledOAuthFlows
+import io.github.whywood.deepdeep.sdk.ai.getSupportedThinkingLevels
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.sdk.ai.providers.builtinProviders
 import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
@@ -88,7 +90,7 @@ class ProviderCatalog(
         val model = models.firstOrNull { it.id == config.modelId }
             ?: models.firstOrNull()
             ?: ModelOption(provider, config.modelId, config.modelId, listOf(ThinkingLevel.OFF))
-        val thinking = config.thinkingLevel.takeIf { it in model.thinkingLevels } ?: ThinkingLevel.OFF
+        val thinking = model.thinkingLevels.resolveThinkingLevel(config.thinkingLevel)
         return ModelConfig(provider, model.id, thinking)
     }
 
@@ -136,17 +138,18 @@ class ProviderCatalog(
         thinkingLevels = thinkingLevels(this),
     )
 
-    private fun thinkingLevels(model: Model): List<ThinkingLevel> {
-        if (!model.reasoning) return listOf(ThinkingLevel.OFF)
-        val levels = model.thinkingLevelMap.orEmpty().filterValues { it != null }.keys
-        return buildList {
-            add(ThinkingLevel.OFF)
-            if ("low" in levels) add(ThinkingLevel.LOW)
-            if ("medium" in levels) add(ThinkingLevel.MEDIUM)
-            if ("high" in levels) add(ThinkingLevel.HIGH)
-            if ("max" in levels) add(ThinkingLevel.MAX)
+    private fun thinkingLevels(model: Model): List<ThinkingLevel> =
+        getSupportedThinkingLevels(model).mapNotNull { level ->
+            when (level) {
+                ModelThinkingLevel.Off -> ThinkingLevel.OFF
+                ModelThinkingLevel.Minimal -> null
+                ModelThinkingLevel.Low -> ThinkingLevel.LOW
+                ModelThinkingLevel.Medium -> ThinkingLevel.MEDIUM
+                ModelThinkingLevel.High -> ThinkingLevel.HIGH
+                ModelThinkingLevel.Xhigh -> ThinkingLevel.XHIGH
+                ModelThinkingLevel.Max -> ThinkingLevel.MAX
+            }
         }.distinct()
-    }
 
     companion object {
         const val DEFAULT_PROVIDER_ID = ProviderDefaults.DEFAULT_PROVIDER_ID
