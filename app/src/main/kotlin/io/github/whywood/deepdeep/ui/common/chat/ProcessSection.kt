@@ -228,6 +228,7 @@ internal fun ProcessSection(
                             is AssistantStep.Reasoning -> ReasoningCard(
                                 step = step,
                                 active = step.id == activeReasoningId,
+                                onToggle = { onToggleStep(step.id) },
                                 compact = processDetail == ProcessDetail.COMPACT,
                                 terminatedStatus = terminatedStatus.takeIf { step.id == lastReasoningId },
                             )
