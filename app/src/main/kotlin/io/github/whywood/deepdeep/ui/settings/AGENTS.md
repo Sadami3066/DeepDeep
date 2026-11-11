@@ -15,7 +15,7 @@
 | `PersonalizationScreen.kt` | 个性化：头像、称呼、互动风格、语气、自定义指令 |
 | `AgreementScreen.kt` | 隐私与用户协议：数据与隐私、用户协议、免责声明、开源许可 |
 | `ProviderListScreen.kt` | 全厂商列表：搜索排序、已配置标记、进详情、顶部「添加自定义服务商」入口；搜索命中自定义服务商时不显示内置分组 |
-| `CustomProviderEditorScreen.kt` | 自定义服务商编辑：名称、接口格式、接口地址、API Key、模型列表（行摘要显示能力，点击进模型编辑页）；一键获取模型时按服务商返回自动预填名称、上下文、最大输出与图片支持，已有草稿不覆盖；新建/编辑/删除 |
+| `CustomProviderEditorScreen.kt` | 自定义服务商编辑：名称、接口格式、接口地址、API Key、模型列表（行摘要显示能力，点击进模型编辑页）；获取模型列表时按服务商返回自动预填名称、上下文、最大输出与图片支持，已有草稿不覆盖；新建/编辑/删除 |
 | `CustomProviderModelScreen.kt` | 单个模型编辑：模型 ID、显示名、上下文大小、最大输出、图片输入、思考能力与用户多选勾选的思考档位（开启思考后至少选一档才能保存）；读不到的能力留空用默认值 |
 | `ProviderDetailScreen.kt` | 厂商详情：OAuth 登录/退出、API Key 保存/清除 |
 | `LinuxEnvironmentSection.kt` | Linux 分区：内置环境状态（准备中/失败可重试）、启用开关、共享存储、挂载目录（SAF 选公共存储子目录 + 名称/说明）与占用 |

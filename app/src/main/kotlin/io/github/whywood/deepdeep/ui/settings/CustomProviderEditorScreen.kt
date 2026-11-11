@@ -284,7 +284,6 @@ fun CustomProviderEditorScreen(
                                 R.string.settings_custom_provider_discover
                             },
                         ),
-                        subtitle = stringResource(R.string.settings_custom_provider_discover_hint),
                         icon = DdIcons.Search,
                         enabled = !discovering,
                         onClick = {
