@@ -59,6 +59,14 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
+internal object ProcessRowMetrics {
+    val IconSize = 13.dp
+    val IconGap = 6.dp
+    val ChevronSize = 12.dp
+    val OuterInset = DdSpacing.Xs
+    val InnerInset = DdSpacing.Sm
+}
+
 @Composable
 internal fun ToolCard(
     tool: ToolTrace,
@@ -111,21 +119,21 @@ internal fun ToolCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = DdSpacing.Xs)
+                .padding(horizontal = ProcessRowMetrics.OuterInset)
                 .heightIn(min = 32.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .semantics { stateDescription = state }
                 .clickable(role = Role.Button, onClick = onToggle)
-                .padding(horizontal = DdSpacing.Sm)
+                .padding(horizontal = ProcessRowMetrics.InnerInset)
                 .testTag("tool_toggle_${tool.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdIcon(
                 icon = toolIcon(toolIconKind(tool.name)),
                 tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
-                size = 13.dp,
+                size = ProcessRowMetrics.IconSize,
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(ProcessRowMetrics.IconGap))
             Text(
                 text = title,
                 style = DdType.bodySmall.copy(
@@ -179,7 +187,7 @@ internal fun ToolCard(
                 icon = DdIcons.ChevronRight,
                 modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                 tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
-                size = 12.dp,
+                size = ProcessRowMetrics.ChevronSize,
             )
             Spacer(Modifier.width(DdSpacing.Xxs))
         }
