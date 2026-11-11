@@ -21,6 +21,11 @@ enum class SendWhileRunning {
     QUEUE,
 }
 
+enum class ProcessDetail {
+    DETAILED,
+    COMPACT,
+}
+
 data class UiPreferences(
     val autoCollapseProcess: Boolean = true,
     val autoRetry: Boolean = true,
@@ -28,6 +33,7 @@ data class UiPreferences(
     val pinnedWorkspaceIds: Set<String> = emptySet(),
     val chatFontScale: Float = CHAT_FONT_SCALE_DEFAULT,
     val sendWhileRunning: SendWhileRunning = SendWhileRunning.STEER,
+    val processDetail: ProcessDetail = ProcessDetail.DETAILED,
     val metadataMode: SessionNamingMode = SessionNamingMode.AUTO,
     val metadataProviderId: String = "",
     val metadataModelId: String = "",
@@ -64,6 +70,7 @@ class AppPreferences(context: Context) {
     private val pinnedWorkspacesKey = stringSetPreferencesKey("pinned_workspace_ids")
     private val chatFontScaleKey = floatPreferencesKey("chat_font_scale")
     private val sendWhileRunningKey = stringPreferencesKey("send_while_running")
+    private val processDetailKey = stringPreferencesKey("process_detail")
     private val metadataModeKey = stringPreferencesKey("metadata_mode")
     private val metadataProviderKey = stringPreferencesKey("metadata_provider")
     private val metadataModelKey = stringPreferencesKey("metadata_model")
@@ -79,6 +86,9 @@ class AppPreferences(context: Context) {
                 sendWhileRunning = values[sendWhileRunningKey]
                     ?.let { stored -> SendWhileRunning.entries.firstOrNull { it.name == stored } }
                     ?: SendWhileRunning.STEER,
+                processDetail = values[processDetailKey]
+                    ?.let { stored -> ProcessDetail.entries.firstOrNull { it.name == stored } }
+                    ?: ProcessDetail.DETAILED,
                 metadataMode = values[metadataModeKey]
                     ?.let { stored -> SessionNamingMode.entries.firstOrNull { it.name == stored } }
                     ?: SessionNamingMode.AUTO,
@@ -108,6 +118,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setSendWhileRunning(value: SendWhileRunning) {
         store.edit { it[sendWhileRunningKey] = value.name }
+    }
+
+    suspend fun setProcessDetail(value: ProcessDetail) {
+        store.edit { it[processDetailKey] = value.name }
     }
 
     suspend fun setMetadataMode(value: SessionNamingMode) {

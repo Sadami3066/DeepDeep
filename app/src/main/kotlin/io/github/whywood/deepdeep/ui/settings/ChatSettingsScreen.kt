@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.CHAT_FONT_SCALE_MAX
 import io.github.whywood.deepdeep.data.CHAT_FONT_SCALE_MIN
+import io.github.whywood.deepdeep.data.ProcessDetail
 import io.github.whywood.deepdeep.data.SendWhileRunning
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.UiToggle
@@ -53,12 +54,14 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 fun ChatSettingsScreen(
     preferences: UiPreferences,
     sendWhileRunning: SendWhileRunning = SendWhileRunning.STEER,
+    processDetail: ProcessDetail = ProcessDetail.DETAILED,
     onBack: () -> Unit,
     onToggle: (UiToggle, Boolean) -> Unit,
     voiceAutoSpeak: Boolean = false,
     onVoiceAutoSpeakChange: (Boolean) -> Unit = {},
     onChatFontScaleChange: (Float) -> Unit = {},
     onSendWhileRunningChange: (SendWhileRunning) -> Unit = {},
+    onProcessDetailChange: (ProcessDetail) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -103,6 +106,11 @@ fun ChatSettingsScreen(
                     title = R.string.settings_auto_collapse_process,
                     checked = preferences.autoCollapseProcess,
                     onCheckedChange = { onToggle(UiToggle.AUTO_COLLAPSE_PROCESS, it) },
+                )
+                DdHairline()
+                ProcessDetailRow(
+                    value = processDetail,
+                    onChange = onProcessDetailChange,
                 )
                 DdHairline()
                 SendWhileRunningRow(
@@ -195,6 +203,48 @@ private fun sendWhileRunningLabel(value: SendWhileRunning): String = stringResou
     when (value) {
         SendWhileRunning.STEER -> R.string.settings_send_while_running_steer
         SendWhileRunning.QUEUE -> R.string.settings_send_while_running_queue
+    },
+)
+
+@Composable
+private fun ProcessDetailRow(
+    value: ProcessDetail,
+    onChange: (ProcessDetail) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        DdListRow(
+            title = stringResource(R.string.chat_process_detail_title),
+            value = processDetailLabel(value),
+            onClick = { expanded = true },
+            showChevron = true,
+            modifier = Modifier.testTag("settings_process_detail"),
+        )
+        DdMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            menuWidth = 356.dp,
+        ) {
+            ProcessDetail.entries.forEach { option ->
+                DdMenuItem(
+                    text = processDetailLabel(option),
+                    onClick = {
+                        expanded = false
+                        onChange(option)
+                    },
+                    selected = value == option,
+                    testTag = "settings_process_detail_option_${option.name.lowercase()}",
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun processDetailLabel(value: ProcessDetail): String = stringResource(
+    when (value) {
+        ProcessDetail.DETAILED -> R.string.chat_process_detail_detailed
+        ProcessDetail.COMPACT -> R.string.chat_process_detail_compact
     },
 )
 

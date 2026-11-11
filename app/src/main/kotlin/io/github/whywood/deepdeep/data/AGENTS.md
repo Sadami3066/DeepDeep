@@ -9,7 +9,7 @@
 | `AgentDocStore.kt` | 项目 AGENTS.md 读写（override 优先、限 64 KB、原子写） |
 | `BundledSkills.kt` | 随包技能：`assets/skills/**` 按内容同步到技能仓库与全局启用目录，可传入门控谓词并删除被排除的自有技能；跳过插件标记/用户自有目录 |
 | `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
-| `AppPreferences.kt` | 聊天界面偏好：过程折叠、自动重试、后台唤醒、置顶、字号 |
+| `AppPreferences.kt` | 聊天界面偏好：过程折叠、过程详细度、自动重试、后台唤醒、置顶、字号 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
 | `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素；文件读写经 `HostFiles`（Root 档可读系统目录，其余档自然失败），解析绝对路径时按共享存储开关放行 `/storage/emulated/0` 内文件；分享/预览前把不可读文件暂存到 cache，暂存不了（超大文件）时回退导出到共享存储或系统下载目录 |
 | `CustomProviderStore.kt` | 自定义模型服务商：读写 `files/agent/models.json`（SDK models.json 格式，供 pi 会话与 ProviderCatalog 合并），容错解析与临时文件原子替换 |

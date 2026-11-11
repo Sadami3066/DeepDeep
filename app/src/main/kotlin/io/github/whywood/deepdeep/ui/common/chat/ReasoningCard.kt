@@ -7,7 +7,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +39,7 @@ import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -88,6 +91,19 @@ internal fun ReasoningCard(
                 .testTag("reasoning_toggle_${step.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(
+                Modifier
+                    .size(6.dp)
+                    .clip(DdShapes.Pill)
+                    .background(
+                        when {
+                            terminatedStatus == ProcessStatus.Failed -> colors.danger
+                            active -> colors.inkSecondary
+                            else -> colors.inkTertiary.copy(alpha = DdAlpha.Muted)
+                        },
+                    ),
+            )
+            Spacer(Modifier.width(6.dp))
             Text(
                 text = stringResource(R.string.assistant_reasoning),
                 style = titleStyle,

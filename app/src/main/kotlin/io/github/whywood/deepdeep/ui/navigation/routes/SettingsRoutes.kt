@@ -96,6 +96,7 @@ internal fun ChatSettingsRoute(dependencies: AppDependencies, scope: CoroutineSc
     ChatSettingsScreen(
         preferences = preferences,
         sendWhileRunning = preferences.sendWhileRunning,
+        processDetail = preferences.processDetail,
         onBack = onBack,
         onToggle = { toggle, enabled -> scope.launch { dependencies.appPreferences.set(toggle, enabled) } },
         voiceAutoSpeak = voiceAutoSpeak,
@@ -103,6 +104,9 @@ internal fun ChatSettingsRoute(dependencies: AppDependencies, scope: CoroutineSc
         onChatFontScaleChange = { value -> scope.launch { dependencies.appPreferences.setChatFontScale(value) } },
         onSendWhileRunningChange = { value ->
             scope.launch { dependencies.appPreferences.setSendWhileRunning(value) }
+        },
+        onProcessDetailChange = { value ->
+            scope.launch { dependencies.appPreferences.setProcessDetail(value) }
         },
     )
 }

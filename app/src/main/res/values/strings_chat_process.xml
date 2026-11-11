@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_process_detail_title">聊天过程详细度</string>
+    <string name="chat_process_detail_detailed">详细</string>
+    <string name="chat_process_detail_compact">简洁</string>
+    <string name="chat_process_tool_used">使用工具 %1$s</string>
+</resources>

@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.data.ProcessDetail
 import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
@@ -73,6 +74,7 @@ internal fun ProcessSection(
     onFileClick: (String) -> Unit,
     autoCollapseProcess: Boolean = true,
     excludedStepId: Long? = null,
+    processDetail: ProcessDetail = ProcessDetail.DETAILED,
 ) {
     val colors = deepDeepColors()
     var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
@@ -233,6 +235,7 @@ internal fun ProcessSection(
                                 onToggleStep = onToggleStep,
                                 onCopyOutput = onCopyOutput,
                                 onFileClick = onFileClick,
+                                processDetail = processDetail,
                             )
 
                             is AssistantStep.Text -> ChatMarkdown(
@@ -250,6 +253,7 @@ internal fun ProcessSection(
                             onToggleStep = onToggleStep,
                             onCopyOutput = onCopyOutput,
                             onFileClick = onFileClick,
+                            processDetail = processDetail,
                         )
                     }
                 }
@@ -301,6 +305,7 @@ private fun ToolRunGroup(
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
     onFileClick: (String) -> Unit,
+    processDetail: ProcessDetail,
 ) {
     val colors = deepDeepColors()
     val firstToolId = tools.first().id
@@ -380,6 +385,7 @@ private fun ToolRunGroup(
                         onToggleStep = onToggleStep,
                         onCopyOutput = onCopyOutput,
                         onFileClick = onFileClick,
+                        processDetail = processDetail,
                     )
                 }
             }
@@ -426,6 +432,7 @@ private fun ProcessToolStep(
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
     onFileClick: (String) -> Unit,
+    processDetail: ProcessDetail,
 ) {
     val trace = step.trace
     val deliveredCount = if (trace.name == "present") {
@@ -441,6 +448,7 @@ private fun ProcessToolStep(
             stringResource(R.string.present_tool_delivered, count)
         },
         onFileClick = onFileClick,
+        compact = processDetail == ProcessDetail.COMPACT,
     )
     val record = if (trace.status == ToolActivityStatus.DONE) {
         remember(trace) { parseQuestionRecord(trace) }

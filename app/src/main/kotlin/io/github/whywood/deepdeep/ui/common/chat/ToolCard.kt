@@ -66,6 +66,7 @@ internal fun ToolCard(
     onCopyOutput: (String) -> Unit,
     titleOverride: String? = null,
     onFileClick: ((String) -> Unit)? = null,
+    compact: Boolean = false,
 ) {
     val colors = deepDeepColors()
     val rotation = animateFloatAsState(
@@ -78,8 +79,12 @@ internal fun ToolCard(
     )
     val rawArguments = tool.rawArguments
     val output = tool.resultText()
-    val preview = remember(rawArguments, tool.arguments, titleOverride, output, tool.status) {
+    val toolUsedFormat = stringResource(R.string.chat_process_tool_used)
+    val compactTitle = if (compact) toolUsedLabel(toolUsedFormat, tool.name) else null
+    val title = compactTitle ?: titleOverride ?: displayToolName(tool.name)
+    val preview = remember(rawArguments, tool.arguments, titleOverride, output, tool.status, compact) {
         when {
+            compact -> ""
             tool.status == ToolActivityStatus.FAILED -> output
                 ?.lineSequence()
                 ?.firstOrNull { it.isNotBlank() }
@@ -115,10 +120,20 @@ internal fun ToolCard(
                 .testTag("tool_toggle_${tool.id}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            DdIcon(
+                icon = toolIcon(toolIconKind(tool.name)),
+                tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
+                size = 13.dp,
+            )
+            Spacer(Modifier.width(6.dp))
             Text(
-                text = titleOverride ?: displayToolName(tool.name),
+                text = title,
                 style = DdType.bodySmall.copy(
-                    fontFamily = if (titleOverride == null) FontFamily.Monospace else FontFamily.Default,
+                    fontFamily = if (compactTitle == null && titleOverride == null) {
+                        FontFamily.Monospace
+                    } else {
+                        FontFamily.Default
+                    },
                     fontSize = 12.sp,
                     lineHeight = 18.sp,
                 ),
@@ -396,4 +411,19 @@ private fun toolArgsPreview(raw: JsonObject?, legacy: Map<String, String>): Stri
             ?: legacy.values.firstOrNull { it.isNotBlank() }
     } ?: return ""
     return value.replace('\n', ' ').trim()
+}
+
+private fun toolIcon(kind: ToolIconKind): DdIcon = when (kind) {
+    ToolIconKind.Book -> DdIcons.Book
+    ToolIconKind.Pen -> DdIcons.Pen
+    ToolIconKind.Terminal -> DdIcons.Terminal
+    ToolIconKind.Search -> DdIcons.Search
+    ToolIconKind.Brain -> DdIcons.Brain
+    ToolIconKind.Apps -> DdIcons.Apps
+    ToolIconKind.Clock -> DdIcons.Clock
+    ToolIconKind.File -> DdIcons.File
+    ToolIconKind.Folder -> DdIcons.Folder
+    ToolIconKind.Target -> DdIcons.Target
+    ToolIconKind.Check -> DdIcons.Check
+    ToolIconKind.Plug -> DdIcons.Plug
 }

@@ -60,7 +60,7 @@ ol{margin:8px 0 0;padding-left:20px}
   </div>
 </header>
 <main>
-  <div class="stats" id="stats">70 个图标 · 7 类 · 62 位图 · 8 矢量 · 71 个 DdIcons 成员</div>
+  <div class="stats" id="stats">71 个图标 · 7 类 · 62 位图 · 9 矢量 · 72 个 DdIcons 成员</div>
 <section class="category" data-category="navigation">
   <div class="cat-head"><h2>导航与方向</h2><span class="cat-id">navigation</span><span class="count">9</span></div>
   <p class="desc">菜单、返回、展开与方向指示</p>
@@ -138,7 +138,7 @@ ol{margin:8px 0 0;padding-left:20px}
 </article></div>
 </section>
 <section class="category" data-category="action">
-  <div class="cat-head"><h2>操作</h2><span class="cat-id">action</span><span class="count">16</span></div>
+  <div class="cat-head"><h2>操作</h2><span class="cat-id">action</span><span class="count">17</span></div>
   <p class="desc">添加、分享、下载与编辑操作</p>
   <div class="grid"><article class="card" data-search="添加 add action ic_action_add 位图 · regular plus regular/02_navigation_chat/ic_milo_add.png" title="上游：regular/02_navigation_chat/ic_milo_add.png">
   <div class="icon"><img class="pic" src="action/add.png" alt=""></div>
@@ -187,6 +187,14 @@ ol{margin:8px 0 0;padding-left:20px}
   <div class="res">ic_action_eye</div>
   <div class="kind">矢量 · 手绘</div>
   <div class="badges"><span class="val">Eye</span></div>
+</article>
+<article class="card" data-search="笔 pen action ic_action_pen 矢量 · 手绘 pen " title="手绘 vector 源">
+  <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5L2 22l1.5 -5.5L17 3z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div class="zh">笔</div>
+  <div class="id">pen</div>
+  <div class="res">ic_action_pen</div>
+  <div class="kind">矢量 · 手绘</div>
+  <div class="badges"><span class="val">Pen</span></div>
 </article>
 <article class="card" data-search="置顶 pin action ic_action_pin 位图 · regular pin regular/03_memory_files/ic_milo_pin.png" title="上游：regular/03_memory_files/ic_milo_pin.png">
   <div class="icon"><img class="pic" src="action/pin.png" alt=""></div>
@@ -661,7 +669,7 @@ ol{margin:8px 0 0;padding-left:20px}
     arrow_up.xml  back.png  chevron_down.xml  chevron_right.xml  close.png  expand.png
     external_link.png  menu.png  more.png
   action/
-    add.png  archive.png  copy.png  delete.png  download.png  eye.xml  pin.png  play.png
+    add.png  archive.png  copy.png  delete.png  download.png  eye.xml  pen.xml  pin.png  play.png
     quote.xml  retry.png  scan.png  search.png  select_all.xml  share.png  stop.png  sync.png
   status/
     confirm.png  info.png  notifications.png
@@ -747,7 +755,7 @@ const update = () => {
     section.hidden = ![...section.querySelectorAll('.card')].some((card) => !card.hidden);
   }
   const categoryCount = sections.filter((section) => !section.hidden).length;
-  stats.textContent = query.length === 0 ? '70 个图标 · 7 类 · 62 位图 · 8 矢量 · 71 个 DdIcons 成员' : `${visible} / ${cards.length} 个图标 · ${categoryCount} 类`;
+  stats.textContent = query.length === 0 ? '71 个图标 · 7 类 · 62 位图 · 9 矢量 · 72 个 DdIcons 成员' : `${visible} / ${cards.length} 个图标 · ${categoryCount} 类`;
 };
 input.addEventListener('input', update);
 </script>
