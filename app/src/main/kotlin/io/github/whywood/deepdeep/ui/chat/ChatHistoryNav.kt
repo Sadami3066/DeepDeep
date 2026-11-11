@@ -3,7 +3,7 @@ package io.github.whywood.deepdeep.ui.chat
 internal const val ChatHistoryFoldThreshold = 20
 internal const val ChatHistoryInitialVisible = 3
 internal const val ChatHistoryLoadStep = 20
-internal const val ChatHistoryNavMaxTicks = 6
+internal const val ChatHistoryNavWindowTicks = 5
 
 internal fun initialVisibleMessages(total: Int): Int =
     if (total > ChatHistoryFoldThreshold) ChatHistoryInitialVisible else total.coerceAtLeast(0)
@@ -27,19 +27,30 @@ internal fun resolveVisibleMessages(visible: Int, previousTotal: Int, total: Int
     }
 }
 
-internal fun navWindowIndices(
-    userMessageIndices: List<Int>,
-    anchorMessageIndex: Int,
-    maxTicks: Int,
-): List<Int> {
-    if (userMessageIndices.isEmpty() || maxTicks <= 0) return emptyList()
-    if (userMessageIndices.size <= maxTicks) return userMessageIndices
-    var anchorSlot = 0
-    for (slot in userMessageIndices.indices) {
-        if (userMessageIndices[slot] <= anchorMessageIndex) anchorSlot = slot else break
+internal fun navAnchorSlot(userMessageIndices: List<Int>, anchorMessageIndex: Int): Int {
+    if (userMessageIndices.isEmpty()) return 0
+    var slot = 0
+    for (index in userMessageIndices.indices) {
+        if (userMessageIndices[index] <= anchorMessageIndex) slot = index else break
     }
-    val start = (anchorSlot - maxTicks / 2).coerceIn(0, userMessageIndices.size - maxTicks)
-    return userMessageIndices.subList(start, start + maxTicks)
+    return slot
+}
+
+internal fun navFollowTopSlot(
+    activeSlot: Int,
+    currentTopSlot: Int,
+    count: Int,
+    viewportTicks: Int,
+): Int {
+    if (count <= viewportTicks) return 0
+    val maxTop = count - viewportTicks
+    val top = currentTopSlot.coerceIn(0, maxTop)
+    val active = activeSlot.coerceIn(0, count - 1)
+    return when {
+        active < top -> active
+        active >= top + viewportTicks -> (active - viewportTicks + 1).coerceAtMost(maxTop)
+        else -> top
+    }
 }
 
 internal fun messageItemIndex(messageIndex: Int, total: Int, visible: Int): Int {
@@ -58,13 +69,4 @@ internal fun messageIndexForItemIndex(itemIndex: Int, total: Int, visible: Int):
     val pillOffset = if (hiddenStart > 0) 1 else 0
     val visiblePosition = (itemIndex - pillOffset).coerceAtLeast(0)
     return (hiddenStart + visiblePosition).coerceIn(0, total - 1)
-}
-
-internal fun activeNavSegmentIndex(segments: List<Int>, messageIndex: Int): Int {
-    if (segments.isEmpty()) return -1
-    var active = 0
-    for (index in segments.indices) {
-        if (segments[index] <= messageIndex) active = index else break
-    }
-    return active
 }

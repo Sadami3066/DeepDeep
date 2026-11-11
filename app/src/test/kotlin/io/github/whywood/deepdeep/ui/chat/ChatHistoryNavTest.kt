@@ -48,42 +48,39 @@ class ChatHistoryNavTest {
     }
 
     @Test
-    fun shortHistoryShowsEveryUserMessage() {
-        assertEquals(listOf(1, 4, 9), navWindowIndices(listOf(1, 4, 9), 4, ChatHistoryNavMaxTicks))
-        assertTrue(navWindowIndices(emptyList(), 0, ChatHistoryNavMaxTicks).isEmpty())
-        assertTrue(navWindowIndices((0 until 10).toList(), 3, 0).isEmpty())
+    fun anchorSlotTracksMessagePosition() {
+        val userIndices = listOf(1, 4, 9, 14)
+        assertEquals(0, navAnchorSlot(userIndices, -5))
+        assertEquals(0, navAnchorSlot(userIndices, 3))
+        assertEquals(1, navAnchorSlot(userIndices, 4))
+        assertEquals(2, navAnchorSlot(userIndices, 10))
+        assertEquals(3, navAnchorSlot(userIndices, 99))
+        assertEquals(0, navAnchorSlot(emptyList(), 5))
     }
 
     @Test
-    fun windowCentersOnAnchorAndClampsToEdges() {
-        val userIndices = (0 until 20).map { it * 2 }
-        assertEquals(userIndices.take(ChatHistoryNavMaxTicks), navWindowIndices(userIndices, -5, ChatHistoryNavMaxTicks))
-        assertEquals(userIndices.take(ChatHistoryNavMaxTicks), navWindowIndices(userIndices, 6, ChatHistoryNavMaxTicks))
-        assertEquals(userIndices.subList(4, 10), navWindowIndices(userIndices, 14, ChatHistoryNavMaxTicks))
-        assertEquals(userIndices.subList(7, 13), navWindowIndices(userIndices, 20, ChatHistoryNavMaxTicks))
-        assertEquals(userIndices.takeLast(ChatHistoryNavMaxTicks), navWindowIndices(userIndices, 100, ChatHistoryNavMaxTicks))
+    fun followTopScrollsOneTickOnlyAtWindowEdges() {
+        assertEquals(0, navFollowTopSlot(2, 0, 20, ChatHistoryNavWindowTicks))
+        assertEquals(0, navFollowTopSlot(4, 0, 20, ChatHistoryNavWindowTicks))
+        assertEquals(1, navFollowTopSlot(5, 0, 20, ChatHistoryNavWindowTicks))
+        assertEquals(9, navFollowTopSlot(10, 9, 20, ChatHistoryNavWindowTicks))
+        assertEquals(10, navFollowTopSlot(13, 10, 20, ChatHistoryNavWindowTicks))
+        assertEquals(9, navFollowTopSlot(9, 10, 20, ChatHistoryNavWindowTicks))
+        assertEquals(15, navFollowTopSlot(19, 11, 20, ChatHistoryNavWindowTicks))
+        assertEquals(15, navFollowTopSlot(50, 3, 20, ChatHistoryNavWindowTicks))
+        assertEquals(0, navFollowTopSlot(3, 0, 2, ChatHistoryNavWindowTicks))
     }
 
     @Test
-    fun windowSlidesByOneTickAsAnchorAdvances() {
-        val userIndices = (0 until 100).toList()
-        var previous = navWindowIndices(userIndices, -1, ChatHistoryNavMaxTicks)
-        for (anchor in userIndices) {
-            val window = navWindowIndices(userIndices, anchor, ChatHistoryNavMaxTicks)
-            assertEquals(ChatHistoryNavMaxTicks, window.size)
-            assertTrue(window.first() >= previous.first())
-            assertTrue(window.first() - previous.first() <= 1)
-            previous = window
+    fun followTopSlidesOneTickAsActiveAdvances() {
+        var top = 0
+        for (slot in 1 until 100) {
+            val next = navFollowTopSlot(slot, top, 100, ChatHistoryNavWindowTicks)
+            assertTrue(next >= top)
+            assertTrue(next - top <= 1)
+            top = next
         }
-    }
-
-    @Test
-    fun activeTickFollowsWindowAnchor() {
-        val window = navWindowIndices((0 until 20).toList(), 10, ChatHistoryNavMaxTicks)
-        assertEquals(listOf(7, 8, 9, 10, 11, 12), window)
-        assertEquals(3, activeNavSegmentIndex(window, 10))
-        assertEquals(0, activeNavSegmentIndex(window, 0))
-        assertEquals(5, activeNavSegmentIndex(window, 19))
+        assertEquals(95, top)
     }
 
     @Test
@@ -103,14 +100,4 @@ class ChatHistoryNavTest {
         assertEquals(0, messageIndexForItemIndex(0, 0, 0))
     }
 
-    @Test
-    fun activeSegmentFollowsScrollPosition() {
-        val segments = listOf(0, 10, 20, 30)
-        assertEquals(0, activeNavSegmentIndex(segments, 0))
-        assertEquals(0, activeNavSegmentIndex(segments, 9))
-        assertEquals(1, activeNavSegmentIndex(segments, 10))
-        assertEquals(2, activeNavSegmentIndex(segments, 25))
-        assertEquals(3, activeNavSegmentIndex(segments, 99))
-        assertEquals(-1, activeNavSegmentIndex(emptyList(), 5))
-    }
 }

@@ -290,7 +290,7 @@ fun ChatScreen(
             index.takeIf { message.role == AssistantRole.USER }
         }
     }
-    val showMessageNav = userMessageIndices.size >= 3
+    val showMessageNav = userMessageIndices.size > ChatHistoryNavWindowTicks
     val navTopItemPosition by remember(listState) {
         derivedStateOf {
             val first = listState.layoutInfo.visibleItemsInfo.firstOrNull()
@@ -310,10 +310,6 @@ fun ChatScreen(
             visible = shownMessageCount,
         )
     }
-    val navSegments = remember(userMessageIndices, navAnchorMessageIndex) {
-        navWindowIndices(userMessageIndices, navAnchorMessageIndex, ChatHistoryNavMaxTicks)
-    }
-    val navActiveSegment = activeNavSegmentIndex(navSegments, navAnchorMessageIndex)
     val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
@@ -792,8 +788,8 @@ fun ChatScreen(
             }
             if (showMessageNav && !state.switchingConversation) {
                 MessageNavBar(
-                    segments = navSegments,
-                    activeSegmentIndex = navActiveSegment,
+                    userMessageIndices = userMessageIndices,
+                    activeMessageIndex = navAnchorMessageIndex,
                     onJump = ::jumpToMessage,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
