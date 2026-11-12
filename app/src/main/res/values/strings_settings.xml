@@ -298,6 +298,7 @@
     <string name="settings_custom_provider_protocol_anthropic">Anthropic Messages</string>
     <string name="settings_custom_provider_base_url">接口地址</string>
     <string name="settings_custom_provider_base_url_hint">https://api.example.com/v1</string>
+    <string name="settings_custom_provider_base_url_cleartext">明文 HTTP 不加密，建议只连接本机或局域网网关</string>
     <string name="settings_custom_provider_api_key">API Key</string>
     <string name="settings_custom_provider_api_key_hint">输入服务商提供的 API Key</string>
     <string name="settings_custom_provider_models">模型</string>

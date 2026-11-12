@@ -243,6 +243,14 @@ fun CustomProviderEditorScreen(
                 placeholder = stringResource(R.string.settings_custom_provider_base_url_hint),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
             )
+            if (trimmedBaseUrl.startsWith("http://", ignoreCase = true)) {
+                Text(
+                    text = stringResource(R.string.settings_custom_provider_base_url_cleartext),
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             FormField(
                 label = stringResource(R.string.settings_custom_provider_api_key),
                 value = apiKey,

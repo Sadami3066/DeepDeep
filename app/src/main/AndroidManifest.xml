@@ -59,7 +59,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.DeepDeep"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="true">
         <service
             android:name=".service.AgentService"
             android:exported="false"

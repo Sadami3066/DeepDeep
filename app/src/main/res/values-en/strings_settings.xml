@@ -292,6 +292,7 @@
     <string name="settings_custom_provider_protocol_anthropic">Anthropic Messages</string>
     <string name="settings_custom_provider_base_url">Base URL</string>
     <string name="settings_custom_provider_base_url_hint">https://api.example.com/v1</string>
+    <string name="settings_custom_provider_base_url_cleartext">Plain HTTP is unencrypted; use it only for local or LAN gateways</string>
     <string name="settings_custom_provider_api_key">API key</string>
     <string name="settings_custom_provider_api_key_hint">Enter the API key from your provider</string>
     <string name="settings_custom_provider_models">Models</string>
