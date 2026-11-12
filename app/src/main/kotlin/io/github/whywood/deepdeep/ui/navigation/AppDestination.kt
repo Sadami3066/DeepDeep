@@ -127,6 +127,11 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Purge : AppDestination {
+        override val routeKey: String = "purge"
+        override val depth: Int = 1
+    }
+
     data object Plugins : AppDestination {
         override val routeKey: String = "plugins"
         override val depth: Int = 1
@@ -209,6 +214,7 @@ sealed interface AppDestination {
             routeKey == Timers.routeKey -> Timers
             routeKey == Memory.routeKey -> Memory
             routeKey == Plugins.routeKey -> Plugins
+            routeKey == Purge.routeKey -> Purge
             routeKey == Remote.routeKey -> Remote
             routeKey.startsWith(REMOTE_CONNECT_PREFIX) ->
                 RemoteConnect(routeKey.removePrefix(REMOTE_CONNECT_PREFIX))

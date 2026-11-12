@@ -218,6 +218,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 onOpenSkills = { actions.onNavigate(AppDestination.Skills) },
                 onOpenMcp = { actions.onNavigate(AppDestination.Mcp) },
                 onOpenPlugins = { actions.onNavigate(AppDestination.Plugins) },
+                onOpenPurge = { actions.onNavigate(AppDestination.Purge) },
                 onOpenTimers = { actions.onNavigate(AppDestination.Timers) },
                 onOpenMemory = { actions.onNavigate(AppDestination.Memory) },
                 onOpenRemote = { actions.onNavigate(AppDestination.Remote) },

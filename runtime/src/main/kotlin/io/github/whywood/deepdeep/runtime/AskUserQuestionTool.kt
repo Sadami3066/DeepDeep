@@ -76,7 +76,11 @@ private val askUserQuestionParameters: JsonObject = buildJsonObject {
     put("required", buildJsonArray { add(JsonPrimitive("questions")) })
 }
 
-fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding): CodingTool = CodingTool(
+fun askUserQuestionTool(
+    questionCenter: QuestionCenter,
+    binding: SessionBinding,
+    waitTimeoutMs: Long = ANSWER_WAIT_TIMEOUT_MS,
+): CodingTool = CodingTool(
     name = "ask_user_question",
     description = "Ask the user one to five structured questions and wait for answers. Use options for choices; omit options for free-form input. Append (Recommended) to a recommended label. Ask only when a real choice or missing fact blocks progress.",
     parameters = askUserQuestionParameters,
@@ -89,7 +93,7 @@ fun askUserQuestionTool(questionCenter: QuestionCenter, binding: SessionBinding)
         } else {
             try {
                 val questions = parseQuestions(args)
-                val outcome = withTimeoutOrNull(ANSWER_WAIT_TIMEOUT_MS) {
+                val outcome = withTimeoutOrNull(waitTimeoutMs) {
                     questionCenter.ask(sessionId, toolCallId, questions, signal)
                 }
                 when (outcome) {

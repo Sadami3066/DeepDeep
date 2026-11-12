@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.data.StorageMountStore
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
+import io.github.whywood.deepdeep.purge.PurgeController
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.MiniappStore
@@ -48,6 +49,7 @@ internal class RuntimeGraphDeps(
     val goalService: GoalService,
     val miniappStore: MiniappStore,
     val pluginManager: () -> PluginHostManager,
+    val purge: () -> PurgeController,
     val hostAccess: HostAccessController,
     val hostEnvironment: HostEnvironmentProvider,
     val decorateInterrupted: suspend (ConversationState, String) -> ConversationState,

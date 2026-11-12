@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.core.SessionTitleService
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
+import io.github.whywood.deepdeep.purge.purgePlaybookTool
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.AppToolContext
 import io.github.whywood.deepdeep.runtime.GoalPhase
@@ -79,11 +80,13 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
                 deps.pluginManager().deferredTools(binding, policyFor(binding).plugins)
             },
             extraToolFactories = listOf({ _, binding -> builtInTools(binding) }),
+            questionWaitMs = { deps.purge().questionTimeoutMs() },
         )
     }
 
     private fun builtInTools(binding: SessionBinding): List<CodingTool> = buildList {
         add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
+        add(purgePlaybookTool(deps.purge()))
         add(systemShellTool { deps.hostEnvironment.current().system })
         add(todoWriteTool(
             sessionId = { binding.current()?.sessionId },
@@ -108,7 +111,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         return RuntimeHooks(
             promptTransform = delegate.promptTransform,
             systemContext = delegate.systemContext,
-            inputHandler = delegate.inputHandler,
+            inputHandler = purgeInputHandler(delegate.inputHandler),
             toolHooks = delegate.toolHooks,
             onSessionBound = { binding ->
                 deps.pluginManager().bindSessionHooks(binding, delegate, policyFor(binding).plugins)
@@ -117,6 +120,15 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             },
             onSessionClosed = { sessionId -> deps.pluginManager().onSessionClosed(sessionId) },
         )
+    }
+
+    private fun purgeInputHandler(next: InputHandler): InputHandler = { request ->
+        val augmented = deps.purge().augmentInput(request.text)
+        if (augmented != null) {
+            InputDecision.Continue(augmented, request.images)
+        } else {
+            next(request)
+        }
     }
 
     private fun storageMountInfos(): List<StorageMountInfo> =
@@ -144,6 +156,8 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             excludedSkills = workspacePolicy.skills + excludedPluginSkills,
             excludedMcpServers = workspacePolicy.mcpServers,
             toolContext = appToolContext,
+            promptSections = { deps.purge().sections() },
+            contextSanitizer = { text -> deps.purge().sanitizeContext(text) },
             memory = memoryStore,
             hooks = pluginRuntimeHooks(),
         )

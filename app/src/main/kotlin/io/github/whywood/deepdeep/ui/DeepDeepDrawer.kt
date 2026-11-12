@@ -158,6 +158,7 @@ fun DeepDeepDrawer(
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
     onOpenPlugins: () -> Unit,
+    onOpenPurge: () -> Unit,
     onOpenTimers: () -> Unit,
     onOpenMemory: () -> Unit,
     onOpenRemote: () -> Unit,
@@ -257,6 +258,12 @@ fun DeepDeepDrawer(
                 label = stringResource(R.string.drawer_nav_skills),
                 onClick = onOpenSkills,
                 testTag = "drawer_skills",
+            )
+            DrawerNavItem(
+                icon = DdIcons.Target,
+                label = stringResource(R.string.drawer_nav_purge),
+                onClick = onOpenPurge,
+                testTag = "drawer_purge",
             )
             DrawerNavItem(
                 icon = DdIcons.Puzzle,

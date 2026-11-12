@@ -30,6 +30,7 @@ import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.remote.RemoteConnection
+import io.github.whywood.deepdeep.purge.PurgeController
 import io.github.whywood.deepdeep.graph.DataGraph
 import io.github.whywood.deepdeep.graph.DataGraphDeps
 import io.github.whywood.deepdeep.graph.PlatformGraph
@@ -154,6 +155,18 @@ class AppGraph(context: Context) : AppDependencies {
     override val goalService: GoalService get() = dataGraph.goalService
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
 
+    override val purge: PurgeController by lazy {
+        PurgeController(
+            assets = appContext.assets,
+            agentDir = agentDir,
+            overrideTargets = listOf(
+                File(agentDir, "AGENTS.override.md"),
+                File(homeDir, "AGENTS.override.md"),
+            ),
+            scope = scope,
+        )
+    }
+
     override val hostAccess: HostAccessController get() = platformGraph.hostAccess
     override val hostEnvironmentProvider: HostEnvironmentProvider get() = platformGraph.hostEnvironmentProvider
     override val rootfsBootstrap: RootfsBootstrap get() = platformGraph.rootfsBootstrap
@@ -188,6 +201,7 @@ class AppGraph(context: Context) : AppDependencies {
 
     init {
         scope.launch { StorageMigration.migrate(appContext.filesDir) }
+        purge.start()
         scope.launch {
             val environment = linuxEnvironment
             if (!shouldAutoInstallLinux(environment.isSupported, environment.state.value)) return@launch
@@ -220,6 +234,14 @@ class AppGraph(context: Context) : AppDependencies {
         scope.launch {
             host.events.collect { event ->
                 pluginManager.onRuntimeEvent(event)
+                when (val runtimeEvent = event.event) {
+                    is RuntimeEvent.RunStarted -> purge.rememberPrompt(event.sessionId, runtimeEvent.prompt)
+                    is RuntimeEvent.RunFinished -> purge.onRunFinished(event.sessionId, runtimeEvent.text) { sessionId, text ->
+                        host.postPluginMessage(sessionId, "purge_fallback", "{}", text)
+                    }
+
+                    else -> Unit
+                }
                 when (event.event) {
                     is RuntimeEvent.RunFinished, is RuntimeEvent.RunFailed -> {
                         runCatching { skillRepository.syncIfChanged() }.onFailure {
@@ -247,6 +269,7 @@ class AppGraph(context: Context) : AppDependencies {
         httpTransport = dataGraph.httpTransport,
         mcpTokenStore = dataGraph.mcpTokenStore,
         pluginManager = { pluginManager },
+        purge = { purge },
         host = { host },
         syncBundledSkills = { syncBundledSkills() },
     )

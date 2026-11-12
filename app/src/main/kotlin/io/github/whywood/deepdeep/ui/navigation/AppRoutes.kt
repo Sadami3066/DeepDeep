@@ -15,6 +15,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PersonalizationRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginPageRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginsRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.PurgeRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.CustomProviderEditorRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ProvidersRoute
@@ -152,6 +153,8 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             onReloadSessions = { dependencies.host.reloadMcp() },
             onReconnect = { server -> dependencies.host.reconnectMcp(server) },
         )
+
+        AppDestination.Purge -> PurgeRoute(dependencies, onBack)
 
         AppDestination.Plugins -> PluginsRoute(
             dependencies = dependencies,

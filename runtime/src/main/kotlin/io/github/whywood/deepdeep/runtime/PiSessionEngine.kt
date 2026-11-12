@@ -51,6 +51,8 @@ class PiSessionEngine(
     private val excludedSkills: Set<String> = emptySet(),
     private val excludedMcpServers: Set<String> = emptySet(),
     private val toolContext: AppToolContext? = null,
+    private val promptSections: () -> Map<String, String> = { emptyMap() },
+    private val contextSanitizer: (String) -> String = { it },
     private val toolFs: FileSystem = FileSystem.SYSTEM,
     private val fs: FileSystem = toolFs,
     private val supportsChatDelivery: Boolean = true,
@@ -114,7 +116,7 @@ class PiSessionEngine(
         }
         suspend fun memoryContextSections(): Map<String, String> {
             val text = try {
-                memory?.section()
+                memory?.section()?.let { contextSanitizer(it) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -151,7 +153,8 @@ class PiSessionEngine(
                             mounts = mounts,
                         ),
                     ),
-                ) + promptResources.current() + pluginContextSection() + extraSystemPromptSections,
+                ) + promptResources.current() + pluginContextSection() + extraSystemPromptSections +
+                    runCatching { promptSections() }.getOrDefault(emptyMap()),
             )
         }
         val session = createAgentSession(

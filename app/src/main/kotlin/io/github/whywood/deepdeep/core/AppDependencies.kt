@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.WebSearchSettingsStore
 import io.github.whywood.deepdeep.data.remote.RemoteConnection
+import io.github.whywood.deepdeep.purge.PurgeController
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -129,6 +130,8 @@ interface FeatureDependencies {
     val memoryRecap: MemoryRecap
 
     val remoteConnection: RemoteConnection
+
+    val purge: PurgeController
 }
 
 interface ServiceDependencies {
