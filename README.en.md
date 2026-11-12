@@ -182,9 +182,9 @@ Development requirements:
 
 The Agent SDK comes from JitPack: `com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3` (the version is `pi` in `gradle/libs.versions.toml`). On the first build, JitPack may compile the SDK on demand, which can take minutes or time out; once the dependency is cached, later builds can run offline. In an offline environment, run a full build online once first.
 
-Device scripts need `adb`. With more than one device online, set `ANDROID_SERIAL`; without it the script uses the only online device and fails when several are online. `plugin-e2e.sh` defaults to `../plugins` and `plugin-bundles-e2e.sh` to `../DeepDeep-Official-Plugins`; set `PLUGINS_DIR` to override. Both need an arm64 device with root (`su -c` working, or a successful `adb root`). `plugin-e2e.sh` also expects a `sample` module in the plugin repository; DeepDeep-Plugins currently ships only `template`, so the script fails fast with a clear message. `plugin-api-abi.sh` needs `unzip` and `javap` (`jar` is optional and falls back to `unzip`).
+Device scripts need `adb`. With more than one device online, set `ANDROID_SERIAL`; without it the script uses the only online device and fails when several are online. The plugin end-to-end scripts look for `plugins` / `DeepDeep-Official-Plugins` next to the repository or one directory above; set `PLUGINS_DIR` when they live elsewhere. Both install the debug build with `adb install` and push fixtures into the app's external private directory, so **no root is needed**; `plugin-e2e.sh` also expects a signed `sample` fixture (DeepDeep-Plugins currently ships only `template`, so point `E2E_DDP` at a signed bundle). `plugin-api-abi.sh` needs `unzip` and `javap` (`jar` is optional and falls back to `unzip`).
 
-An x86_64 AVD can run unit tests, compile, install and launch the app, and cover most UI work; the Linux environment, plugin e2e, screen control, and Root-tier system access require an arm64 device.
+An x86_64 AVD can run unit tests, compile, install and launch the app, run the plugin end-to-end scripts, and cover most UI work; the Linux environment, screen control, and Root-tier system access require an arm64 device.
 
 All Gradle calls go through `./scripts/gradlew-locked`; concurrent local builds may run out of memory.
 

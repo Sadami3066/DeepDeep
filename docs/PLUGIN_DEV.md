@@ -50,7 +50,7 @@ cp -R template my-plugin && cd my-plugin
 
 安装：把 `.ddp` 传到手机，可以直接在文件管理器里用 DeepDeep 打开、把文件分享给 DeepDeep，或在插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
 
-真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
+设备回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活；`scripts/plugin-e2e.sh` 用插件仓库的 `sample` 测试夹具回归安装、运行、停用与升级。脚本用 `adb install` 装 debug 包，把 `.ddp` 推进 App 外部私有目录，不需要 root，普通设备或模拟器都能跑。
 
 ## 工程与依赖
 

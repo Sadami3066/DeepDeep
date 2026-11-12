@@ -8,7 +8,7 @@ TEST_PACKAGE="io.github.whywood.deepdeep.test"
 RUNNER="androidx.test.runner.AndroidJUnitRunner"
 TEST_CLASS="io.github.whywood.deepdeep.plugin.manager.PluginBundleE2ETest"
 DEVICE_DIR="/sdcard/Android/data/${PACKAGE}/files/plugin-e2e"
-PLUGINS_DIR="${PLUGINS_DIR:-$(cd .. && pwd)/DeepDeep-Official-Plugins}"
+PLUGINS_DIR="${PLUGINS_DIR:-$(deepdeep_neighbor_dir DeepDeep-Official-Plugins || true)}"
 UPDATE_MODULE="${UPDATE_MODULE:-wecom}"
 UPDATE_VERSION="9.9.9"
 MODULES=(feishu wecom sysu micloud)
@@ -17,16 +17,15 @@ UPDATE_MANIFEST="${PLUGINS_DIR}/${UPDATE_MODULE}/src/main/assets/plugin.json"
 UPDATE_BUNDLE="${PLUGINS_DIR}/${UPDATE_MODULE}/build/plugin/${UPDATE_MODULE}.ddp"
 UPDATE_STAGED="/tmp/deepdeep-${UPDATE_MODULE}-update.ddp"
 
-if [[ ! -d "$PLUGINS_DIR" ]]; then
-  echo "plugin repository not found: $PLUGINS_DIR" >&2
+if [[ -z "$PLUGINS_DIR" || ! -d "$PLUGINS_DIR" ]]; then
+  echo "插件仓库不存在：${PLUGINS_DIR:-未找到}（用 PLUGINS_DIR 指定 DeepDeep-Official-Plugins 路径）" >&2
   exit 1
 fi
 
 deepdeep_require_adb
 serial="$(deepdeep_device_serial)"
-deepdeep_ensure_root "$serial"
 
-./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal :app:assembleDebug :app:assembleDebugAndroidTest
+./scripts/gradlew-locked :app:assembleDebug :app:assembleDebugAndroidTest
 
 (
   cd "$PLUGINS_DIR"
@@ -59,24 +58,15 @@ cp "$UPDATE_BUNDLE" "$UPDATE_STAGED"
 restore_update_manifest
 trap - EXIT
 
-adb -s "$serial" push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/deepdeep.apk >/dev/null
-adb -s "$serial" push app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/deepdeep-test.apk >/dev/null
-adb -s "$serial" shell su -c "pm install -r /data/local/tmp/deepdeep.apk" >/dev/null
-adb -s "$serial" shell su -c "pm install -r /data/local/tmp/deepdeep-test.apk" >/dev/null
-adb -s "$serial" shell su -c "mkdir -p ${DEVICE_DIR}"
-adb -s "$serial" shell su -c "rm -f ${DEVICE_DIR}/*.ddp"
-adb -s "$serial" shell su -c "mkdir -p ${DEVICE_DIR}-update"
-adb -s "$serial" shell su -c "rm -f ${DEVICE_DIR}-update/*.ddp"
+deepdeep_install_apk "$serial" app/build/outputs/apk/debug/app-debug.apk
+deepdeep_install_apk "$serial" app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
+deepdeep_clear_app_dir "$serial" "$DEVICE_DIR"
+deepdeep_clear_app_dir "$serial" "${DEVICE_DIR}-update"
 
 for module in "${MODULES[@]}"; do
-  ddp="${PLUGINS_DIR}/${module}/build/plugin/${module}.ddp"
-  adb -s "$serial" push "$ddp" "/data/local/tmp/${module}.ddp" >/dev/null
-  adb -s "$serial" shell su -c "cp /data/local/tmp/${module}.ddp ${DEVICE_DIR}/${module}.ddp"
-  adb -s "$serial" shell su -c "chmod 644 ${DEVICE_DIR}/${module}.ddp"
+  deepdeep_stage_app_file "$serial" "${PLUGINS_DIR}/${module}/build/plugin/${module}.ddp" "$DEVICE_DIR" "${module}.ddp"
 done
+deepdeep_stage_app_file "$serial" "$UPDATE_STAGED" "${DEVICE_DIR}-update" "${UPDATE_MODULE}.ddp"
 
-adb -s "$serial" push "$UPDATE_STAGED" "/data/local/tmp/${UPDATE_MODULE}-update.ddp" >/dev/null
-adb -s "$serial" shell su -c "cp /data/local/tmp/${UPDATE_MODULE}-update.ddp ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
-adb -s "$serial" shell su -c "chmod 644 ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
-
-adb -s "$serial" shell am instrument -w -e class "$TEST_CLASS" "${TEST_PACKAGE}/${RUNNER}"
+deepdeep_instrument "$serial" "$TEST_CLASS" "${TEST_PACKAGE}/${RUNNER}"

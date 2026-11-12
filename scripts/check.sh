@@ -33,6 +33,6 @@ if [[ "$device" -eq 1 ]]; then
   deepdeep_require_adb
   serial="$(deepdeep_device_serial)"
   adb -s "$serial" wait-for-device
-  adb -s "$serial" install -r app/build/outputs/apk/debug/app-debug.apk
+  deepdeep_install_apk "$serial" app/build/outputs/apk/debug/app-debug.apk
   adb -s "$serial" shell am start -n io.github.whywood.deepdeep/.MainActivity
 fi

@@ -176,16 +176,16 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 ./scripts/check.sh                # 编译 + 单测 + lint + 模块边界 + APK
 ./scripts/check.sh --full         # 交付前：再加插件 SDK ABI 基线
 ./scripts/check.sh --device       # 再加覆盖安装到手机并启动
-./scripts/plugin-e2e.sh           # 真机插件端到端
+./scripts/plugin-e2e.sh           # 插件端到端（设备或模拟器，无需 root）
 ./scripts/plugin-bundles-e2e.sh   # 四个官方插件包回归（需先构建插件仓库）
 ./scripts/plugin-api-abi.sh       # 单独校验插件 SDK ABI 基线（--update 更新）
 ```
 
 Agent SDK 经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`（版本即 `gradle/libs.versions.toml` 里的 `pi`）。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
 
-真机脚本需要 `adb`；多设备在线时用 `ANDROID_SERIAL` 指定（未指定且多台在线会报错）。`plugin-e2e.sh` 默认使用 `../plugins`，`plugin-bundles-e2e.sh` 默认使用 `../DeepDeep-Official-Plugins`，可用 `PLUGINS_DIR` 覆盖；两者都需要 arm64 真机并已 root（`su -c` 可用或 `adb root` 成功）。`plugin-e2e.sh` 还需要插件仓库里的 `sample` 模块，DeepDeep-Plugins 目前只有 `template`，缺失时脚本会直接报错。`plugin-api-abi.sh` 需要 `unzip`、`javap`（`jar` 可选，缺省时用 `unzip` 回退）。
+真机脚本需要 `adb`；多设备在线时用 `ANDROID_SERIAL` 指定（未指定且多台在线会报错）。插件 e2e 默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`，找不到或换位置时用 `PLUGINS_DIR` 指定。两个脚本都用 `adb install` 装 debug 包、把夹具推到 App 外部私有目录，**不需要 root**；`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具（DeepDeep-Plugins 目前只有 `template`，缺夹具时用 `E2E_DDP` 指定已签名包）。`plugin-api-abi.sh` 需要 `unzip`、`javap`（`jar` 可选，缺省时用 `unzip` 回退）。
 
-x86_64 模拟器可以完成单测、编译、安装启动和绝大多数 UI 开发；Linux 环境、插件 e2e、屏幕操作与 Root 档系统访问必须用 arm64 真机。
+x86_64 模拟器可以完成单测、编译、安装启动、插件 e2e 和绝大多数 UI 开发；Linux 环境、屏幕操作与 Root 档系统访问必须用 arm64 真机。
 
 所有 Gradle 调用走 `./scripts/gradlew-locked`；本机并发构建可能 OOM。
 
