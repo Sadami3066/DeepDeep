@@ -5,6 +5,7 @@
     <files-path name="workspaces" path="workspaces/" />
     <files-path name="plugins" path="plugins/" />
     <files-path name="gui" path="gui/" />
+    <files-path name="updates" path="updates/" />
     <cache-path name="camera" path="camera/" />
     <cache-path name="share_incoming" path="share-incoming/" />
     <cache-path name="handoff" path="handoff/" />

@@ -1,0 +1,26 @@
+<resources>
+    <string name="settings_update">Software update</string>
+    <string name="settings_update_available">%1$s available</string>
+    <string name="update_current_version">Current version %1$s</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_up_to_date">You’re up to date</string>
+    <string name="update_last_checked">Last checked %1$s</string>
+    <string name="update_recheck">Check again</string>
+    <string name="update_release_caption">Version %1$s · %2$s</string>
+    <string name="update_size_mb">%1$d MB</string>
+    <string name="update_download_install">Download and install</string>
+    <string name="update_downloading">Downloading %1$d%%</string>
+    <string name="update_ready">Downloaded and ready to install</string>
+    <string name="update_install">Install</string>
+    <string name="update_permission_needed">Allow DeepDeep to install apps</string>
+    <string name="update_open_permission">Allow</string>
+    <string name="update_error_network">Can’t reach the update service. Check your network and try again.</string>
+    <string name="update_error_service">Update information is invalid. Try again later.</string>
+    <string name="update_error_no_release">No update available right now</string>
+    <string name="update_error_download">Download failed. Try again.</string>
+    <string name="update_error_verify">Package verification failed. Try again.</string>
+    <string name="update_error_archive">The package doesn’t match this version</string>
+    <string name="update_error_install">Can’t open the installer</string>
+    <string name="update_retry">Retry</string>
+    <string name="update_open_browser">Open in browser</string>
+</resources>

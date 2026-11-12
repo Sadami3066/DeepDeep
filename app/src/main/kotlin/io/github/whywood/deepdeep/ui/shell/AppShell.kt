@@ -36,6 +36,7 @@ import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.session.SessionExporter
 import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.exportShareIntent
+import io.github.whywood.deepdeep.data.update.hasUpdate
 import io.github.whywood.deepdeep.design.DdFontStyle
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -152,6 +153,7 @@ internal fun AppShell(
     )
     val devPackages by graph.devPackageManager.state.collectAsStateWithLifecycle()
     val voiceAutoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(initialValue = false)
+    val updateUi by graph.updateManager.ui.collectAsStateWithLifecycle()
     val appLanguage = remember(context) { LanguagePreferences(context).read() }
     val colors = deepDeepColors()
     val attachmentMissingMessage = stringResource(R.string.assistant_attach_missing)
@@ -630,6 +632,7 @@ internal fun AppShell(
             jobSessionIds,
             nickname,
             avatarBitmap,
+            updateUi.hasUpdate,
         )
         val drawerActions = ShellDrawerActions(
             onNavigate = { destination -> drawerOpen = false; navigator.push(destination) },

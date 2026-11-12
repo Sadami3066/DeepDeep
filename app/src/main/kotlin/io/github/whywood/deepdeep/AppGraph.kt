@@ -30,6 +30,9 @@ import io.github.whywood.deepdeep.data.StorageMigration
 import io.github.whywood.deepdeep.data.ThemePreferences
 import io.github.whywood.deepdeep.data.VoicePreferences
 import io.github.whywood.deepdeep.data.remote.RemoteConnection
+import io.github.whywood.deepdeep.data.update.AndroidUpdateInstaller
+import io.github.whywood.deepdeep.data.update.DataStoreUpdateStore
+import io.github.whywood.deepdeep.data.update.UpdateManager
 import io.github.whywood.deepdeep.graph.DataGraph
 import io.github.whywood.deepdeep.graph.DataGraphDeps
 import io.github.whywood.deepdeep.graph.PlatformGraph
@@ -153,6 +156,18 @@ class AppGraph(context: Context) : AppDependencies {
     override val questionCenter: QuestionCenter get() = dataGraph.questionCenter
     override val goalService: GoalService get() = dataGraph.goalService
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
+
+    override val updateManager: UpdateManager by lazy {
+        UpdateManager(
+            transport = dataGraph.httpTransport,
+            store = DataStoreUpdateStore(appContext),
+            installer = AndroidUpdateInstaller(appContext),
+            updatesDir = File(appContext.filesDir, "updates"),
+            scope = scope,
+            currentVersionName = BuildConfig.VERSION_NAME,
+            onFailure = { message, error -> Diagnostics.log(appContext, message, error) },
+        )
+    }
 
     override val hostAccess: HostAccessController get() = platformGraph.hostAccess
     override val hostEnvironmentProvider: HostEnvironmentProvider get() = platformGraph.hostEnvironmentProvider

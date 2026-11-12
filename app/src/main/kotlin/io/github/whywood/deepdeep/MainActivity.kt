@@ -116,6 +116,7 @@ class MainActivity : ComponentActivity() {
         AppVisibility.taskId = taskId
         graph.notificationCenter.clearQuestionNotifications()
         graph.processRuntime.onForeground()
+        graph.updateManager.maybeAutoCheck()
     }
 
     override fun onStop() {

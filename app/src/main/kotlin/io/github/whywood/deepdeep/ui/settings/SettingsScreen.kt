@@ -36,7 +36,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -98,6 +97,8 @@ fun SettingsScreen(
     archivedCount: Int = 0,
     onOpenArchived: () -> Unit = {},
     onLanguageChange: () -> Unit = {},
+    updateVersion: String? = null,
+    onOpenUpdate: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -269,6 +270,27 @@ fun SettingsScreen(
             SettingsSectionLabel(stringResource(R.string.settings_group_about))
             DdGroupCard {
                 DdListRow(
+                    icon = DdIcons.Download,
+                    title = stringResource(R.string.settings_update),
+                    value = if (updateVersion == null) versionName else null,
+                    trailing = if (updateVersion != null) {
+                        {
+                            Text(
+                                text = stringResource(R.string.settings_update_available, updateVersion),
+                                style = DdType.bodySmall,
+                                color = colors.accent,
+                                maxLines = 1,
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                    onClick = onOpenUpdate,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_update"),
+                )
+                DdRowDivider(leadingInset = SettingsDividerInset)
+                DdListRow(
                     icon = DdIcons.License,
                     title = stringResource(R.string.settings_license),
                     onClick = { showLicenses = true },
@@ -276,15 +298,6 @@ fun SettingsScreen(
                 )
             }
 
-            Text(
-                text = "DeepDeep · $versionName",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp),
-                style = DdType.micro,
-                color = colors.inkTertiary,
-                textAlign = TextAlign.Center,
-            )
             Spacer(Modifier.height(40.dp))
         }
     }

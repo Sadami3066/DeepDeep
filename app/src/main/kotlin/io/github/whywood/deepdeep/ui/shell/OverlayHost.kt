@@ -87,6 +87,7 @@ data class ShellDrawerState(
     val jobSessionIds: Set<String>,
     val userName: String,
     val avatar: ImageBitmap? = null,
+    val hasUpdate: Boolean = false,
 )
 data class ShellDrawerActions(
     val onNavigate: (AppDestination) -> Unit, val onDismiss: () -> Unit,
@@ -213,6 +214,7 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 jobSessionIds = state.jobSessionIds,
                 userName = state.userName,
                 avatar = state.avatar,
+                hasUpdate = state.hasUpdate,
                 onOpenSearch = { actions.onNavigate(AppDestination.Search) },
                 onOpenMiniapp = { actions.onNavigate(AppDestination.Miniapp) },
                 onOpenSkills = { actions.onNavigate(AppDestination.Skills) },

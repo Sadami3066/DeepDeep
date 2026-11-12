@@ -24,6 +24,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.ScanJsonRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ScanSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SettingsRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.SoftwareUpdateRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.SystemAccessRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.TimersRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.UsageHabitsRoute
@@ -115,6 +116,8 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
 
 
         AppDestination.WebSearch -> WebSearchRoute(dependencies, onBack)
+
+        AppDestination.Update -> SoftwareUpdateRoute(dependencies, onBack)
 
         AppDestination.Personalization -> PersonalizationRoute(dependencies, host.scope, onBack)
 

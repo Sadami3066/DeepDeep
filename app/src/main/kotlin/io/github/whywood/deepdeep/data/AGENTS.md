@@ -41,6 +41,7 @@
 | `StorageMountStore.kt` | 公共存储挂载目录 `files/storage-mounts.json`：`StorageMount(id,name,description,path)`、最多 20 个、名称≤32/说明≤160、限定 `/storage/emulated/0/`、原子写 |
 | `WorkspaceToolPolicyStore.kt` | 工作区工具策略 `files/workspace-tool-policies.json`：按 canonical cwd 存 `WorkspaceToolPolicy(skills, plugins, mcpServers)`，记录该工作区不继承的全局技能名、插件 id 与 MCP 服务器名；Mutex + 原子写 |
 | `ThemePreferences.kt` | 深浅色主题 DataStore |
+| [update/](update/AGENTS.md) | 应用内更新：GitHub 最新 Release 检查、下载校验与系统安装（详见子包文档） |
 | `VoicePreferences.kt` | 语音自动朗读开关 DataStore |
 
 ## 要点

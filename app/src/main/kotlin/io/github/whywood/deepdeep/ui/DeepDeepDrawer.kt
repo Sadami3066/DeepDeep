@@ -174,6 +174,7 @@ fun DeepDeepDrawer(
     onSetArchived: (String, Boolean) -> Unit,
     onDelete: (String) -> Unit,
     onSettings: () -> Unit,
+    hasUpdate: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -392,7 +393,7 @@ fun DeepDeepDrawer(
         }
         DdHairline(color = colors.hairline.copy(alpha = DdAlpha.Hairline))
         Spacer(Modifier.height(DdSpacing.Md))
-        DrawerAccountRow(userName = userName, avatar = avatar, onClick = onSettings)
+        DrawerAccountRow(userName = userName, avatar = avatar, hasUpdate = hasUpdate, onClick = onSettings)
         Spacer(Modifier.height(DdSpacing.Md))
     }
     renameTarget?.let { session ->
@@ -843,6 +844,7 @@ private fun DrawerSessionRow(
 private fun DrawerAccountRow(
     userName: String,
     avatar: ImageBitmap?,
+    hasUpdate: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -873,11 +875,21 @@ private fun DrawerAccountRow(
                 maxLines = 1,
             )
         }
-        DdIcon(
-            icon = DdIcons.Settings,
-            tint = colors.inkTertiary,
-            size = 16.dp,
-            modifier = Modifier.testTag("drawer_account_settings"),
-        )
+        Box(Modifier.size(18.dp)) {
+            DdIcon(
+                icon = DdIcons.Settings,
+                tint = colors.inkTertiary,
+                size = 16.dp,
+                modifier = Modifier.align(Alignment.Center).testTag("drawer_account_settings"),
+            )
+            if (hasUpdate) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .size(6.dp)
+                        .background(colors.accent, CircleShape),
+                )
+            }
+        }
     }
 }

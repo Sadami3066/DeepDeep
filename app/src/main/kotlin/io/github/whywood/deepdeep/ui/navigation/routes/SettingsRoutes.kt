@@ -16,6 +16,7 @@ import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.PersonalizationUi
 import io.github.whywood.deepdeep.data.StorageMount
 import io.github.whywood.deepdeep.data.UiPreferences
+import io.github.whywood.deepdeep.data.update.releaseOrNull
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
@@ -28,6 +29,7 @@ import io.github.whywood.deepdeep.ui.settings.SystemAccessScreen
 import io.github.whywood.deepdeep.ui.settings.UsageHabitsScreen
 import io.github.whywood.deepdeep.ui.settings.ScanJsonScreen
 import io.github.whywood.deepdeep.ui.settings.ScanSettingsScreen
+import io.github.whywood.deepdeep.ui.settings.SoftwareUpdateScreen
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -52,6 +54,7 @@ internal fun SettingsRoute(
     val overlayEntryMode by dependencies.overlayEntryPreferences.mode.collectAsStateWithLifecycle(
         initialValue = OverlayEntryMode.VOICE,
     )
+    val updateUi by dependencies.updateManager.ui.collectAsStateWithLifecycle()
     SettingsScreen(
         nickname = ui.nickname,
         avatar = ui.avatar,
@@ -82,6 +85,25 @@ internal fun SettingsRoute(
         archivedCount = archivedCount,
         onOpenArchived = { navigator.push(AppDestination.Archived) },
         onLanguageChange = { dependencies.pluginManager.refresh() },
+        updateVersion = updateUi.phase.releaseOrNull?.versionName,
+        onOpenUpdate = { navigator.push(AppDestination.Update) },
+    )
+}
+
+@Composable
+internal fun SoftwareUpdateRoute(dependencies: AppDependencies, onBack: () -> Unit) {
+    val ui by dependencies.updateManager.ui.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { dependencies.updateManager.onPageOpened() }
+    SoftwareUpdateScreen(
+        ui = ui,
+        currentVersion = BuildConfig.VERSION_NAME,
+        onBack = onBack,
+        onCheck = dependencies.updateManager::checkManually,
+        onRetry = dependencies.updateManager::retry,
+        onDownload = dependencies.updateManager::download,
+        onInstall = dependencies.updateManager::install,
+        onOpenInstallPermission = dependencies.updateManager::openInstallPermission,
+        onResume = dependencies.updateManager::onScreenResumed,
     )
 }
 

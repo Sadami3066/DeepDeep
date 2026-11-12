@@ -1,6 +1,6 @@
 # ui · 页面与组件
 
-Compose 界面层：按功能分子包，每个子包是一个页面/组件域。Screen 只渲染状态与回调，数据由 ViewModel 或 StateHolder 提供，装配与导航统一在 `navigation/`。本目录直接文件为 `DeepDeepDrawer.kt`（常驻抽屉：账户行、功能导航、按工作区分组的会话列表，会话行尾显示定时/后台任务标记）与 `DrawerSessionMarkers.kt`（从定时器与后台任务状态推导会话标记的纯函数），其余都是子包。
+Compose 界面层：按功能分子包，每个子包是一个页面/组件域。Screen 只渲染状态与回调，数据由 ViewModel 或 StateHolder 提供，装配与导航统一在 `navigation/`。本目录直接文件为 `DeepDeepDrawer.kt`（常驻抽屉：账户行、功能导航、按工作区分组的会话列表，会话行尾显示定时/后台任务标记；有新版本时账户行齿轮旁显示小圆点）与 `DrawerSessionMarkers.kt`（从定时器与后台任务状态推导会话标记的纯函数），其余都是子包。
 
 ## 子包
 
