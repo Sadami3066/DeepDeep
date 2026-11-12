@@ -93,6 +93,42 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
     }
 }
 
+subprojects {
+    tasks.withType<Test>().configureEach {
+        environment("LC_ALL", "C")
+        environment("TZ", "UTC")
+    }
+}
+
+val verifyDocFacts = tasks.register("verifyDocFacts") {
+    val noticesRoot = layout.projectDirectory.file("THIRD_PARTY_NOTICES.md")
+    val noticesPackaged = layout.projectDirectory.file("app/src/main/assets/licenses/THIRD_PARTY_NOTICES.md")
+    val appBuild = layout.projectDirectory.file("app/build.gradle.kts")
+    val readmeZh = layout.projectDirectory.file("README.md")
+    val readmeEn = layout.projectDirectory.file("README.en.md")
+    val versionCatalog = layout.projectDirectory.file("gradle/libs.versions.toml")
+    inputs.files(noticesRoot, noticesPackaged, appBuild, readmeZh, readmeEn, versionCatalog)
+    doLast {
+        check(noticesRoot.asFile.readText() == noticesPackaged.asFile.readText()) {
+            "THIRD_PARTY_NOTICES.md 与 app/src/main/assets/licenses 下的打包副本不一致：改根文件后同步复制"
+        }
+        val versionName = Regex("versionName = \"([^\"]+)\"").find(appBuild.asFile.readText())
+            ?.groupValues?.get(1) ?: error("cannot read versionName from app/build.gradle.kts")
+        check(readmeZh.asFile.readText().contains("当前版本为 $versionName")) {
+            "README.md 的当前版本与 app/build.gradle.kts 的 versionName($versionName) 不一致"
+        }
+        check(readmeEn.asFile.readText().contains("Version $versionName is distributed")) {
+            "README.en.md 的当前版本与 app/build.gradle.kts 的 versionName($versionName) 不一致"
+        }
+        val sdkVersion = Regex("pi = \"v([^\"]+)\"").find(versionCatalog.asFile.readText())
+            ?.groupValues?.get(1) ?: error("cannot read pi version from gradle/libs.versions.toml")
+        check(noticesRoot.asFile.readText().contains("pi2kotlin SDK $sdkVersion")) {
+            "THIRD_PARTY_NOTICES.md 的 SDK 版本与 gradle/libs.versions.toml 的 pi($sdkVersion) 不一致"
+        }
+        logger.lifecycle("Doc facts verified (version $versionName, SDK $sdkVersion)")
+    }
+}
+
 gradle.projectsEvaluated {
     val allowed = mapOf(
         ":app" to setOf(":runtime", ":shell", ":design", ":plugin-api"),
@@ -130,6 +166,7 @@ gradle.projectsEvaluated {
     tasks.named("check") {
         dependsOn(verifyModuleBoundaries)
         dependsOn(verifyPackageBoundaries)
+        dependsOn(verifyDocFacts)
         dependsOn(unitTestTasks)
         dependsOn(lintTasks)
     }
