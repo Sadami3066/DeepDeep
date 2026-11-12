@@ -1,6 +1,1167 @@
 {
-  "schemaVersion": 2,
-  "generatedAt": "2026-11-08T04:38:30Z",
+  "schemaVersion": 3,
+  "generatedAt": "2026-11-12T05:23:25Z",
   "keyId": "ec256:db63256431bd66db",
-  "entries": []
+  "entries": [
+    {
+      "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.feishu",
+      "name": {
+        "zh": "飞书",
+        "en": "Feishu"
+      },
+      "summary": {
+        "zh": "消息、日历、云文档与邮箱",
+        "en": "Messages, calendar, docs, and mail"
+      },
+      "description": {
+        "zh": "通过官方 lark-cli 读写飞书消息、日历、云文档、云空间、邮箱与任务。\n在插件页面安装 CLI、连接账号并管理应用权限。",
+        "en": "Read and send Feishu messages, manage calendar events, cloud docs, drive files, mail, and tasks through the official lark-cli.\nInstall the CLI and connect your account on the plugin page."
+      },
+      "icon": "icons/feishu.png",
+      "tags": {
+        "zh": [
+          "飞书",
+          "办公",
+          "消息"
+        ],
+        "en": [
+          "Feishu",
+          "Productivity",
+          "Messaging"
+        ]
+      },
+      "version": "1.0.3",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/feishu-1.0.3.ddp",
+        "sha256": "119abc51755387e69a32eae18997e7ab3937a13708bfc17301bd5f8e9c54f540",
+        "size": 929061
+      },
+      "plugin": {
+        "apiLevel": 5,
+        "minHostVersion": "1.0.1",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "version": "1.0.3"
+      }
+    },
+    {
+      "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.micloud",
+      "name": {
+        "zh": "小米云服务",
+        "en": "Mi Cloud"
+      },
+      "summary": {
+        "zh": "读取小米云笔记、待办、相册与短信",
+        "en": "Notes, tasks, photos, and SMS from Mi Cloud"
+      },
+      "description": {
+        "zh": "连接小米账号后读取小米云服务中的笔记、待办、短信、联系人、相册与录音。\n首次使用需在插件页面完成小米账号登录。",
+        "en": "Connect a Xiaomi account to read notes, tasks, SMS, contacts, photos, and recordings from Mi Cloud.\nSign in to your Xiaomi account on the plugin page first."
+      },
+      "icon": "icons/micloud.png",
+      "tags": {
+        "zh": [
+          "小米云",
+          "笔记",
+          "相册"
+        ],
+        "en": [
+          "Mi Cloud",
+          "Notes",
+          "Photos"
+        ]
+      },
+      "version": "1.0.4",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/micloud-1.0.4.ddp",
+        "sha256": "d99cea18838d50c4234e9293ee839972c76c804fe56370e940e7aa938e02680d",
+        "size": 929115
+      },
+      "plugin": {
+        "apiLevel": 5,
+        "minHostVersion": "1.0.1",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "version": "1.0.4"
+      }
+    },
+    {
+      "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.sysu",
+      "name": {
+        "zh": "中山大学 CLI",
+        "en": "SYSU CLI"
+      },
+      "summary": {
+        "zh": "教务、在线教学、体育场馆与网费",
+        "en": "Academics, LMS, gym, and campus network"
+      },
+      "description": {
+        "zh": "使用 Node.js sysu CLI 查询课表、成绩、考试、公告、在线教学、场馆预约、网费与统一认证换票；账号密码只在插件页使用",
+        "en": "Query timetable, grades, exams, notices, online courses, gym bookings, campus network, and SSO tickets with the Node.js sysu CLI inside the Linux runtime.\nSign-in and credentials are handled on the plugin page, and the CLI installs automatically on first use."
+      },
+      "icon": "icons/sysu.png",
+      "tags": {
+        "zh": [
+          "中山大学",
+          "教务",
+          "命令行"
+        ],
+        "en": [
+          "Sun Yat-sen University",
+          "Academics",
+          "CLI"
+        ]
+      },
+      "version": "1.2.4",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/sysu-1.2.4.ddp",
+        "sha256": "fef6c4809c9a4909e2bfa32186f804e3288fe4b00668c5bee77053e3ba7d7bc8",
+        "size": 949235
+      },
+      "plugin": {
+        "apiLevel": 5,
+        "minHostVersion": "1.0.1",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "previews": [
+          "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-1.jpg",
+          "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-2.jpg"
+        ],
+        "version": "1.2.4"
+      }
+    },
+    {
+      "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.wechat",
+      "name": {
+        "zh": "微信导出",
+        "en": "WeChat Export"
+      },
+      "summary": {
+        "zh": "按日期范围导出完整微信记录",
+        "en": "Export complete WeChat records for a date range"
+      },
+      "description": {
+        "zh": "在 Linux 运行环境里同步、解密微信本地数据库，按日期范围导出完整聊天记录。CLI 只做数据清洗和导出，不做筛选或摘要；需要把系统访问切到 Root。",
+        "en": "Sync and decrypt the local WeChat database inside the Linux runtime, then export complete chat records for a date range. The CLI only formats and exports; set system access to Root."
+      },
+      "icon": "icons/wechat.png",
+      "tags": {
+        "zh": [
+          "微信",
+          "导出",
+          "聊天记录"
+        ],
+        "en": [
+          "WeChat",
+          "Export",
+          "Chat history"
+        ]
+      },
+      "version": "0.2.2",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/wechat-0.2.2.ddp",
+        "sha256": "3b079a26db896f21d3408918a7380d194c5ec47f1f63b0b20b20824d92f53aa1",
+        "size": 868072
+      },
+      "plugin": {
+        "apiLevel": 5,
+        "minHostVersion": "1.0.1",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "root",
+        "version": "0.2.2"
+      }
+    },
+    {
+      "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.wecom",
+      "name": {
+        "zh": "企业微信",
+        "en": "WeCom"
+      },
+      "summary": {
+        "zh": "消息、邮件、文档、日程与待办",
+        "en": "Messages, mail, docs, schedules, and tasks"
+      },
+      "description": {
+        "zh": "安装官方 wecom-cli 后扫码授权，操作企业微信的消息、邮件、文档、日程与待办。\n账号授权与 CLI 安装都在插件页面完成。",
+        "en": "Scan the QR code to authorize the official wecom-cli, then work with WeCom messages, mail, docs, schedules, and tasks.\nCLI install and account authorization both happen on the plugin page."
+      },
+      "icon": "icons/wecom.png",
+      "tags": {
+        "zh": [
+          "企业微信",
+          "办公",
+          "消息"
+        ],
+        "en": [
+          "WeCom",
+          "Productivity",
+          "Messaging"
+        ]
+      },
+      "version": "1.0.3",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/wecom-1.0.3.ddp",
+        "sha256": "0eb0c58cba1a175f04b6bba24109de7363fc61158463e445c978448088b4c80e",
+        "size": 964812
+      },
+      "plugin": {
+        "apiLevel": 5,
+        "minHostVersion": "1.0.1",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "version": "1.0.3"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "brainstorming",
+      "name": {
+        "zh": "头脑风暴",
+        "en": "Brainstorming"
+      },
+      "summary": {
+        "zh": "动手实现前先梳理需求与方案",
+        "en": "Shape the idea before writing code"
+      },
+      "description": {
+        "zh": "在开始写代码或做任何创作前，用对话把需求、约束与可选方案梳理清楚。\n产出经过确认的设计，再进入实现。\n适合新功能、组件、行为改动或任何从零开始的计划。",
+        "en": "Use a guided conversation to clarify requirements, constraints, and options before any creative work.\nConfirm a direction first, then move into implementation.\nGreat for new features, components, behavior changes, or any plan from scratch."
+      },
+      "icon": "icons/superpowers.png",
+      "tags": {
+        "zh": [
+          "规划",
+          "协作"
+        ],
+        "en": [
+          "Planning",
+          "Collaboration"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/brainstorming-1.0.0.zip",
+        "sha256": "8cecdc0877847c9425b424d4ac938a5471a032259e621c22baf9bc2773e00030",
+        "size": 32015
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/obra/superpowers"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "github-issue-creator",
+      "name": {
+        "zh": "GitHub Issue 整理",
+        "en": "GitHub Issue Creator"
+      },
+      "summary": {
+        "zh": "把零散信息整理成规范 issue",
+        "en": "Turn scattered notes into a clean issue"
+      },
+      "description": {
+        "zh": "把错误日志、语音记录或截图整理成结构清晰的 GitHub issue。\n支持附图与 GIF 作为证据，适合从非正式描述快速建单。",
+        "en": "Turn error logs, voice notes, or screenshots into a well-structured GitHub issue.\nSupports images and GIFs as evidence, making it fast to file a clear issue."
+      },
+      "tags": {
+        "zh": [
+          "GitHub",
+          "协作"
+        ],
+        "en": [
+          "GitHub",
+          "Collaboration"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/github-issue-creator-1.0.0.zip",
+        "sha256": "52ba6d4a41f0bf18c818b49954d81c88183ae504346f4855abae9aab179ce7c4",
+        "size": 3114
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/microsoft/skills"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "mcp-builder",
+      "name": {
+        "zh": "MCP 服务器开发",
+        "en": "MCP Server Development"
+      },
+      "summary": {
+        "zh": "构建高质量 MCP 服务器的指南",
+        "en": "Guide to building quality MCP servers"
+      },
+      "description": {
+        "zh": "面向 Python(FastMCP)、Node/TypeScript 与 C#/.NET 的 MCP 服务器开发指南。\n覆盖工具设计、评估、最佳实践与多语言模板，适合把外部 API 接入助手。",
+        "en": "A guide to building MCP servers in Python (FastMCP), Node/TypeScript, and C#/.NET.\nCovers tool design, evaluation, best practices, and templates for exposing external APIs to assistants."
+      },
+      "tags": {
+        "zh": [
+          "MCP",
+          "开发"
+        ],
+        "en": [
+          "MCP",
+          "Development"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/mcp-builder-1.0.0.zip",
+        "sha256": "fc4ad1bbcab9e599c472dc410a8ef9e192db39d60c59a8515e9d4a7fc8331b88",
+        "size": 50517
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/microsoft/skills"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "skill-creator",
+      "name": {
+        "zh": "技能创建",
+        "en": "Skill Creator"
+      },
+      "summary": {
+        "zh": "创建与更新技能的规范与脚手架",
+        "en": "Patterns and scaffolding for creating skills"
+      },
+      "description": {
+        "zh": "为 AI 编码助手创建高质量技能：结构、输出模式与工作流。\n侧重 Azure SDK 与 Microsoft Foundry 场景，含初始化、打包与校验脚本。",
+        "en": "Create high-quality skills for AI coding agents: structure, output patterns, and workflows.\nFocused on Azure SDK and Microsoft Foundry scenarios, with init, package, and validation scripts."
+      },
+      "tags": {
+        "zh": [
+          "技能",
+          "开发"
+        ],
+        "en": [
+          "Skills",
+          "Development"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/skill-creator-1.0.0.zip",
+        "sha256": "e00bde12ea883204f07170f17026ded7cd8c43f7c7b01bf5d48d00b37f27ceca",
+        "size": 42680
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/microsoft/skills"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "systematic-debugging",
+      "name": {
+        "zh": "系统化调试",
+        "en": "Systematic Debugging"
+      },
+      "summary": {
+        "zh": "用可复现的流程定位 bug 根因",
+        "en": "Trace bugs to their root cause"
+      },
+      "description": {
+        "zh": "遇到 bug、测试失败或意外行为时，先建立可复现证据，再沿调用链追到根因。\n强调先改测试复现、再做最小修复，避免拍脑袋改代码。",
+        "en": "When a bug, failing test, or unexpected behavior shows up, reproduce it first, then trace the call chain to the root cause.\nEmphasizes a failing test followed by the smallest fix instead of guessing."
+      },
+      "icon": "icons/superpowers.png",
+      "tags": {
+        "zh": [
+          "调试",
+          "开发"
+        ],
+        "en": [
+          "Debugging",
+          "Development"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/systematic-debugging-1.0.0.zip",
+        "sha256": "6e3b657b5935b56deee18c1ba0f817d3a69b6bab19429b78c68b5ff652544379",
+        "size": 14070
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/obra/superpowers"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "test-driven-development",
+      "name": {
+        "zh": "测试驱动开发",
+        "en": "Test-Driven Development"
+      },
+      "summary": {
+        "zh": "先写测试再写实现",
+        "en": "Write the test before the code"
+      },
+      "description": {
+        "zh": "在写实现代码前先写会失败的测试，用红-绿-重构推进功能与修复。\n包含如何写出好的测试与常见反模式。\n适合任何新功能或 bug 修复。",
+        "en": "Write a failing test first, then implement, using red-green-refactor for features and fixes.\nCovers how to write good tests and common anti-patterns.\nWorks for any new feature or bug fix."
+      },
+      "icon": "icons/superpowers.png",
+      "tags": {
+        "zh": [
+          "测试",
+          "开发"
+        ],
+        "en": [
+          "Testing",
+          "Development"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/test-driven-development-1.0.0.zip",
+        "sha256": "ad7668b35a0effdd31012c3c9dd594cd641232658fb0c3b93473b1b111d291db",
+        "size": 9373
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/obra/superpowers"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "verification-before-completion",
+      "name": {
+        "zh": "完成前验证",
+        "en": "Verification Before Completion"
+      },
+      "summary": {
+        "zh": "声称完成前先跑验证并给出证据",
+        "en": "Run the checks before claiming done"
+      },
+      "description": {
+        "zh": "在说「做完了/修好了/测试通过」之前，先运行验证命令并核对输出。\n要求用证据代替断言，避免未经验证的完成声明。",
+        "en": "Before saying done, fixed, or passing, run the verification commands and check the output.\nEvidence before assertions: never claim success without running it."
+      },
+      "icon": "icons/superpowers.png",
+      "tags": {
+        "zh": [
+          "测试",
+          "质量"
+        ],
+        "en": [
+          "Testing",
+          "Quality"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/verification-before-completion-1.0.0.zip",
+        "sha256": "10b8cb79c2acf14dfc05c71bcb4d15a7020aab6f98111caef2f16922d6a1ba6a",
+        "size": 3260
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/obra/superpowers"
+      }
+    },
+    {
+      "type": "skill",
+      "id": "writing-plans",
+      "name": {
+        "zh": "编写实施计划",
+        "en": "Writing Plans"
+      },
+      "summary": {
+        "zh": "把需求拆成可执行的步骤",
+        "en": "Turn requirements into executable steps"
+      },
+      "description": {
+        "zh": "当需求已明确但改动跨多个步骤时，先写出分阶段、可验证的实施计划。\n计划包含任务拆分、顺序与每步的验证方式，再开始动代码。",
+        "en": "When requirements are clear but the change spans multiple steps, write a staged, verifiable plan first.\nPlans cover task breakdown, ordering, and how to verify each step before code changes."
+      },
+      "icon": "icons/superpowers.png",
+      "tags": {
+        "zh": [
+          "规划",
+          "开发"
+        ],
+        "en": [
+          "Planning",
+          "Development"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/writing-plans-1.0.0.zip",
+        "sha256": "74f5cd62f93172649a715e32e99b17596b07fe5aa4a466ebe6634e7e31123d81",
+        "size": 5784
+      },
+      "skill": {
+        "license": "MIT",
+        "source": "https://github.com/obra/superpowers"
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "airtable",
+      "name": {
+        "zh": "Airtable",
+        "en": "Airtable"
+      },
+      "summary": {
+        "zh": "读写 Airtable 数据库与记录",
+        "en": "Read and write Airtable bases and records"
+      },
+      "description": {
+        "zh": "连接 Airtable 作为数据库与操作层，查询、创建和更新记录。\n适合把表格数据接入对话流程。",
+        "en": "Use Airtable as a database and operations layer: query, create, and update records.\nGood for bringing table data into the conversation."
+      },
+      "icon": "icons/airtable.png",
+      "tags": {
+        "zh": [
+          "数据库",
+          "表格",
+          "协作"
+        ],
+        "en": [
+          "Database",
+          "Spreadsheets",
+          "Collaboration"
+        ]
+      },
+      "version": "0.1.0",
+      "mcp": {
+        "url": "https://mcp.airtable.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Airtable 并授权。",
+          "en": "Sign in to Airtable in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "apify",
+      "name": {
+        "zh": "Apify",
+        "en": "Apify"
+      },
+      "summary": {
+        "zh": "调用万级爬虫与自动化工具",
+        "en": "Run scrapers and automations from Apify"
+      },
+      "description": {
+        "zh": "从 Apify Store 调用现成的爬虫、抓取器与自动化工具提取网站数据。\n连接时需要 Apify API Token。",
+        "en": "Call ready-made scrapers, crawlers, and automation tools from Apify Store to extract website data.\nRequires an Apify API token."
+      },
+      "icon": "icons/apify.png",
+      "tags": {
+        "zh": [
+          "网页抓取",
+          "自动化",
+          "数据"
+        ],
+        "en": [
+          "Scraping",
+          "Automation",
+          "Data"
+        ]
+      },
+      "version": "0.21.4",
+      "mcp": {
+        "url": "https://mcp.apify.com/",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "需要 Apify API Token，连接时按提示填写。",
+          "en": "Requires an Apify API token; you'll be asked for it when connecting."
+        },
+        "auth": {
+          "type": "apiKey",
+          "header": "Authorization",
+          "prefix": "Bearer ",
+          "placeholder": {
+            "zh": "粘贴 Apify API Token",
+            "en": "Paste your Apify API token"
+          },
+          "helpUrl": "https://console.apify.com/settings/integrations"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "atlassian",
+      "name": {
+        "zh": "Atlassian",
+        "en": "Atlassian"
+      },
+      "summary": {
+        "zh": "搜索与管理 Jira、Confluence、Loom",
+        "en": "Search and manage Jira, Confluence, and Loom"
+      },
+      "description": {
+        "zh": "通过 Atlassian Rovo MCP 搜索、创建和管理 Jira、Confluence、Loom 等工作内容。\n首次连接需使用 Atlassian 账号完成 OAuth 授权。",
+        "en": "Search, create, and manage Jira issues, Confluence pages, Loom videos, and more via Atlassian Rovo MCP.\nSign in with your Atlassian account to authorize on first connect."
+      },
+      "icon": "icons/atlassian.png",
+      "tags": {
+        "zh": [
+          "协作",
+          "项目管理",
+          "文档"
+        ],
+        "en": [
+          "Collaboration",
+          "Project Management",
+          "Documentation"
+        ]
+      },
+      "version": "2.0.0",
+      "mcp": {
+        "url": "https://mcp.atlassian.com/v2/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Atlassian 并授权。",
+          "en": "Sign in to Atlassian in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "canva",
+      "name": {
+        "zh": "Canva",
+        "en": "Canva"
+      },
+      "summary": {
+        "zh": "创建、搜索、编辑与导出设计",
+        "en": "Create, search, edit, and export designs"
+      },
+      "description": {
+        "zh": "在 Canva 中创建、搜索、编辑设计，并导出设计资源。\n适合生成海报、社媒图与演示文稿素材。",
+        "en": "Create, search, and edit designs in Canva, then export the results.\nHandy for posters, social images, and presentation assets."
+      },
+      "icon": "icons/canva.png",
+      "tags": {
+        "zh": [
+          "设计",
+          "图片"
+        ],
+        "en": [
+          "Design",
+          "Images"
+        ]
+      },
+      "version": "1.0.0",
+      "mcp": {
+        "url": "https://mcp.canva.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Canva 并授权。",
+          "en": "Sign in to Canva in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "cloudflare",
+      "name": {
+        "zh": "Cloudflare 文档",
+        "en": "Cloudflare Docs"
+      },
+      "summary": {
+        "zh": "检索 Cloudflare 文档与 API 说明",
+        "en": "Search Cloudflare docs and API references"
+      },
+      "description": {
+        "zh": "提供 Cloudflare 官方文档检索工具，帮助查询产品说明与 API 用法。\n公开服务，无需账号即可连接。",
+        "en": "Search the official Cloudflare documentation for product guides and API usage.\nPublic service: no account needed."
+      },
+      "icon": "icons/cloudflare.png",
+      "tags": {
+        "zh": [
+          "云服务",
+          "文档"
+        ],
+        "en": [
+          "Cloud",
+          "Documentation"
+        ]
+      },
+      "version": "1.0.0",
+      "mcp": {
+        "url": "https://docs.mcp.cloudflare.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "公开访问，无需授权。",
+          "en": "Public access; no authorization required."
+        },
+        "auth": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "context7",
+      "name": {
+        "zh": "Context7",
+        "en": "Context7"
+      },
+      "summary": {
+        "zh": "获取库与框架的最新文档和代码示例",
+        "en": "Up-to-date library docs and code examples"
+      },
+      "description": {
+        "zh": "根据库名与版本检索最新文档，返回可直接使用的代码示例。\n公开服务，适合在写代码前确认 API 用法。",
+        "en": "Look up current documentation by library and version, with examples you can use directly.\nPublic service, handy for confirming API usage before writing code."
+      },
+      "icon": "icons/context7.png",
+      "tags": {
+        "zh": [
+          "文档",
+          "开发"
+        ],
+        "en": [
+          "Documentation",
+          "Development"
+        ]
+      },
+      "version": "4.5.1",
+      "mcp": {
+        "url": "https://mcp.context7.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "公开访问，无需授权。",
+          "en": "Public access; no authorization required."
+        },
+        "auth": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "figma",
+      "name": {
+        "zh": "Figma",
+        "en": "Figma"
+      },
+      "summary": {
+        "zh": "把设计稿、组件与变量接入对话",
+        "en": "Bring designs, components, and variables into the conversation"
+      },
+      "description": {
+        "zh": "读取 Figma 文件中的设计上下文，包括组件、样式与变量。\n适合在实现界面前获取准确的设计信息。",
+        "en": "Read design context from Figma files, including components, styles, and variables.\nUseful for getting accurate design details before building UI."
+      },
+      "icon": "icons/figma.png",
+      "tags": {
+        "zh": [
+          "设计",
+          "协作"
+        ],
+        "en": [
+          "Design",
+          "Collaboration"
+        ]
+      },
+      "version": "1.0.3",
+      "mcp": {
+        "url": "https://mcp.figma.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Figma 并授权。",
+          "en": "Sign in to Figma in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "firecrawl",
+      "name": {
+        "zh": "Firecrawl",
+        "en": "Firecrawl"
+      },
+      "summary": {
+        "zh": "网页搜索、抓取与结构化提取",
+        "en": "Web search, scraping, and structured extraction"
+      },
+      "description": {
+        "zh": "搜索网页、抓取页面内容并提取结构化数据。\n也可检索论文并抓取多页面站点；公开访问，可选填 Firecrawl API Key。",
+        "en": "Search the web, scrape page content, and extract structured data.\nAlso supports paper search and multi-page crawling; public access with an optional Firecrawl API key."
+      },
+      "icon": "icons/firecrawl.png",
+      "tags": {
+        "zh": [
+          "网页抓取",
+          "搜索",
+          "数据"
+        ],
+        "en": [
+          "Scraping",
+          "Search",
+          "Data"
+        ]
+      },
+      "version": "3.38.0",
+      "mcp": {
+        "url": "https://mcp.firecrawl.dev/v2/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "公开访问；可选填 Firecrawl API Key。",
+          "en": "Public access; Firecrawl API key optional."
+        },
+        "auth": {
+          "type": "none"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "linear",
+      "name": {
+        "zh": "Linear",
+        "en": "Linear"
+      },
+      "summary": {
+        "zh": "查询与管理 Linear 项目、issue 与文档",
+        "en": "Find and manage Linear issues, projects, and docs"
+      },
+      "description": {
+        "zh": "在 Linear 工作区中查找 issue、项目和文档，也能创建与更新条目。\n适合开发团队在对话里跟进任务进度。",
+        "en": "Look up issues, projects, and documents in your Linear workspace, and create or update them.\nA good fit for development teams tracking work in the conversation."
+      },
+      "icon": "icons/linear.png",
+      "tags": {
+        "zh": [
+          "项目管理",
+          "开发",
+          "协作"
+        ],
+        "en": [
+          "Project Management",
+          "Development",
+          "Collaboration"
+        ]
+      },
+      "version": "1.0.2",
+      "mcp": {
+        "url": "https://mcp.linear.app/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Linear 并授权。",
+          "en": "Sign in to Linear in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "neon",
+      "name": {
+        "zh": "Neon",
+        "en": "Neon"
+      },
+      "summary": {
+        "zh": "管理 Neon 项目、分支与 Postgres 数据库",
+        "en": "Manage Neon projects, branches, and Postgres databases"
+      },
+      "description": {
+        "zh": "通过官方 MCP 管理 Neon 项目、分支与 Lakebase Postgres 数据库。\n可以创建分支、查看连接串并执行 SQL。",
+        "en": "Manage Neon projects, branches, and Lakebase Postgres databases through the official MCP server.\nCreate branches, read connection strings, and run SQL."
+      },
+      "icon": "icons/neon.png",
+      "tags": {
+        "zh": [
+          "数据库",
+          "Postgres",
+          "云服务"
+        ],
+        "en": [
+          "Database",
+          "Postgres",
+          "Cloud"
+        ]
+      },
+      "version": "2.0.0",
+      "mcp": {
+        "url": "https://mcp.neon.tech/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Neon 并授权。",
+          "en": "Sign in to Neon in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "notion",
+      "name": {
+        "zh": "Notion",
+        "en": "Notion"
+      },
+      "summary": {
+        "zh": "搜索与编辑 Notion 页面、数据库",
+        "en": "Search and edit Notion pages and databases"
+      },
+      "description": {
+        "zh": "连接 Notion 工作区，搜索页面并按需创建或更新内容。\n适合把会议记录、知识库与项目资料接入对话。",
+        "en": "Connect your Notion workspace to search pages and create or update content on demand.\nUseful for bringing meeting notes, knowledge bases, and project docs into the conversation."
+      },
+      "icon": "icons/notion.png",
+      "tags": {
+        "zh": [
+          "笔记",
+          "知识库",
+          "协作"
+        ],
+        "en": [
+          "Notes",
+          "Knowledge Base",
+          "Collaboration"
+        ]
+      },
+      "version": "1.0.1",
+      "mcp": {
+        "url": "https://mcp.notion.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Notion 并授权。",
+          "en": "Sign in to Notion in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "perplexity",
+      "name": {
+        "zh": "Perplexity",
+        "en": "Perplexity"
+      },
+      "summary": {
+        "zh": "实时网页搜索与研究",
+        "en": "Real-time web search and research"
+      },
+      "description": {
+        "zh": "通过 Perplexity API 做实时网页搜索、推理与研究，返回带来源的答案。\n连接时需要 Perplexity API Key。",
+        "en": "Run real-time web search, reasoning, and research through the Perplexity API, with answers that cite sources.\nRequires a Perplexity API key."
+      },
+      "icon": "icons/perplexity.png",
+      "tags": {
+        "zh": [
+          "搜索",
+          "研究",
+          "AI"
+        ],
+        "en": [
+          "Search",
+          "Research",
+          "AI"
+        ]
+      },
+      "version": "0.7.0",
+      "mcp": {
+        "url": "https://mcp.perplexity.ai/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "需要 Perplexity API Key，连接时按提示填写。",
+          "en": "Requires a Perplexity API key; you'll be asked for it when connecting."
+        },
+        "auth": {
+          "type": "apiKey",
+          "header": "Authorization",
+          "prefix": "Bearer ",
+          "placeholder": {
+            "zh": "粘贴 Perplexity API Key",
+            "en": "Paste your Perplexity API key"
+          },
+          "helpUrl": "https://www.perplexity.ai/settings/api"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "posthog",
+      "name": {
+        "zh": "PostHog",
+        "en": "PostHog"
+      },
+      "summary": {
+        "zh": "产品分析、功能开关与实验数据",
+        "en": "Product analytics, feature flags, and experiments"
+      },
+      "description": {
+        "zh": "查询 PostHog 的产品分析、功能开关、实验与错误数据。\n连接时需要 PostHog API Token。",
+        "en": "Query PostHog product analytics, feature flags, experiments, and error data.\nRequires a PostHog API token."
+      },
+      "icon": "icons/posthog.png",
+      "tags": {
+        "zh": [
+          "分析",
+          "数据",
+          "产品"
+        ],
+        "en": [
+          "Analytics",
+          "Data",
+          "Product"
+        ]
+      },
+      "version": "1.0.1",
+      "mcp": {
+        "url": "https://mcp.posthog.com/mcp",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "需要 PostHog API Token，连接时按提示填写。",
+          "en": "Requires a PostHog API token; you'll be asked for it when connecting."
+        },
+        "auth": {
+          "type": "apiKey",
+          "header": "Authorization",
+          "prefix": "Bearer ",
+          "placeholder": {
+            "zh": "粘贴 PostHog API Token",
+            "en": "Paste your PostHog API token"
+          },
+          "helpUrl": "https://posthog.com/docs/api"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "stripe",
+      "name": {
+        "zh": "Stripe",
+        "en": "Stripe"
+      },
+      "summary": {
+        "zh": "管理客户、商品、支付与发票",
+        "en": "Manage customers, products, payments, and invoices"
+      },
+      "description": {
+        "zh": "通过 Stripe 官方 MCP 管理客户、商品、支付与发票等数据。\n连接时需要提供 Stripe API Key，请按服务提示授权。",
+        "en": "Manage customers, products, payments, and invoices through Stripe's official MCP server.\nYou'll need a Stripe API key; follow the prompt to authorize the connection."
+      },
+      "icon": "icons/stripe.png",
+      "tags": {
+        "zh": [
+          "支付",
+          "电商",
+          "财务"
+        ],
+        "en": [
+          "Payments",
+          "Commerce",
+          "Finance"
+        ]
+      },
+      "version": "0.2.4",
+      "mcp": {
+        "url": "https://mcp.stripe.com",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "需要 Stripe API Key，连接时按提示填写。",
+          "en": "Requires a Stripe API key; you'll be asked for it when connecting."
+        },
+        "auth": {
+          "type": "apiKey",
+          "header": "Authorization",
+          "prefix": "Bearer ",
+          "placeholder": {
+            "zh": "粘贴 Stripe API Key",
+            "en": "Paste your Stripe API key"
+          },
+          "helpUrl": "https://dashboard.stripe.com/apikeys"
+        }
+      }
+    },
+    {
+      "type": "mcp",
+      "id": "zapier",
+      "name": {
+        "zh": "Zapier",
+        "en": "Zapier"
+      },
+      "summary": {
+        "zh": "连接 9000+ 应用与 4 万+ 自动化动作",
+        "en": "Connect 9,000+ apps and 40,000+ actions"
+      },
+      "description": {
+        "zh": "通过 Zapier 把助手连接到 9,000 多个应用，执行 40,000 多种自动化动作。\n首次连接需在浏览器登录 Zapier 并完成授权。",
+        "en": "Connect the assistant to 9,000+ apps and run 40,000+ actions through Zapier.\nSign in to Zapier in the browser and authorize on first connect."
+      },
+      "icon": "icons/zapier.png",
+      "tags": {
+        "zh": [
+          "自动化",
+          "效率"
+        ],
+        "en": [
+          "Automation",
+          "Productivity"
+        ]
+      },
+      "version": "1.0.1",
+      "mcp": {
+        "url": "https://mcp.zapier.com/api/v1/connect",
+        "transport": "http",
+        "headers": {},
+        "authHint": {
+          "zh": "首次连接需在浏览器登录 Zapier 并授权。",
+          "en": "Sign in to Zapier in the browser and authorize on first connect."
+        },
+        "auth": {
+          "type": "oauth"
+        }
+      }
+    }
+  ]
 }
