@@ -27,7 +27,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）
 ```
 
-插件 SDK 发布产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库；`design` 与 `plugin-api` 版本独立维护（当前 design 0.6.1 / plugin-api 0.8.1）。
+插件 SDK 发布产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库；`design` 与 `plugin-api` 版本独立维护，版本号在各自 `build.gradle.kts` 的 `pluginApiVersion` 里维护。
 
 首次环境：`./scripts/dev-setup.sh`。基线：单测 2550（app 1858 / runtime 561 / shell 74 / plugin-api 57）、0 失败 0 skip、lint 0 error。
 

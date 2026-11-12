@@ -181,9 +181,9 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 ./scripts/plugin-api-abi.sh       # 单独校验插件 SDK ABI 基线（--update 更新）
 ```
 
-Agent SDK 经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`（版本即 `gradle/libs.versions.toml` 里的 `pi`）。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
+Agent SDK 经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android`，版本即 `gradle/libs.versions.toml` 里的 `pi`。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
 
-真机脚本需要 `adb`；多设备在线时用 `ANDROID_SERIAL` 指定（未指定且多台在线会报错）。插件 e2e 默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`，找不到或换位置时用 `PLUGINS_DIR` 指定。两个脚本都用 `adb install` 装 debug 包、把夹具推到 App 外部私有目录，**不需要 root**；`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具（DeepDeep-Plugins 目前只有 `template`，缺夹具时用 `E2E_DDP` 指定已签名包）。`plugin-api-abi.sh` 需要 `unzip`、`javap`（`jar` 可选，缺省时用 `unzip` 回退）。
+真机脚本需要 `adb`；多设备在线时用 `ANDROID_SERIAL` 指定（未指定且多台在线会报错）。插件 e2e 默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`，找不到或换位置时用 `PLUGINS_DIR` 指定。两个脚本都用 `adb install` 装 debug 包、把夹具推到 App 外部私有目录，**不需要 root**；`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具；缺夹具时用 `E2E_DDP` 指定已签名包。`plugin-api-abi.sh` 需要 `unzip`、`javap`（`jar` 可选，缺省时用 `unzip` 回退）。
 
 x86_64 模拟器可以完成单测、编译、安装启动、插件 e2e 和绝大多数 UI 开发；Linux 环境、屏幕操作与 Root 档系统访问必须用 arm64 真机。
 

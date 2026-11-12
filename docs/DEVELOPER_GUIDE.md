@@ -19,7 +19,7 @@
 
 它会检查 `java` 与 `javac`（JDK 17，必须有编译器），按环境变量 → 已有 `local.properties` → 常见路径定位 Android SDK，必要时用 `sdkmanager` 安装 Platform 36 与 build-tools 36.0.0，保留已有 `local.properties`，然后构建 debug APK；不碰签名材料。
 
-Agent SDK 依赖经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`（版本在 `gradle/libs.versions.toml` 的 `pi`）。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
+Agent SDK 依赖经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android`，版本在 `gradle/libs.versions.toml` 的 `pi`。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
 
 ## 构建与验证
 
@@ -94,7 +94,7 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 **设备脚本**
 
 - 需要 `adb`。多设备在线时用 `ANDROID_SERIAL` 指定；脚本优先用它，其次是唯一在线的设备，多台在线且未指定会报错。
-- 插件 e2e 需要插件仓库：默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`（`plugin-e2e.sh` 对应 DeepDeep-Plugins，`plugin-bundles-e2e.sh` 对应官方插件仓库），找不到或换位置时用 `PLUGINS_DIR` 指定。`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具；DeepDeep-Plugins 目前只有 `template`，缺夹具时脚本会提示用 `E2E_DDP` 指定已签名的包。
+- 插件 e2e 需要插件仓库：默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`（`plugin-e2e.sh` 对应 DeepDeep-Plugins，`plugin-bundles-e2e.sh` 对应官方插件仓库），找不到或换位置时用 `PLUGINS_DIR` 指定。`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具；缺夹具时脚本会提示用 `E2E_DDP` 指定已签名的包。
 - `check.sh --device` 与两个 e2e 都覆盖安装 debug 包：设备上已有同包名但签名不同的构建（例如 release APK）时会安装失败，debug 与 release 签名不能互换，需先卸载（会清 App 数据）或换设备/模拟器；e2e 失败会以非 0 退出码结束。
 - `plugin-api-abi.sh` 需要 `unzip`、`jar`、`javap`；后两者由 JDK 提供，脚本会自检并提示缺什么。
 
