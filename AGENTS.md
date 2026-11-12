@@ -22,6 +22,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ./scripts/check.sh --device    # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh        # 设备插件端到端（无需 root；需插件仓库的 sample 夹具，见 PLUGIN_DEV.md）
 ./scripts/plugin-bundles-e2e.sh  # 设备回归四个官方插件包（无需 root；需先构建插件工程）
+./scripts/plugin-binary-compat.sh  # 设备回归已发布 .ddp 的安装/升级/卸载二进制兼容（发布前手工跑）
 ./scripts/api-compat.sh        # 校验 plugin-api 与 design 的公开 ABI（--update 重建基线）
 ./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository  # 发布插件 SDK 到 build/maven-repo
 ./scripts/gradlew-locked ...   # 其它 Gradle 任务；不要直接 ./gradlew（本机并发会 OOM）

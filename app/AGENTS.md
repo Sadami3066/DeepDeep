@@ -42,4 +42,4 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 - 新页面：`ui/navigation/` 加 `AppDestination` 与 `AppRouteContent` 分支，Screen 放 `ui/<feature>/`，状态放同目录 ViewModel/Holder；包级 import 受 `verifyPackageBoundaries` 约束（feature 之间不互引，`common`/`navigation` 例外，ui 不许 import AppGraph/DeepDeepApplication）。
 - 界面不直接调用 DeepDeep SDK，一切经 runtime 的 `AgentRuntimeHost` 与其事件流；插件工具、MCP 工具由 runtime 注册，UI 只渲染。
 - 用户可见文案一律进 `res/values*/strings_*.xml`（默认中文，`values-en` 同步）；插件文案走 `AndroidPluginStrings`，不在 Kotlin 里拼中文。
-- 测试在 `src/test/kotlin` 镜像包结构（JUnit4 + coroutines-test，替身优先）：状态与纯逻辑有单测，界面外观靠手机截图验收；`src/androidTest/` 是设备测试（工具契约、图片/头像、日历、网络策略），需连真机跑。
+- 测试在 `src/test/kotlin` 镜像包结构（JUnit4 + coroutines-test，替身优先）：状态与纯逻辑有单测，界面外观靠手机截图验收；`src/androidTest/` 是设备测试（工具契约、图片/头像、日历、网络策略、插件端到端与二进制回归），需连真机/模拟器跑，`.ddp` 设备夹具在 `src/androidTest/assets/plugin-fixtures/`（见该目录 README）。
