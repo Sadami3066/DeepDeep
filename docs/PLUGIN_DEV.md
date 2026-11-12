@@ -8,14 +8,14 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.8.0`、`PLUGIN_API_LEVEL = 5`、`BASELINE_API_LEVEL = 5`、`HOST_UI_API_LEVEL = 1`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.8.1`、`PLUGIN_API_LEVEL = 5`、`BASELINE_API_LEVEL = 5`、`HOST_UI_API_LEVEL = 1`。
 
 插件工程从 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) 的 `template/` 起步：独立 Gradle Android 工程，包含一个示例工具、一个示例技能、一段提示词与完整的 `.ddp` 打包/签名/验签实现，复制或改名即起点。官方插件实现见 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)。
 
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api:0.8.0`、`design:0.6.0`），不需要本地 mavenLocal 发布。
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api:0.8.1`、`design:0.6.1`），不需要本地 mavenLocal 发布。
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
@@ -69,7 +69,7 @@ cp -R template my-plugin && cd my-plugin
 
 依赖规则：
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.sadami3066.deepdeep:plugin-api:0.8.0`（`api()` 传递 `io.github.sadami3066.deepdeep:design:0.6.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
+- 宿主已提供的库只能 `compileOnly`：`io.github.sadami3066.deepdeep:plugin-api:0.8.1`（`api()` 传递 `io.github.sadami3066.deepdeep:design:0.6.1`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
 - 宿主 release 对插件的运行时依赖做了 R8 keep（`plugin-api`、`design`、Kotlin、协程、Compose，以及插件 UI 常用的 `androidx.lifecycle`/`androidx.activity`/`androidx.savedstate`），这些库在混淆包里不会缺类。keep 只保 ABI 名字，不等于版本兼容承诺：插件仍需按宿主 SDK 版本重编译，白名单之外的宿主库不保证可用。
 - **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
 - 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
@@ -86,7 +86,7 @@ cp -R template my-plugin && cd my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 5） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（5）处理 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `1.0.2`）；比较只看 `major.minor.patch`、忽略后缀，所以 `1.0.2` 宿主满足 `minHostVersion: "0.2.0"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `1.0.2`）；比较只看 `major.minor.patch`、忽略后缀，所以 `1.0.2` 宿主满足 `minHostVersion: "1.0.1"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -723,8 +723,8 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 ## ABI 与版本
 
 - `PLUGIN_API_LEVEL = 5`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 5` 处理。
-- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `1.0.2`），所以 `minHostVersion: "0.2.0"` 在当前宿主上通过。
-- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.8.0`）与 `PLUGIN_API_LEVEL` 独立维护。
+- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`1.0.1-dev` 视为 `1.0.1`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `1.0.2`），所以 `minHostVersion: "1.0.1"` 在当前宿主上通过。
+- **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.8.1`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
 - Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用该插件的 UI，不拒绝插件。
