@@ -55,7 +55,7 @@ internal class RootFileSystem(
     override fun metadataOrNull(path: Path): FileMetadata? {
         listed[path.toString()]?.let { return it }
         val quoted = quote(path)
-        val result = run("stat -c '%F|%s' -- $quoted")
+        val result = run("LC_ALL=C stat -c '%F|%s' -- $quoted")
         if (result.exitCode != 0) return null
         val line = result.stdout.lineSequence().firstOrNull() ?: return null
         if (line.isBlank()) return null
@@ -191,7 +191,7 @@ internal class RootFileSystem(
 
     override fun list(dir: Path): List<Path> {
         val quoted = quote(dir)
-        val result = run("stat -c '%F|%s|%n' -- $quoted/* $quoted/.[!.]* $quoted/..?* 2>/dev/null")
+        val result = run("LC_ALL=C stat -c '%F|%s|%n' -- $quoted/* $quoted/.[!.]* $quoted/..?* 2>/dev/null")
         val lines = result.stdout.lineSequence().filter { it.isNotBlank() }.toList()
         if (lines.isEmpty()) {
             if (result.exitCode != 0 && metadataOrNull(dir)?.isDirectory != true) {

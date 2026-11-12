@@ -111,11 +111,11 @@ class RootFileSystemTest {
             rootFs.createDirectories(nested)
             assertTrue(rootFs.metadata(nested).isDirectory)
             assertTrue(commands.any { it.startsWith("mkdir -p -- ") })
-            assertTrue(commands.any { it.startsWith("stat -c ") })
+            assertTrue(commands.any { it.startsWith("LC_ALL=C stat -c ") })
 
             assertNull(rootFs.listOrNull(dir / "missing"))
             assertTrue(rootFs.listOrNull(nested)!!.isEmpty())
-            assertTrue(commands.any { it.startsWith("stat -c ") && it.contains("-- ") })
+            assertTrue(commands.any { it.startsWith("LC_ALL=C stat -c ") && it.contains("-- ") })
         } finally {
             cleanup(dir)
         }
@@ -185,7 +185,7 @@ class RootFileSystemTest {
             val expected = setOf(dir / "top.txt", dir / "a", nested, nested / "file.txt")
             assertEquals(expected.map { it.toString() }.toSet(), rootFs.listRecursively(dir).map { it.toString() }.toSet())
             assertFalse(rootFs.listRecursively(dir).map { it.toString() }.contains(dir.toString()))
-            assertTrue(commands.any { it.startsWith("stat -c ") && it.contains("-- ") })
+            assertTrue(commands.any { it.startsWith("LC_ALL=C stat -c ") && it.contains("-- ") })
 
             val walked = rootFs.listRecursively(dir, followSymlinks = true).map { it.toString() }.toSet()
             assertTrue(walked.containsAll(expected.map { it.toString() }))
