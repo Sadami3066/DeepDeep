@@ -154,4 +154,36 @@ class PersonalizationPromptTest {
         assertTrue(proactive.contains("Be proactive"))
         assertFalse(quiet.contains("Be proactive"))
     }
+    @Test
+    fun pluginPromptOverridesReplacePreambleAndRules() {
+        val result = buildSessionSystemPromptSections(
+            personalization = Personalization(),
+            providerId = "deepseek",
+            modelId = "deepseek-v4.1-flash",
+            now = now,
+            pluginBody = "plugin body",
+            promptPreamble = "custom preamble",
+            promptRules = "- custom rule",
+        )
+
+        assertEquals("custom preamble", result.getValue("preamble"))
+        assertEquals("<rules>\n- custom rule\n</rules>", result.getValue("rules"))
+        assertEquals("<plugins>\nplugin body\n</plugins>", result.getValue("plugins"))
+        assertTrue(result.getValue("environment").startsWith("<environment>"))
+    }
+
+    @Test
+    fun absentPluginPromptOverridesDoNotEmitPreambleOrRules() {
+        val result = buildSessionSystemPromptSections(
+            personalization = Personalization(),
+            providerId = "deepseek",
+            modelId = "deepseek-v4.1-flash",
+            now = now,
+            pluginBody = null,
+        )
+
+        assertFalse(result.containsKey("preamble"))
+        assertFalse(result.containsKey("rules"))
+        assertFalse(result.containsKey("plugins"))
+    }
 }

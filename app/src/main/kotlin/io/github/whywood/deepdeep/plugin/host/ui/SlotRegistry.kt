@@ -40,7 +40,7 @@ data class SlotRenderEntry(
     val manifestVersion: String,
     val slotId: String,
     val priority: Int,
-    val content: SlotContent.Compose,
+    val content: SlotContent,
     val assetsDir: File,
     val disabledReason: SlotDisabledReason? = null,
 ) {
@@ -67,7 +67,7 @@ class SlotRegistry internal constructor(
             .mapNotNull { entry ->
                 val descriptor = snapshot.plugin(entry.pluginId) ?: return@mapNotNull null
                 if (!descriptor.phase.contributes) return@mapNotNull null
-                val content = entry.binding.content as? SlotContent.Compose ?: return@mapNotNull null
+                val content = entry.binding.content
                 SlotRenderEntry(
                     pluginId = entry.pluginId,
                     manifestVersion = descriptor.manifest.version,

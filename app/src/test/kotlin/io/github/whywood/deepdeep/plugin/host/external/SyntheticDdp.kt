@@ -52,7 +52,7 @@ internal object SyntheticDdp {
     fun manifestJson(
         id: String = PLUGIN_ID,
         version: String = PLUGIN_VERSION,
-        apiLevel: Int = 5,
+        apiLevel: Int = io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL,
         tools: List<String> = listOf("sample_tool"),
         entryClass: String? = ENTRY_CLASS,
         publisherKeyId: String? = null,

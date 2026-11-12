@@ -1,8 +1,8 @@
 package io.github.whywood.deepdeep.plugin.host.external
 
+import io.github.whywood.deepdeep.plugin.api.MIN_SUPPORTED_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginManifestCodec
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -29,6 +29,7 @@ internal enum class VerificationCode {
     SIGNATURE_INVALID,
     MANIFEST_MALFORMED,
     MANIFEST_INVALID,
+    API_LEVEL_UNSUPPORTED,
 }
 
 internal sealed interface VerificationResult {
@@ -41,6 +42,7 @@ internal sealed interface VerificationResult {
     data class Rejected(
         val code: VerificationCode,
         val reason: String,
+        val declaredApiLevel: Int? = null,
     ) : VerificationResult
 }
 
@@ -96,10 +98,20 @@ internal object PluginPackageVerifier {
             )
         ) {
             is PluginManifestCodec.Result.Valid -> decoded.manifest
-            is PluginManifestCodec.Result.Invalid -> return reject(
-                VerificationCode.MANIFEST_INVALID,
-                decoded.issues.joinToString("; ") { "${it.field}: ${it.message}" },
-            )
+            is PluginManifestCodec.Result.Invalid -> {
+                val apiLevelIssue = decoded.issues.firstOrNull { it.code == PluginValidation.Code.API_LEVEL_UNSUPPORTED }
+                if (apiLevelIssue != null && decoded.manifest.apiLevel < MIN_SUPPORTED_API_LEVEL) {
+                    return reject(
+                        VerificationCode.API_LEVEL_UNSUPPORTED,
+                        apiLevelIssue.message,
+                        decoded.manifest.apiLevel,
+                    )
+                }
+                return reject(
+                    VerificationCode.MANIFEST_INVALID,
+                    decoded.issues.joinToString("; ") { "${it.field}: ${it.message}" },
+                )
+            }
         }
         return VerificationResult.Ok(
             manifest = manifest,
@@ -116,8 +128,11 @@ internal object PluginPackageVerifier {
         )
     }
 
-    private fun reject(code: VerificationCode, reason: String): VerificationResult.Rejected =
-        VerificationResult.Rejected(code, reason)
+    private fun reject(
+        code: VerificationCode,
+        reason: String,
+        declaredApiLevel: Int? = null,
+    ): VerificationResult.Rejected = VerificationResult.Rejected(code, reason, declaredApiLevel)
 
     private fun JsonObject.string(name: String): String? =
         (this[name] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }

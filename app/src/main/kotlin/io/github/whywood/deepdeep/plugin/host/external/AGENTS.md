@@ -6,9 +6,13 @@
 
 | 文件 | 职责 |
 |---|---|
+| `PluginManifestCodec.kt` | `plugin.json`（`JsonObject`）→ 宿主实现的 `PluginManifest` 接口：`parse` 宽容、`decode` 严格汇总 `Result`；能力原始 wire 在解析阶段校验后映射为 `PluginCapability` |
+| `PluginValidation.kt` | 格式/ABI/技能校验，返回带 `Severity` 的 `Issue` 列表；id 只接受反向域名，文本只需 `default`、图标只接受 asset 路径 |
+| `PluginVersion.kt` | `major.minor.patch` 解析；完整 semver 比较（release > prerelease、build 忽略）与只比内核的 `compareCore`；市场门禁复用 |
+| `HostPluginManifest.kt` | `PluginManifest`/`UiManifest`/`Provides`/`PublisherInfo`/`LocalizedText` 的宿主内部实现与构造函数 |
 | `DdpPackage.kt` | `.ddp` zip 读取与校验：必需 `assets/plugin.json`、至少一个根 `classes*.dex`，可选 `assets/**`、`lib/<abi>/**`、`META-INF/plugin-signature.json`；逐项 sha256、整包 sha256、规范化 entry digest；entry 读取/解压/复制并再次校验摘要 |
 | `DdpSigning.kt` | 签名格式与密码学：规范化 digest bytes、sha256/hex、Ed25519 公钥解析与验签（平台优先、BouncyCastle 兜底）、`ed25519:<hex>` keyId 派生 |
-| `PluginPackageVerifier.kt` | 外部包验证：签名必需、算法/字段/ keyId/签名校验，再走 `PluginManifestCodec.decode`（宿主 apiLevel/hostVersion），返回 `Ok(manifest, publisher, digests)` / `Rejected(code, reason)` |
+| `PluginPackageVerifier.kt` | 外部包验证：签名必需、算法/字段/ keyId/签名校验，再走 `PluginManifestCodec.decode`（宿主 apiLevel/hostVersion），返回 `Ok(manifest, publisher, digests)` / `Rejected(code, reason, declaredApiLevel)`；`API_LEVEL_UNSUPPORTED` 只用于低于宿主下限的旧 level |
 | `PublisherTrustStore.kt` | `files/plugins/trusted_publishers.json`（schemaVersion 1，keyId → name/publicKey/firstSeenAt），TOFU：新增/已知/公钥冲突；原子写、损坏备份 `.corrupt` 后重建 |
 | `ExternalPluginRecord.kt` | v4 安装记录模型（用户意图）：version/installedAt/enabled/skillIds/installPath/activeBundleSha256/size/publisherKeyId/apiLevel/uiApiLevel/lastError/pendingVersion/pendingBundleSha256/previousVersion/previousInstallPath/previousBundleSha256；v4 不存相位，相位由 `PluginPhase.derive` 从 record+运行期事实派生 |
 | `ExternalPluginRecordStore.kt` | `files/plugins/plugins.json` schemaVersion 4：非 v4/损坏时备份 `plugins.json.v2.bak` 后破坏式重建，原子写，`load/get/records/upsert/remove/setEnabled/mutate`；旧 v4 文件缺 previous\*/pending\*/*phase* 字段时按 null/忽略读取，不 bump schema |
@@ -16,7 +20,7 @@
 | `PluginInstallModels.kt` | 安装结果与状态 DTO：`InstallRejection`/`InspectionResult`/`InstallResult`/`BundleState`/`CommitResult` |
 | `PluginPackageStager.kt` | 候选读取（DdpPackage + 验签 + `PluginManifestCodec.decode`）、staging 解包到 `<version>/{bundle,assets,lib}`、bundle sha256 复核、版本目录清理 |
 | `ExternalPluginRecovery.kt` | 激活恢复原语：`<id>/activation.json` marker（版本/连续次数/时间）用于激活中断与启动崩溃判定；`rollbackToPrevious`（校验 previous bundle 后切回并删失败版本目录）；`pruneVersions` 只保留 active/pending/previous 与 data |
-| `LoadedPluginHandle.kt` | 外部插件装载句柄：校验 bundle sha256，`InMemoryDexClassLoader` 优先、只读 jar + `PathClassLoader` 兜底，实例化 `entryClass`；装载期任何 `Throwable` 归一为 `PluginLoadException`（`CancellationException` 重抛），单插件链接错误不中断宿主启动；`close()` 调 `plugin.close()` 并释放引用/删除兜底 jar |
+| `LoadedPluginHandle.kt` | 外部插件装载句柄：校验 bundle sha256，`InMemoryDexClassLoader` 优先、只读 jar + `PathClassLoader` 兜底，实例化 `entryClass`；装载期任何 `Throwable` 归一为 `PluginLoadException`（`CancellationException` 重抛），旧 API level 抛 `PluginApiLevelRejectedException`，单插件链接错误不中断宿主启动；`close()` 调 `plugin.close()` 并释放引用/删除兜底 jar |
 | `JsonFiles.kt` | JSON 原子写（tmp + ATOMIC_MOVE，失败退 REPLACE_EXISTING）与备份工具 |
 
 ## 签名规范 ddp-1（与 plugins 仓库模板 / docs 对齐）

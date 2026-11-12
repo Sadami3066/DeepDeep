@@ -51,7 +51,7 @@ class ExternalPluginE2ETest {
 
             val installed = awaitSnapshot(PLUGIN_ID) { it.installed }
             assertTrue(installed.enabled)
-            assertEquals(IconRef.Asset("icon.png"), installed.icon)
+            assertEquals("icon.png", installed.icon?.asset)
             assertEquals(listOf("sample.main"), installed.pages.map { it.id })
             assertTrue(
                 "sample page missing",

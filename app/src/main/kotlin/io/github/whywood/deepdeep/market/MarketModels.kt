@@ -23,6 +23,8 @@ data class MarketArtifact(
 
 enum class MarketRequiredAccess { Normal, Adb, Root }
 
+enum class MarketPluginCompatibility { Compatible, ApiLevelTooOld, ApiLevelTooNew, HostTooOld }
+
 data class MarketPluginMeta(
     val apiLevel: Int,
     val minHostVersion: String?,

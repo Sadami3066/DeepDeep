@@ -7,6 +7,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginBusEvent
 import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
 import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.api.UiService
+import io.github.whywood.deepdeep.plugin.host.events.HostPluginBusEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -76,8 +77,15 @@ internal class PluginBusImpl : PluginBus {
     )
 
     override fun publish(event: PluginBusEvent) {
-        val stamped = if (event.publishedAt == 0L) event.copy(publishedAt = System.currentTimeMillis()) else event
-        events.tryEmit(stamped)
+        val publishedAt = if (event.publishedAt == 0L) System.currentTimeMillis() else event.publishedAt
+        events.tryEmit(
+            HostPluginBusEvent(
+                topic = event.topic,
+                publisher = event.publisher,
+                payload = event.payload,
+                publishedAt = publishedAt,
+            ),
+        )
     }
 
     override fun subscribe(topic: String?): Flow<PluginBusEvent> =
@@ -89,7 +97,14 @@ internal class ScopedPluginBus(
     private val pluginId: String,
 ) : PluginBus {
     override fun publish(event: PluginBusEvent) {
-        bus.publish(event.copy(publisher = pluginId))
+        bus.publish(
+            HostPluginBusEvent(
+                topic = event.topic,
+                publisher = pluginId,
+                payload = event.payload,
+                publishedAt = event.publishedAt,
+            ),
+        )
     }
 
     override fun subscribe(topic: String?): Flow<PluginBusEvent> = bus.subscribe(topic)

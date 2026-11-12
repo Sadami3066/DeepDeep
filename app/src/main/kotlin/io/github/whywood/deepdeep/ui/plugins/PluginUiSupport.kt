@@ -34,20 +34,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 internal class PluginTextResolver(
-    private val context: Context,
     private val language: String,
 ) {
-    fun resolve(text: LocalizedText): String = when (text) {
-        is LocalizedText.Resource -> context.getString(text.id)
-        is LocalizedText.Literal -> text.resolve(language) ?: text.resolve().orEmpty()
-    }
+    fun resolve(text: LocalizedText): String = text.resolve(language) ?: text.resolve().orEmpty()
 }
 
 @Composable
 internal fun rememberPluginTextResolver(): PluginTextResolver {
     val context = LocalContext.current
     val language = remember(context) { LanguagePreferences(context).read().tag }
-    return remember(context, language) { PluginTextResolver(context, language) }
+    return remember(context, language) { PluginTextResolver(language) }
 }
 
 @Composable
@@ -58,8 +54,8 @@ internal fun PluginIcon(
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
-    if (icon is IconRef.Asset) {
-        val bitmap = rememberPluginBitmap(assetsDir, icon.path, size)
+    if (icon != null) {
+        val bitmap = rememberPluginBitmap(assetsDir, icon.asset, size)
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,
@@ -70,9 +66,7 @@ internal fun PluginIcon(
             return
         }
     }
-    val resource = (icon as? IconRef.Resource)?.id
-    val resolved = if (resource != null) DdIcon(resource) else DdIcons.Puzzle
-    DdIcon(icon = resolved, tint = tint, modifier = modifier, size = size)
+    DdIcon(icon = DdIcons.Puzzle, tint = tint, modifier = modifier, size = size)
 }
 
 @Composable

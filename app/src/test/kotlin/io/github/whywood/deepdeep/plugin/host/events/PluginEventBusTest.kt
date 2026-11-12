@@ -8,11 +8,12 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.SessionStartedEvent
 
 class PluginEventBusTest {
     private val reporter = RecordingReporter()
 
-    private val event = PluginEvent.RunStarted("session-1", "run-1")
+    private val event = HostRunStartedEvent("session-1", "run-1")
 
     private fun bus(source: PluginHookSource, timeoutMs: Long = 1_000): PluginEventBus =
         PluginEventBus(source, reporter, timeoutMs)
@@ -43,13 +44,13 @@ class PluginEventBusTest {
     fun snapshotIsTakenBeforeDispatch() = runTest {
         val source = TestHookSource()
         val first = object : PluginHooks {
-            override suspend fun sessionStarted(event: PluginEvent.SessionStarted) {
+            override suspend fun sessionStarted(event: SessionStartedEvent) {
                 source.list = emptyList()
             }
         }
         val second = EventRecordingHooks()
         source.list = listOf(hookEntry("first", first), hookEntry("second", second))
-        val failures = bus(source).emit(PluginEvent.SessionStarted("session-1"))
+        val failures = bus(source).emit(HostSessionStartedEvent("session-1"))
         assertTrue(failures.isEmpty())
         assertEquals(1, second.events.size)
         assertEquals(1, source.reads)
@@ -58,13 +59,13 @@ class PluginEventBusTest {
     @Test
     fun failingHookIsIsolatedAndReported() = runTest {
         val failing = object : PluginHooks {
-            override suspend fun sessionStarted(event: PluginEvent.SessionStarted) {
+            override suspend fun sessionStarted(event: SessionStartedEvent) {
                 throw IllegalStateException("boom")
             }
         }
         val healthy = EventRecordingHooks()
         val source = TestHookSource(listOf(hookEntry("failing", failing), hookEntry("healthy", healthy)))
-        val failures = bus(source).emit(PluginEvent.SessionStarted("session-1"))
+        val failures = bus(source).emit(HostSessionStartedEvent("session-1"))
         assertEquals(1, failures.size)
         assertEquals("failing", failures.single().pluginId)
         assertEquals(PluginHookStage.OBSERVE, failures.single().stage)
@@ -76,28 +77,28 @@ class PluginEventBusTest {
     @Test
     fun slowHookTimesOutAndIsIsolated() = runTest {
         val slow = object : PluginHooks {
-            override suspend fun sessionStarted(event: PluginEvent.SessionStarted) {
+            override suspend fun sessionStarted(event: SessionStartedEvent) {
                 delay(60_000)
             }
         }
         val healthy = EventRecordingHooks()
         val source = TestHookSource(listOf(hookEntry("slow", slow), hookEntry("healthy", healthy)))
-        val failures = bus(source, timeoutMs = 100).emit(PluginEvent.SessionStarted("session-1"))
+        val failures = bus(source, timeoutMs = 100).emit(HostSessionStartedEvent("session-1"))
         assertEquals(1, failures.size)
         assertEquals("slow", failures.single().pluginId)
-        assertTrue(failures.single().message.startsWith("SessionStarted timed out"))
+        assertTrue(failures.single().message.startsWith("HostSessionStartedEvent timed out"))
         assertEquals(1, healthy.events.size)
     }
 
     @Test
     fun cancellationIsNotReportedAsFailure() = runTest {
         val hooks = object : PluginHooks {
-            override suspend fun sessionStarted(event: PluginEvent.SessionStarted) {
+            override suspend fun sessionStarted(event: SessionStartedEvent) {
                 throw CancellationException("cancelled")
             }
         }
         val source = TestHookSource(listOf(hookEntry("cancelled", hooks)))
-        val thrown = runCatching { bus(source).emit(PluginEvent.SessionStarted("session-1")) }.exceptionOrNull()
+        val thrown = runCatching { bus(source).emit(HostSessionStartedEvent("session-1")) }.exceptionOrNull()
         assertTrue(thrown is CancellationException)
         assertTrue(reporter.failures.isEmpty())
     }

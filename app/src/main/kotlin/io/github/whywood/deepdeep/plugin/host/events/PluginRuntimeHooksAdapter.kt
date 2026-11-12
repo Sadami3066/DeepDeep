@@ -1,15 +1,14 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
-import io.github.whywood.deepdeep.plugin.api.InputDecision as PluginInputDecision
 import io.github.whywood.deepdeep.plugin.api.InputRequest as PluginInputRequest
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
-import io.github.whywood.deepdeep.plugin.api.ToolCallDecision as PluginToolCallDecision
+import io.github.whywood.deepdeep.plugin.api.ToolCallAction
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest
 import io.github.whywood.deepdeep.plugin.api.ToolExecutionResult
-import io.github.whywood.deepdeep.plugin.api.ToolResultDecision as PluginToolResultDecision
+import io.github.whywood.deepdeep.plugin.api.ToolResultAction
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InputDecision as RuntimeInputDecision
 import io.github.whywood.deepdeep.runtime.InputHandler
@@ -60,13 +59,13 @@ internal class PluginRuntimeHooksAdapter(
                 imagePaths = request.images.mapNotNull { image -> image.path },
             ),
         )
-        when (decision) {
-            is PluginInputDecision.Continue -> RuntimeInputDecision.Continue(
-                text = decision.text,
+        if (decision.handled) {
+            RuntimeInputDecision.Handled
+        } else {
+            RuntimeInputDecision.Continue(
+                text = decision.text ?: request.text,
                 images = resolveImages(decision.imagePaths, request.images),
             )
-
-            PluginInputDecision.Handled -> RuntimeInputDecision.Handled
         }
     }
 
@@ -80,10 +79,10 @@ internal class PluginRuntimeHooksAdapter(
                     args = context.args,
                 ),
             )
-            return when (decision) {
-                is PluginToolCallDecision.Block -> RuntimeToolCallDecision.Block(decision.reason)
-                is PluginToolCallDecision.Rewrite -> RuntimeToolCallDecision.Rewrite(decision.args)
-                PluginToolCallDecision.Continue -> RuntimeToolCallDecision.Continue
+            return when (decision.action) {
+                ToolCallAction.BLOCK -> RuntimeToolCallDecision.Block(decision.reason.orEmpty())
+                ToolCallAction.REWRITE -> RuntimeToolCallDecision.Rewrite(decision.args ?: context.args)
+                else -> RuntimeToolCallDecision.Continue
             }
         }
 
@@ -96,9 +95,11 @@ internal class PluginRuntimeHooksAdapter(
                     result = context.result.toPluginToolResult(),
                 ),
             )
-            return when (decision) {
-                is PluginToolResultDecision.Replace -> RuntimeToolResultDecision.Replace(decision.result.toAgentToolResult())
-                PluginToolResultDecision.Keep -> RuntimeToolResultDecision.Keep
+            val replacement = decision.result
+            return if (decision.action == ToolResultAction.REPLACE && replacement != null) {
+                RuntimeToolResultDecision.Replace(replacement.toAgentToolResult())
+            } else {
+                RuntimeToolResultDecision.Keep
             }
         }
     }

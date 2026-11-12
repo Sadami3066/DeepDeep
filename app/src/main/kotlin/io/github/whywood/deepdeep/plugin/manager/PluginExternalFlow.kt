@@ -2,12 +2,15 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.PluginStrings
-import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.host.PluginRecord
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
+import io.github.whywood.deepdeep.plugin.host.external.HostLocalizedText
+import io.github.whywood.deepdeep.plugin.host.external.HostPluginManifest
+import io.github.whywood.deepdeep.plugin.host.external.HostProvides
+import io.github.whywood.deepdeep.plugin.host.external.PluginApiLevelRejectedException
+import io.github.whywood.deepdeep.plugin.host.external.hostLocalizedText
 import io.github.whywood.deepdeep.plugin.host.external.InspectionResult
 import io.github.whywood.deepdeep.plugin.host.external.InstallResult
 import java.io.File
@@ -63,7 +66,7 @@ internal class PluginExternalFlow(
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Throwable) {
-                    persistFailure(view.id, error.message ?: error.javaClass.simpleName)
+                    persistFailure(view.id, errorMessage(error))
                     runtime.clearStartupCount(view.id)
                     return@forEach
                 } ?: run {
@@ -108,7 +111,7 @@ internal class PluginExternalFlow(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            persistFailure(pluginId, error.message ?: error.javaClass.simpleName)
+            persistFailure(pluginId, errorMessage(error))
             return false
         } ?: return false
         val handle = runtime.handle(pluginId) ?: return false
@@ -141,7 +144,7 @@ internal class PluginExternalFlow(
                 publisherKeyId = result.publisher.keyId,
                 trusted = result.trusted != null,
                 provides = result.manifest.provides,
-                capabilities = result.manifest.capabilities.orEmpty(),
+                capabilities = result.manifest.capabilities.map { it.wire }.toSet(),
                 error = null,
             )
 
@@ -155,9 +158,9 @@ internal class PluginExternalFlow(
                 publisherName = "",
                 publisherKeyId = "",
                 trusted = false,
-                provides = Provides(),
+                provides = HostProvides(),
                 capabilities = emptySet(),
-                error = result.reason,
+                error = rejectionMessage(result.code, result.reason, result.declaredApiLevel),
             )
         }
     }
@@ -196,7 +199,10 @@ internal class PluginExternalFlow(
                         requiresConfirmation = true,
                     )
 
-                    is InstallResult.Rejected -> ExternalInstallUi(false, result.reason)
+                    is InstallResult.Rejected -> ExternalInstallUi(
+                        false,
+                        rejectionMessage(result.code, result.reason, result.declaredApiLevel),
+                    )
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -225,7 +231,7 @@ internal class PluginExternalFlow(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
-            val message = error.message ?: error.javaClass.simpleName
+            val message = errorMessage(error)
             persistFailure(pluginId, message)
             return message
         } ?: run {
@@ -280,12 +286,28 @@ internal class PluginExternalFlow(
         external?.record(pluginId)?.let { record -> gate.attachExternalRecord(pluginId, record) }
     }
 
-    private fun fallbackManifest(record: ExternalPluginRecord): PluginManifest = PluginManifest(
+    private fun fallbackManifest(record: ExternalPluginRecord): PluginManifest = HostPluginManifest(
         id = record.id,
         version = record.version,
-        name = LocalizedText.Literal(record.id),
-        summary = LocalizedText.Literal(""),
+        name = hostLocalizedText(record.id),
+        summary = HostLocalizedText(emptyMap()),
     )
+
+    private fun rejectionMessage(
+        code: io.github.whywood.deepdeep.plugin.host.external.InstallRejection,
+        reason: String,
+        declaredApiLevel: Int?,
+    ): String = when (code) {
+        io.github.whywood.deepdeep.plugin.host.external.InstallRejection.API_LEVEL_UNSUPPORTED ->
+            strings.get(R.string.plugins_api_level_retired, declaredApiLevel ?: 0)
+
+        else -> reason
+    }
+
+    private fun errorMessage(error: Throwable): String = when (error) {
+        is PluginApiLevelRejectedException -> strings.get(R.string.plugins_api_level_retired, error.declaredApiLevel)
+        else -> error.message ?: error.javaClass.simpleName
+    }
 
     private fun ExternalPluginRecord.toPluginRecord(): PluginRecord = PluginRecord(
         id = id,

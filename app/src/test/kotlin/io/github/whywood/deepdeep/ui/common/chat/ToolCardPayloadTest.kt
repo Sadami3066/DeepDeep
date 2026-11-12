@@ -6,6 +6,8 @@ import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.fileRefBlock
+import io.github.whywood.deepdeep.plugin.api.textBlock
 
 class ToolCardPayloadTest {
     @Test
@@ -20,9 +22,9 @@ class ToolCardPayloadTest {
 
         assertEquals(
             listOf(
-                ToolBlock.Text("before"),
-                ToolBlock.FileRef("/tmp/report.pdf", "application/pdf"),
-                ToolBlock.FileRef("/tmp/raw.bin"),
+                textBlock("before"),
+                fileRefBlock("/tmp/report.pdf", "application/pdf"),
+                fileRefBlock("/tmp/raw.bin"),
             ),
             payload.toPluginToolBlocks(),
         )
@@ -31,7 +33,7 @@ class ToolCardPayloadTest {
     @Test
     fun textAndEmptyPayloadsStayTextOnly() {
         assertEquals(
-            listOf(ToolBlock.Text("done")),
+            listOf(textBlock("done")),
             ToolResultPayload.Text("done").toPluginToolBlocks(),
         )
         assertEquals(emptyList<ToolBlock>(), ToolResultPayload.Empty.toPluginToolBlocks())

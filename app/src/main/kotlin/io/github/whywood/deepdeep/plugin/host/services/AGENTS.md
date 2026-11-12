@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
-| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果（合并输出在 `stdout`，`stderr` 恒空）；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送，24 小时超时），当前环境无流式实现时回退为命令完成后一次性推送；输出经无界 channel 背压排队，不丢弃行；`available` 由注入的 lambda 决定 |
+| `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果（合并输出在 `stdout`，`stderr` 恒空）；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送，24 小时超时），当前环境无流式实现时回退为命令完成后一次性推送；输出经无界 channel 背压排队，不丢弃行；`available` 由注入的 lambda 决定；chunk 用宿主 `HostLinuxChunk` + `LinuxChunkKind` |
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
 | `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限 |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |
@@ -20,8 +20,8 @@
 | `MiniappPluginService.kt` | `MiniappStore` 的扫描/加载/创建草稿/删除；`MiniappAgentService` 的 create/edit/run 以 fire-and-forget 方式执行 |
 | `McpPluginService.kt` | `McpConfigStore` 的服务器列表、`McpServerProbe` 探测；工具列表/调用需 deps 回调 |
 | `McpModelMapping.kt` | MCP 模型对象 ↔ plugin-api DTO 映射（工具、调用结果内容块） |
-| `UiAppInfoBus.kt` | `UiService`（openUrl/share/toast/openPage 回调，某个回调未注入时调用即抛 `PluginServiceUnavailable`）、`AppInfoService`（版本/语言/SDK/机型/安装 id）、`PluginBusImpl`/`ScopedPluginBus`（进程内 topic 总线，发布时盖 pluginId） |
-| `ChatPluginService.kt` | `ChatService.postCustomMessage` → 宿主的会话自定义消息投递（写 JSONL + 实时事件，返回是否成功） |
+| `UiAppInfoBus.kt` | `UiService`（openUrl/share/toast/openPage 回调，某个回调未注入时调用即抛 `PluginServiceUnavailable`）、`AppInfoService`（版本/语言/SDK/机型/安装 id）、`PluginBusImpl`/`ScopedPluginBus`（进程内 topic 总线，发布时用 `HostPluginBusEvent` 盖 pluginId 与时间戳） |
+| `ChatPluginService.kt` | `ChatService.postCustomMessage`/`sendMessage` → 宿主会话投递；返回宿主实现的 `ChatSendResult`（`ChatSendKind`） |
 | `PluginUiBridge.kt` | UI 请求桥：`share` 起系统分享 chooser（FileProvider），`openPage` 写 pending 页请求并拉起 MainActivity（DeepDeepApp 消费后导航到插件页） |
 | `LogPluginService.kt` | `android.util.Log`，tag 带 pluginId；测试可注入 sink |
 

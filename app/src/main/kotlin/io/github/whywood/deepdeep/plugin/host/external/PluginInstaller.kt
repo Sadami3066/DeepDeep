@@ -2,7 +2,6 @@ package io.github.whywood.deepdeep.plugin.host.external
 
 import io.github.whywood.deepdeep.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
-import io.github.whywood.deepdeep.plugin.api.PluginVersion
 import io.github.whywood.deepdeep.plugin.host.HostToolNames
 import io.github.whywood.deepdeep.plugin.host.PluginPaths
 import java.io.File
@@ -24,7 +23,11 @@ internal class PluginInstaller(
 
     suspend fun inspect(packageFile: File): InspectionResult = withContext(ioDispatcher) {
         when (val result = stager.readCandidate(packageFile)) {
-            is CandidateResult.Rejected -> InspectionResult.Rejected(result.code, result.reason)
+            is CandidateResult.Rejected -> InspectionResult.Rejected(
+                result.code,
+                result.reason,
+                result.declaredApiLevel,
+            )
             is CandidateResult.Ok -> {
                 val candidate = result.candidate
                 InspectionResult.Ready(
@@ -40,7 +43,11 @@ internal class PluginInstaller(
 
     suspend fun install(packageFile: File, acceptPublisher: Boolean = false): InstallResult = withContext(ioDispatcher) {
         val candidate = when (val result = stager.readCandidate(packageFile)) {
-            is CandidateResult.Rejected -> return@withContext InstallResult.Rejected(result.code, result.reason)
+            is CandidateResult.Rejected -> return@withContext InstallResult.Rejected(
+                result.code,
+                result.reason,
+                result.declaredApiLevel,
+            )
             is CandidateResult.Ok -> result.candidate
         }
         val manifest = candidate.manifest

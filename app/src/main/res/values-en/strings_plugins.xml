@@ -37,6 +37,8 @@
     <string name="plugins_capability_bus">Event bus</string>
     <string name="plugins_capability_logs">Logs</string>
     <string name="plugins_capability_chat">Chat messages</string>
+    <string name="plugins_capability_prompt">System prompt</string>
+    <string name="plugins_capability_other">Other capability</string>
     <string name="plugins_info_skills">Skills</string>
     <string name="plugins_info_publisher">Publisher</string>
     <string name="plugins_delete_title">Uninstall plugin</string>
@@ -75,4 +77,5 @@
     <string name="plugins_page_unavailable">This plugin does not provide content for this page</string>
     <string name="plugins_recovery_retry">Retry activation</string>
     <string name="plugins_recovery_rollback">Roll back to %1$s</string>
+    <string name="plugins_api_level_retired">Plugin API %1$d is no longer supported. Update the plugin.</string>
 </resources>

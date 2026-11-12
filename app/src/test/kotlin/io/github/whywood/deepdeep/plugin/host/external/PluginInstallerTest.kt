@@ -358,6 +358,23 @@ class PluginInstallerTest {
         assertFalse(PluginPaths.pluginRoot(pluginsRoot, installed.id).exists())
     }
 
+    @Test
+    fun inspectRejectsRetiredApiLevelFive() = runBlocking {
+        val installer = installer()
+        val pkg = SyntheticDdp.build(
+            dir,
+            "legacy.dpp",
+            SyntheticDdp.BuildRequest(manifest = SyntheticDdp.manifestJson(apiLevel = 5), key = key),
+        )
+
+        val result = installer.inspect(pkg)
+
+        assertTrue(result is InspectionResult.Rejected)
+        val rejected = result as InspectionResult.Rejected
+        assertEquals(InstallRejection.API_LEVEL_UNSUPPORTED, rejected.code)
+        assertEquals(5, rejected.declaredApiLevel)
+    }
+
     private fun installer(): PluginInstaller = PluginInstaller(
         pluginsRoot = pluginsRoot,
         trustStore = trustStore,

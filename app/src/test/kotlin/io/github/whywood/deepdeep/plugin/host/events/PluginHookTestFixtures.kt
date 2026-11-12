@@ -14,7 +14,33 @@ import io.github.whywood.deepdeep.plugin.api.ToolCallDecision
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest
 import io.github.whywood.deepdeep.plugin.api.ToolExecutionResult
 import io.github.whywood.deepdeep.plugin.api.ToolResultDecision
+import io.github.whywood.deepdeep.plugin.api.inputContinue
+import io.github.whywood.deepdeep.plugin.api.resultKeep
+import io.github.whywood.deepdeep.plugin.api.toolContinue
 import io.github.whywood.deepdeep.plugin.host.PluginHooksEntry
+import io.github.whywood.deepdeep.plugin.api.MessageRole
+import io.github.whywood.deepdeep.plugin.api.ToolPhase
+import io.github.whywood.deepdeep.plugin.api.BusEventReceived
+import io.github.whywood.deepdeep.plugin.api.CompactionFailedEvent
+import io.github.whywood.deepdeep.plugin.api.CompactionFinishedEvent
+import io.github.whywood.deepdeep.plugin.api.CompactionStartedEvent
+import io.github.whywood.deepdeep.plugin.api.McpStatusChangedEvent
+import io.github.whywood.deepdeep.plugin.api.McpToolsChangedEvent
+import io.github.whywood.deepdeep.plugin.api.MessageDeltaEvent
+import io.github.whywood.deepdeep.plugin.api.MessageFinishedEvent
+import io.github.whywood.deepdeep.plugin.api.MessageStartedEvent
+import io.github.whywood.deepdeep.plugin.api.ModelChangedEvent
+import io.github.whywood.deepdeep.plugin.api.RetryExhaustedEvent
+import io.github.whywood.deepdeep.plugin.api.RetryScheduledEvent
+import io.github.whywood.deepdeep.plugin.api.RetrySucceededEvent
+import io.github.whywood.deepdeep.plugin.api.RunFinishedEvent
+import io.github.whywood.deepdeep.plugin.api.RunStartedEvent
+import io.github.whywood.deepdeep.plugin.api.SessionClosedEvent
+import io.github.whywood.deepdeep.plugin.api.SessionStartedEvent
+import io.github.whywood.deepdeep.plugin.api.ThinkingLevelChangedEvent
+import io.github.whywood.deepdeep.plugin.api.ToolExecutionUpdateEvent
+import io.github.whywood.deepdeep.plugin.api.TurnFinishedEvent
+import io.github.whywood.deepdeep.plugin.api.TurnStartedEvent
 
 internal fun hookEntry(pluginId: String, hooks: PluginHooks): PluginHooksEntry = PluginHooksEntry(pluginId, hooks)
 
@@ -46,13 +72,13 @@ internal fun probeHooks(
         onPrompt?.invoke(request) ?: request.prompt
 
     override suspend fun inputTransform(request: InputRequest): InputDecision =
-        onInput?.invoke(request) ?: InputDecision.continueWith(request)
+        onInput?.invoke(request) ?: inputContinue(request.text, request.imagePaths)
 
     override suspend fun beforeToolCall(request: ToolCallRequest): ToolCallDecision =
-        onBefore?.invoke(request) ?: ToolCallDecision.Continue
+        onBefore?.invoke(request) ?: toolContinue()
 
     override suspend fun afterToolExecution(request: ToolExecutionResult): ToolResultDecision =
-        onAfter?.invoke(request) ?: ToolResultDecision.Keep
+        onAfter?.invoke(request) ?: resultKeep()
 
     override suspend fun context(request: PluginContextRequest): String? = onContext?.invoke(request)
 }
@@ -65,50 +91,50 @@ internal class EventRecordingHooks : PluginHooks {
 
     val calls = mutableListOf<String>()
 
-    override suspend fun sessionStarted(event: PluginEvent.SessionStarted) = record("sessionStarted", event)
+    override suspend fun sessionStarted(event: SessionStartedEvent) = record("sessionStarted", event)
 
-    override suspend fun sessionClosed(event: PluginEvent.SessionClosed) = record("sessionClosed", event)
+    override suspend fun sessionClosed(event: SessionClosedEvent) = record("sessionClosed", event)
 
-    override suspend fun runStarted(event: PluginEvent.RunStarted) = record("runStarted", event)
+    override suspend fun runStarted(event: RunStartedEvent) = record("runStarted", event)
 
-    override suspend fun runFinished(event: PluginEvent.RunFinished) = record("runFinished", event)
+    override suspend fun runFinished(event: RunFinishedEvent) = record("runFinished", event)
 
-    override suspend fun turnStarted(event: PluginEvent.TurnStarted) = record("turnStarted", event)
+    override suspend fun turnStarted(event: TurnStartedEvent) = record("turnStarted", event)
 
-    override suspend fun turnFinished(event: PluginEvent.TurnFinished) = record("turnFinished", event)
+    override suspend fun turnFinished(event: TurnFinishedEvent) = record("turnFinished", event)
 
-    override suspend fun messageStarted(event: PluginEvent.MessageStarted) = record("messageStarted", event)
+    override suspend fun messageStarted(event: MessageStartedEvent) = record("messageStarted", event)
 
-    override suspend fun messageDelta(event: PluginEvent.MessageDelta) = record("messageDelta", event)
+    override suspend fun messageDelta(event: MessageDeltaEvent) = record("messageDelta", event)
 
-    override suspend fun messageFinished(event: PluginEvent.MessageFinished) = record("messageFinished", event)
+    override suspend fun messageFinished(event: MessageFinishedEvent) = record("messageFinished", event)
 
-    override suspend fun toolExecutionUpdate(event: PluginEvent.ToolExecutionUpdate) =
+    override suspend fun toolExecutionUpdate(event: ToolExecutionUpdateEvent) =
         record("toolExecutionUpdate", event)
 
-    override suspend fun compactionStarted(event: PluginEvent.CompactionStarted) = record("compactionStarted", event)
+    override suspend fun compactionStarted(event: CompactionStartedEvent) = record("compactionStarted", event)
 
-    override suspend fun compactionFinished(event: PluginEvent.CompactionFinished) =
+    override suspend fun compactionFinished(event: CompactionFinishedEvent) =
         record("compactionFinished", event)
 
-    override suspend fun compactionFailed(event: PluginEvent.CompactionFailed) = record("compactionFailed", event)
+    override suspend fun compactionFailed(event: CompactionFailedEvent) = record("compactionFailed", event)
 
-    override suspend fun modelChanged(event: PluginEvent.ModelChanged) = record("modelChanged", event)
+    override suspend fun modelChanged(event: ModelChangedEvent) = record("modelChanged", event)
 
-    override suspend fun thinkingLevelChanged(event: PluginEvent.ThinkingLevelChanged) =
+    override suspend fun thinkingLevelChanged(event: ThinkingLevelChangedEvent) =
         record("thinkingLevelChanged", event)
 
-    override suspend fun retryScheduled(event: PluginEvent.RetryScheduled) = record("retryScheduled", event)
+    override suspend fun retryScheduled(event: RetryScheduledEvent) = record("retryScheduled", event)
 
-    override suspend fun retrySucceeded(event: PluginEvent.RetrySucceeded) = record("retrySucceeded", event)
+    override suspend fun retrySucceeded(event: RetrySucceededEvent) = record("retrySucceeded", event)
 
-    override suspend fun retryExhausted(event: PluginEvent.RetryExhausted) = record("retryExhausted", event)
+    override suspend fun retryExhausted(event: RetryExhaustedEvent) = record("retryExhausted", event)
 
-    override suspend fun mcpStatusChanged(event: PluginEvent.McpStatusChanged) = record("mcpStatusChanged", event)
+    override suspend fun mcpStatusChanged(event: McpStatusChangedEvent) = record("mcpStatusChanged", event)
 
-    override suspend fun mcpToolsChanged(event: PluginEvent.McpToolsChanged) = record("mcpToolsChanged", event)
+    override suspend fun mcpToolsChanged(event: McpToolsChangedEvent) = record("mcpToolsChanged", event)
 
-    override suspend fun busEvent(event: PluginEvent.BusEvent) = record("busEvent", event)
+    override suspend fun busEvent(event: BusEventReceived) = record("busEvent", event)
 
     private fun record(name: String, event: PluginEvent) {
         calls += name
@@ -117,27 +143,27 @@ internal class EventRecordingHooks : PluginHooks {
 }
 
 internal fun allPluginEvents(): List<PluginEvent> = listOf(
-    PluginEvent.SessionStarted("session-1", "title", "/workspace"),
-    PluginEvent.SessionClosed("session-1"),
-    PluginEvent.RunStarted("session-1", "run-1"),
-    PluginEvent.RunFinished("session-1", "run-1", null),
-    PluginEvent.TurnStarted("session-1", "turn-1"),
-    PluginEvent.TurnFinished("session-1", "turn-1", false),
-    PluginEvent.MessageStarted("session-1", "message-1", PluginEvent.MessageRole.USER),
-    PluginEvent.MessageDelta("session-1", "message-1", "delta"),
-    PluginEvent.MessageFinished("session-1", "message-1", "text"),
-    PluginEvent.ToolExecutionUpdate("session-1", "call-1", "bash", PluginEvent.ToolPhase.STARTED, null),
-    PluginEvent.CompactionStarted("session-1"),
-    PluginEvent.CompactionFinished("session-1", 100L, 50L),
-    PluginEvent.CompactionFailed("session-1", "boom"),
-    PluginEvent.ModelChanged("session-1", "model"),
-    PluginEvent.ThinkingLevelChanged("session-1", "high"),
-    PluginEvent.RetryScheduled("session-1", 1, 500L, "rate limited"),
-    PluginEvent.RetrySucceeded("session-1", 1),
-    PluginEvent.RetryExhausted("session-1", 3, "boom"),
-    PluginEvent.McpStatusChanged("mcp", McpServerStatus.OK),
-    PluginEvent.McpToolsChanged("mcp", listOf("tool")),
-    PluginEvent.BusEvent(PluginBusEvent("topic", "publisher")),
+    HostSessionStartedEvent("session-1", "title", "/workspace"),
+    HostSessionClosedEvent("session-1"),
+    HostRunStartedEvent("session-1", "run-1"),
+    HostRunFinishedEvent("session-1", "run-1", null),
+    HostTurnStartedEvent("session-1", "turn-1"),
+    HostTurnFinishedEvent("session-1", "turn-1", false),
+    HostMessageStartedEvent("session-1", "message-1", MessageRole.USER),
+    HostMessageDeltaEvent("session-1", "message-1", "delta"),
+    HostMessageFinishedEvent("session-1", "message-1", "text"),
+    HostToolExecutionUpdateEvent("session-1", "call-1", "bash", ToolPhase.STARTED, null),
+    HostCompactionStartedEvent("session-1"),
+    HostCompactionFinishedEvent("session-1", 100L, 50L),
+    HostCompactionFailedEvent("session-1", "boom"),
+    HostModelChangedEvent("session-1", "model"),
+    HostThinkingLevelChangedEvent("session-1", "high"),
+    HostRetryScheduledEvent("session-1", 1, 500L, "rate limited"),
+    HostRetrySucceededEvent("session-1", 1),
+    HostRetryExhaustedEvent("session-1", 3, "boom"),
+    HostMcpStatusChangedEvent("mcp", McpServerStatus.OK),
+    HostMcpToolsChangedEvent("mcp", listOf("tool")),
+    HostBusEventReceived(HostPluginBusEvent("topic", "publisher", kotlinx.serialization.json.JsonObject(emptyMap()), 0)),
 )
 
 internal val pluginEventMethodNames: List<String> = listOf(

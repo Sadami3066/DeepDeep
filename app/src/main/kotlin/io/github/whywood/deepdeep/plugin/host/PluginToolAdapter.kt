@@ -5,9 +5,9 @@ import io.github.whywood.deepdeep.sdk.agent.AgentToolUpdateCallback
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.deepdeep.plugin.api.PluginRunSignal
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
-import io.github.whywood.deepdeep.plugin.api.PluginRunSignal
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.runtime.DeferredTool
 import io.github.whywood.deepdeep.plugin.host.events.toAgentToolResult
@@ -55,7 +55,7 @@ internal object PluginToolAdapter {
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
         val resolvedSessionId = sessionId()
         if (onUpdate == null) {
-            runTool { tool.execute(PluginToolCall(callId, args, pluginSignal, resolvedSessionId)) }
+            runTool { tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null)) }
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
@@ -63,12 +63,26 @@ internal object PluginToolAdapter {
             }
             val result = runTool {
                 tool.execute(
-                    PluginToolCall(callId, args, pluginSignal, resolvedSessionId) { partial -> updates.trySend(partial) },
+                    HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId) { partial ->
+                        updates.trySend(partial)
+                    },
                 )
             }
             updates.close()
             forward.join()
             result
+        }
+    }
+
+    private class HostPluginToolCall(
+        override val callId: String,
+        override val args: JsonObject,
+        override val signal: PluginRunSignal?,
+        override val sessionId: String,
+        private val update: ((PluginToolResult) -> Unit)? = null,
+    ) : PluginToolCall {
+        override fun partial(result: PluginToolResult) {
+            update?.invoke(result)
         }
     }
 

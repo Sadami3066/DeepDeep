@@ -4,8 +4,16 @@ import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
 import io.github.whywood.deepdeep.sdk.ai.Content
 import io.github.whywood.deepdeep.sdk.ai.ImageContent
 import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.deepdeep.plugin.api.FileRefBlock
+import io.github.whywood.deepdeep.plugin.api.ImageBlock
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.api.TextBlock
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.plugin.api.fileRefBlock
+import io.github.whywood.deepdeep.plugin.api.imageBlock
+import io.github.whywood.deepdeep.plugin.api.richResult
+import io.github.whywood.deepdeep.plugin.api.textBlock
+import io.github.whywood.deepdeep.plugin.api.textResult
 import io.github.whywood.deepdeep.runtime.ToolResultDetails
 import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import io.github.whywood.deepdeep.runtime.fileRefDisplayText
@@ -16,32 +24,32 @@ internal fun AgentToolResult.toPluginToolResult(): PluginToolResult {
     val blocks = content.map { item -> item.toToolBlock() }
     val details = details as? JsonObject
     val failed = isError == true
-    return if (blocks.size == 1 && blocks.first() is ToolBlock.Text) {
-        PluginToolResult.Text(
-            text = (blocks.first() as ToolBlock.Text).text,
-            details = details,
-            isError = failed,
-        )
+    val single = blocks.singleOrNull()
+    return if (single is TextBlock) {
+        textResult(single.text, details, isError = failed)
     } else {
-        PluginToolResult.Rich(blocks = blocks, details = details, isError = failed)
+        richResult(blocks, details, isError = failed)
     }
 }
 
-internal fun PluginToolResult.toAgentToolResult(): AgentToolResult = when (this) {
-    is PluginToolResult.Text -> AgentToolResult(
-        content = listOf(TextContent(text)),
-        details = details,
-        isError = isError.takeIf { it },
-    )
-
-    is PluginToolResult.Rich -> AgentToolResult(
-        content = blocks.map { block -> block.toContent() },
-        details = details.withFileRefs(blocks.filterIsInstance<ToolBlock.FileRef>()),
-        isError = isError.takeIf { it },
-    )
+internal fun PluginToolResult.toAgentToolResult(): AgentToolResult {
+    val text = text
+    return if (text != null) {
+        AgentToolResult(
+            content = listOf(TextContent(text)),
+            details = details,
+            isError = isError.takeIf { it },
+        )
+    } else {
+        AgentToolResult(
+            content = blocks.map { block -> block.toContent() },
+            details = details.withFileRefs(blocks.filterIsInstance<FileRefBlock>()),
+            isError = isError.takeIf { it },
+        )
+    }
 }
 
-private fun JsonObject?.withFileRefs(fileRefs: List<ToolBlock.FileRef>): JsonObject? {
+private fun JsonObject?.withFileRefs(fileRefs: List<FileRefBlock>): JsonObject? {
     if (fileRefs.isEmpty()) return this
     val base = this ?: JsonObject(emptyMap())
     val encoded = ToolResultDetails.encodeFileRefs(
@@ -51,21 +59,23 @@ private fun JsonObject?.withFileRefs(fileRefs: List<ToolBlock.FileRef>): JsonObj
 }
 
 private fun Content.toToolBlock(): ToolBlock = when (this) {
-    is TextContent -> ToolBlock.Text(text)
-    is ImageContent -> ToolBlock.Image(
+    is TextContent -> textBlock(text)
+    is ImageContent -> imageBlock(
         data = runCatching { Base64.getDecoder().decode(data) }.getOrDefault(ByteArray(0)),
         mimeType = mimeType,
     )
 
-    else -> ToolBlock.Text(toString())
+    else -> textBlock(toString())
 }
 
 private fun ToolBlock.toContent(): Content = when (this) {
-    is ToolBlock.Text -> TextContent(text)
-    is ToolBlock.Image -> ImageContent(
+    is TextBlock -> TextContent(text)
+    is ImageBlock -> ImageContent(
         data = Base64.getEncoder().encodeToString(data),
         mimeType = mimeType,
     )
 
-    is ToolBlock.FileRef -> TextContent(fileRefDisplayText(path, mimeType))
+    is FileRefBlock -> TextContent(fileRefDisplayText(path, mimeType))
+
+    else -> TextContent(toString())
 }

@@ -49,6 +49,7 @@ class PiSessionEngine(
     private val sharedStorage: suspend () -> Boolean = { false },
     private val storageMounts: suspend () -> List<StorageMountInfo> = { emptyList() },
     private val pluginPromptBody: suspend () -> String? = { null },
+    private val pluginPromptOverrides: suspend () -> PluginPromptOverrides = { PluginPromptOverrides.None },
     private val excludedSkills: Set<String> = emptySet(),
     private val excludedMcpServers: Set<String> = emptySet(),
     private val toolContext: AppToolContext? = null,
@@ -135,12 +136,19 @@ class PiSessionEngine(
             val session = created
             val sharedStorageValue = runCatching { sharedStorage() }.getOrDefault(false)
             val mounts = runCatching { storageMounts() }.getOrDefault(emptyList())
+            val promptMerge = mergePluginPromptOverrides(
+                overrides = runCatching { pluginPromptOverrides() }.getOrDefault(PluginPromptOverrides.None),
+                legacyBody = runCatching { pluginPromptBody() }.getOrNull(),
+                warn = { message -> logWarn("PluginPrompt", message) },
+            )
             buildSessionSystemPromptSections(
                 personalization = runCatching { personalization() }.getOrDefault(Personalization()),
                 providerId = session?.model?.provider ?: providerId,
                 modelId = session?.model?.id ?: modelId,
                 now = OffsetDateTime.now(),
-                pluginBody = runCatching { pluginPromptBody() }.getOrNull(),
+                pluginBody = promptMerge.pluginsBody,
+                promptPreamble = promptMerge.preamble,
+                promptRules = promptMerge.rules,
                 environmentLines = hostEnvironment?.current()?.promptLines,
                 extra = memoryContextSections() + mapOf(
                     "paths" to wrapPromptSection(

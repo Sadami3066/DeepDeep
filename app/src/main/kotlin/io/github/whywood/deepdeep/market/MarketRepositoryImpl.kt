@@ -6,6 +6,8 @@ import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.data.SkillArchiveResult
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
+import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import java.io.File
@@ -41,6 +43,8 @@ class MarketRepositoryImpl(
     private val pluginManager: PluginManagerFacade,
     private val mcpConfigStore: McpConfigStore,
     private val http: OkHttpClient = defaultHttpClient(),
+    private val hostApiLevel: Int = PLUGIN_API_LEVEL,
+    private val hostVersion: String? = io.github.whywood.deepdeep.BuildConfig.VERSION_NAME,
 ) : MarketRepository {
     private val filesDir = File(context.filesDir, MarketDefaults.MARKET_DIR)
     private val registryFile = File(filesDir, "registry.json")
@@ -77,6 +81,9 @@ class MarketRepositoryImpl(
     }
 
     override fun installedVersion(entry: MarketEntry): String? = installedContent.value.versionOf(entry)
+
+    override fun pluginCompatibility(entry: MarketEntry): MarketPluginCompatibility =
+        resolvePluginCompatibility(entry.plugin, hostApiLevel, hostVersion)
 
     override suspend fun refresh(force: Boolean): Boolean = refreshMutex.withLock {
         withContext(Dispatchers.IO) {
@@ -127,6 +134,7 @@ class MarketRepositoryImpl(
         }.getOrDefault(emptySet())
         val targets = autoUpdatePlanner.plan(registry.entries, _installStates.value)
             .filter { it.id !in pending }
+            .filter { pluginCompatibility(it) == MarketPluginCompatibility.Compatible }
         for (entry in targets) {
             autoUpdatePlanner.markAttempt(entry.id)
             val result = install(entry)
@@ -140,6 +148,12 @@ class MarketRepositoryImpl(
 
     override suspend fun install(entry: MarketEntry, apiKey: String?): Result<Unit> = installMutex.withLock {
         withContext(Dispatchers.IO) {
+            val blocked = entry.takeIf { it.type == MarketEntryType.Plugin }?.let(::pluginCompatibility)
+            if (blocked != null && blocked != MarketPluginCompatibility.Compatible) {
+                val message = blockedMessage(entry, blocked)
+                setInstallState(entry.id, MarketInstallState.Failed(message))
+                return@withContext Result.failure(IllegalStateException(message))
+            }
             setInstallState(entry.id, MarketInstallState.Installing(null))
             try {
                 when (entry.type) {
@@ -362,6 +376,18 @@ class MarketRepositoryImpl(
         registryFile.writeBytes(fetched.registryBytes)
         signatureFile.writeBytes(fetched.signatureBytes)
         metaFile.writeText("{\"fetchedAt\":${System.currentTimeMillis()}}")
+    }
+
+    private fun blockedMessage(entry: MarketEntry, compatibility: MarketPluginCompatibility): String = when (compatibility) {
+        MarketPluginCompatibility.ApiLevelTooOld ->
+            context.getString(R.string.market_plugin_api_retired, entry.plugin?.apiLevel ?: 0)
+
+        MarketPluginCompatibility.ApiLevelTooNew -> context.getString(R.string.market_plugin_requires_newer_app)
+
+        MarketPluginCompatibility.HostTooOld ->
+            context.getString(R.string.market_plugin_requires_host_version, entry.plugin?.minHostVersion.orEmpty())
+
+        MarketPluginCompatibility.Compatible -> ""
     }
 
     private fun currentRegistry(): MarketRegistry? = (_state.value as? MarketState.Ready)?.registry

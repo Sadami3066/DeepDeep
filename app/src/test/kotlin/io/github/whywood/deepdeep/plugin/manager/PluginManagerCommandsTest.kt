@@ -26,10 +26,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.available
+import io.github.whywood.deepdeep.plugin.api.contributions
+import io.github.whywood.deepdeep.plugin.api.pluginSkill
 
 class PluginManagerCommandsTest {
     private class FakeStrings : PluginStrings {
         override fun get(id: Int): String = "string_$id"
+
+        override fun get(id: Int, vararg args: Any): String = "string_$id"
     }
 
     private class Harness(
@@ -49,7 +54,7 @@ class PluginManagerCommandsTest {
         val registry = PluginRegistry()
         val state = MutableStateFlow(PluginsUiState())
         val strings = FakeStrings()
-        val textResolver = PluginTextResolver(resourceString = { "" }, language = { "default" })
+        val textResolver = PluginTextResolver(language = { "default" })
         val skillStore = PluginSkillStore(root.resolve("skills"), root.resolve("repo"))
         val lifecycle = PluginLifecycle(
             parentScope = scope,
@@ -103,9 +108,9 @@ class PluginManagerCommandsTest {
     }
 
     private class SkillPlugin(private val skillId: String) : DeepDeepPlugin {
-        override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
+        override suspend fun availability(host: PluginHost): PluginAvailability = available()
 
-        override fun skills(host: PluginHost): List<PluginSkill> = listOf(PluginSkill(skillId, "# $skillId"))
+        override fun skills(host: PluginHost): List<PluginSkill> = listOf(pluginSkill(skillId, "# $skillId"))
     }
 
     private suspend fun await(timeoutMillis: Long = 5_000, condition: () -> Boolean) {

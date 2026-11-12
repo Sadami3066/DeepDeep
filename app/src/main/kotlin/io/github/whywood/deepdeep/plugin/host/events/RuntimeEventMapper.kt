@@ -13,9 +13,13 @@ import io.github.whywood.deepdeep.sdk.ai.UserMessage
 import io.github.whywood.deepdeep.sdk.coding.mcp.McpServerState
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus
-import io.github.whywood.deepdeep.plugin.api.PluginBusEvent
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.api.MessageRole
+import io.github.whywood.deepdeep.plugin.api.ToolPhase
+import io.github.whywood.deepdeep.plugin.api.richResult
+import io.github.whywood.deepdeep.plugin.api.textResult
+import io.github.whywood.deepdeep.plugin.api.PluginBusEvent
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.util.concurrent.ConcurrentHashMap
@@ -45,9 +49,9 @@ internal class RuntimeEventMapper(
         emitAll(mapSessionEvent(sessionId, event))
 
     fun map(sessionId: String, event: RuntimeEvent): List<PluginEvent> = when (event) {
-        is RuntimeEvent.RunStarted -> listOf(PluginEvent.RunStarted(sessionId, event.runId))
-        is RuntimeEvent.RunFinished -> listOf(PluginEvent.RunFinished(sessionId, event.runId))
-        is RuntimeEvent.RunFailed -> listOf(PluginEvent.RunFinished(sessionId, event.runId, event.message))
+        is RuntimeEvent.RunStarted -> listOf(HostRunStartedEvent(sessionId, event.runId))
+        is RuntimeEvent.RunFinished -> listOf(HostRunFinishedEvent(sessionId, event.runId))
+        is RuntimeEvent.RunFailed -> listOf(HostRunFinishedEvent(sessionId, event.runId, event.message))
         is RuntimeEvent.TurnInjected -> injectedMessage(sessionId, event.runId, event.text)
         is RuntimeEvent.UserInputAdmitted -> userMessage(sessionId, event.runId, event.text)
         else -> emptyList()
@@ -56,34 +60,34 @@ internal class RuntimeEventMapper(
     fun mapSessionEvent(sessionId: String, event: SessionEvent): List<PluginEvent> = when (event) {
         is SessionEvent.AgentEventReceived -> mapAgentEvent(sessionId, event.event)
         is SessionEvent.ModelChanged -> listOf(
-            PluginEvent.ModelChanged(sessionId, "${event.provider}/${event.modelId}"),
-            PluginEvent.ThinkingLevelChanged(sessionId, event.thinkingLevel),
+            HostModelChangedEvent(sessionId, "${event.provider}/${event.modelId}"),
+            HostThinkingLevelChangedEvent(sessionId, event.thinkingLevel),
         )
 
-        is SessionEvent.CompactionStarted -> listOf(PluginEvent.CompactionStarted(sessionId))
+        is SessionEvent.CompactionStarted -> listOf(HostCompactionStartedEvent(sessionId))
         is SessionEvent.CompactionFinished -> listOf(
-            PluginEvent.CompactionFinished(sessionId, event.tokensBefore, event.tokensAfter ?: 0L),
+            HostCompactionFinishedEvent(sessionId, event.tokensBefore, event.tokensAfter ?: 0L),
         )
 
         is SessionEvent.CompactionFailed -> listOf(
-            PluginEvent.CompactionFailed(sessionId, event.errorMessage.orEmpty()),
+            HostCompactionFailedEvent(sessionId, event.errorMessage.orEmpty()),
         )
 
         is SessionEvent.RetryScheduled -> listOf(
-            PluginEvent.RetryScheduled(sessionId, event.attempt, event.delayMs, event.errorMessage),
+            HostRetryScheduledEvent(sessionId, event.attempt, event.delayMs, event.errorMessage),
         )
 
-        is SessionEvent.RetrySucceeded -> listOf(PluginEvent.RetrySucceeded(sessionId, event.attempt))
+        is SessionEvent.RetrySucceeded -> listOf(HostRetrySucceededEvent(sessionId, event.attempt))
         is SessionEvent.RetryExhausted -> listOf(
-            PluginEvent.RetryExhausted(sessionId, event.attempts, event.errorMessage.orEmpty()),
+            HostRetryExhaustedEvent(sessionId, event.attempts, event.errorMessage.orEmpty()),
         )
 
         is SessionEvent.McpServerStatusChanged -> listOf(
-            PluginEvent.McpStatusChanged(event.name, event.status.toPluginStatus()),
+            HostMcpStatusChangedEvent(event.name, event.status.toPluginStatus()),
         )
 
         is SessionEvent.McpToolsChanged -> listOf(
-            PluginEvent.McpToolsChanged(event.server, event.added),
+            HostMcpToolsChangedEvent(event.server, event.added),
         )
 
         is SessionEvent.CustomMessageAppended -> listOf(customMessageEvent(sessionId, event))
@@ -91,9 +95,9 @@ internal class RuntimeEventMapper(
     }
 
     private fun mapAgentEvent(sessionId: String, event: AgentEvent): List<PluginEvent> = when (event) {
-        AgentEvent.TurnStart -> listOf(PluginEvent.TurnStarted(sessionId, ids.turnStarted(sessionId)))
+        AgentEvent.TurnStart -> listOf(HostTurnStartedEvent(sessionId, ids.turnStarted(sessionId)))
         is AgentEvent.TurnEnd -> listOf(
-            PluginEvent.TurnFinished(
+            HostTurnFinishedEvent(
                 sessionId = sessionId,
                 turnId = ids.turnFinished(sessionId),
                 failed = event.message.asAssistantMessage()?.stopReason == StopReason.Error,
@@ -101,23 +105,23 @@ internal class RuntimeEventMapper(
         )
 
         is AgentEvent.MessageStart -> listOf(
-            PluginEvent.MessageStarted(sessionId, messageId(sessionId, event.message), event.message.role.toPluginRole()),
+            HostMessageStartedEvent(sessionId, messageId(sessionId, event.message), event.message.role.toPluginRole()),
         )
 
         is AgentEvent.MessageUpdate -> when (val update = event.assistantMessageEvent) {
             is TextDeltaEvent -> listOf(
-                PluginEvent.MessageDelta(sessionId, messageId(sessionId, event.message), update.delta),
+                HostMessageDeltaEvent(sessionId, messageId(sessionId, event.message), update.delta),
             )
 
             is ThinkingDeltaEvent -> listOf(
-                PluginEvent.MessageDelta(sessionId, messageId(sessionId, event.message), update.delta),
+                HostMessageDeltaEvent(sessionId, messageId(sessionId, event.message), update.delta),
             )
 
             else -> emptyList()
         }
 
         is AgentEvent.MessageEnd -> listOf(
-            PluginEvent.MessageFinished(
+            HostMessageFinishedEvent(
                 sessionId = sessionId,
                 messageId = messageId(sessionId, event.message),
                 text = event.message.text(),
@@ -125,30 +129,30 @@ internal class RuntimeEventMapper(
         )
 
         is AgentEvent.ToolExecutionStart -> listOf(
-            PluginEvent.ToolExecutionUpdate(
+            HostToolExecutionUpdateEvent(
                 sessionId = sessionId,
                 callId = event.toolCallId,
                 toolName = event.toolName,
-                phase = PluginEvent.ToolPhase.STARTED,
+                phase = ToolPhase.STARTED,
             ),
         )
 
         is AgentEvent.ToolExecutionUpdate -> listOf(
-            PluginEvent.ToolExecutionUpdate(
+            HostToolExecutionUpdateEvent(
                 sessionId = sessionId,
                 callId = event.toolCallId,
                 toolName = event.toolName,
-                phase = PluginEvent.ToolPhase.PARTIAL,
+                phase = ToolPhase.PARTIAL,
                 partial = event.partialResult.toPluginToolResult(),
             ),
         )
 
         is AgentEvent.ToolExecutionEnd -> listOf(
-            PluginEvent.ToolExecutionUpdate(
+            HostToolExecutionUpdateEvent(
                 sessionId = sessionId,
                 callId = event.toolCallId,
                 toolName = event.toolName,
-                phase = if (event.isError) PluginEvent.ToolPhase.FAILED else PluginEvent.ToolPhase.FINISHED,
+                phase = if (event.isError) ToolPhase.FAILED else ToolPhase.FINISHED,
                 partial = event.result.toPluginToolResult().withError(event.isError),
             ),
         )
@@ -166,24 +170,24 @@ internal class RuntimeEventMapper(
     private fun injectedMessage(sessionId: String, runId: String, text: String): List<PluginEvent> {
         val messageId = "$runId:system"
         return listOf(
-            PluginEvent.MessageStarted(sessionId, messageId, PluginEvent.MessageRole.SYSTEM),
-            PluginEvent.MessageFinished(sessionId, messageId, text),
+            HostMessageStartedEvent(sessionId, messageId, MessageRole.SYSTEM),
+            HostMessageFinishedEvent(sessionId, messageId, text),
         )
     }
 
     private fun userMessage(sessionId: String, runId: String, text: String): List<PluginEvent> {
         val messageId = "$runId:user"
         return listOf(
-            PluginEvent.MessageStarted(sessionId, messageId, PluginEvent.MessageRole.USER),
-            PluginEvent.MessageFinished(sessionId, messageId, text),
+            HostMessageStartedEvent(sessionId, messageId, MessageRole.USER),
+            HostMessageFinishedEvent(sessionId, messageId, text),
         )
     }
 
     private fun customMessageEvent(
         sessionId: String,
         event: SessionEvent.CustomMessageAppended,
-    ): PluginEvent = PluginEvent.BusEvent(
-        PluginBusEvent(
+    ): PluginEvent = HostBusEventReceived(
+        HostPluginBusEvent(
             topic = RUNTIME_CUSTOM_MESSAGE_TOPIC,
             publisher = HOST_BUS_PUBLISHER,
             payload = buildJsonObject {
@@ -191,27 +195,28 @@ internal class RuntimeEventMapper(
                 put("customType", event.customType)
                 put("entryId", event.entryId)
             },
+            publishedAt = 0,
         ),
     )
 
-    private fun PluginToolResult.withError(isError: Boolean): PluginToolResult =
-        if (isError && !this.isError) {
-            when (this) {
-                is PluginToolResult.Text -> copy(isError = true)
-                is PluginToolResult.Rich -> copy(isError = true)
-            }
+    private fun PluginToolResult.withError(isError: Boolean): PluginToolResult {
+        if (!isError || this.isError) return this
+        val currentText = text
+        return if (currentText != null) {
+            textResult(currentText, details, isError = true)
         } else {
-            this
+            richResult(blocks, details, isError = true)
         }
+    }
 
     private fun messageId(sessionId: String, message: AgentMessage): String =
         "$sessionId:${message.role}:${message.timestamp}"
 
-    private fun String.toPluginRole(): PluginEvent.MessageRole = when (this) {
-        "assistant" -> PluginEvent.MessageRole.ASSISTANT
-        "user" -> PluginEvent.MessageRole.USER
-        "toolResult" -> PluginEvent.MessageRole.TOOL
-        else -> PluginEvent.MessageRole.SYSTEM
+    private fun String.toPluginRole(): MessageRole = when (this) {
+        "assistant" -> MessageRole.ASSISTANT
+        "user" -> MessageRole.USER
+        "toolResult" -> MessageRole.TOOL
+        else -> MessageRole.SYSTEM
     }
 
     private fun AgentMessage.text(): String? = when (val message = asLlmMessage()) {

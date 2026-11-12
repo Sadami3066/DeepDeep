@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
 import io.github.whywood.deepdeep.plugin.api.LinuxChunk
+import io.github.whywood.deepdeep.plugin.api.LinuxChunkKind
 import io.github.whywood.deepdeep.plugin.api.LinuxResult
 import io.github.whywood.deepdeep.plugin.api.LinuxService
 import io.github.whywood.deepdeep.runtime.CommandResult
@@ -81,13 +82,21 @@ internal class LinuxPluginService(
     }
 }
 
+internal data class HostLinuxChunk(
+    override val kind: LinuxChunkKind,
+    override val text: String?,
+    override val exitCode: Int?,
+) : LinuxChunk
+
 internal fun linuxStream(
     execute: suspend (onLine: (String) -> Unit) -> ShellLinuxResult,
 ): Flow<LinuxChunk> = callbackFlow {
     val pending = Channel<LinuxChunk>(Channel.UNLIMITED)
     val pump = launch { for (chunk in pending) send(chunk) }
-    val result = execute { line -> pending.trySend(LinuxChunk.Stdout(line)) }
-    pending.send(LinuxChunk.Exit(result.exitCode))
+    val result = execute { line ->
+        pending.trySend(HostLinuxChunk(kind = LinuxChunkKind.STDOUT, text = line, exitCode = null))
+    }
+    pending.send(HostLinuxChunk(kind = LinuxChunkKind.EXIT, text = null, exitCode = result.exitCode))
     pending.close()
     pump.join()
     close()

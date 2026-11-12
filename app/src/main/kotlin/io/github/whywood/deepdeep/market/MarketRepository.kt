@@ -16,4 +16,6 @@ interface MarketRepository {
     suspend fun install(entry: MarketEntry, apiKey: String? = null): Result<Unit>
 
     fun installedVersion(entry: MarketEntry): String?
+
+    fun pluginCompatibility(entry: MarketEntry): MarketPluginCompatibility
 }

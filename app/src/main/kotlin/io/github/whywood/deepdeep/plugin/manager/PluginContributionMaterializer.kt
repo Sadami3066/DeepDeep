@@ -1,7 +1,17 @@
 package io.github.whywood.deepdeep.plugin.manager
 
+import android.util.Log
+import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
+import io.github.whywood.deepdeep.plugin.api.PluginExperimentalApi
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
+import io.github.whywood.deepdeep.plugin.api.PromptOverride
+import io.github.whywood.deepdeep.plugin.api.PromptOverridePlugin
+import io.github.whywood.deepdeep.plugin.api.available
+import io.github.whywood.deepdeep.plugin.api.pluginSkill
+import io.github.whywood.deepdeep.plugin.api.pluginSkillFile
+import io.github.whywood.deepdeep.plugin.api.unavailable
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
 import java.io.File
@@ -50,7 +60,7 @@ internal class PluginContributionMaterializer(
             throw error
         } catch (error: Throwable) {
             record(error)
-            PluginAvailability.Unavailable(error.message ?: error.javaClass.simpleName)
+            unavailable(error.message ?: error.javaClass.simpleName)
         }
         val contributions = if (view.enabled) {
             try {
@@ -59,6 +69,7 @@ internal class PluginContributionMaterializer(
                     tools = base.tools,
                     skills = skills,
                     promptSections = plugin.promptSections(view.host),
+                    promptOverride = materializePromptOverride(view, plugin),
                     ui = plugin.ui(view.host),
                     hooks = base.hooks,
                 )
@@ -79,13 +90,15 @@ internal class PluginContributionMaterializer(
         )
     }
 
-    fun materializeSkills(view: PluginRuntimeView, plugin: io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin): List<PluginSkill> =
+    fun materializeSkills(view: PluginRuntimeView, plugin: DeepDeepPlugin): List<PluginSkill> =
         plugin.skills(view.host).map { skill ->
-            skill.copy(
+            pluginSkill(
+                id = skill.id,
+                markdown = skill.markdown,
                 files = skill.files.map { file ->
                     val assetPath = file.assetPath
                     if (file.content == null && assetPath != null) {
-                        file.copy(content = readAsset(view, assetPath))
+                        pluginSkillFile(file.path, content = readAsset(view, assetPath), assetPath = null)
                     } else {
                         file
                     }
@@ -93,7 +106,28 @@ internal class PluginContributionMaterializer(
             )
         }
 
+    private fun materializePromptOverride(view: PluginRuntimeView, plugin: DeepDeepPlugin): PromptOverride? {
+        if (PluginCapability.PROMPT !in view.manifest.capabilities) return null
+        val provider = plugin as? PromptOverridePlugin ?: return null
+        return try {
+            provider.promptOverride(view.host)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Throwable) {
+            promptWarning("prompt override failed for ${view.id}: ${error.message ?: error.javaClass.simpleName}")
+            null
+        }
+    }
+
     private fun readAsset(view: PluginRuntimeView, path: String): String? = runCatching {
         File(view.host.assetsDir, path).readText()
     }.getOrNull()
+
+    private fun promptWarning(message: String) {
+        runCatching { Log.w(PROMPT_TAG, message) }
+    }
+
+    private companion object {
+        const val PROMPT_TAG = "PluginPrompt"
+    }
 }

@@ -1,54 +1,48 @@
 package io.github.whywood.deepdeep.plugin.host
 
-import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.host.external.HostLocalizedText
+import io.github.whywood.deepdeep.plugin.host.external.hostLocalizedText
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class PluginTextResolverTest {
-    private val englishResolver = PluginTextResolver({ id -> "resource:$id" }, { "en" })
+    private val englishResolver = PluginTextResolver({ "en" })
 
     @Test
-    fun resolvesLiteralByLanguageTag() {
-        val text = LocalizedText.Literal(mapOf("default" to "default text", "en" to "english text", "zh" to "中文"))
-        assertEquals("english text", englishResolver.resolve(text))
-        assertEquals("中文", PluginTextResolver({ "" }, { "zh" }).resolve(text))
+    fun resolvesRequestedLanguage() {
+        val text = hostLocalizedText(mapOf("default" to "default text", "zh" to "中文", "en" to "english"))
+        assertEquals("english", englishResolver.resolve(text))
+        assertEquals("中文", PluginTextResolver({ "zh" }).resolve(text))
     }
 
     @Test
     fun fallsBackToDefaultLanguage() {
-        val text = LocalizedText.Literal(mapOf("default" to "default text", "en" to "english text"))
-        assertEquals("default text", PluginTextResolver({ "" }, { "fr" }).resolve(text))
-        assertEquals("default text", PluginTextResolver({ "" }, { "" }).resolve(text))
+        val text = hostLocalizedText(mapOf("default" to "default text", "zh" to "中文"))
+        assertEquals("default text", PluginTextResolver({ "fr" }).resolve(text))
         assertEquals("default text", PluginTextResolver({ "" }).resolve(text))
+        assertEquals("default text", PluginTextResolver().resolve(text))
     }
 
     @Test
-    fun missingTextResolvesToEmptyString() {
-        assertEquals("", englishResolver.resolve(LocalizedText.Literal(emptyMap())))
+    fun formatsArguments() {
+        val text = hostLocalizedText("hello %s, %d")
+        assertEquals("hello world, 3", englishResolver.resolve(text, arrayOf<Any>("world", 3)))
     }
 
     @Test
-    fun resolvesResourceThroughInjectedResolver() {
-        assertEquals("resource:42", englishResolver.resolve(LocalizedText.Resource(42)))
+    fun emptyValuesResolveToEmptyString() {
+        assertEquals("", englishResolver.resolve(HostLocalizedText(emptyMap())))
     }
 
     @Test
-    fun formatsArgumentsWhenPresent() {
-        val text = LocalizedText.Literal("hello %s #%d")
-
-        assertEquals("hello world #7", englishResolver.resolve(text, arrayOf<Any>("world", 7)))
-        assertEquals("100% done", englishResolver.resolve(LocalizedText.Literal("100%% %s"), arrayOf<Any>("done")))
+    fun formattingWithoutArgumentsKeepsPercentSigns() {
+        val text = hostLocalizedText("100% ready")
+        assertEquals("100% ready", englishResolver.resolve(text))
     }
 
     @Test
-    fun leavesTemplateVerbatimWithoutArguments() {
-        assertEquals("100%", englishResolver.resolve(LocalizedText.Literal("100%")))
-        assertEquals("a %s b", englishResolver.resolve(LocalizedText.Literal("a %s b")))
-    }
-
-    @Test
-    fun formatsResourceTextArguments() {
-        val resolver = PluginTextResolver({ id -> "resource %s" }, { "en" })
-        assertEquals("resource value", resolver.resolve(LocalizedText.Resource(1), arrayOf<Any>("value")))
+    fun formatsStringAndNumberArguments() {
+        val text = hostLocalizedText("%1\$s: %2\$d")
+        assertEquals("a: 1", englishResolver.resolve(text, arrayOf<Any>("a", 1)))
     }
 }

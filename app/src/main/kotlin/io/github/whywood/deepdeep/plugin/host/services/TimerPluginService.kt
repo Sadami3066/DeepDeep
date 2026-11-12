@@ -4,6 +4,9 @@ import io.github.whywood.deepdeep.plugin.api.TimerInfo
 import io.github.whywood.deepdeep.plugin.api.TimerRequest
 import io.github.whywood.deepdeep.plugin.api.TimerService
 import io.github.whywood.deepdeep.plugin.api.TimerTrigger as PluginTrigger
+import io.github.whywood.deepdeep.plugin.api.TimerTriggerKind
+import io.github.whywood.deepdeep.plugin.api.timerCron
+import io.github.whywood.deepdeep.plugin.api.timerOnce
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.Timer
 import io.github.whywood.deepdeep.runtime.TimerService as RuntimeTimerService
@@ -39,13 +42,18 @@ internal class TimerPluginService(
 
     override suspend fun cancel(id: String): Boolean = timers.delete(id)
 
-    private fun PluginTrigger.toRuntimeTrigger(): RuntimeTrigger = when (this) {
-        is PluginTrigger.Once -> {
-            val dateTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), systemZone())
+    private fun PluginTrigger.toRuntimeTrigger(): RuntimeTrigger = when (kind) {
+        TimerTriggerKind.ONCE -> {
+            val millis = epochMillis ?: throw IllegalArgumentException("timer trigger is missing epochMillis")
+            val dateTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), systemZone())
             RuntimeTrigger.Once(dateTime.toLocalDate(), dateTime.toLocalTime())
         }
 
-        is PluginTrigger.Cron -> RuntimeTrigger.Cron(expression)
+        TimerTriggerKind.CRON -> RuntimeTrigger.Cron(
+            expression ?: throw IllegalArgumentException("timer trigger is missing cron expression"),
+        )
+
+        else -> throw IllegalArgumentException("unsupported timer trigger: $kind")
     }
 
     private fun Timer.toPluginInfo(): TimerInfo = TimerInfo(
@@ -62,19 +70,19 @@ internal class TimerPluginService(
     private fun RuntimeTrigger.toPluginTrigger(): PluginTrigger = when (this) {
         is RuntimeTrigger.Once -> {
             val epochMillis = ZonedDateTime.of(date, time, systemZone()).toInstant().toEpochMilli()
-            PluginTrigger.Once(epochMillis)
+            timerOnce(epochMillis)
         }
 
-        is RuntimeTrigger.Daily -> PluginTrigger.Cron("${time.minute} ${time.hour} * * *")
+        is RuntimeTrigger.Daily -> timerCron("${time.minute} ${time.hour} * * *")
 
         is RuntimeTrigger.Weekly -> {
             val daysPart = days.sortedBy { it.value }.joinToString(",") { day ->
                 if (day.value == 7) "0" else day.value.toString()
             }.ifEmpty { "*" }
-            PluginTrigger.Cron("${time.minute} ${time.hour} * * $daysPart")
+            timerCron("${time.minute} ${time.hour} * * $daysPart")
         }
 
-        is RuntimeTrigger.Cron -> PluginTrigger.Cron(expression)
+        is RuntimeTrigger.Cron -> timerCron(expression)
     }
 
     private fun systemZone(): ZoneId = ZoneId.systemDefault()

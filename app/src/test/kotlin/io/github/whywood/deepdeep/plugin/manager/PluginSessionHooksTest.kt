@@ -25,6 +25,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.available
+import io.github.whywood.deepdeep.plugin.api.contributions
 
 class PluginSessionHooksTest {
     @Test
@@ -265,17 +267,17 @@ class PluginSessionHooksTest {
             hits.merge(name, 1) { current, _ -> current + 1 }
         }
 
-        override suspend fun availability(host: PluginHost): PluginAvailability = PluginAvailability.Available
+        override suspend fun availability(host: PluginHost): PluginAvailability = available()
 
         override fun contributions(host: PluginHost): Contributions {
             hit("contributions")
-            return Contributions(tools = tools.map(::managerTool), hooks = baseHooks)
+            return contributions(tools = tools.map(::managerTool), hooks = baseHooks)
         }
 
         override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions {
             hit("contributionsFor")
             return sessionHooks?.let { hooks ->
-                Contributions(tools = tools.map(::managerTool), hooks = hooks)
+                contributions(tools = tools.map(::managerTool), hooks = hooks)
             } ?: contributions(host)
         }
     }

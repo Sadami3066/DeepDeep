@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
 import io.github.whywood.deepdeep.plugin.api.LinuxChunk
+import io.github.whywood.deepdeep.plugin.api.LinuxChunkKind
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.host.HostEnvironment
@@ -35,7 +36,11 @@ class LinuxPluginStreamTest {
         ).toList()
 
         assertEquals(
-            listOf(LinuxChunk.Stdout("one"), LinuxChunk.Stdout("two"), LinuxChunk.Exit(0)),
+            listOf(
+                HostLinuxChunk(LinuxChunkKind.STDOUT, "one", null),
+                HostLinuxChunk(LinuxChunkKind.STDOUT, "two", null),
+                HostLinuxChunk(LinuxChunkKind.EXIT, null, 0),
+            ),
             chunks,
         )
     }
@@ -50,8 +55,8 @@ class LinuxPluginStreamTest {
             },
         ).onEach { delay(1) }.toList()
 
-        assertEquals(lineCount, chunks.count { it is LinuxChunk.Stdout })
-        assertEquals(LinuxChunk.Exit(0), chunks.last())
+        assertEquals(lineCount, chunks.count { it.kind == LinuxChunkKind.STDOUT })
+        assertEquals(HostLinuxChunk(LinuxChunkKind.EXIT, null, 0), chunks.last())
     }
 
     @Test
@@ -91,7 +96,10 @@ class LinuxPluginStreamTest {
         val chunks = service.stream("apk info").toList()
 
         assertEquals(24 * 60 * 60 * 1000L, seenTimeout)
-        assertEquals(listOf(LinuxChunk.Stdout("streamed"), LinuxChunk.Exit(0)), chunks)
+        assertEquals(
+            listOf(HostLinuxChunk(LinuxChunkKind.STDOUT, "streamed", null), HostLinuxChunk(LinuxChunkKind.EXIT, null, 0)),
+            chunks,
+        )
     }
 
     @Test

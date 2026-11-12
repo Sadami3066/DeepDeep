@@ -9,6 +9,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.composerAction
+import io.github.whywood.deepdeep.plugin.api.pluginSkill
+import io.github.whywood.deepdeep.plugin.api.promptSection
 
 class PluginRegistryTest {
     @Test
@@ -59,7 +62,7 @@ class PluginRegistryTest {
     }
 
     @Test
-    fun phaseControlsSnapshotContributions() {
+    fun phaseControlsSnapshotcontributions() {
         val registry = PluginRegistry()
         val contributions = PluginContributions(tools = listOf(testTool("alpha_tool")))
         registry.register(testDescriptor("alpha", phase = PluginPhase.FAILED, contributions = contributions))
@@ -123,8 +126,8 @@ class PluginRegistryTest {
             testDescriptor(
                 "alpha",
                 contributions = PluginContributions(
-                    skills = listOf(PluginSkill("shared_skill", "alpha body")),
-                    promptSections = listOf(PromptSection("shared_section", "alpha body")),
+                    skills = listOf(pluginSkill("shared_skill", "alpha body")),
+                    promptSections = listOf(promptSection("shared_section", "alpha body")),
                 ),
             ),
         )
@@ -132,8 +135,8 @@ class PluginRegistryTest {
             testDescriptor(
                 "beta",
                 contributions = PluginContributions(
-                    skills = listOf(PluginSkill("shared_skill", "beta body")),
-                    promptSections = listOf(PromptSection("shared_section", "beta body")),
+                    skills = listOf(pluginSkill("shared_skill", "beta body")),
+                    promptSections = listOf(promptSection("shared_section", "beta body")),
                 ),
             ),
         )

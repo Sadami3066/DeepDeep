@@ -3,6 +3,8 @@ package io.github.whywood.deepdeep.plugin.host.services
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
 import io.github.whywood.deepdeep.plugin.api.McpTool
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.plugin.api.imageBlock
+import io.github.whywood.deepdeep.plugin.api.textBlock
 import java.util.Base64
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -27,12 +29,12 @@ internal object McpModelMapping {
                 val data = (content["data"] as? JsonPrimitive)?.contentOrNull.orEmpty()
                 val mimeType = (content["mimeType"] as? JsonPrimitive)?.contentOrNull ?: "image/png"
                 val bytes = runCatching { Base64.getDecoder().decode(data) }.getOrDefault(ByteArray(0))
-                ToolBlock.Image(bytes, mimeType)
+                imageBlock(bytes, mimeType)
             }
 
             else -> {
                 val text = (content["text"] as? JsonPrimitive)?.contentOrNull
-                ToolBlock.Text(text ?: content.toString())
+                textBlock(text ?: content.toString())
             }
         }
     }

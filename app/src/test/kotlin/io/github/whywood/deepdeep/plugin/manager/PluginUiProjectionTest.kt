@@ -13,22 +13,27 @@ import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.contributions
+import io.github.whywood.deepdeep.plugin.api.pluginPage
+import io.github.whywood.deepdeep.plugin.api.pluginSkill
+import io.github.whywood.deepdeep.plugin.host.external.HostPublisherInfo
+import io.github.whywood.deepdeep.plugin.host.external.hostLocalizedText
 
 class PluginUiProjectionTest {
     private class PagedPlugin : CountingPlugin() {
-        override fun skills(host: PluginHost): List<PluginSkill> = listOf(PluginSkill("demo", "# Demo"))
+        override fun skills(host: PluginHost): List<PluginSkill> = listOf(pluginSkill("demo", "# Demo"))
 
-        override fun contributions(host: PluginHost): Contributions = Contributions()
+        override fun contributions(host: PluginHost): Contributions = contributions()
 
         override fun ui(host: PluginHost): PluginUiContributions = object : PluginUiContributions {
             override val bindings = emptyList<io.github.whywood.deepdeep.plugin.api.SlotBinding>()
 
-            override val pages = listOf(PluginPage("home", LocalizedText.Literal("Home"), content = {}))
+            override val pages = listOf(pluginPage("home", hostLocalizedText("Home"), content = {}))
         }
     }
 
     private fun projection(): PluginUiProjection {
-        val resolver = PluginTextResolver(resourceString = { "" }, language = { "default" })
+        val resolver = PluginTextResolver(language = { "default" })
         return PluginUiProjection(resolver)
     }
 
@@ -64,7 +69,7 @@ class PluginUiProjectionTest {
     fun publisherNameComesFromManifestWithRecordKeyId() = runTest {
         val gate = PluginRuntimeRegistry()
         val manifest = managerManifest("alpha").copy(
-            publisher = PublisherInfo("milous", "ed25519:cb08"),
+            publisher = HostPublisherInfo("milous", "ed25519:cb08"),
         )
         val runtime = managerRuntime(manifest, CountingPlugin()).apply {
             externalRecord = ExternalPluginRecord(

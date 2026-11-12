@@ -15,7 +15,11 @@ internal data class Candidate(
 internal sealed interface CandidateResult {
     data class Ok(val candidate: Candidate) : CandidateResult
 
-    data class Rejected(val code: InstallRejection, val reason: String) : CandidateResult
+    data class Rejected(
+        val code: InstallRejection,
+        val reason: String,
+        val declaredApiLevel: Int? = null,
+    ) : CandidateResult
 }
 
 internal class PluginPackageStager(
@@ -36,6 +40,8 @@ internal class PluginPackageStager(
         return when (val verification = PluginPackageVerifier.verify(pkg, hostApiLevel, hostVersion)) {
             is VerificationResult.Rejected -> CandidateResult.Rejected(
                 when (verification.code) {
+                    VerificationCode.API_LEVEL_UNSUPPORTED -> InstallRejection.API_LEVEL_UNSUPPORTED
+
                     VerificationCode.MANIFEST_MALFORMED,
                     VerificationCode.MANIFEST_INVALID,
                     -> InstallRejection.MANIFEST_INVALID
@@ -43,6 +49,7 @@ internal class PluginPackageStager(
                     else -> InstallRejection.SIGNATURE_INVALID
                 },
                 verification.reason,
+                verification.declaredApiLevel,
             )
 
             is VerificationResult.Ok -> CandidateResult.Ok(

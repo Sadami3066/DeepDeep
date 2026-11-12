@@ -19,6 +19,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import io.github.whywood.deepdeep.plugin.api.composeSlot
+import io.github.whywood.deepdeep.plugin.api.slotBinding
+import io.github.whywood.deepdeep.plugin.host.external.HostPluginManifest
+import io.github.whywood.deepdeep.plugin.host.external.HostUiManifest
+import io.github.whywood.deepdeep.plugin.host.external.hostLocalizedText
 
 class SlotRegistryTest {
     @get:Rule
@@ -28,13 +33,13 @@ class SlotRegistryTest {
 
     private val slot: String = SlotIds.toolCard("home")
 
-    private fun manifest(id: String, ui: UiManifest? = null): PluginManifest = PluginManifest(
+    private fun manifest(id: String, ui: UiManifest? = null): PluginManifest = HostPluginManifest(
         id = id,
         version = "1.0.0",
         ui = ui,
-        name = LocalizedText.Literal("name of $id"),
-        summary = LocalizedText.Literal("summary of $id"),
-        capabilities = PluginCapability.entries.map { it.wire }.toSet(),
+        name = hostLocalizedText("name of $id"),
+        summary = hostLocalizedText("summary of $id"),
+        capabilities = PluginCapability.ALL.toSet(),
     )
 
     private fun descriptor(
@@ -52,10 +57,10 @@ class SlotRegistryTest {
         ),
     )
 
-    private fun binding(slotId: String, priority: Int = 0): SlotBinding = SlotBinding(
+    private fun binding(slotId: String, priority: Int = 0): SlotBinding = slotBinding(
         slotId = slotId,
         priority = priority,
-        content = SlotContent.Compose { },
+        content = composeSlot { },
     )
 
     private fun registry(vararg descriptors: PluginDescriptor): SlotRegistry {
@@ -102,7 +107,7 @@ class SlotRegistryTest {
     @Test
     fun composeVersionMismatchDisablesBinding() {
         val registry = registry(
-            descriptor("alpha", listOf(binding(slot)), ui = UiManifest(compose = "1.9.0")),
+            descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(compose = "1.9.0")),
         )
 
         val entry = registry.bindings(slot).single()
@@ -113,7 +118,7 @@ class SlotRegistryTest {
     @Test
     fun matchingComposeVersionKeepsBinding() {
         val registry = registry(
-            descriptor("alpha", listOf(binding(slot)), ui = UiManifest(compose = "v1.10.5")),
+            descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(compose = "v1.10.5")),
         )
 
         assertNull(registry.bindings(slot).single().disabledReason)
@@ -122,7 +127,7 @@ class SlotRegistryTest {
     @Test
     fun unknownHostComposeVersionDisablesDeclaredBinding() {
         val source = PluginRegistry()
-        source.register(descriptor("alpha", listOf(binding(slot)), ui = UiManifest(compose = "1.10.5")))
+        source.register(descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(compose = "1.10.5")))
         val registry = SlotRegistry(
             { source.snapshot() },
             File(temporaryFolder.root, "plugins"),
@@ -137,7 +142,7 @@ class SlotRegistryTest {
     @Test
     fun kotlinMinorMismatchDisablesBinding() {
         val registry = registry(
-            descriptor("alpha", listOf(binding(slot)), ui = UiManifest(kotlin = "2.3.0")),
+            descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(kotlin = "2.3.0")),
         )
 
         assertEquals(
@@ -148,10 +153,10 @@ class SlotRegistryTest {
 
     @Test
     fun uiApiLevelMismatchDisablesBindingAndPages() {
-        val registry = registry(descriptor("alpha", listOf(binding(slot)), ui = UiManifest(apiLevel = 2)))
+        val registry = registry(descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(apiLevel = 3)))
 
         assertEquals(
-            SlotDisabledReason.UiApiLevelUnsupported(2, 1),
+            SlotDisabledReason.UiApiLevelUnsupported(3, 2),
             registry.bindings(slot).single().disabledReason,
         )
         assertEquals(false, registry.uiCompatible("alpha"))

@@ -7,7 +7,7 @@ import io.github.whywood.deepdeep.plugin.api.McpServer
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus
 import io.github.whywood.deepdeep.plugin.api.McpService
 import io.github.whywood.deepdeep.plugin.api.McpTool
-import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.plugin.api.textBlock
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpProbeResult
 import io.github.whywood.deepdeep.runtime.McpProbeState
@@ -44,7 +44,7 @@ internal class McpPluginService(
 
     override suspend fun call(server: String, tool: String, arguments: JsonObject): McpCallResult =
         caller?.invoke(server, tool, arguments) ?: McpCallResult(
-            blocks = listOf(ToolBlock.Text("MCP tool calls are not available to plugins")),
+            blocks = listOf(textBlock("MCP tool calls are not available to plugins")),
             isError = true,
         )
 

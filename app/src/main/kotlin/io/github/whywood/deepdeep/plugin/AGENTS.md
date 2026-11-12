@@ -18,5 +18,6 @@
 - 生命周期由 `PluginHostManager` 驱动：`start()` 装载外部记录 → 一次物化 → 启用 → 技能同步；每插件独立 `SupervisorJob` scope，停用先 `onDisable` 再 cancel scope 与 `close()` 收尾；启停变化触发 `host.reconfigure()`，忙碌会话在轮次结束的安全点重建。
 - 外部插件只从 `.ddp` 安装（ddp-1 签名、TOFU 发布者、sha256、记录 v4）；安装/更新确认页展示发布者指纹、sha256 与能力清单；更新在下次进程启动激活，失败保留旧版本；激活中断/连续启动崩溃按恢复策略跳过、自动停用或回滚（`PluginManagerCommands.retryActivation`/`rollbackPlugin`）。
 - 插件只能通过 `PluginHost` 的 17 个宿主服务访问 App 能力，且无法使用 Android 资源/组件（字符串/图标走 manifest + assets）。
+- prompt override 是 experimental 能力：插件声明 `prompt` capability 并实现 `PromptOverridePlugin`，manager 物化后由 runtime 合并进系统提示词；preamble/rules 可覆盖、sections 按 priority 追加，单插件 32KiB/总量 64KiB。
 - 插件贡献 = tools / skills / promptSections / ui 槽位（tool.card/chat.message）/ pages（`PluginPage.content` 内联）/ composerActions / hooks；每轮 refresh 每插件只物化一次，由 `PluginRegistry` 聚合成不可变快照，工具/提示词/技能/槽位/UI 都消费这份快照。
 - 插件自己的 CLI 下载与登录由插件页面或工具自行完成，宿主不再提供安装/连接流程。

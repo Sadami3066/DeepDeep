@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep.plugin.host.events
 
+import io.github.whywood.deepdeep.plugin.api.MessageDeltaEvent
 import io.github.whywood.deepdeep.plugin.api.PluginEvent
+import io.github.whywood.deepdeep.plugin.api.ToolExecutionUpdateEvent
+import io.github.whywood.deepdeep.plugin.api.ToolPhase
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -123,7 +126,7 @@ internal class SessionEventPump(
 }
 
 internal fun PluginEvent.isDeltaEvent(): Boolean = when (this) {
-    is PluginEvent.MessageDelta -> true
-    is PluginEvent.ToolExecutionUpdate -> phase == PluginEvent.ToolPhase.PARTIAL
+    is MessageDeltaEvent -> true
+    is ToolExecutionUpdateEvent -> phase == ToolPhase.PARTIAL
     else -> false
 }

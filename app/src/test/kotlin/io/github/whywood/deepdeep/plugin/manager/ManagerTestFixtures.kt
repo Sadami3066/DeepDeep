@@ -20,16 +20,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonObject
+import io.github.whywood.deepdeep.plugin.api.available
+import io.github.whywood.deepdeep.plugin.api.contributions
+import io.github.whywood.deepdeep.plugin.api.pluginTool
+import io.github.whywood.deepdeep.plugin.api.promptSection
+import io.github.whywood.deepdeep.plugin.api.textResult
+import io.github.whywood.deepdeep.plugin.host.external.HostPluginManifest
+import io.github.whywood.deepdeep.plugin.host.external.hostLocalizedText
 
 internal fun managerManifest(
     id: String,
     version: String = "1.0.0",
-): PluginManifest = PluginManifest(
+): HostPluginManifest = HostPluginManifest(
     id = id,
     version = version,
-    name = LocalizedText.Literal(id),
-    summary = LocalizedText.Literal("summary"),
-    capabilities = PluginCapability.entries.map { it.wire }.toSet(),
+    name = hostLocalizedText(id),
+    summary = hostLocalizedText("summary"),
+    capabilities = PluginCapability.ALL.toSet(),
 )
 
 internal fun managerRecord(
@@ -46,12 +53,12 @@ internal fun managerRecord(
     lastError = lastError,
 )
 
-internal fun managerTool(name: String): PluginTool = PluginTool(
+internal fun managerTool(name: String): PluginTool = pluginTool(
     name = name,
     label = name,
     description = name,
     parameters = JsonObject(emptyMap()),
-    execute = { PluginToolResult.Text("ok") },
+    execute = { textResult("ok") },
 )
 
 internal fun managerRuntime(
@@ -67,7 +74,7 @@ internal fun managerRuntime(
 )
 
 internal open class CountingPlugin(
-    var availabilityResult: PluginAvailability = PluginAvailability.Available,
+    var availabilityResult: PluginAvailability = available(),
     var contributionsError: Throwable? = null,
     var skillsError: Throwable? = null,
     var enableError: Throwable? = null,
@@ -98,7 +105,7 @@ internal open class CountingPlugin(
     override fun contributions(host: PluginHost): Contributions {
         hit("contributions")
         contributionsError?.let { throw it }
-        return Contributions(tools = listOf(managerTool("counted_tool")))
+        return contributions(tools = listOf(managerTool("counted_tool")))
     }
 
     override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions {
@@ -108,7 +115,7 @@ internal open class CountingPlugin(
 
     override fun promptSections(host: PluginHost): List<PromptSection> {
         hit("promptSections")
-        return listOf(PromptSection("section", "body"))
+        return listOf(promptSection("section", "body"))
     }
 
     override fun ui(host: PluginHost): PluginUiContributions {

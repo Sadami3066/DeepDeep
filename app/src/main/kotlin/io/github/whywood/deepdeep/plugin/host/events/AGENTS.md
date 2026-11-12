@@ -6,9 +6,10 @@
 
 | 文件 | 职责 |
 |---|---|
+| `HostPluginEvents.kt` | 21 个观察事件的宿主实现（`data class` 实现 plugin-api 只读事件接口，附 `HostPluginBusEvent`） |
 | `PluginHookFailure.kt` | 钩子失败模型（插件 id/阶段/消息/原因）、阶段枚举、失败上报器（默认走 `Log.w`，测试可替换） |
 | `PluginHookSource.kt` | `PluginHookSession`（sessionId/cwd/file）、`PluginHookSource`（按顺序取钩子快照）、`HookSnapshot`、`RuntimeHookSource`（registry 物化快照）、`SessionHookSource`（会话源：registry 快照按 pluginId 覆盖会话贡献 hooks，run 级冻结）、`PluginRuntimeHooksFactory`（按源造适配器） |
-| `PluginEventBus.kt` | 观察型事件总线：每次分发取一次快照、逐个插件按 5s 超时派发、异常/超时隔离并聚合失败 |
+| `PluginEventBus.kt` | 观察型事件总线：每次分发取一次快照、逐个插件按 5s 超时派发、异常/超时隔离并聚合失败；事件用 `is XxxEvent` 分派 |
 | `PluginHookDispatchers.kt` | 四类变换/闸门：提示词链式变换（fail-open）、输入变换（Handled 短路、错误 fail-open）、工具前闸门（Block 短路、错误/超时 fail-closed）、工具后结果链（错误/超时 fail-open） |
 | `PluginToolResultConversion.kt` | SDK `AgentToolResult` ↔ `PluginToolResult` 边界转换（文本/Rich/图片 base64/FileRef 文本回退与 details 保留键写入/details/isError） |
 | `RuntimeEventMapper.kt` | runtime `RuntimeEvent`/pi SDK `SessionEvent`（含 `AgentEvent`）→ `PluginEvent` 映射与分发；Turn/Message/Tool/ThinkingLevel 全部有来源，runtime 路径不再重复映射工具与 delta |

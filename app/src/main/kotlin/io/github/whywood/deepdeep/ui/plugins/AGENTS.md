@@ -9,7 +9,7 @@
 | `PluginsScreen.kt` | 插件页：搜索、64dp 顶栏（导入「+」；市场 tab 为刷新按钮）、单列表行（图标+名称+摘要+开关+「⋯」动作菜单）、插件详情底部弹层、卸载确认弹窗；`pendingImportUri` 承接文件管理器/分享打开的 `.ddp` 并复用导入确认弹窗 |
 | `PluginsStateHolder.kt` | 纯 UI 临时状态（搜索词、启停中 id）与命令分发（启停、卸载、导入、恢复） |
 | `PluginImportDialogs.kt` | 外部插件导入确认/结果弹窗 |
-| `PluginUiSupport.kt` | LocalizedText/IconRef 解析、图标按显示尺寸降采样解码（缺失/损坏回退占位）、phase/search/size 纯函数、列表分组卡片 |
+| `PluginUiSupport.kt` | `LocalizedText.values` 按语言解析、asset 图标按显示尺寸降采样解码（缺失/损坏回退占位）、phase/search/size 纯函数、列表分组卡片 |
 | `PluginHostSlots.kt` | `PluginPageHost`：按 `manager.pagesOf(pluginId)` 找页面并直接渲染 `PluginPage.content`（UI 不兼容/页面不存在时回退提示）与 composer 动作查询 |
 
 ## 要点

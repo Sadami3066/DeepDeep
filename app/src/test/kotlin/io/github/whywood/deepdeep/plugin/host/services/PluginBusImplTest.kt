@@ -15,6 +15,7 @@ import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.host.events.HostPluginBusEvent
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PluginBusImplTest {
@@ -25,9 +26,9 @@ class PluginBusImplTest {
         val collector = launch { bus.subscribe("alpha").take(2).toList(received) }
         runCurrent()
 
-        bus.publish(PluginBusEvent(topic = "alpha", publisher = "p", payload = buildJsonObject { put("n", 1) }))
-        bus.publish(PluginBusEvent(topic = "beta", publisher = "p"))
-        bus.publish(PluginBusEvent(topic = "alpha", publisher = "p"))
+        bus.publish(HostPluginBusEvent("alpha", "p", buildJsonObject { put("n", 1) }, 0))
+        bus.publish(HostPluginBusEvent("beta", "p", kotlinx.serialization.json.JsonObject(emptyMap()), 0))
+        bus.publish(HostPluginBusEvent("alpha", "p", kotlinx.serialization.json.JsonObject(emptyMap()), 0))
         advanceUntilIdle()
         collector.join()
 
@@ -43,7 +44,7 @@ class PluginBusImplTest {
         val received = async { bus.subscribe("topic").first() }
         runCurrent()
 
-        scoped.publish(PluginBusEvent(topic = "topic", publisher = "ignored"))
+        scoped.publish(HostPluginBusEvent("topic", "ignored", kotlinx.serialization.json.JsonObject(emptyMap()), 0))
 
         assertEquals("demo-plugin", received.await().publisher)
     }

@@ -11,6 +11,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.available
 
 class PluginRuntimeRegistryTest {
     private fun registryWith(plugin: ManagerTestPlugin = ManagerTestPlugin()): Pair<PluginRuntimeRegistry, ManagedPlugin> {
@@ -172,5 +173,5 @@ class PluginRuntimeRegistryTest {
 
 internal class ManagerTestPlugin : io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin {
     override suspend fun availability(host: io.github.whywood.deepdeep.plugin.api.PluginHost): io.github.whywood.deepdeep.plugin.api.PluginAvailability =
-        io.github.whywood.deepdeep.plugin.api.PluginAvailability.Available
+        io.github.whywood.deepdeep.plugin.api.available()
 }

@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host
 
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -9,7 +10,7 @@ class DeclaredServiceTest {
     @Test
     fun undeclaredServiceIsRejectedEvenWhenAvailable() {
         val error = runCatching {
-            declaredService("chat", setOf("files", "app"), "service")
+            declaredService("chat", setOf(PluginCapability.FILES, PluginCapability.APP), "service")
         }.exceptionOrNull()
 
         assertTrue(error is PluginServiceUnavailable)
@@ -22,7 +23,7 @@ class DeclaredServiceTest {
     @Test
     fun declaredButUnavailableServiceReportsUnavailable() {
         val error = runCatching {
-            declaredService<String>("screen", setOf("screen"), null)
+            declaredService<String>("screen", setOf(PluginCapability.SCREEN), null)
         }.exceptionOrNull()
 
         assertEquals("plugin service is not available: screen (unavailable)", error?.message)
@@ -30,6 +31,6 @@ class DeclaredServiceTest {
 
     @Test
     fun declaredAvailableServiceIsReturned() {
-        assertEquals("service", declaredService("chat", setOf("chat"), "service"))
+        assertEquals("service", declaredService("chat", setOf(PluginCapability.CHAT), "service"))
     }
 }

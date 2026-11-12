@@ -16,6 +16,9 @@ import kotlinx.coroutines.CancellationException
 
 internal class PluginLoadException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+internal class PluginApiLevelRejectedException(val declaredApiLevel: Int) :
+    Exception("plugin apiLevel $declaredApiLevel is not supported")
+
 internal class LoadedPluginHandle private constructor(
     val pluginId: String,
     val version: String,
@@ -81,6 +84,9 @@ internal class LoadedPluginHandle private constructor(
                 )
             }
             if (verification is VerificationResult.Rejected) {
+                if (verification.code == VerificationCode.API_LEVEL_UNSUPPORTED) {
+                    throw PluginApiLevelRejectedException(verification.declaredApiLevel ?: -1)
+                }
                 throw PluginLoadException("plugin bundle verification failed: ${verification.reason}")
             }
             val verified = verification as VerificationResult.Ok

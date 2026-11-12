@@ -1,9 +1,11 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.ComposerAction
+import io.github.whywood.deepdeep.plugin.api.PluginExperimentalApi
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
+import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +34,9 @@ interface PluginManagerFacade {
     fun deferredTools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<io.github.whywood.deepdeep.runtime.DeferredTool>
 
     fun promptBody(excludedPlugins: Set<String> = emptySet()): String?
+
+    @OptIn(PluginExperimentalApi::class)
+    fun promptOverrides(excludedPlugins: Set<String> = emptySet()): PluginPromptOverrides
 
     fun skillIds(pluginId: String): List<String>
 

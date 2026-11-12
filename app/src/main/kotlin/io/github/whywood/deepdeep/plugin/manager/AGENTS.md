@@ -11,7 +11,7 @@
 | `PluginManagerCommands.kt` | 用户/系统命令：enable/disable、卸载、重试激活、回滚、busy 互斥、错误状态 |
 | `PluginRuntimeRegistry.kt` | 唯一状态写入点（状态闸门）：`PluginRecord`（用户意图）+ `ManagedPlugin`（运行期事实）表，串行写、发布不可变 `PluginRuntimeView`、派生 descriptor |
 | `PluginHostModels.kt` | `ManagedPlugin` 运行期事实、`PluginRuntimeView` 不可变快照、`toDescriptor` |
-| `PluginContributionMaterializer.kt` | 一次物化：每次 refresh 每插件每方法最多调用一次，结果写入状态闸门 |
+| `PluginContributionMaterializer.kt` | 一次物化：每次 refresh 每插件每方法最多调用一次，结果写入状态闸门；声明 `prompt` 且实现 `PromptOverridePlugin` 时收集 prompt override |
 | `PluginLifecycle.kt` | 每插件 `SupervisorJob` scope、`PluginHostFactory`、enable/disable/uninstall 收尾、技能同步 |
 | `PluginActivationProtocol.kt` | 激活协议 prepare→probe→commit→swap 与失败矩阵 |
 | `PluginSessionHooks.kt` | 会话 hooks 绑定（`SessionBinding`）、每 `SessionBinding` 一次 `contributionsFor`（工具与会话 hooks 共用）、per-session hook source、run 级冻结、运行期/SDK 事件派发 |
@@ -30,6 +30,7 @@
 - 状态变更只经 `PluginRuntimeRegistry`（写串行、读返回不可变视图）；写盘（外部记录 v4）由流程负责：先写盘，再过闸门。
 - 一次物化：每次 refresh 每插件调用 `availability()`/`skills()` 各 1 次，enabled 时 `contributions()`/`ui()`/`promptSections()` 各 1 次；工具装配、`promptBody`、技能同步、槽位、冲突诊断、UI 快照只读物化结果，消费路径不再调用插件。
 - 生命周期：每插件独立 `SupervisorJob` scope；disable/uninstall/close 统一 cancel scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册或清贡献 → 同步技能（会话钩子在当前 run 内按冻结集合继续派发，run 结束后的刷新快照生效）；单插件 `Throwable` 隔离（`CancellationException` 重抛）。禁用但未装载的插件为 `DISABLED` 而非 `FAILED`。
+- prompt override：`PluginHostManager.promptOverrides(excludedPlugins)` 从 registry 快照按插件过滤后映射为 runtime `PluginPromptOverrides`；只在插件 ACTIVE/DEGRADED 且声明 `prompt` 时物化，启停/刷新经 reconfigure 安全点生效；workspace 排除插件其 override 一并过滤。
 - 会话：`bindSessionHooks` 接 `SessionBinding`，每会话一个 `PluginRuntimeHooksAdapter`；同一 `SessionBinding` 实例只调用一次 `contributionsFor` 并缓存（身份相等、弱引用、按 binding 分锁），工具与会话 hooks 共用这次物化，不同会话的物化互不阻塞；会话贡献返回非空 hooks 时按 pluginId 覆盖该插件的全局 hooks，默认空实现（`PluginHooks.None`）沿用全局 hooks；run 开始冻结会话钩子集合、`RunFinished`/`RunFailed` 派发完成后解冻并刷成最新快照（冻结期间启停插件不影响本轮，解冻后按最新快照生效）。`close()` 幂等：关闭中的会话不再接收新事件，排空后移除 adapter 与贡献缓存。
 - 外部安装/更新只做「校验 + 暂存」，`PENDING_RESTART` 由 `record.pendingVersion` 表达，下次启动由 `PluginActivationProtocol` 走 prepare/probe/commit/swap；失败按矩阵回滚（旧版本保持可用）。安装后不再调用插件 `install()` 钩子，插件自身的 CLI 下载/登录由插件页面或工具完成。
 - `start()` 重复调用不会重复注册/启用插件，但仍会激活待生效的 pending 版本：更新只经启动安全点生效，进程内重试与真实重启走同一条路径。

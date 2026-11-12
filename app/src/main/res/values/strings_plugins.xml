@@ -37,6 +37,8 @@
     <string name="plugins_capability_bus">事件总线</string>
     <string name="plugins_capability_logs">日志</string>
     <string name="plugins_capability_chat">会话消息</string>
+    <string name="plugins_capability_prompt">系统提示词</string>
+    <string name="plugins_capability_other">其他能力</string>
     <string name="plugins_info_skills">技能</string>
     <string name="plugins_info_publisher">发布者</string>
     <string name="plugins_delete_title">卸载插件</string>
@@ -57,6 +59,7 @@
     <string name="plugins_error_unknown">插件不存在或已被移除</string>
 
     <string name="plugins_import_unreadable">无法读取插件包</string>
+    <string name="plugins_api_level_retired">插件 API %1$d 已停用，请更新插件</string>
     <string name="plugins_import_invalid">不是有效的插件包</string>
     <string name="plugins_import_title">导入插件</string>
     <string name="plugins_import_version">版本</string>

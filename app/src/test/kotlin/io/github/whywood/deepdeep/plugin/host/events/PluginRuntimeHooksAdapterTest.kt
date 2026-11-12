@@ -28,6 +28,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.textResult
+import io.github.whywood.deepdeep.plugin.api.inputContinue
+import io.github.whywood.deepdeep.plugin.api.inputHandled
+import io.github.whywood.deepdeep.plugin.api.toolRewrite
+import io.github.whywood.deepdeep.plugin.api.toolBlock
+import io.github.whywood.deepdeep.plugin.api.resultReplace
+import io.github.whywood.deepdeep.plugin.api.resultKeep
 
 class PluginRuntimeHooksAdapterTest {
     private val session = PluginHookSession("session-1", "/workspace", "/workspace/session.jsonl")
@@ -56,7 +63,7 @@ class PluginRuntimeHooksAdapterTest {
     }
 
     @Test
-    fun systemContextWrapsAndEscapesContributions() = runTest {
+    fun systemContextWrapsAndEscapescontributions() = runTest {
         val hooks = probeHooks(onContext = { "a & <b>" })
         val context = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).systemContext()
         assertEquals("<plugin_context plugin=\"p\">\na &amp; &lt;b&gt;\n</plugin_context>", context)
@@ -74,7 +81,7 @@ class PluginRuntimeHooksAdapterTest {
         val seenPaths = mutableListOf<List<String>>()
         val hooks = probeHooks(onInput = { pluginRequest ->
             seenPaths += pluginRequest.imagePaths
-            PluginInputDecision.Continue("${pluginRequest.text}!", pluginRequest.imagePaths)
+            inputContinue("${pluginRequest.text}!", pluginRequest.imagePaths)
         })
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
             .inputHandler(RuntimeInputRequest("hi", images)) as RuntimeInputDecision.Continue
@@ -89,7 +96,7 @@ class PluginRuntimeHooksAdapterTest {
             writeBytes(byteArrayOf(1, 2, 3))
             deleteOnExit()
         }
-        val hooks = probeHooks(onInput = { PluginInputDecision.Continue("rewritten", listOf(file.absolutePath)) })
+        val hooks = probeHooks(onInput = { inputContinue("rewritten", listOf(file.absolutePath)) })
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
             .inputHandler(RuntimeInputRequest("hi")) as RuntimeInputDecision.Continue
         assertEquals("rewritten", decision.text)
@@ -101,7 +108,7 @@ class PluginRuntimeHooksAdapterTest {
 
     @Test
     fun inputHandlerDropsImagesWhenPluginReturnsNoPaths() = runTest {
-        val hooks = probeHooks(onInput = { PluginInputDecision.Continue("no images") })
+        val hooks = probeHooks(onInput = { inputContinue("no images") })
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
             .inputHandler(RuntimeInputRequest("hi", listOf(ImagePart("aGk=", "image/png", "/tmp/photo.png"))))
             as RuntimeInputDecision.Continue
@@ -111,7 +118,7 @@ class PluginRuntimeHooksAdapterTest {
 
     @Test
     fun inputHandlerSkipsUnreadableReturnedPaths() = runTest {
-        val hooks = probeHooks(onInput = { PluginInputDecision.Continue("rewritten", listOf("/no/such/file.png")) })
+        val hooks = probeHooks(onInput = { inputContinue("rewritten", listOf("/no/such/file.png")) })
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks))))
             .inputHandler(RuntimeInputRequest("hi")) as RuntimeInputDecision.Continue
         assertTrue(decision.images.isEmpty())
@@ -119,7 +126,7 @@ class PluginRuntimeHooksAdapterTest {
 
     @Test
     fun inputHandlerMapsHandled() = runTest {
-        val hooks = probeHooks(onInput = { PluginInputDecision.Handled })
+        val hooks = probeHooks(onInput = { inputHandled() })
         assertEquals(
             RuntimeInputDecision.Handled,
             adapter(TestHookSource(listOf(hookEntry("p", hooks)))).inputHandler(RuntimeInputRequest("hi")),
@@ -142,7 +149,7 @@ class PluginRuntimeHooksAdapterTest {
         val seen = mutableListOf<PluginToolCallRequest>()
         val hooks = probeHooks(onBefore = { request ->
             seen += request
-            PluginToolCallDecision.Rewrite(buildJsonObject { put("x", 2) })
+            toolRewrite(buildJsonObject { put("x", 2) })
         })
         val context = ToolCallContext("bash", "call-1", buildJsonObject { put("x", 1) })
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).toolHooks.beforeToolCall(context)
@@ -155,7 +162,7 @@ class PluginRuntimeHooksAdapterTest {
 
     @Test
     fun toolBeforeMapsBlock() = runTest {
-        val hooks = probeHooks(onBefore = { PluginToolCallDecision.Block("danger") })
+        val hooks = probeHooks(onBefore = { toolBlock("danger") })
         val context = ToolCallContext("bash", "call-1", JsonObject(emptyMap()))
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).toolHooks.beforeToolCall(context)
         assertEquals(RuntimeToolCallDecision.Block("danger"), decision)
@@ -176,7 +183,7 @@ class PluginRuntimeHooksAdapterTest {
         val seen = mutableListOf<PluginToolResult>()
         val hooks = probeHooks(onAfter = { request ->
             seen += request.result
-            PluginToolResultDecision.Replace(PluginToolResult.Text("replaced", isError = true))
+            resultReplace(textResult("replaced", isError = true))
         })
         val context = ToolResultContext("bash", "call-1", JsonObject(emptyMap()), agentTextResult("original"))
         val decision = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).toolHooks.afterToolResult(context)
@@ -184,7 +191,7 @@ class PluginRuntimeHooksAdapterTest {
         val result = (decision as RuntimeToolResultDecision.Replace).result
         assertEquals("replaced", (result.content.single() as TextContent).text)
         assertEquals(true, result.isError)
-        assertEquals(PluginToolResult.Text("original"), seen.single())
+        assertEquals(textResult("original"), seen.single())
     }
 
     @Test
@@ -192,7 +199,7 @@ class PluginRuntimeHooksAdapterTest {
         val seen = mutableListOf<PluginToolExecutionResult>()
         val hooks = probeHooks(onAfter = { request ->
             seen += request
-            PluginToolResultDecision.Keep
+            resultKeep()
         })
         val context = ToolResultContext("bash", "call-1", JsonObject(emptyMap()), agentTextResult("original"))
         assertEquals(
@@ -207,7 +214,7 @@ class PluginRuntimeHooksAdapterTest {
     @Test
     fun eventsAreDispatchedThroughAdapter() = runTest {
         val hooks = EventRecordingHooks()
-        val event = PluginEvent.RunStarted("session-1", "run-1")
+        val event = HostRunStartedEvent("session-1", "run-1")
         val failures = adapter(TestHookSource(listOf(hookEntry("p", hooks)))).emit(event)
         assertTrue(failures.isEmpty())
         assertEquals(listOf(event), hooks.events)

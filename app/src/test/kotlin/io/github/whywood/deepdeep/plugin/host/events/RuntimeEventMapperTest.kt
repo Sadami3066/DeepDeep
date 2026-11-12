@@ -26,6 +26,11 @@ import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.MessageRole
+import io.github.whywood.deepdeep.plugin.api.ToolPhase
+import io.github.whywood.deepdeep.plugin.api.textResult
+import io.github.whywood.deepdeep.plugin.api.BusEventReceived
+import io.github.whywood.deepdeep.plugin.api.ToolExecutionUpdateEvent
 
 class RuntimeEventMapperTest {
     private class Sink {
@@ -71,10 +76,10 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.RunStarted("session-1", "run-1"),
-                PluginEvent.RunFinished("session-1", "run-1"),
-                PluginEvent.RunFinished("session-1", "run-1"),
-                PluginEvent.RunFinished("session-1", "run-2", "boom"),
+                HostRunStartedEvent("session-1", "run-1"),
+                HostRunFinishedEvent("session-1", "run-1"),
+                HostRunFinishedEvent("session-1", "run-1"),
+                HostRunFinishedEvent("session-1", "run-2", "boom"),
             ),
             sink.events,
         )
@@ -106,10 +111,10 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.MessageStarted("session-1", "run-1:user", PluginEvent.MessageRole.USER),
-                PluginEvent.MessageFinished("session-1", "run-1:user", "hi"),
-                PluginEvent.MessageStarted("session-1", "run-1:system", PluginEvent.MessageRole.SYSTEM),
-                PluginEvent.MessageFinished("session-1", "run-1:system", "reminder body"),
+                HostMessageStartedEvent("session-1", "run-1:user", MessageRole.USER),
+                HostMessageFinishedEvent("session-1", "run-1:user", "hi"),
+                HostMessageStartedEvent("session-1", "run-1:system", MessageRole.SYSTEM),
+                HostMessageFinishedEvent("session-1", "run-1:system", "reminder body"),
             ),
             sink.events,
         )
@@ -142,11 +147,11 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.TurnStarted("session-1", "session-1:turn:1"),
-                PluginEvent.MessageStarted("session-1", "session-1:assistant:10", PluginEvent.MessageRole.ASSISTANT),
-                PluginEvent.MessageDelta("session-1", "session-1:assistant:10", "hello"),
-                PluginEvent.MessageFinished("session-1", "session-1:assistant:10", "hello"),
-                PluginEvent.TurnFinished("session-1", "session-1:turn:1", false),
+                HostTurnStartedEvent("session-1", "session-1:turn:1"),
+                HostMessageStartedEvent("session-1", "session-1:assistant:10", MessageRole.ASSISTANT),
+                HostMessageDeltaEvent("session-1", "session-1:assistant:10", "hello"),
+                HostMessageFinishedEvent("session-1", "session-1:assistant:10", "hello"),
+                HostTurnFinishedEvent("session-1", "session-1:turn:1", false),
             ),
             sink.events,
         )
@@ -168,7 +173,7 @@ class RuntimeEventMapperTest {
             ),
         )
 
-        assertEquals(listOf(PluginEvent.MessageDelta("session-1", "session-1:assistant:11", "hmm")), sink.events)
+        assertEquals(listOf(HostMessageDeltaEvent("session-1", "session-1:assistant:11", "hmm")), sink.events)
     }
 
     @Test
@@ -200,19 +205,19 @@ class RuntimeEventMapperTest {
             ),
         )
 
-        val events = sink.events.filterIsInstance<PluginEvent.ToolExecutionUpdate>()
+        val events = sink.events.filterIsInstance<ToolExecutionUpdateEvent>()
         assertEquals(
             listOf(
-                PluginEvent.ToolPhase.STARTED,
-                PluginEvent.ToolPhase.PARTIAL,
-                PluginEvent.ToolPhase.FINISHED,
-                PluginEvent.ToolPhase.FAILED,
+                ToolPhase.STARTED,
+                ToolPhase.PARTIAL,
+                ToolPhase.FINISHED,
+                ToolPhase.FAILED,
             ),
             events.map { it.phase },
         )
-        assertEquals(PluginToolResult.Text("partial"), events[1].partial)
-        assertEquals(PluginToolResult.Text("ok"), events[2].partial)
-        assertEquals(PluginToolResult.Text("bad", isError = true), events[3].partial)
+        assertEquals(textResult("partial"), events[1].partial)
+        assertEquals(textResult("ok"), events[2].partial)
+        assertEquals(textResult("bad", isError = true), events[3].partial)
     }
 
     @Test
@@ -230,8 +235,8 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.TurnStarted("session-1", "session-1:turn:1"),
-                PluginEvent.TurnFinished("session-1", "session-1:turn:1", true),
+                HostTurnStartedEvent("session-1", "session-1:turn:1"),
+                HostTurnFinishedEvent("session-1", "session-1:turn:1", true),
             ),
             sink.events,
         )
@@ -271,10 +276,10 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.TurnStarted("session-1", "session-1:turn:1"),
-                PluginEvent.TurnFinished("session-1", "session-1:turn:1", false),
-                PluginEvent.TurnStarted("session-1", "session-1:turn:2"),
-                PluginEvent.TurnFinished("session-1", "session-1:turn:2", false),
+                HostTurnStartedEvent("session-1", "session-1:turn:1"),
+                HostTurnFinishedEvent("session-1", "session-1:turn:1", false),
+                HostTurnStartedEvent("session-1", "session-1:turn:2"),
+                HostTurnFinishedEvent("session-1", "session-1:turn:2", false),
             ),
             sink.events,
         )
@@ -294,13 +299,13 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.ModelChanged("session-1", "deepseek/deepseek-chat"),
-                PluginEvent.ThinkingLevelChanged("session-1", "high"),
-                PluginEvent.CompactionStarted("session-1"),
-                PluginEvent.CompactionFinished("session-1", 120L, 80L),
-                PluginEvent.CompactionFinished("session-1", 120L, 0L),
-                PluginEvent.CompactionFailed("session-1", "boom"),
-                PluginEvent.CompactionFailed("session-1", ""),
+                HostModelChangedEvent("session-1", "deepseek/deepseek-chat"),
+                HostThinkingLevelChangedEvent("session-1", "high"),
+                HostCompactionStartedEvent("session-1"),
+                HostCompactionFinishedEvent("session-1", 120L, 80L),
+                HostCompactionFinishedEvent("session-1", 120L, 0L),
+                HostCompactionFailedEvent("session-1", "boom"),
+                HostCompactionFailedEvent("session-1", ""),
             ),
             sink.events,
         )
@@ -318,10 +323,10 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.RetryScheduled("session-1", 2, 500L, "rate limited"),
-                PluginEvent.RetrySucceeded("session-1", 2),
-                PluginEvent.RetryExhausted("session-1", 3, "boom"),
-                PluginEvent.RetryExhausted("session-1", 3, ""),
+                HostRetryScheduledEvent("session-1", 2, 500L, "rate limited"),
+                HostRetrySucceededEvent("session-1", 2),
+                HostRetryExhaustedEvent("session-1", 3, "boom"),
+                HostRetryExhaustedEvent("session-1", 3, ""),
             ),
             sink.events,
         )
@@ -344,7 +349,7 @@ class RuntimeEventMapperTest {
                 "session-1",
                 SessionEvent.McpServerStatusChanged("server", SdkMcpStatus("server", state)),
             )
-            assertEquals(listOf(PluginEvent.McpStatusChanged("server", expected)), sink.events)
+            assertEquals(listOf(HostMcpStatusChangedEvent("server", expected)), sink.events)
         }
 
         val sink = Sink()
@@ -352,7 +357,7 @@ class RuntimeEventMapperTest {
             "session-1",
             SessionEvent.McpToolsChanged("server", listOf("added-tool"), listOf("removed-tool")),
         )
-        assertEquals(listOf(PluginEvent.McpToolsChanged("server", listOf("added-tool"))), sink.events)
+        assertEquals(listOf(HostMcpToolsChangedEvent("server", listOf("added-tool"))), sink.events)
     }
 
     @Test
@@ -360,7 +365,7 @@ class RuntimeEventMapperTest {
         val sink = Sink()
         mapper(sink).dispatchSessionEvent("session-1", SessionEvent.CustomMessageAppended("note", "entry-1"))
 
-        val event = sink.events.single() as PluginEvent.BusEvent
+        val event = sink.events.single() as BusEventReceived
         assertEquals(RUNTIME_CUSTOM_MESSAGE_TOPIC, event.event.topic)
         assertEquals(HOST_BUS_PUBLISHER, event.event.publisher)
         assertEquals("session-1", event.event.payload["sessionId"]?.jsonPrimitive?.content)
@@ -405,7 +410,7 @@ class RuntimeEventMapperTest {
             SessionRuntimeEvent("other-session", RuntimeEvent.RunStarted("run-1", 1_000L)),
         )
 
-        assertEquals(listOf(PluginEvent.RunStarted("wrapped-session", "run-1")), sink.events)
+        assertEquals(listOf(HostRunStartedEvent("wrapped-session", "run-1")), sink.events)
     }
 
     @Test
@@ -423,9 +428,9 @@ class RuntimeEventMapperTest {
 
         assertEquals(
             listOf(
-                PluginEvent.RunStarted("session-1", "run-1"),
-                PluginEvent.MessageStarted("session-1", "run-1:system", PluginEvent.MessageRole.SYSTEM),
-                PluginEvent.MessageFinished("session-1", "run-1:system", "reminder"),
+                HostRunStartedEvent("session-1", "run-1"),
+                HostMessageStartedEvent("session-1", "run-1:system", MessageRole.SYSTEM),
+                HostMessageFinishedEvent("session-1", "run-1:system", "reminder"),
             ),
             hooks.events,
         )

@@ -51,6 +51,12 @@ import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.api.TextBlock
+import io.github.whywood.deepdeep.plugin.api.fileRefBlock
+import io.github.whywood.deepdeep.plugin.api.imageBlock
+import io.github.whywood.deepdeep.plugin.api.richResult
+import io.github.whywood.deepdeep.plugin.api.textBlock
+import io.github.whywood.deepdeep.plugin.api.textResult
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolResultPayload
@@ -368,28 +374,28 @@ internal fun ToolTrace.pluginSlotResult(): PluginToolResult? {
         val blocks = payload.toPluginToolBlocks()
         if (blocks.isEmpty()) return null
         val first = blocks.firstOrNull()
-        return if (blocks.size == 1 && first is ToolBlock.Text) {
-            PluginToolResult.Text(text = first.text, isError = isError)
+        return if (blocks.size == 1 && first is TextBlock) {
+            textResult(first.text, isError = isError)
         } else {
-            PluginToolResult.Rich(blocks = blocks, isError = isError)
+            richResult(blocks, isError = isError)
         }
     }
     val text = error?.takeIf { it.isNotBlank() } ?: output?.takeIf { it.isNotBlank() } ?: return null
-    return PluginToolResult.Text(text = text, isError = isError)
+    return textResult(text, isError = isError)
 }
 
 internal fun ToolResultPayload.toPluginToolBlocks(): List<ToolBlock> = when (this) {
-    is ToolResultPayload.Text -> listOf(ToolBlock.Text(text))
+    is ToolResultPayload.Text -> listOf(textBlock(text))
     is ToolResultPayload.Empty -> emptyList()
     is ToolResultPayload.Blocks -> blocks.map { block ->
         when (block) {
-            is ToolResultPayload.Block.Text -> ToolBlock.Text(block.text)
-            is ToolResultPayload.Block.Image -> ToolBlock.Image(
+            is ToolResultPayload.Block.Text -> textBlock(block.text)
+            is ToolResultPayload.Block.Image -> imageBlock(
                 data = runCatching { Base64.getDecoder().decode(block.data) }.getOrDefault(ByteArray(0)),
                 mimeType = block.mimeType,
             )
 
-            is ToolResultPayload.Block.FileRef -> ToolBlock.FileRef(block.path, block.mimeType)
+            is ToolResultPayload.Block.FileRef -> fileRefBlock(block.path, block.mimeType)
         }
     }
 }

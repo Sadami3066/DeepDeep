@@ -59,7 +59,6 @@ import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
-import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
@@ -472,7 +471,7 @@ private fun CollapsedPluginResults(steps: List<AssistantStep>, excludedStepId: L
     val results = steps
         .filterIsInstance<AssistantStep.Tool>()
         .map { it.trace }
-        .filter { trace -> trace.id != excludedStepId && trace.pluginSlotResult() is PluginToolResult.Rich }
+        .filter { trace -> trace.id != excludedStepId && trace.pluginSlotResult()?.blocks?.isNotEmpty() == true }
     if (results.isEmpty()) return
     Column(
         Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, bottom = DdSpacing.Xxs),

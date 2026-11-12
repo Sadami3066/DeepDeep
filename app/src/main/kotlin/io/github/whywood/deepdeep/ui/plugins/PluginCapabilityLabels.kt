@@ -35,4 +35,6 @@ private fun capabilityLabelRes(capability: PluginCapability): Int = when (capabi
     PluginCapability.BUS -> R.string.plugins_capability_bus
     PluginCapability.LOGS -> R.string.plugins_capability_logs
     PluginCapability.CHAT -> R.string.plugins_capability_chat
+    PluginCapability.PROMPT -> R.string.plugins_capability_prompt
+    else -> R.string.plugins_capability_other
 }

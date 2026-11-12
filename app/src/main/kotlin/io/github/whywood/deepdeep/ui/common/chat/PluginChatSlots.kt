@@ -6,9 +6,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.whywood.deepdeep.plugin.api.CustomMessageSlotState
 import io.github.whywood.deepdeep.plugin.api.SlotIds
-import io.github.whywood.deepdeep.plugin.api.ToolCardSlotState
+import io.github.whywood.deepdeep.plugin.host.ui.HostCustomMessageSlotState
+import io.github.whywood.deepdeep.plugin.host.ui.HostToolCardSlotState
 import io.github.whywood.deepdeep.plugin.host.ui.PluginSlotHost
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import kotlinx.serialization.json.JsonObject
@@ -33,7 +33,7 @@ internal fun PluginToolCardSlot(
     val entries = remember(uiState, toolName) { manager.slotEntries(SlotIds.toolCard(toolName)) }
     PluginSlotHost(
         entries = entries,
-        state = ToolCardSlotState(callId = callId, toolName = toolName, args = args, result = result),
+        state = HostToolCardSlotState(callId = callId, toolName = toolName, args = args, result = result),
         fallback = fallback,
     )
 }
@@ -51,7 +51,7 @@ internal fun PluginCustomMessageSlot(
     val entries = remember(uiState, customType) { manager.slotEntries(SlotIds.chatMessage(customType)) }
     PluginSlotHost(
         entries = entries,
-        state = CustomMessageSlotState(messageId = messageId, customType = customType, payload = payload),
+        state = HostCustomMessageSlotState(messageId = messageId, customType = customType, payload = payload),
         fallback = fallback,
     )
 }

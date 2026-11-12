@@ -4,12 +4,16 @@ import android.content.Context
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
+import io.github.whywood.deepdeep.plugin.api.PluginExperimentalApi
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginServices
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
+import io.github.whywood.deepdeep.runtime.PluginPromptContribution
+import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
+import io.github.whywood.deepdeep.runtime.PluginPromptSection
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -44,10 +48,7 @@ class PluginHostManager internal constructor(
     private var started = false
     private var lastRefreshAt = 0L
 
-    override val textResolver: PluginTextResolver = PluginTextResolver(
-        resourceString = { id -> strings.get(id) },
-        language = language,
-    )
+    override val textResolver: PluginTextResolver = PluginTextResolver(language = language)
     private val hostFactory = PluginHostFactory(
         context = context,
         pluginsRoot = pluginsRoot,
@@ -160,6 +161,29 @@ class PluginHostManager internal constructor(
         if (sections.isEmpty()) return null
         return sections.joinToString("\n\n") { it.body }
     }
+
+    @OptIn(PluginExperimentalApi::class)
+    override fun promptOverrides(excludedPlugins: Set<String>): PluginPromptOverrides =
+        PluginPromptOverrides(
+            registrySnapshot.promptOverrides
+                .filterNot { it.pluginId in excludedPlugins }
+                .map { entry ->
+                    PluginPromptContribution(
+                        pluginId = entry.pluginId,
+                        priority = entry.priority,
+                        preamble = entry.override.preamble,
+                        rules = entry.override.rules,
+                        sections = entry.override.sections.map { section ->
+                            PluginPromptSection(
+                                pluginId = entry.pluginId,
+                                id = section.id,
+                                body = section.body,
+                                priority = section.priority,
+                            )
+                        },
+                    )
+                },
+        )
 
     override fun setEnabled(pluginId: String, enabled: Boolean) = commands.setEnabled(pluginId, enabled)
 

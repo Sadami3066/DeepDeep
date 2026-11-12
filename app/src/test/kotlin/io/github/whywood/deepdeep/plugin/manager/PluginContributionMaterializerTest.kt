@@ -7,6 +7,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.promptSection
+import io.github.whywood.deepdeep.plugin.api.unavailable
 
 class PluginContributionMaterializerTest {
     private fun runtimeWith(plugin: CountingPlugin): Pair<PluginRuntimeRegistry, PluginRuntimeView> {
@@ -74,8 +76,8 @@ class PluginContributionMaterializerTest {
     }
 
     @Test
-    fun unavailablePluginIsDegradedAndKeepsContributions() = runTest {
-        val plugin = CountingPlugin(availabilityResult = PluginAvailability.Unavailable("offline"))
+    fun unavailablePluginIsDegradedAndKeepscontributions() = runTest {
+        val plugin = CountingPlugin(availabilityResult = unavailable("offline"))
         val (gate, _) = runtimeWith(plugin)
         PluginContributionMaterializer(gate).refreshAll()
 

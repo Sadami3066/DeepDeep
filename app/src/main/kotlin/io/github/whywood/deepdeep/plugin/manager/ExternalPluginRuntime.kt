@@ -1,13 +1,15 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import android.content.Context
-import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
-import io.github.whywood.deepdeep.plugin.api.PluginManifestCodec
 import io.github.whywood.deepdeep.plugin.host.external.ActivationMarker
 import io.github.whywood.deepdeep.plugin.host.external.BundleState
 import io.github.whywood.deepdeep.plugin.host.external.DdpPackage
+import io.github.whywood.deepdeep.plugin.host.external.PluginManifestCodec
+import io.github.whywood.deepdeep.plugin.host.external.HostLocalizedText
+import io.github.whywood.deepdeep.plugin.host.external.HostPluginManifest
+import io.github.whywood.deepdeep.plugin.host.external.hostLocalizedText
 import io.github.whywood.deepdeep.plugin.host.external.CommitResult
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecovery
@@ -152,11 +154,11 @@ internal class ExternalPluginRuntime(
                 PluginManifestCodec.parse(pkg.manifestJson())
             }.getOrNull()?.let { return it }
         }
-        return PluginManifest(
+        return HostPluginManifest(
             id = record.id,
             version = record.version,
-            name = LocalizedText.Literal(record.id),
-            summary = LocalizedText.Literal(""),
+            name = hostLocalizedText(record.id),
+            summary = HostLocalizedText(emptyMap()),
         )
     }
 

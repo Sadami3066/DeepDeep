@@ -8,7 +8,7 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
-import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.plugin.api.textBlock
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
 import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
 import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
@@ -46,7 +46,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             language = language,
             servicesFactory = { pluginId, dataDir, manifest, pluginScope ->
                 buildPluginServices(pluginServices(pluginId, dataDir, pluginScope))
-                    .declaredOnly(manifest.capabilities.orEmpty())
+                    .declaredOnly(manifest.capabilities)
             },
             skillStore = PluginSkillStore(
                 skillsDir = File(deps.agentDir, "skills"),
@@ -112,7 +112,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             mcpCall = call@{ server, tool, arguments ->
                 val config = deps.mcpConfigStore.loadServers()[server]
                     ?: return@call McpCallResult(
-                        blocks = listOf(ToolBlock.Text("unknown MCP server: $server")),
+                        blocks = listOf(textBlock("unknown MCP server: $server")),
                         isError = true,
                     )
                 McpModelMapping.result(deps.mcpPluginBridge().callTool(server, config, tool, arguments))

@@ -5,10 +5,19 @@ import io.github.whywood.deepdeep.plugin.api.InputRequest
 import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
+import io.github.whywood.deepdeep.plugin.api.ToolCallAction
 import io.github.whywood.deepdeep.plugin.api.ToolCallDecision
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest
 import io.github.whywood.deepdeep.plugin.api.ToolExecutionResult
+import io.github.whywood.deepdeep.plugin.api.ToolResultAction
 import io.github.whywood.deepdeep.plugin.api.ToolResultDecision
+import io.github.whywood.deepdeep.plugin.api.inputContinue
+import io.github.whywood.deepdeep.plugin.api.inputHandled
+import io.github.whywood.deepdeep.plugin.api.resultKeep
+import io.github.whywood.deepdeep.plugin.api.resultReplace
+import io.github.whywood.deepdeep.plugin.api.toolBlock
+import io.github.whywood.deepdeep.plugin.api.toolContinue
+import io.github.whywood.deepdeep.plugin.api.toolRewrite
 import io.github.whywood.deepdeep.plugin.host.PluginHooksEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -46,17 +55,17 @@ internal class PluginHookDispatchers(
     }
 
     suspend fun transformInput(request: InputRequest): InputDecision {
-        var current = request
+        var currentText = request.text
+        var currentImages = request.imagePaths
         for (entry in source.entries()) {
             val decision = dispatch(entry, PluginHookStage.INPUT_TRANSFORM, block = {
-                inputTransform(current)
-            }) { InputDecision.continueWith(current) }
-            when (decision) {
-                is InputDecision.Continue -> current = current.copy(text = decision.text, imagePaths = decision.imagePaths)
-                InputDecision.Handled -> return InputDecision.Handled
-            }
+                inputTransform(InputRequest(request.sessionId, currentText, currentImages))
+            }) { inputContinue(currentText, currentImages) }
+            if (decision.handled) return inputHandled()
+            currentText = decision.text ?: currentText
+            currentImages = decision.imagePaths
         }
-        return InputDecision.continueWith(current)
+        return inputContinue(currentText, currentImages)
     }
 
     suspend fun beforeToolCall(request: ToolCallRequest): ToolCallDecision {
@@ -65,36 +74,33 @@ internal class PluginHookDispatchers(
         for (entry in source.entries()) {
             val decision = dispatch(entry, PluginHookStage.BEFORE_TOOL_CALL, block = {
                 this.beforeToolCall(current)
-            }) { failure -> ToolCallDecision.Block(failure.toolBlockReason()) }
-            when (decision) {
-                is ToolCallDecision.Block -> return decision
-                is ToolCallDecision.Rewrite -> {
-                    current = current.copy(args = decision.args)
+            }) { failure -> toolBlock(failure.toolBlockReason()) }
+            when (decision.action) {
+                ToolCallAction.BLOCK -> return decision
+                ToolCallAction.REWRITE -> {
+                    current = current.copy(args = decision.args ?: current.args)
                     rewritten = true
                 }
 
-                ToolCallDecision.Continue -> Unit
+                else -> Unit
             }
         }
-        return if (rewritten) ToolCallDecision.Rewrite(current.args) else ToolCallDecision.Continue
+        return if (rewritten) toolRewrite(current.args) else toolContinue()
     }
 
     suspend fun afterToolExecution(request: ToolExecutionResult): ToolResultDecision {
         var current = request
         var replaced = false
         for (entry in source.entries()) {
-            when (val decision = dispatch(entry, PluginHookStage.AFTER_TOOL_EXECUTION, block = {
+            val decision = dispatch(entry, PluginHookStage.AFTER_TOOL_EXECUTION, block = {
                 this.afterToolExecution(current)
-            }) { ToolResultDecision.Keep }) {
-                is ToolResultDecision.Replace -> {
-                    current = current.copy(result = decision.result)
-                    replaced = true
-                }
-
-                ToolResultDecision.Keep -> Unit
+            }) { resultKeep() }
+            if (decision.action == ToolResultAction.REPLACE) {
+                current = current.copy(result = decision.result ?: current.result)
+                replaced = true
             }
         }
-        return if (replaced) ToolResultDecision.Replace(current.result) else ToolResultDecision.Keep
+        return if (replaced) resultReplace(current.result) else resultKeep()
     }
 
     private companion object {

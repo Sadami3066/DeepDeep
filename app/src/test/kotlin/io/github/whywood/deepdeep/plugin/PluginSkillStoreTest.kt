@@ -11,6 +11,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import io.github.whywood.deepdeep.plugin.api.pluginSkill
+import io.github.whywood.deepdeep.plugin.api.pluginSkillFile
 
 class PluginSkillStoreTest {
     @get:Rule
@@ -25,7 +27,7 @@ class PluginSkillStoreTest {
     fun syncWritesRepoAndActiveWithMarker() = runTest {
         store().sync(
             pluginId = "feishu",
-            skills = listOf(PluginSkill("deepdeep-feishu", "---\nname: x\ndescription: y\n---\nbody")),
+            skills = listOf(pluginSkill("deepdeep-feishu", "---\nname: x\ndescription: y\n---\nbody")),
             previousIds = emptyList(),
             active = true,
         )
@@ -37,7 +39,7 @@ class PluginSkillStoreTest {
 
     @Test
     fun inactiveSyncKeepsRepoOnly() = runTest {
-        store().sync("feishu", listOf(PluginSkill("a", "x")), emptyList(), active = false)
+        store().sync("feishu", listOf(pluginSkill("a", "x")), emptyList(), active = false)
         assertTrue(File(repoDir, "a/SKILL.md").isFile)
         assertFalse(File(activeDir, "a").exists())
     }
@@ -45,12 +47,12 @@ class PluginSkillStoreTest {
     @Test
     fun setActiveTogglesActiveCopy() = runTest {
         val store = store()
-        store.sync("feishu", listOf(PluginSkill("a", "x")), emptyList(), active = false)
-        store.setActive("feishu", listOf(PluginSkill("a", "x")), enabled = true)
+        store.sync("feishu", listOf(pluginSkill("a", "x")), emptyList(), active = false)
+        store.setActive("feishu", listOf(pluginSkill("a", "x")), enabled = true)
         assertTrue(File(activeDir, "a/SKILL.md").isFile)
         assertEquals("feishu", File(activeDir, "a/.deepdeep-plugin").readText())
 
-        store.setActive("feishu", listOf(PluginSkill("a", "x")), enabled = false)
+        store.setActive("feishu", listOf(pluginSkill("a", "x")), enabled = false)
         assertFalse(File(activeDir, "a").exists())
         assertTrue(File(repoDir, "a/SKILL.md").isFile)
     }
@@ -58,8 +60,8 @@ class PluginSkillStoreTest {
     @Test
     fun syncRemovesStaleSkillsForPlugin() = runTest {
         val store = store()
-        store.sync("feishu", listOf(PluginSkill("a", "x")), emptyList(), active = true)
-        store.sync("feishu", listOf(PluginSkill("b", "y")), listOf("a"), active = true)
+        store.sync("feishu", listOf(pluginSkill("a", "x")), emptyList(), active = true)
+        store.sync("feishu", listOf(pluginSkill("b", "y")), listOf("a"), active = true)
         assertFalse(File(repoDir, "a").exists())
         assertFalse(File(activeDir, "a").exists())
         assertTrue(File(repoDir, "b").isDirectory)
@@ -73,7 +75,7 @@ class PluginSkillStoreTest {
         File(active, "SKILL.md").writeText("old body")
         File(active, ".deepdeep-plugin").writeText("feishu")
 
-        store().ensureRepo("feishu", listOf(PluginSkill("deepdeep-feishu", "new body")))
+        store().ensureRepo("feishu", listOf(pluginSkill("deepdeep-feishu", "new body")))
 
         assertTrue(File(repoDir, "deepdeep-feishu/SKILL.md").isFile)
         assertEquals("feishu", File(repoDir, "deepdeep-feishu/.deepdeep-plugin").readText())
@@ -82,7 +84,7 @@ class PluginSkillStoreTest {
 
     @Test
     fun ensureRepoCreatesMissingRepoSkill() = runTest {
-        store().ensureRepo("feishu", listOf(PluginSkill("a", "body")))
+        store().ensureRepo("feishu", listOf(pluginSkill("a", "body")))
         assertEquals("body", File(repoDir, "a/SKILL.md").readText())
         assertFalse(File(activeDir, "a").exists())
     }
@@ -93,7 +95,7 @@ class PluginSkillStoreTest {
         foreign.mkdirs()
         File(foreign, "SKILL.md").writeText("user skill")
 
-        val skipped = store().sync("feishu", listOf(PluginSkill("taken", "x")), emptyList(), active = true)
+        val skipped = store().sync("feishu", listOf(pluginSkill("taken", "x")), emptyList(), active = true)
 
         assertEquals(listOf("taken"), skipped)
         assertEquals("user skill", File(foreign, "SKILL.md").readText())
@@ -107,7 +109,7 @@ class PluginSkillStoreTest {
         foreign.mkdirs()
         File(foreign, "SKILL.md").writeText("user skill")
 
-        val skipped = store().sync("feishu", listOf(PluginSkill("taken", "x")), emptyList(), active = true)
+        val skipped = store().sync("feishu", listOf(pluginSkill("taken", "x")), emptyList(), active = true)
 
         assertEquals(listOf("taken"), skipped)
         assertEquals("user skill", File(foreign, "SKILL.md").readText())
@@ -121,7 +123,7 @@ class PluginSkillStoreTest {
         File(foreign, "SKILL.md").writeText("body")
         File(foreign, "extra.txt").writeText("keep")
 
-        val skipped = store().sync("feishu", listOf(PluginSkill("claimed", "body")), emptyList(), active = true)
+        val skipped = store().sync("feishu", listOf(pluginSkill("claimed", "body")), emptyList(), active = true)
 
         assertTrue(skipped.isEmpty())
         assertEquals("feishu", File(foreign, ".deepdeep-plugin").readText())
@@ -132,13 +134,13 @@ class PluginSkillStoreTest {
     @Test
     fun setActiveClaimsForeignActiveSkillWithMatchingContent() = runTest {
         val store = store()
-        store.sync("feishu", listOf(PluginSkill("claimed", "body")), emptyList(), active = false)
+        store.sync("feishu", listOf(pluginSkill("claimed", "body")), emptyList(), active = false)
         File(repoDir, "claimed/.deepdeep-plugin").delete()
         val foreign = File(activeDir, "claimed")
         foreign.mkdirs()
         File(foreign, "SKILL.md").writeText("body")
 
-        val skipped = store.setActive("feishu", listOf(PluginSkill("claimed", "body")), enabled = true)
+        val skipped = store.setActive("feishu", listOf(pluginSkill("claimed", "body")), enabled = true)
 
         assertTrue(skipped.isEmpty())
         assertEquals("feishu", File(foreign, ".deepdeep-plugin").readText())
@@ -147,7 +149,7 @@ class PluginSkillStoreTest {
     @Test
     fun removeDeletesBothDirectories() = runTest {
         val store = store()
-        store.sync("feishu", listOf(PluginSkill("owned", "x")), emptyList(), active = true)
+        store.sync("feishu", listOf(pluginSkill("owned", "x")), emptyList(), active = true)
         store.remove("feishu", listOf("owned"))
         assertFalse(File(repoDir, "owned").exists())
         assertFalse(File(activeDir, "owned").exists())
@@ -156,7 +158,7 @@ class PluginSkillStoreTest {
     @Test
     fun removeOnlyDeletesOwnedSkills() = runTest {
         val store = store()
-        store.sync("feishu", listOf(PluginSkill("owned", "x")), emptyList(), active = true)
+        store.sync("feishu", listOf(pluginSkill("owned", "x")), emptyList(), active = true)
         val foreignRepo = File(repoDir, "foreign")
         foreignRepo.mkdirs()
         File(foreignRepo, "SKILL.md").writeText("user skill")
@@ -174,12 +176,12 @@ class PluginSkillStoreTest {
 
     @Test
     fun syncWritesSkillFilesIntoRepoAndActive() = runTest {
-        val skill = PluginSkill(
+        val skill = pluginSkill(
             id = "deepdeep-miniapp",
             markdown = "# Skill",
             files = listOf(
-                PluginSkillFile("references/api.md", "# API"),
-                PluginSkillFile("examples/01-hello.html", "<html></html>"),
+                pluginSkillFile("references/api.md", "# API"),
+                pluginSkillFile("examples/01-hello.html", "<html></html>"),
             ),
         )
         store().sync("miniapp", listOf(skill), emptyList(), active = true)
@@ -198,7 +200,7 @@ class PluginSkillStoreTest {
             val failed = runCatching {
                 store().sync(
                     "miniapp",
-                    listOf(PluginSkill("safe", "body", files = listOf(PluginSkillFile(path, "x")))),
+                    listOf(pluginSkill("safe", "body", files = listOf(pluginSkillFile(path, "x")))),
                     emptyList(),
                     active = true,
                 )
@@ -217,10 +219,10 @@ class PluginSkillStoreTest {
         store().sync(
             "miniapp",
             listOf(
-                PluginSkill(
+                pluginSkill(
                     id = "claimed",
                     markdown = "body",
-                    files = listOf(PluginSkillFile("references/new.md", "# New")),
+                    files = listOf(pluginSkillFile("references/new.md", "# New")),
                 ),
             ),
             emptyList(),

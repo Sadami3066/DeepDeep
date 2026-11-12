@@ -10,14 +10,16 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.MessageDeltaEvent
+import io.github.whywood.deepdeep.plugin.api.RunStartedEvent
 
 class SessionEventPumpTest {
     private val snapshot = HookSnapshot(version = 1L, entries = listOf(PluginHooksEntry("plugin", probeHooks())))
     private val emptySnapshot = HookSnapshot(version = 1L, entries = emptyList())
 
-    private fun event(name: String): PluginEvent = PluginEvent.RunStarted("session", name)
+    private fun event(name: String): PluginEvent = HostRunStartedEvent("session", name)
 
-    private fun delta(name: String): PluginEvent = PluginEvent.MessageDelta("session", "message", name)
+    private fun delta(name: String): PluginEvent = HostMessageDeltaEvent("session", "message", name)
 
     @Test
     fun dispatchesInSubmitOrderWithinSession() = runTest {
@@ -149,7 +151,7 @@ class SessionEventPumpTest {
         pump.submit("session", event("one"))
         gateEntered.await()
         pump.submit("session", event("two"))
-        pump.submit("session", PluginEvent.SessionClosed("session"))
+        pump.submit("session", HostSessionClosedEvent("session"))
         val closing = scope.launch { pump.closeAndDrain("session") }
         gate.complete(Unit)
         closing.join()
@@ -157,10 +159,10 @@ class SessionEventPumpTest {
         assertEquals(3, dispatched.size)
         assertEquals("one", dispatched[0])
         assertEquals("two", dispatched[1])
-        assertTrue(dispatched[2].startsWith("SessionClosed"))
+        assertTrue(dispatched[2].startsWith("HostSessionClosed"))
     }
 
-    private fun label(event: PluginEvent): String = (event as? PluginEvent.RunStarted)?.runId
-        ?: (event as? PluginEvent.MessageDelta)?.delta
+    private fun label(event: PluginEvent): String = (event as? RunStartedEvent)?.runId
+        ?: (event as? MessageDeltaEvent)?.delta
         ?: event.toString()
 }

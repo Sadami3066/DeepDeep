@@ -1,6 +1,6 @@
 package io.github.whywood.deepdeep.plugin.manager
 
-import io.github.whywood.deepdeep.plugin.api.PublisherInfo
+import io.github.whywood.deepdeep.plugin.host.external.HostPublisherInfo
 import io.github.whywood.deepdeep.plugin.host.PluginPhase
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
@@ -32,9 +32,9 @@ internal class PluginUiProjection(
             installedSizeBytes = view.externalRecord?.size,
             lastError = view.record.lastError,
             publisher = view.externalRecord?.let { record ->
-                PublisherInfo(descriptor.manifest.publisher?.name.orEmpty(), record.publisherKeyId)
+                HostPublisherInfo(descriptor.manifest.publisher?.name.orEmpty(), record.publisherKeyId)
             },
-            capabilities = descriptor.manifest.capabilities.orEmpty(),
+            capabilities = descriptor.manifest.capabilities.map { it.wire }.toSet(),
         )
     }
 

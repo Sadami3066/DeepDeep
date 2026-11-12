@@ -161,6 +161,25 @@ class PluginPackageVerifierTest {
     }
 
     @Test
+    fun rejectsRetiredApiLevelFive() {
+        val key = SyntheticDdp.newSigningKey()
+        val pkg = DdpPackage.read(
+            SyntheticDdp.build(
+                dir,
+                request = SyntheticDdp.BuildRequest(
+                    manifest = SyntheticDdp.manifestJson(apiLevel = 5),
+                    key = key,
+                ),
+            ),
+        )
+
+        val result = PluginPackageVerifier.verify(pkg)
+
+        assertEquals(VerificationCode.API_LEVEL_UNSUPPORTED, (result as VerificationResult.Rejected).code)
+        assertEquals(5, result.declaredApiLevel)
+    }
+
+    @Test
     fun rejectsManifestWithoutEntryClass() {
         val key = SyntheticDdp.newSigningKey()
         val pkg = DdpPackage.read(

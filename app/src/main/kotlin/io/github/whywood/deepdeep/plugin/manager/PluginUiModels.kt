@@ -62,7 +62,5 @@ data class PluginsUiState(
     fun snapshot(pluginId: String): PluginSnapshot? = plugins.firstOrNull { it.id == pluginId }
 }
 
-internal fun PluginAvailability.toUi(): PluginAvailabilityUi = when (this) {
-    is PluginAvailability.Available -> PluginAvailabilityUi.Available
-    is PluginAvailability.Unavailable -> PluginAvailabilityUi.Unavailable(reason)
-}
+internal fun PluginAvailability.toUi(): PluginAvailabilityUi =
+    if (available) PluginAvailabilityUi.Available else PluginAvailabilityUi.Unavailable(reason.orEmpty())

@@ -1,11 +1,13 @@
 package io.github.whywood.deepdeep.plugin.host
 
 import io.github.whywood.deepdeep.plugin.api.ComposerAction
+import io.github.whywood.deepdeep.plugin.api.PluginExperimentalApi
 import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.api.PluginTool
+import io.github.whywood.deepdeep.plugin.api.PromptOverride
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.PromptSection
 import io.github.whywood.deepdeep.plugin.api.SlotBinding
@@ -31,10 +33,12 @@ internal enum class PluginPhase {
     }
 }
 
+@OptIn(PluginExperimentalApi::class)
 internal data class PluginContributions(
     val tools: List<PluginTool> = emptyList(),
     val skills: List<PluginSkill> = emptyList(),
     val promptSections: List<PromptSection> = emptyList(),
+    val promptOverride: PromptOverride? = null,
     val ui: PluginUiContributions = PluginUiContributions.None,
     val hooks: PluginHooks = PluginHooks.None,
 ) {
@@ -76,6 +80,12 @@ internal data class PluginSkillEntry(val pluginId: String, val skill: PluginSkil
 
 internal data class PluginPromptSectionEntry(val pluginId: String, val section: PromptSection)
 
+internal data class PluginPromptOverrideEntry(
+    val pluginId: String,
+    val priority: Int,
+    val override: PromptOverride,
+)
+
 internal data class PluginUiEntry(val pluginId: String, val contributions: PluginUiContributions)
 
 internal data class PluginHooksEntry(val pluginId: String, val hooks: PluginHooks)
@@ -95,6 +105,7 @@ internal class PluginRegistrySnapshot(
     val tools: List<PluginToolEntry>
     val skills: List<PluginSkillEntry>
     val promptSections: List<PluginPromptSectionEntry>
+    val promptOverrides: List<PluginPromptOverrideEntry>
     val ui: List<PluginUiEntry>
     val hooks: List<PluginHooksEntry>
     val bindings: List<PluginBindingEntry>
@@ -132,6 +143,11 @@ internal class PluginRegistrySnapshot(
                     if (owners.isEmpty()) add(PluginPromptSectionEntry(descriptor.id, section))
                     owners += descriptor.id
                 }
+            }
+        }
+        promptOverrides = contributing.mapNotNull { descriptor ->
+            descriptor.contributions.promptOverride?.let { override ->
+                PluginPromptOverrideEntry(descriptor.id, override.priority, override)
             }
         }
         ui = contributing.map { PluginUiEntry(it.id, it.contributions.ui) }

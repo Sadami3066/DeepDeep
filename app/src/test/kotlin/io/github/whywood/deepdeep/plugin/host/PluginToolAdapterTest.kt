@@ -21,6 +21,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.fileRefBlock
+import io.github.whywood.deepdeep.plugin.api.imageBlock
+import io.github.whywood.deepdeep.plugin.api.pluginTool
+import io.github.whywood.deepdeep.plugin.api.richResult
+import io.github.whywood.deepdeep.plugin.api.textBlock
+import io.github.whywood.deepdeep.plugin.api.textResult
 
 class PluginToolAdapterTest {
     private val emptyArgs = JsonObject(emptyMap())
@@ -31,14 +37,14 @@ class PluginToolAdapterTest {
             put("type", "object")
             put("required", "text")
         }
-        val tool = PluginTool(
+        val tool = pluginTool(
             name = "sample_tool",
             label = "Sample Label",
             description = "Sample description",
             parameters = parameters,
             promptSnippet = "use sample_tool",
             promptGuidelines = listOf("first guideline", "second guideline"),
-            execute = { PluginToolResult.Text("ok") },
+            execute = { textResult("ok") },
         )
 
         val coding = PluginToolAdapter.toCodingTool(tool)
@@ -53,12 +59,12 @@ class PluginToolAdapterTest {
 
     @Test
     fun emptyPromptGuidelinesBecomeNull() {
-        val tool = PluginTool(
+        val tool = pluginTool(
             name = "plain_tool",
             label = "plain_tool",
             description = "plain",
             parameters = emptyArgs,
-            execute = { PluginToolResult.Text("ok") },
+            execute = { textResult("ok") },
         )
         val coding = PluginToolAdapter.toCodingTool(tool)
         assertNull(coding.promptGuidelines)
@@ -74,7 +80,7 @@ class PluginToolAdapterTest {
     @Test
     fun mapsTextResult() = runTest {
         val tool = testTool("text_tool") {
-            PluginToolResult.Text("hello", details = buildJsonObject { put("kind", "greeting") })
+            textResult("hello", details = buildJsonObject { put("kind", "greeting") })
         }.let(PluginToolAdapter::toCodingTool)
 
         val result = tool.execute("call-1", emptyArgs, null, null)
@@ -86,7 +92,7 @@ class PluginToolAdapterTest {
     @Test
     fun mapsTextErrorResult() = runTest {
         val tool = testTool("error_tool") {
-            PluginToolResult.Text("failed", isError = true)
+            textResult("failed", isError = true)
         }.let(PluginToolAdapter::toCodingTool)
 
         val result = tool.execute("call-1", emptyArgs, null, null)
@@ -98,11 +104,11 @@ class PluginToolAdapterTest {
     fun mapsRichBlocks() = runTest {
         val imageBytes = byteArrayOf(1, 2, 3)
         val tool = testTool("rich_tool") {
-            PluginToolResult.Rich(
+            richResult(
                 listOf(
-                    ToolBlock.Text("before"),
-                    ToolBlock.Image(imageBytes, "image/png"),
-                    ToolBlock.FileRef("/tmp/plugin-output.txt", "text/plain"),
+                    textBlock("before"),
+                    imageBlock(imageBytes, "image/png"),
+                    fileRefBlock("/tmp/plugin-output.txt", "text/plain"),
                 ),
                 details = buildJsonObject { put("kind", "rich") },
             )
@@ -126,7 +132,7 @@ class PluginToolAdapterTest {
     @Test
     fun mapsFileRefWithoutMimeType() = runTest {
         val tool = testTool("file_tool") {
-            PluginToolResult.Rich(listOf(ToolBlock.FileRef("/tmp/output.bin")))
+            richResult(listOf(fileRefBlock("/tmp/output.bin")))
         }.let(PluginToolAdapter::toCodingTool)
 
         val result = tool.execute("call-1", emptyArgs, null, null)
@@ -140,7 +146,7 @@ class PluginToolAdapterTest {
     @Test
     fun mapsRichErrorResult() = runTest {
         val tool = testTool("rich_error") {
-            PluginToolResult.Rich(listOf(ToolBlock.Text("broken")), isError = true)
+            richResult(listOf(textBlock("broken")), isError = true)
         }.let(PluginToolAdapter::toCodingTool)
 
         val result = tool.execute("call-1", emptyArgs, null, null)
@@ -151,9 +157,9 @@ class PluginToolAdapterTest {
     @Test
     fun streamsPartialUpdatesBeforeFinalResult() = runTest {
         val tool = testTool("streaming_tool") { call ->
-            call.partial(PluginToolResult.Text("half"))
-            call.partial(PluginToolResult.Text("almost"))
-            PluginToolResult.Text("done")
+            call.partial(textResult("half"))
+            call.partial(textResult("almost"))
+            textResult("done")
         }.let(PluginToolAdapter::toCodingTool)
         val updates = mutableListOf<String>()
 
@@ -192,7 +198,7 @@ class PluginToolAdapterTest {
         val tool = testTool("args_tool") { call ->
             receivedCallId = call.callId
             receivedArgs = call.args
-            PluginToolResult.Text("ok")
+            textResult("ok")
         }.let(PluginToolAdapter::toCodingTool)
         val args = buildJsonObject { put("text", "hello") }
 
@@ -208,7 +214,7 @@ class PluginToolAdapterTest {
         var seen: String? = null
         val tool = testTool("session_tool") { call ->
             seen = call.sessionId
-            PluginToolResult.Text(call.sessionId)
+            textResult(call.sessionId)
         }.let { PluginToolAdapter.toCodingTool(it) { current } }
 
         val first = tool.execute("call-1", emptyArgs, null, null)
@@ -226,7 +232,7 @@ class PluginToolAdapterTest {
         var seen: String? = null
         val tool = testTool("session_tool") { call ->
             seen = call.sessionId
-            PluginToolResult.Text("ok")
+            textResult("ok")
         }.let(PluginToolAdapter::toCodingTool)
 
         tool.execute("call-1", emptyArgs, null, null)

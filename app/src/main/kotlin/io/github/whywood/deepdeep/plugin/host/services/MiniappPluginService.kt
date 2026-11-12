@@ -7,6 +7,9 @@ import io.github.whywood.deepdeep.plugin.api.MiniappInvalid
 import io.github.whywood.deepdeep.plugin.api.MiniappRun
 import io.github.whywood.deepdeep.plugin.api.MiniappScan
 import io.github.whywood.deepdeep.plugin.api.MiniappService
+import io.github.whywood.deepdeep.plugin.api.miniappInvalid
+import io.github.whywood.deepdeep.plugin.api.miniappMissing
+import io.github.whywood.deepdeep.plugin.api.miniappValid
 import io.github.whywood.deepdeep.runtime.CreatedDraft
 import io.github.whywood.deepdeep.runtime.MiniappAgentRequest
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
@@ -36,17 +39,17 @@ internal class MiniappPluginService(
     }
 
     override suspend fun load(id: String): MiniappEntry = when (val entry = store.load(id)) {
-        is RuntimeMiniappEntry.Valid -> MiniappEntry.Valid(
+        is RuntimeMiniappEntry.Valid -> miniappValid(
             app = entry.creation.manifest.toPluginApp(entry.creation.directory),
             manifest = entry.creation.manifest.toJsonObject(),
         )
 
-        is RuntimeMiniappEntry.Invalid -> MiniappEntry.Invalid(
+        is RuntimeMiniappEntry.Invalid -> miniappInvalid(
             id = entry.id,
             reason = entry.reason.name + (entry.detail?.let { ": $it" } ?: ""),
         )
 
-        RuntimeMiniappEntry.Missing -> MiniappEntry.Missing
+        RuntimeMiniappEntry.Missing -> miniappMissing()
     }
 
     override suspend fun create(request: MiniappCreateRequest): MiniappApp? {

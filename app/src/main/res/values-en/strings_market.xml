@@ -119,4 +119,7 @@
     <string name="market_access_adb">ADB</string>
     <string name="market_access_root">Root</string>
     <string name="market_access_insufficient">Current access is below the level this plugin requires; some features may be unavailable</string>
+    <string name="market_plugin_api_retired">Plugin API %1$d is no longer supported; wait for a plugin update</string>
+    <string name="market_plugin_requires_newer_app">Update DeepDeep to install this plugin</string>
+    <string name="market_plugin_requires_host_version">DeepDeep %1$s or newer is required</string>
 </resources>

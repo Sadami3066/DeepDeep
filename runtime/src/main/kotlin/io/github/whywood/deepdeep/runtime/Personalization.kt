@@ -59,6 +59,8 @@ internal fun buildSessionSystemPromptSections(
     pluginBody: String?,
     rootBash: Boolean = false,
     environmentLines: List<String>? = null,
+    promptPreamble: String? = null,
+    promptRules: String? = null,
     extra: Map<String, String> = emptyMap(),
 ): Map<String, String> {
     val sections = LinkedHashMap(
@@ -68,6 +70,8 @@ internal fun buildSessionSystemPromptSections(
     if (body.isNotEmpty()) {
         sections["plugins"] = wrapPromptSection("plugins", body)
     }
+    promptPreamble?.trim()?.takeIf { it.isNotEmpty() }?.let { sections["preamble"] = it }
+    promptRules?.trim()?.takeIf { it.isNotEmpty() }?.let { sections["rules"] = wrapPromptSection("rules", it) }
     sections.putAll(extra)
     return sections
 }

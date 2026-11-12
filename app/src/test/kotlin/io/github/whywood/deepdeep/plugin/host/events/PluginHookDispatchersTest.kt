@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.plugin.api.InputRequest
 import io.github.whywood.deepdeep.plugin.api.PluginContextRequest
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
 import io.github.whywood.deepdeep.plugin.api.PromptRequest
+import io.github.whywood.deepdeep.plugin.api.ToolCallAction
 import io.github.whywood.deepdeep.plugin.api.ToolCallDecision
 import io.github.whywood.deepdeep.plugin.api.ToolCallRequest
 import io.github.whywood.deepdeep.plugin.api.ToolExecutionResult
@@ -20,6 +21,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import io.github.whywood.deepdeep.plugin.api.contributions
+import io.github.whywood.deepdeep.plugin.api.inputContinue
+import io.github.whywood.deepdeep.plugin.api.inputHandled
+import io.github.whywood.deepdeep.plugin.api.resultKeep
+import io.github.whywood.deepdeep.plugin.api.resultReplace
+import io.github.whywood.deepdeep.plugin.api.textResult
+import io.github.whywood.deepdeep.plugin.api.toolBlock
+import io.github.whywood.deepdeep.plugin.api.toolContinue
+import io.github.whywood.deepdeep.plugin.api.toolRewrite
 
 class PluginHookDispatchersTest {
     private val reporter = RecordingReporter()
@@ -32,7 +42,7 @@ class PluginHookDispatchersTest {
     private fun toolCallRequest(args: JsonObject = JsonObject(emptyMap())): ToolCallRequest =
         ToolCallRequest("session-1", "call-1", "bash", args)
 
-    private fun toolExecution(result: PluginToolResult = PluginToolResult.Text("original")): ToolExecutionResult =
+    private fun toolExecution(result: PluginToolResult = textResult("original")): ToolExecutionResult =
         ToolExecutionResult("session-1", "call-1", "bash", result)
 
     @Test
@@ -126,17 +136,17 @@ class PluginHookDispatchersTest {
     fun inputTransformChainsAndHandledShortCircuits() = runTest {
         var thirdCalls = 0
         var secondText: String? = null
-        val first = probeHooks(onInput = { InputDecision.Continue("${it.text}-a") })
+        val first = probeHooks(onInput = { inputContinue("${it.text}-a") })
         val second = probeHooks(onInput = { request ->
             secondText = request.text
-            InputDecision.Handled
+            inputHandled()
         })
         val third = probeHooks(onInput = {
             thirdCalls += 1
-            InputDecision.continueWith(it)
+            inputContinue(it.text, it.imagePaths)
         })
         val source = TestHookSource(listOf(hookEntry("a", first), hookEntry("b", second), hookEntry("c", third)))
-        assertEquals(InputDecision.Handled, dispatchers(source).transformInput(InputRequest("session-1", "hi")))
+        assertEquals(inputHandled(), dispatchers(source).transformInput(InputRequest("session-1", "hi")))
         assertEquals("hi-a", secondText)
         assertEquals(0, thirdCalls)
     }
@@ -144,10 +154,10 @@ class PluginHookDispatchersTest {
     @Test
     fun inputTransformFailureIsFailOpen() = runTest {
         val failing = probeHooks(onInput = { error("boom") })
-        val healthy = probeHooks(onInput = { InputDecision.Continue("${it.text}-b") })
+        val healthy = probeHooks(onInput = { inputContinue("${it.text}-b") })
         val source = TestHookSource(listOf(hookEntry("failing", failing), hookEntry("healthy", healthy)))
         val decision = dispatchers(source).transformInput(InputRequest("session-1", "hi"))
-        assertEquals("hi-b", (decision as InputDecision.Continue).text)
+        assertEquals("hi-b", decision.text)
         assertEquals(PluginHookStage.INPUT_TRANSFORM, reporter.failures.single().stage)
     }
 
@@ -155,40 +165,40 @@ class PluginHookDispatchersTest {
     fun inputTransformTimeoutIsFailOpen() = runTest {
         val slow = probeHooks(onInput = {
             delay(60_000)
-            InputDecision.Handled
+            inputHandled()
         })
         val source = TestHookSource(listOf(hookEntry("slow", slow)))
         val decision = dispatchers(source, timeoutMs = 100).transformInput(InputRequest("session-1", "hi"))
-        assertEquals("hi", (decision as InputDecision.Continue).text)
+        assertEquals("hi", decision.text)
     }
 
     @Test
     fun toolGateBlocksOnFirstBlock() = runTest {
         var afterCalls = 0
-        val blocking = probeHooks(onBefore = { ToolCallDecision.Block("danger") })
+        val blocking = probeHooks(onBefore = { toolBlock("danger") })
         val after = probeHooks(onBefore = {
             afterCalls += 1
-            ToolCallDecision.Continue
+            toolContinue()
         })
         val source = TestHookSource(listOf(hookEntry("blocking", blocking), hookEntry("after", after)))
-        assertEquals(ToolCallDecision.Block("danger"), dispatchers(source).beforeToolCall(toolCallRequest()))
+        assertEquals(toolBlock("danger"), dispatchers(source).beforeToolCall(toolCallRequest()))
         assertEquals(0, afterCalls)
     }
 
     @Test
     fun toolGateRewritesArgsForLaterPlugins() = runTest {
         val seen = mutableListOf<JsonObject>()
-        val rewriter = probeHooks(onBefore = { ToolCallDecision.Rewrite(buildJsonObject { put("x", 2) }) })
+        val rewriter = probeHooks(onBefore = { toolRewrite(buildJsonObject { put("x", 2) }) })
         val observer = probeHooks(onBefore = { request ->
             seen += request.args
-            ToolCallDecision.Continue
+            toolContinue()
         })
         val source = TestHookSource(listOf(hookEntry("rewriter", rewriter), hookEntry("observer", observer)))
         val request = toolCallRequest(buildJsonObject { put("x", 1) })
         val decision = dispatchers(source).beforeToolCall(request)
         assertEquals(2, seen.single().getValue("x").jsonPrimitive.int)
-        assertTrue(decision is ToolCallDecision.Rewrite)
-        assertEquals(2, (decision as ToolCallDecision.Rewrite).args.getValue("x").jsonPrimitive.int)
+        assertTrue(decision.action == ToolCallAction.REWRITE)
+        assertEquals(2, decision.args!!.getValue("x").jsonPrimitive.int)
     }
 
     @Test
@@ -197,12 +207,12 @@ class PluginHookDispatchersTest {
         val failing = probeHooks(onBefore = { error("boom") })
         val after = probeHooks(onBefore = {
             afterCalls += 1
-            ToolCallDecision.Continue
+            toolContinue()
         })
         val source = TestHookSource(listOf(hookEntry("failing", failing), hookEntry("after", after)))
         val decision = dispatchers(source).beforeToolCall(toolCallRequest())
-        assertTrue(decision is ToolCallDecision.Block)
-        assertEquals("plugin failing failed: boom", (decision as ToolCallDecision.Block).reason)
+        assertTrue(decision.action == ToolCallAction.BLOCK)
+        assertEquals("plugin failing failed: boom", decision.reason.orEmpty())
         assertEquals(0, afterCalls)
         assertEquals(PluginHookStage.BEFORE_TOOL_CALL, reporter.failures.single().stage)
     }
@@ -211,28 +221,28 @@ class PluginHookDispatchersTest {
     fun toolGateTimeoutFailsClosed() = runTest {
         val slow = probeHooks(onBefore = {
             delay(60_000)
-            ToolCallDecision.Continue
+            toolContinue()
         })
         val source = TestHookSource(listOf(hookEntry("slow", slow)))
         val decision = dispatchers(source, timeoutMs = 100).beforeToolCall(toolCallRequest())
-        assertTrue(decision is ToolCallDecision.Block)
-        assertTrue((decision as ToolCallDecision.Block).reason.contains("timed out"))
+        assertTrue(decision.action == ToolCallAction.BLOCK)
+        assertTrue(decision.reason.orEmpty().contains("timed out"))
     }
 
     @Test
     fun toolResultReplacementsChain() = runTest {
         val seen = mutableListOf<String>()
         val first = probeHooks(onAfter = { request ->
-            seen += (request.result as PluginToolResult.Text).text
-            ToolResultDecision.Replace(PluginToolResult.Text("first"))
+            seen += request.result.text.orEmpty()
+            resultReplace(textResult("first"))
         })
         val second = probeHooks(onAfter = { request ->
-            seen += (request.result as PluginToolResult.Text).text
-            ToolResultDecision.Replace(PluginToolResult.Text("second"))
+            seen += request.result.text.orEmpty()
+            resultReplace(textResult("second"))
         })
         val source = TestHookSource(listOf(hookEntry("a", first), hookEntry("b", second)))
         val decision = dispatchers(source).afterToolExecution(toolExecution())
-        assertEquals(ToolResultDecision.Replace(PluginToolResult.Text("second")), decision)
+        assertEquals(resultReplace(textResult("second")), decision)
         assertEquals(listOf("original", "first"), seen)
     }
 
@@ -240,7 +250,7 @@ class PluginHookDispatchersTest {
     fun toolResultFailureKeepsPreviousResult() = runTest {
         val failing = probeHooks(onAfter = { error("boom") })
         val source = TestHookSource(listOf(hookEntry("failing", failing)))
-        assertEquals(ToolResultDecision.Keep, dispatchers(source).afterToolExecution(toolExecution()))
+        assertEquals(resultKeep(), dispatchers(source).afterToolExecution(toolExecution()))
         assertEquals(PluginHookStage.AFTER_TOOL_EXECUTION, reporter.failures.single().stage)
     }
 
@@ -248,10 +258,10 @@ class PluginHookDispatchersTest {
     fun toolResultTimeoutIsFailOpen() = runTest {
         val slow = probeHooks(onAfter = {
             delay(60_000)
-            ToolResultDecision.Replace(PluginToolResult.Text("late"))
+            resultReplace(textResult("late"))
         })
         val source = TestHookSource(listOf(hookEntry("slow", slow)))
-        assertEquals(ToolResultDecision.Keep, dispatchers(source, timeoutMs = 100).afterToolExecution(toolExecution()))
+        assertEquals(resultKeep(), dispatchers(source, timeoutMs = 100).afterToolExecution(toolExecution()))
     }
 
     @Test
@@ -269,9 +279,9 @@ class PluginHookDispatchersTest {
     fun noHooksKeepsIdentity() = runTest {
         val dispatcher = dispatchers(TestHookSource())
         assertEquals("hi", dispatcher.transformPrompt(promptRequest()))
-        assertEquals(InputDecision.Continue("hi"), dispatcher.transformInput(InputRequest("session-1", "hi")))
-        assertEquals(ToolCallDecision.Continue, dispatcher.beforeToolCall(toolCallRequest()))
-        assertEquals(ToolResultDecision.Keep, dispatcher.afterToolExecution(toolExecution()))
+        assertEquals(inputContinue("hi"), dispatcher.transformInput(InputRequest("session-1", "hi")))
+        assertEquals(toolContinue(), dispatcher.beforeToolCall(toolCallRequest()))
+        assertEquals(resultKeep(), dispatcher.afterToolExecution(toolExecution()))
         assertTrue(reporter.failures.isEmpty())
     }
 }

@@ -14,7 +14,7 @@ import org.junit.Test
 
 class PluginExternalFlowTest {
     @Test
-    fun activateStagedNowSyncsSkillsAfterRefreshBeforeNotifyingContributions() = runTest {
+    fun activateStagedNowSyncsSkillsAfterRefreshBeforeNotifyingcontributions() = runTest {
         val gate = PluginRuntimeRegistry()
         val root = Files.createTempDirectory("plugin-external-flow").toFile()
         val lifecycle = PluginLifecycle(
@@ -42,8 +42,10 @@ class PluginExternalFlowTest {
             external = null,
             strings = object : PluginStrings {
                 override fun get(id: Int): String = ""
+
+                override fun get(id: Int, vararg args: Any): String = ""
             },
-            textResolver = PluginTextResolver(resourceString = { "" }),
+            textResolver = PluginTextResolver(),
             lifecycle = lifecycle,
             refresh = {
                 materializer.refreshAll()

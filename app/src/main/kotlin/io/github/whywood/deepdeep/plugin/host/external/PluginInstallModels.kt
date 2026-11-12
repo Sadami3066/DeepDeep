@@ -7,6 +7,7 @@ internal enum class InstallRejection {
     PACKAGE_INVALID,
     SIGNATURE_INVALID,
     MANIFEST_INVALID,
+    API_LEVEL_UNSUPPORTED,
     VERSION_CONFLICT,
     PUBLISHER_CONFLICT,
     TOOL_CONFLICT,
@@ -23,7 +24,11 @@ internal sealed interface InspectionResult {
         val installed: ExternalPluginRecord?,
     ) : InspectionResult
 
-    data class Rejected(val code: InstallRejection, val reason: String) : InspectionResult
+    data class Rejected(
+        val code: InstallRejection,
+        val reason: String,
+        val declaredApiLevel: Int? = null,
+    ) : InspectionResult
 }
 
 internal sealed interface InstallResult {
@@ -39,7 +44,11 @@ internal sealed interface InstallResult {
         val digests: PackageDigests,
     ) : InstallResult
 
-    data class Rejected(val code: InstallRejection, val reason: String) : InstallResult
+    data class Rejected(
+        val code: InstallRejection,
+        val reason: String,
+        val declaredApiLevel: Int? = null,
+    ) : InstallResult
 }
 
 internal sealed interface BundleState {

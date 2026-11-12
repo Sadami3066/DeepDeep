@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.plugin.host.services
 
 import io.github.whywood.deepdeep.plugin.api.PluginServiceUnavailable
 import io.github.whywood.deepdeep.plugin.api.ShareRequest
+import io.github.whywood.deepdeep.plugin.api.shareRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -18,7 +19,7 @@ class UiPluginServiceTest {
 
         assertThrows(PluginServiceUnavailable::class.java) { service.openUrl("https://example.com") }
         assertThrows(PluginServiceUnavailable::class.java) { service.toast("hi") }
-        assertThrows(PluginServiceUnavailable::class.java) { service.share(ShareRequest(text = "hi")) }
+        assertThrows(PluginServiceUnavailable::class.java) { service.share(shareRequest(text = "hi")) }
         assertThrows(PluginServiceUnavailable::class.java) { service.openPage("home") }
     }
 
@@ -37,7 +38,7 @@ class UiPluginServiceTest {
 
         service.openUrl("https://example.com")
         service.toast("hi")
-        service.share(ShareRequest(text = "payload"))
+        service.share(shareRequest(text = "payload"))
         service.openPage("home")
 
         assertEquals("https://example.com", openedUrl)

@@ -66,6 +66,7 @@ import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketInstallState
 import io.github.whywood.deepdeep.market.MarketMcpAuthType
+import io.github.whywood.deepdeep.market.MarketPluginCompatibility
 import io.github.whywood.deepdeep.market.MarketPluginMeta
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketRequiredAccess
@@ -247,6 +248,7 @@ internal fun MarketTab(
             installState = installStates[selected.id],
             installedVersion = repository.installedVersion(selected),
             hostAccess = hostAccess,
+            pluginCompatibility = repository.pluginCompatibility(selected),
             iconLoader = iconLoader,
             onDismiss = { selectedId = null },
             onInstall = {
@@ -454,6 +456,7 @@ private fun MarketDetailSheet(
     installState: MarketInstallState?,
     installedVersion: String?,
     hostAccess: HostAccess,
+    pluginCompatibility: MarketPluginCompatibility,
     iconLoader: MarketIconLoader,
     onDismiss: () -> Unit,
     onInstall: () -> Unit,
@@ -596,6 +599,28 @@ private fun MarketDetailSheet(
                     color = colors.warning,
                 )
             }
+            val compatibilityNotice = when (pluginCompatibility) {
+                MarketPluginCompatibility.ApiLevelTooOld -> stringResource(
+                    R.string.market_plugin_api_retired,
+                    entry.plugin?.apiLevel ?: 0,
+                )
+
+                MarketPluginCompatibility.ApiLevelTooNew -> stringResource(R.string.market_plugin_requires_newer_app)
+                MarketPluginCompatibility.HostTooOld -> stringResource(
+                    R.string.market_plugin_requires_host_version,
+                    entry.plugin?.minHostVersion.orEmpty(),
+                )
+
+                MarketPluginCompatibility.Compatible -> null
+            }
+            if (compatibilityNotice != null) {
+                Spacer(Modifier.height(DdSpacing.Md))
+                Text(
+                    text = compatibilityNotice,
+                    style = DdType.bodySmall,
+                    color = colors.danger,
+                )
+            }
             val previews = entry.plugin?.previewUrls.orEmpty()
             if (previews.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
@@ -717,9 +742,10 @@ private fun MarketDetailSheet(
                 text = statusLabel(status, progress),
                 onClick = onInstall,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = status == MarketEntryStatus.Install ||
-                    status == MarketEntryStatus.Update ||
-                    status == MarketEntryStatus.Failed,
+                enabled = pluginCompatibility == MarketPluginCompatibility.Compatible &&
+                    (status == MarketEntryStatus.Install ||
+                        status == MarketEntryStatus.Update ||
+                        status == MarketEntryStatus.Failed),
             )
         }
         Spacer(Modifier.height(16.dp))

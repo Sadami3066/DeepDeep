@@ -119,4 +119,7 @@
     <string name="market_access_adb">ADB</string>
     <string name="market_access_root">Root</string>
     <string name="market_access_insufficient">当前访问权限低于插件要求，部分功能可能不可用</string>
+    <string name="market_plugin_api_retired">插件 API %1$d 已停用，请等待插件更新</string>
+    <string name="market_plugin_requires_newer_app">需要更新 DeepDeep 后才能安装</string>
+    <string name="market_plugin_requires_host_version">需要 DeepDeep %1$s 或更高版本</string>
 </resources>

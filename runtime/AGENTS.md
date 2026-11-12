@@ -17,7 +17,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `RuntimeWorkspaces.kt` | 工作区列表、增删改、Home 解析与可见 cwd |
 | `RuntimeModels.kt` | 会话模型/思考档、历史、用量与压缩 |
 | `RuntimeSessions.kt` | 会话查询、列表、重命名/置顶/归档与删除 |
-| `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP、系统提示词与 `RuntimeHooks`；Agent 级工具钩子覆盖动态 MCP/tool_search，输入变换在 prompt 前完成；paths 段注入共享存储与挂载目录；构造参数 `excludedSkills`/`excludedMcpServers` 按工作区策略排除技能与 MCP 服务器（技能含被排除插件贡献的 skill id） |
+| `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP、系统提示词与 `RuntimeHooks`；Agent 级工具钩子覆盖动态 MCP/tool_search，输入变换在 prompt 前完成；paths 段注入共享存储与挂载目录；构造参数 `excludedSkills`/`excludedMcpServers` 按工作区策略排除技能与 MCP 服务器（技能含被排除插件贡献的 skill id）；`pluginPromptOverrides` 每轮合并插件 prompt override（preamble/rules 单胜者、sections 按 priority、单插件 32KiB/总量 64KiB、冲突与超限记 `PluginPrompt` warn） |
 | `PluginRuntimeHooks.kt` | `RuntimeHooks` 聚合（prompt/input/tool/会话绑定，`onSessionBound` 传 `SessionBinding`）与 Agent 级工具钩子桥（Block/Rewrite/Replace，保留 SDK 结果归一化） |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
 | `RuntimeDirectories.kt` | 会话目录与工作区目录的存储适配器 |
@@ -32,7 +32,8 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
 | `SessionCloseReason.kt` | 句柄关闭原因（Idle/Reload/Reconfigure/Deleted/Closed）与 `SessionClosure` 事件模型 |
 | `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
-| `Personalization.kt` | 称呼、交互风格与语气等提示词分节；环境段由 `HostEnvironment.promptLines` 提供 |
+| `Personalization.kt` | 称呼、交互风格与语气等提示词分节；环境段由 `HostEnvironment.promptLines` 提供；`buildSessionSystemPromptSections` 支持插件 preamble/rules 覆盖与 plugins 段 |
+| `PluginPromptOverrides.kt` | 插件 prompt override 模型与纯合并函数：preamble/rules 按 priority + 注册顺序取单胜者、sections 按 priority 排序去重、单插件 32KiB/总量 64KiB 超限跳过，冲突经 `PluginPrompt` warn 输出 |
 | `PromptPaths.kt` | 提示词 paths 段：Skills / App data / Shared storage / Mounted directories（挂载目录名称、路径与说明） |
 | `PromptResourceSections.kt` | 每轮重读提示词资源（技能、项目指令、附加系统提示），渲染 skills/project_context/addendum 三段覆盖建会话时的旧值；删空时用空串清掉旧段 |
 | `SkillCatalog.kt` | 发现技能并渲染为提示词块 |
