@@ -2,6 +2,23 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+missing=""
+command -v unzip >/dev/null 2>&1 || missing="unzip"
+
+JAVAP=""
+if [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/javap" ]]; then
+  JAVAP="$JAVA_HOME/bin/javap"
+elif command -v javap >/dev/null 2>&1; then
+  JAVAP="javap"
+else
+  missing="${missing:+$missing }javap"
+fi
+
+if [[ -n "$missing" ]]; then
+  echo "缺少命令：$missing（Ubuntu 安装 openjdk-17-jdk-headless / macOS 安装 JDK）" >&2
+  exit 1
+fi
+
 GOLDEN="plugin-api/abi/plugin-api.api"
 UPDATE=0
 if [[ "${1:-}" == "--update" ]]; then
@@ -27,11 +44,6 @@ if command -v jar >/dev/null 2>&1; then
 else
   unzip -Z1 "$JAR"
 fi | grep '\.class$' | sed 's#/#.#g; s#\.class$##' | sort -u > "$TMP/classes.txt"
-
-JAVAP="javap"
-if [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/javap" ]]; then
-  JAVAP="$JAVA_HOME/bin/javap"
-fi
 
 : > "$TMP/api.txt"
 while IFS= read -r cls; do

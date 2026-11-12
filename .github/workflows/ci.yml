@@ -2,6 +2,11 @@ name: CI
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "assets/**"
   push:
     tags: ["v*"]
 
@@ -11,10 +16,6 @@ concurrency:
 
 permissions:
   contents: read
-
-env:
-  DEEPDEEP_GRADLE_WORKERS: "4"
-  DEEPDEEP_GRADLE_JVMARGS: "-Xmx3g -XX:MaxMetaspaceSize=1g"
 
 jobs:
   verify:

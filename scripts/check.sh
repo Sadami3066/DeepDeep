@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/env.sh
 
-if [[ -z "${ANDROID_HOME:-}" && -f local.properties ]]; then
-  sdk_dir="$(sed -n 's/^sdk\.dir=//p' local.properties)"
-  if [[ -n "$sdk_dir" ]]; then
-    export ANDROID_HOME="$sdk_dir"
-    export ANDROID_SDK_ROOT="$sdk_dir"
-  fi
+if sdk="$(deepdeep_android_sdk)"; then
+  export ANDROID_HOME="$sdk"
+  export ANDROID_SDK_ROOT="$sdk"
 fi
 
 mode="${1:-}"
@@ -32,6 +30,9 @@ else
 fi
 
 if [[ "$device" -eq 1 ]]; then
-  adb install -r app/build/outputs/apk/debug/app-debug.apk
-  adb shell am start -n io.github.whywood.deepdeep/.MainActivity
+  deepdeep_require_adb
+  serial="$(deepdeep_device_serial)"
+  adb -s "$serial" wait-for-device
+  adb -s "$serial" install -r app/build/outputs/apk/debug/app-debug.apk
+  adb -s "$serial" shell am start -n io.github.whywood.deepdeep/.MainActivity
 fi

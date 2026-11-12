@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/env.sh
 
 PACKAGE="io.github.whywood.deepdeep"
 TEST_PACKAGE="io.github.whywood.deepdeep.test"
@@ -20,6 +21,10 @@ if [[ ! -d "$PLUGINS_DIR" ]]; then
   echo "plugin repository not found: $PLUGINS_DIR" >&2
   exit 1
 fi
+
+deepdeep_require_adb
+serial="$(deepdeep_device_serial)"
+deepdeep_ensure_root "$serial"
 
 ./scripts/gradlew-locked :design:publishToMavenLocal :plugin-api:publishToMavenLocal :app:assembleDebug :app:assembleDebugAndroidTest
 
@@ -54,24 +59,24 @@ cp "$UPDATE_BUNDLE" "$UPDATE_STAGED"
 restore_update_manifest
 trap - EXIT
 
-adb push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/deepdeep.apk >/dev/null
-adb push app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/deepdeep-test.apk >/dev/null
-adb shell su -c "pm install -r /data/local/tmp/deepdeep.apk" >/dev/null
-adb shell su -c "pm install -r /data/local/tmp/deepdeep-test.apk" >/dev/null
-adb shell su -c "mkdir -p ${DEVICE_DIR}"
-adb shell su -c "rm -f ${DEVICE_DIR}/*.ddp"
-adb shell su -c "mkdir -p ${DEVICE_DIR}-update"
-adb shell su -c "rm -f ${DEVICE_DIR}-update/*.ddp"
+adb -s "$serial" push app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/deepdeep.apk >/dev/null
+adb -s "$serial" push app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/deepdeep-test.apk >/dev/null
+adb -s "$serial" shell su -c "pm install -r /data/local/tmp/deepdeep.apk" >/dev/null
+adb -s "$serial" shell su -c "pm install -r /data/local/tmp/deepdeep-test.apk" >/dev/null
+adb -s "$serial" shell su -c "mkdir -p ${DEVICE_DIR}"
+adb -s "$serial" shell su -c "rm -f ${DEVICE_DIR}/*.ddp"
+adb -s "$serial" shell su -c "mkdir -p ${DEVICE_DIR}-update"
+adb -s "$serial" shell su -c "rm -f ${DEVICE_DIR}-update/*.ddp"
 
 for module in "${MODULES[@]}"; do
   ddp="${PLUGINS_DIR}/${module}/build/plugin/${module}.ddp"
-  adb push "$ddp" "/data/local/tmp/${module}.ddp" >/dev/null
-  adb shell su -c "cp /data/local/tmp/${module}.ddp ${DEVICE_DIR}/${module}.ddp"
-  adb shell su -c "chmod 644 ${DEVICE_DIR}/${module}.ddp"
+  adb -s "$serial" push "$ddp" "/data/local/tmp/${module}.ddp" >/dev/null
+  adb -s "$serial" shell su -c "cp /data/local/tmp/${module}.ddp ${DEVICE_DIR}/${module}.ddp"
+  adb -s "$serial" shell su -c "chmod 644 ${DEVICE_DIR}/${module}.ddp"
 done
 
-adb push "$UPDATE_STAGED" "/data/local/tmp/${UPDATE_MODULE}-update.ddp" >/dev/null
-adb shell su -c "cp /data/local/tmp/${UPDATE_MODULE}-update.ddp ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
-adb shell su -c "chmod 644 ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
+adb -s "$serial" push "$UPDATE_STAGED" "/data/local/tmp/${UPDATE_MODULE}-update.ddp" >/dev/null
+adb -s "$serial" shell su -c "cp /data/local/tmp/${UPDATE_MODULE}-update.ddp ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
+adb -s "$serial" shell su -c "chmod 644 ${DEVICE_DIR}-update/${UPDATE_MODULE}.ddp"
 
-adb shell am instrument -w -e class "$TEST_CLASS" "${TEST_PACKAGE}/${RUNNER}"
+adb -s "$serial" shell am instrument -w -e class "$TEST_CLASS" "${TEST_PACKAGE}/${RUNNER}"

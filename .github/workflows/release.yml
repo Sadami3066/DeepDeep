@@ -1,14 +1,16 @@
 name: Release
 
-# 仅手动触发（M4 准备稿）。正式启用前需要：
-#   - 正式 keystore 与 4 个 Secrets（见 docs/DECISIONS.md 第 1 条）
-#   - app/build.gradle.kts 的 signingConfigs.release 已接好
-# 启用后再把 tag 触发加回来。
+# 手动发布：先提交版本号并推送 tag，再用该 tag 触发。
+# 需要的 Secrets：ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD。
+# 更新说明必须手写在仓库文件里（默认 release-notes/<tag>.md），release body 会原样显示在 App 更新页。
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 要发布的 tag（例如 v0.3.0）
+        description: 要发布的 tag（例如 v1.0.3，必须已存在且与 versionName 一致）
+        required: true
+      notes_file:
+        description: 手写更新说明文件路径（相对仓库根，例如 release-notes/v1.0.3.md）
         required: true
 
 permissions:
@@ -31,18 +33,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      - name: Verify release inputs
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+          NOTES_FILE: ${{ inputs.notes_file }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+          grep -q "versionName = \"${VERSION}\"" app/build.gradle.kts
+          test -s "$NOTES_FILE"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
       - name: Ensure Android SDK 36
         run: |
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          if [ ! -d "$SDK_ROOT/platforms/android-36" ] || [ ! -d "$SDK_ROOT/build-tools/36.0.0" ]; then
-            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n 1)"
-            test -n "$SDKMANAGER"
-            yes | "$SDKMANAGER" --licenses > /dev/null || true
-            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
-          fi
+          source scripts/env.sh
+          deepdeep_ensure_sdk_components "$(deepdeep_android_sdk)"
 
       - name: Check
-        run: ./scripts/check.sh
+        run: ./scripts/check.sh --full
 
       - name: Stage signing config
         env:
@@ -56,21 +63,13 @@ jobs:
           printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
             "$RUNNER_TEMP/release.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
 
-      - name: Build signed artifacts
-        run: |
-          TAG="${TAG_NAME#v}"
-          MAJOR="${TAG%%.*}"; REST="${TAG#*.}"; MINOR="${REST%%.*}"; PATCH="${REST#*.}"; PATCH="${PATCH%%-*}"
-          ./scripts/gradlew-locked -PversionName="${TAG_NAME}" \
-            -PversionCode="$((MAJOR * 10000 + MINOR * 100 + PATCH))" \
-            :app:assembleRelease :app:bundleRelease
-        env:
-          TAG_NAME: ${{ inputs.tag }}
+      - name: Build signed APK
+        run: ./scripts/gradlew-locked :app:assembleRelease
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ inputs.tag }}" \
-            app/build/outputs/apk/release/app-release.apk \
-            app/build/outputs/bundle/release/app-release.aab \
-            --title "${{ inputs.tag }}" --generate-notes
+          cp app/build/outputs/apk/release/app-release.apk "DeepDeep-${VERSION}.apk"
+          gh release create "${{ inputs.tag }}" "DeepDeep-${VERSION}.apk" \
+            --title "${{ inputs.tag }}" --notes-file "${{ inputs.notes_file }}"

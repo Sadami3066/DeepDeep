@@ -3,10 +3,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 LOCK_FILE="${TMPDIR:-/tmp}/deepdeep-build.lock"
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-  echo "[build] 另一个构建正在运行，等待中…" >&2
-  flock -w 7200 9 || { echo "[build] 等待构建锁超时（2 小时）" >&2; exit 1; }
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    echo "[build] 另一个构建正在运行，等待中…" >&2
+    flock -w 7200 9 || { echo "[build] 等待构建锁超时（2 小时）" >&2; exit 1; }
+  fi
+else
+  echo "[build] 未找到 flock，跳过构建锁（macOS 可 brew install flock）" >&2
 fi
 
 args=()
