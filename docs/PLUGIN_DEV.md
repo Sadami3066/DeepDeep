@@ -86,7 +86,7 @@ cp -R template my-plugin && cd my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 5） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（5）处理 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `1.0.2`）；比较只看 `major.minor.patch`、忽略后缀，所以 `1.0.2` 宿主满足 `minHostVersion: "1.0.1"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `1.0.3`）；比较只看 `major.minor.patch`、忽略后缀，所以 `1.0.3` 宿主满足 `minHostVersion: "1.0.1"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -723,7 +723,7 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 ## ABI 与版本
 
 - `PLUGIN_API_LEVEL = 5`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 5` 处理。
-- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`1.0.1-dev` 视为 `1.0.1`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `1.0.2`），所以 `minHostVersion: "1.0.1"` 在当前宿主上通过。
+- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`1.0.1-dev` 视为 `1.0.1`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `1.0.3`），所以 `minHostVersion: "1.0.1"` 在当前宿主上通过。
 - **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.8.1`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
