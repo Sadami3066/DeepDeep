@@ -89,6 +89,7 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 - x86_64 AVD 可以完成单测、编译、安装启动、插件 e2e 和绝大多数 UI 检查。
 - 以下必须用 arm64 真机：Linux 环境（内置 rootfs 只有 aarch64）、屏幕操作/虚拟屏与 Root 档系统访问。
 - 插件 e2e 不需要 root：脚本用 `adb install` 装 debug 包，再把 `.ddp` 夹具推进 App 外部私有目录（`/sdcard/Android/data/<pkg>/files/`），普通设备与模拟器都能跑；需要 root 的只是 App 的 Root 档系统访问功能。
+- 模拟器与完整构建不要同时跑：Gradle/Kotlin daemon 加模拟器容易吃满内存导致系统 OOM；跑 `check.sh --full` 前先关模拟器（`adb -s <serial> emu kill`）。
 
 **设备脚本**
 
