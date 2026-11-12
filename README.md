@@ -15,7 +15,7 @@
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
-<img src="https://img.shields.io/badge/1.0.3-6B7280?style=flat-square" alt="1.0.3" />
+<img src="https://img.shields.io/badge/1.0.4-6B7280?style=flat-square" alt="1.0.4" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 <br />
@@ -41,7 +41,7 @@ DeepDeep拥有内置的超轻量Linux环境，能够覆盖99%的电脑办公和�
 
 使用 DeepDeep 时，请遵循 App 内的用户协议。
 
-当前版本为 1.0.3，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases)，源码已公开。
+当前版本为 1.0.4，安装包发布在 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases)，源码已公开。
 
 ## 功能预览
 
@@ -143,7 +143,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 | **审批** | 只分系统访问三档：普通、无线调试、Root，不逐条确认命令 |
 | **运行位置** | 任务在本机执行；关闭 App 后停止，目标续跑只在进程内有效 |
 | **受保护页面** | 支付、密码等页面禁止截图，Agent 会把控制权交还给你 |
-| **分发** | 1.0.3 通过 GitHub Releases 分发，未上架应用商店；源码已公开 |
+| **分发** | 1.0.4 通过 GitHub Releases 分发，未上架应用商店；源码已公开 |
 
 ## 开发与构建
 
