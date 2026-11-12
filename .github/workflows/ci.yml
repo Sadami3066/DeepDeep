@@ -43,7 +43,7 @@ jobs:
           fi
 
       - name: Check
-        run: ./scripts/check.sh
+        run: ./scripts/check.sh --full
 
       - name: Upload reports
         if: failure()
