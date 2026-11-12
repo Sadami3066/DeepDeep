@@ -10,11 +10,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 `plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 SDK 版本 `0.8.0`、`PLUGIN_API_LEVEL = 5`、`BASELINE_API_LEVEL = 5`、`HOST_UI_API_LEVEL = 1`。
 
-插件工程包含三类参考（`template/` 与官方插件公开，`sample/`、`interop/` 用于宿主回归）：
-
-- `sample/`：最小插件（两个工具 + 自定义消息卡 + 插件页面），用于宿主真机回归。
-- `template/`：完整模板（工具 + partial 更新 + 会话感知工具 + 技能 + hooks + 工具卡槽位 + 插件页面），复制为新模块即起点。
-- `interop/`：接口全覆盖测试插件（全部生命周期、hooks、17 个宿主服务、两类槽位、插件页面），用于联调与回归，也是 SDK 的使用样例。
+插件工程从 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) 的 `template/` 起步：独立 Gradle Android 工程，包含一个示例工具、一个示例技能、一段提示词与完整的 `.ddp` 打包/签名/验签实现，复制或改名即起点。官方插件实现见 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)。
 
 前置条件：
 
@@ -34,27 +30,27 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ```bash
 # 1. 复制模板并改名（在插件工程仓库根目录执行）
-cp -R template my-plugin
+cp -R template my-plugin && cd my-plugin
+#    改 settings.gradle.kts 的 rootProject.name（决定 .ddp 文件名）
 #    改 build.gradle.kts 的 namespace/applicationId/versionName
 #    改 src/main/assets/plugin.json 的 id/version/entryClass/name/summary/provides
 #    改 src/main/kotlin 下包名与入口类
-#    在仓库根 settings.gradle.kts 的 include(...) 注册 :my-plugin
 
 # 2. 打包 + 签名 + 自检
-./scripts/gradlew-locked :my-plugin:assemblePlugin
-./scripts/gradlew-locked :my-plugin:signPlugin
-./scripts/gradlew-locked :my-plugin:verifyPlugin
+./gradlew assemblePlugin
+./gradlew signPlugin
+./gradlew verifyPlugin
 
 # 3. 产物
-#    my-plugin/build/plugin/my-plugin.unsigned.ddp   未签名（排障用）
-#    my-plugin/build/plugin/my-plugin.ddp            可安装的签名包
+#    build/plugin/<rootProject.name>.unsigned.ddp   未签名（排障用）
+#    build/plugin/<rootProject.name>.ddp            可安装的签名包
 ```
 
-产物文件名由模块名决定：`<module>/build/plugin/<module>.ddp`。模块只编 `debug` 变体，`release` 不开 minify；`.ddp` 由 debug APK 重打包而来。
+模板工程未改名时 `rootProject.name` 是 `plugin-template`，产物在 `template/build/plugin/plugin-template.ddp`（未签名是 `plugin-template.unsigned.ddp`）；改名后文件名随之变化。模块只编 `debug` 变体，`release` 不开 minify；`.ddp` 由 debug APK 重打包而来。把模板作为多模块工程的一个模块（如 `:template`）时，任务按模块执行，如 `:template:verifyPlugin`，产物在 `<module>/build/plugin/<module>.ddp`。
 
 安装：把 `.ddp` 传到手机，可以直接在文件管理器里用 DeepDeep 打开、把文件分享给 DeepDeep，或在插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、将提供的工具/技能/页面；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
 
-真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-e2e.sh` 用插件工程的 `sample/` 跑安装→启用→工具→停用→卸载；`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
+真机回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-bundles-e2e.sh` 用四个官方插件包回归安装与激活。
 
 ## 工程与依赖
 
@@ -90,7 +86,7 @@ cp -R template my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 5） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（5）处理 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`）；比较只看 `major.minor.patch`、忽略后缀，所以 `0.2.0-dev` 宿主满足 `minHostVersion: "0.2.0"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`（当前 `1.0.2`）；比较只看 `major.minor.patch`、忽略后缀，所以 `1.0.2` 宿主满足 `minHostVersion: "0.2.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -139,7 +135,7 @@ cp -R template my-plugin
 
 `capabilities` 是**可用性边界，不是安全沙箱**：插件仍与宿主同进程、同 UID，可以通过 `host.context` 或反射绕过；它用于让插件声明意图、让用户在安装前看清会用到哪些能力，不能阻止恶意代码。至少声明一项；空数组合法但插件几乎无法工作。
 
-`tools`/`skills`/`pages` 的 id 统一匹配 `^[a-z][A-Za-z0-9_-]*$`，**不能包含点号**（技能 id 写 `interop-guide`，不是 `interop.guide`）；`uiSlots` 的槽位 id 规则见后文。
+`tools`/`skills`/`pages` 的 id 统一匹配 `^[a-z][A-Za-z0-9_-]*$`，**不能包含点号**（技能 id 写 `template-guide`，不是 `template.guide`）；`uiSlots` 的槽位 id 规则见后文。
 
 `LocalizedText` 写法：
 
@@ -202,18 +198,19 @@ plugin.ddp
 
 ### 打包与签名任务
 
-插件工程仓库根的 `gradle/plugin-bundle.gradle.kts` 是所有模块共用的构建脚本，提供三个任务：
+模板工程的 `build.gradle.kts` 内置四个打包任务；多模块工程（如官方插件仓）把这部分抽到根 `gradle/plugin-bundle.gradle.kts` 共享。
 
 | 任务 | 作用 |
 |---|---|
+| `generateSigningKey` | 生成 `keys/plugin-signing.pem` 与 `.pub`；已存在则报错，不会覆盖 |
 | `assemblePlugin` | 把 `build/outputs/apk/debug/<module>-debug.apk` 重打成 `build/plugin/<module>.unsigned.ddp`，只保留 `classes*.dex`、`assets/**`、`lib/**`，条目时间固定以便复现 |
-| `signPlugin` | 生成/读取 Ed25519 密钥，对 unsigned 包签名并写入 `META-INF/plugin-signature.json`；打印 `publisher keyId`、整包 sha256、entry digest |
+| `signPlugin` | 读取 Ed25519 密钥，对 unsigned 包签名并写入 `META-INF/plugin-signature.json`；打印 `publisher keyId`、整包 sha256、entry digest |
 | `verifyPlugin` | 重新按宿主规则验签，输出 `Signature OK` |
 
-密钥默认在仓库根 `keys/plugin-signing.pem`/`.pub`：首次 `signPlugin` 自动生成，私钥权限收敛为 `600`，`.gitignore` 忽略。也可以用 Gradle 属性指定别的前缀（不带扩展名）：
+密钥默认在工程根 `keys/plugin-signing.pem`/`.pub`，由 `generateSigningKey` 生成（私钥权限收敛为 `600`，`.gitignore` 忽略）；`signPlugin` 只读取密钥，缺失时直接报错并提示生成方式。也可以用 Gradle 属性指定别的前缀（不带扩展名）：
 
 ```bash
-./gradlew -PpluginSigningKey=/secure/keys/my-plugin :my-plugin:signPlugin
+./gradlew -PpluginSigningKey=/secure/keys/my-plugin signPlugin
 ```
 
 - 私钥**不入版本库、不外发**；丢了就无法再发同名更新。
@@ -726,7 +723,7 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 ## ABI 与版本
 
 - `PLUGIN_API_LEVEL = 5`：宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 5..5）内；未写 `apiLevel` 按 `BASELINE_API_LEVEL = 5` 处理。
-- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `0.2.0-dev`），所以 `minHostVersion: "0.2.0"` 在当前开发版宿主上通过。
+- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 `major.minor.patch`、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的门槛卡住；完整 semver 比较按「release > prerelease、build 忽略」处理。宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`（当前 `1.0.2`），所以 `minHostVersion: "0.2.0"` 在当前宿主上通过。
 - **发布前没有兼容承诺**：当前处于发布前开发期，`plugin-api` 可以随时删改类型/签名且不升级 `PLUGIN_API_LEVEL`，插件必须按最新 SDK 重新编译；发布后才启用「同一 apiLevel 内只做加法、删改变必须升等级」的规则。SDK 版本号（当前 `0.8.0`）与 `PLUGIN_API_LEVEL` 独立维护。
 - `plugin-api` 的公开 ABI 由 ABI 基线清单固定（宿主仓库 `scripts/plugin-api-abi.sh` 校验），删改公开类型/签名必须显式更新清单并升版本。
 - 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
@@ -744,12 +741,13 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 
 ## 调试与常见错误
 
-构建/打包/签名（在插件工程仓库根）：
+构建/打包/签名（模板工程在 DeepDeep-Plugins 的 `template/`，产物 `template/build/plugin/plugin-template.ddp`）：
 
 ```bash
-./scripts/gradlew-locked :sample:assemblePlugin :sample:signPlugin :sample:verifyPlugin
-./scripts/gradlew-locked :template:verifyPlugin
-./scripts/check.sh        # 全部官方插件 + sample + template + interop 打包签名自检
+cd template && ./gradlew assemblePlugin signPlugin verifyPlugin
+
+# 官方插件仓（DeepDeep-Official-Plugins 根）
+./scripts/check.sh        # 构建、签名并验签全部四个官方插件
 ```
 
 排查路径：
@@ -785,5 +783,5 @@ host.chat().sendMessage(call.sessionId, "同步完成", ChatMessageOptions(trigg
 ## 参考
 
 - 契约源码：宿主仓库 `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/`
-- 插件工程：[DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)（官方实现）与 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins)（模板与开发资料）；`sample/`、`interop/` 为内部回归工程
+- 插件工程：[DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)（官方实现）与 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins)（模板与开发资料）
 - 产品能力：[USER_GUIDE.md](USER_GUIDE.md)；构建与模块：[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
