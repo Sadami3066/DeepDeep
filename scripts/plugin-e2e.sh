@@ -19,9 +19,15 @@ fi
 
 deepdeep_require_adb
 serial="$(deepdeep_device_serial)"
+if sdk="$(deepdeep_android_sdk)"; then
+  export ANDROID_HOME="$sdk"
+  export ANDROID_SDK_ROOT="$sdk"
+fi
 
 if [[ ! -f "$E2E_DDP" ]]; then
-  if [[ -d "$PLUGINS_DIR/$E2E_MODULE" && -x "$PLUGINS_DIR/scripts/gradlew-locked" ]]; then
+  if [[ -x "$PLUGINS_DIR/$E2E_MODULE/gradlew" ]]; then
+    (cd "$PLUGINS_DIR/$E2E_MODULE" && ./gradlew verifyPlugin)
+  elif [[ -d "$PLUGINS_DIR/$E2E_MODULE" && -x "$PLUGINS_DIR/scripts/gradlew-locked" ]]; then
     (cd "$PLUGINS_DIR" && ./scripts/gradlew-locked ":${E2E_MODULE}:verifyPlugin")
   else
     echo "缺少测试夹具：$E2E_DDP（插件仓库需有 ${E2E_MODULE} 模块，或用 E2E_DDP 指定已签名包）" >&2

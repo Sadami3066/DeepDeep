@@ -24,6 +24,10 @@ fi
 
 deepdeep_require_adb
 serial="$(deepdeep_device_serial)"
+if sdk="$(deepdeep_android_sdk)"; then
+  export ANDROID_HOME="$sdk"
+  export ANDROID_SDK_ROOT="$sdk"
+fi
 
 ./scripts/gradlew-locked :app:assembleDebug :app:assembleDebugAndroidTest
 
