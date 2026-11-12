@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.plugin.manager
 
+import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.host.external.DdpEntry
 import io.github.whywood.deepdeep.plugin.host.external.DdpSigning
 import java.io.File
@@ -57,10 +58,11 @@ internal class ExternalPluginDdpFixture(private val directory: File) {
     private fun manifest(pluginId: String, version: String, entryClass: String): String = buildString {
         append("{\"id\":\"").append(pluginId).append("\",")
         append("\"version\":\"").append(version).append("\",")
-        append("\"apiLevel\":1,")
+        append("\"apiLevel\":").append(PLUGIN_API_LEVEL).append(',')
         append("\"entryClass\":\"").append(entryClass).append("\",")
         append("\"name\":{\"default\":\"E2E Fixture\"},")
         append("\"summary\":{\"default\":\"E2E Fixture\"},")
+        append("\"capabilities\":[],")
         append("\"provides\":{\"tools\":[]}}")
     }
 

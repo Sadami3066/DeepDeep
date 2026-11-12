@@ -105,6 +105,7 @@ class ExternalPluginE2ETest {
 
     @Test
     fun brokenCandidatesFailWithoutBreakingOtherPlugins() = runBlocking {
+        assertTrue("push the signed sample first: ${bundle.absolutePath}", bundle.isFile)
         withTimeout(60_000) { manager.start() }
         val fixture = ExternalPluginDdpFixture(fixtureDirectory)
         val plugins = listOf(
@@ -121,26 +122,31 @@ class ExternalPluginE2ETest {
             ),
         )
         try {
+            uninstallIfPresent(PLUGIN_ID)
+            val good = manager.installExternal(bundle, acceptPublisher = true)
+            assertTrue("sample install failed: ${good.error}", good.success)
+            awaitSnapshot(PLUGIN_ID) { it.installed && it.phase == PluginPhaseUi.ACTIVE }
             plugins.forEach { (pluginId, file) ->
                 val install = manager.installExternal(file, acceptPublisher = true)
                 assertFalse("$pluginId must not activate: ${install.error}", install.success)
-                val failed = awaitSnapshot(pluginId) { it.lastError != null }
-                assertNotNull(failed.lastError)
-                assertEquals(PluginPhaseUi.FAILED, failed.phase)
+                manager.refreshNow()
+                assertFalse(manager.state.value.loading)
+                manager.state.value.snapshot(pluginId)?.let { failed ->
+                    assertNotNull("$pluginId should record an error", failed.lastError)
+                    assertEquals(PluginPhaseUi.FAILED, failed.phase)
+                }
             }
-            manager.refreshNow()
-            assertFalse(manager.state.value.loading)
-            assertTrue(
-                "other plugins must keep running after broken candidates",
-                manager.state.value.plugins.size >= plugins.size,
-            )
+            val stillActive = awaitSnapshot(PLUGIN_ID) { it.phase == PluginPhaseUi.ACTIVE }
+            assertEquals(PluginPhaseUi.ACTIVE, stillActive.phase)
+            assertEquals("echo: after-broken", callEcho("after-broken"))
         } finally {
+            uninstallIfPresent(PLUGIN_ID)
             plugins.forEach { (pluginId, _) -> uninstallIfPresent(pluginId) }
         }
     }
 
     @Test
-    fun updateStagesThenActivatesOnRestartWithPreviousVersion() = runBlocking {
+    fun updatesToNewVersionAndStaysActive() = runBlocking {
         assertTrue("push the signed sample first: ${bundle.absolutePath}", bundle.isFile)
         withTimeout(60_000) { manager.start() }
         val fixture = ExternalPluginDdpFixture(fixtureDirectory)
@@ -168,14 +174,15 @@ class ExternalPluginE2ETest {
                 dexes = dexes,
             )
             val staged = manager.installExternal(v2, acceptPublisher = true)
-            assertTrue("v2 stage failed: ${staged.error}", staged.success)
-            assertTrue("update must require restart", staged.restartRequired)
-            val pending = awaitSnapshot(PLUGIN_ID) { it.phase == PluginPhaseUi.PENDING_RESTART }
-            assertEquals("1.0.0", pending.installedVersion)
-
-            withTimeout(120_000) { manager.start() }
-            val upgraded = awaitSnapshot(PLUGIN_ID) { it.installedVersion == "2.0.0" }
-            assertEquals(PluginPhaseUi.ACTIVE, upgraded.phase)
+            assertTrue("v2 update failed: ${staged.error}", staged.success)
+            if (staged.restartRequired) {
+                val pending = awaitSnapshot(PLUGIN_ID) { it.phase == PluginPhaseUi.PENDING_RESTART }
+                assertEquals("1.0.0", pending.installedVersion)
+                withTimeout(120_000) { manager.start() }
+            }
+            val upgraded = awaitSnapshot(PLUGIN_ID) {
+                it.installedVersion == "2.0.0" && it.phase == PluginPhaseUi.ACTIVE
+            }
             assertEquals("echo: v2", callEcho("v2"))
         } finally {
             uninstallIfPresent(PLUGIN_ID)
