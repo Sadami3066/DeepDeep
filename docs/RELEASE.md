@@ -30,12 +30,14 @@ keyPassword=...
 
 `app/build.gradle.kts` 里的版本号在发版前手动修改：
 
-- `versionCode`：每次发版递增，按 `MAJOR*10000 + MINOR*100 + PATCH` 计算（例如 `1.0.3` → `10003`）。
+- `versionCode`：每次发版递增，按 `MAJOR*10000 + MINOR*100 + PATCH` 计算（例如 `1.2.3` → `10203`）。
 - `versionName`：`X.Y.Z`，与 tag 一致。
 
+版本号只写在这些地方：`app/build.gradle.kts`、`CHANGELOG.md` 顶部节、`release-notes/vX.Y.Z.md`、git tag。README、USER_GUIDE 等产品文档不写版本。
+
 1. 改好 `versionCode` 与 `versionName`，`./scripts/check.sh --full` 通过后提交。
-2. 打 tag `vX.Y.Z`（如 `v1.0.3`），与 `versionName` 一致。
-3. 在 GitHub 创建 release：只上传一个资产，命名为 `DeepDeep-X.Y.Z.apk`（如 `DeepDeep-1.0.3.apk`）。
+2. 打 tag `vX.Y.Z`，与 `versionName` 一致。
+3. 在 GitHub 创建 release：只上传一个资产，命名为 `DeepDeep-X.Y.Z.apk`。
 4. 更新说明手写成用户能看懂的文案：App 更新页会原样显示。不要用 `--generate-notes` 生成 commit 列表，也不要写「见下方附件」这类必须跳到 GitHub 才能看懂的说明。
 5. 不要勾 prerelease 或 draft：App 只读 latest 正式版。
 

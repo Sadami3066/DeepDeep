@@ -15,7 +15,7 @@
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
-<img src="https://img.shields.io/badge/1.0.4-6B7280?style=flat-square" alt="1.0.4" />
+<img src="https://img.shields.io/github/v/release/Sadami3066/DeepDeep?style=flat-square&color=6B7280" alt="Latest release" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 <br />
@@ -41,7 +41,7 @@ DeepDeep is open source and built for transparency. It does not run its own back
 
 Use of DeepDeep is subject to the user agreement in the app.
 
-Version 1.0.4 is distributed through [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The source code is public.
+Installers are available from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The source code is public.
 
 ## Feature Preview
 
@@ -142,7 +142,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 | **Approval** | Three permission tiers (Standard, Wireless debugging, Root); commands are not confirmed individually |
 | **Execution** | Tasks run on the device; closing the app stops them, and goal continuation is process-local |
 | **Protected pages** | Payment and password pages cannot be captured; the agent returns control to the user |
-| **Distribution** | 1.0.4 is distributed through GitHub Releases and is not available in an app store; the source code is public |
+| **Distribution** | Distributed through GitHub Releases and not available in an app store; the source code is public |
 
 ## Development
 
