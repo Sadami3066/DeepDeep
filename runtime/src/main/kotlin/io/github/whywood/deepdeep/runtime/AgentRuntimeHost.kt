@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import io.github.whywood.deepdeep.sdk.ai.Provider
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -302,6 +303,8 @@ class AgentRuntimeHost internal constructor(
     override suspend fun compact(sessionId: String): CompactionOutcome = models.compact(sessionId)
 
     suspend fun reconfigure() = pool.reconfigureAll()
+
+    suspend fun syncCustomProviders(providers: List<Provider>) = pool.syncCustomProviders(providers)
 
     suspend fun postPluginMessage(
         sessionId: String,

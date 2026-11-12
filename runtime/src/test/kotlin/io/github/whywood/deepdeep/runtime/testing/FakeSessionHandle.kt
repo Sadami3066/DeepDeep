@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.runtime.testing
 import io.github.whywood.deepdeep.sdk.agent.AgentMessage
 import io.github.whywood.deepdeep.sdk.ai.Model
 import io.github.whywood.deepdeep.sdk.ai.ModelCost
+import io.github.whywood.deepdeep.sdk.ai.Provider
 import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
@@ -109,6 +110,12 @@ class FakeSessionHandle(
 
     override suspend fun setThinkingLevel(level: String) {
         thinkingLevel = level
+    }
+
+    val registeredProviders = CopyOnWriteArrayList<Provider>()
+
+    override fun registerProvider(provider: Provider) {
+        registeredProviders += provider
     }
 
     override suspend fun compact(): SessionCompaction? = null

@@ -5,9 +5,13 @@ import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
 import io.github.whywood.deepdeep.sdk.agent.asAgentMessage
 import io.github.whywood.deepdeep.sdk.ai.AssistantMessage
 import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.Provider
 import io.github.whywood.deepdeep.sdk.ai.StopReason
 import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
 import io.github.whywood.deepdeep.sdk.ai.Usage
+import io.github.whywood.deepdeep.sdk.ai.auth.AuthOverrides
+import io.github.whywood.deepdeep.sdk.ai.auth.AuthResolver
+import io.github.whywood.deepdeep.sdk.ai.auth.ResolvedAuth
 import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.runtime.testing.FakeSessionEngine
@@ -260,6 +264,33 @@ class AgentRuntimeHostTest {
             assertEquals(1, fixture.engine.createCount)
             fixture.host.send(opened.sessionId, "first")
             assertEquals(listOf("first"), fixture.engine.handles[0].prompts.map { it.text })
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun syncCustomProvidersReachesDraftAndPersistedSessions() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            fixture.host.newSession(AgentRuntimeHost.HOME_ID)
+            val draft = fixture.engine.handles.last()
+            val persisted = fixture.open("session-persisted")
+            val provider = Provider(
+                id = "custom-test",
+                name = "Custom",
+                baseUrl = "https://example.com/v1",
+                apiProviders = emptyMap(),
+                models = emptyList(),
+                auth = object : AuthResolver {
+                    override suspend fun resolve(overrides: AuthOverrides?): ResolvedAuth = ResolvedAuth(apiKey = "", source = "test")
+                },
+            )
+
+            fixture.host.syncCustomProviders(listOf(provider))
+
+            assertEquals(listOf("custom-test"), draft.registeredProviders.map { it.id })
+            assertEquals(listOf("custom-test"), persisted.registeredProviders.map { it.id })
         } finally {
             fixture.close()
         }

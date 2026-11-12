@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 import io.github.whywood.deepdeep.sdk.agent.AgentMessage
 import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.Provider
 import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.sdk.coding.compaction.buildSessionProjection
@@ -389,6 +390,10 @@ internal class PiSessionHandle(
 
     override suspend fun setThinkingLevel(level: String) {
         session.setThinkingLevel(level)
+    }
+
+    override fun registerProvider(provider: Provider) {
+        session.modelRuntime.registerProvider(provider)
     }
 
     override suspend fun compact(): SessionCompaction? = session.compact()?.let { result ->

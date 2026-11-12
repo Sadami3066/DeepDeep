@@ -24,11 +24,14 @@ class ProviderCatalog(
     private val credentials: CredentialStore,
     customProviders: List<CustomProviderConfig> = emptyList(),
 ) : ProviderDirectory {
+    private var customProviderMap: Map<String, Provider> = emptyMap()
     private var providerMap: Map<String, Provider> = buildProviderMap(customProviders)
     private var registry = Models(providerMap.toMutableMap())
 
     override var summaries: List<ProviderSummary> = buildSummaries()
         private set
+
+    fun customSdkProviders(): List<Provider> = customProviderMap.values.toList()
 
     fun setCustomProviders(customProviders: List<CustomProviderConfig>) {
         providerMap = buildProviderMap(customProviders)
@@ -38,8 +41,13 @@ class ProviderCatalog(
 
     private fun buildProviderMap(customProviders: List<CustomProviderConfig>): Map<String, Provider> {
         val providers = builtinProviders(transport, credentials).associateBy { it.id }.toMutableMap()
-        if (customProviders.isEmpty()) return providers
-        composeCustomProviders(customProviders).forEach { provider -> providers[provider.id] = provider }
+        if (customProviders.isEmpty()) {
+            customProviderMap = emptyMap()
+            return providers
+        }
+        val composed = composeCustomProviders(customProviders)
+        customProviderMap = composed.associateBy { it.id }
+        composed.forEach { provider -> providers[provider.id] = provider }
         return providers
     }
 

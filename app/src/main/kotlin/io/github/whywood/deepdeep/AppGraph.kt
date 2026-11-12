@@ -141,6 +141,7 @@ class AppGraph(context: Context) : AppDependencies {
         dataGraph.reloadCustomProviders()
         scope.launch {
             dataGraph.modelSelection.ensure(configuredProviderIds())
+            host.syncCustomProviders(dataGraph.providerCatalog.customSdkProviders())
         }
     }
     override val providerOAuthService: ProviderOAuthService get() = dataGraph.providerOAuthService

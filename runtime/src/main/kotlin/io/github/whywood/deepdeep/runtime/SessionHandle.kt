@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.runtime
 
 import io.github.whywood.deepdeep.sdk.agent.AgentMessage
 import io.github.whywood.deepdeep.sdk.ai.Model
+import io.github.whywood.deepdeep.sdk.ai.Provider
 import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
@@ -37,6 +38,7 @@ interface SessionHandle {
     fun lastAssistantText(): String?
     suspend fun setModel(model: Model, thinkingLevel: String?)
     suspend fun setThinkingLevel(level: String)
+    fun registerProvider(provider: Provider)
     suspend fun compact(): SessionCompaction?
     fun history(): List<AssistantMessage>
     fun usage(): SessionUsage?

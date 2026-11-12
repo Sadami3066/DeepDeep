@@ -10,7 +10,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 |---|---|
 | `AgentRuntimeHost.kt` | 会话总管装配：事件流入口、接口委托与目录适配构造 |
 | `RuntimeHandle.kt` | 单个已打开会话的句柄：引擎、会话、cwd、命令状态、排队输入与活跃时间 |
-| `RuntimePool.kt` | 句柄池：打开/关闭/重载/淘汰/重配与按会话取句柄；关闭时按原因发出 `SessionClosure` |
+| `RuntimePool.kt` | 句柄池：打开/关闭/重载/淘汰/重配与按会话取句柄；关闭时按原因发出 `SessionClosure`；自定义 Provider 变更时下发到所有已打开会话 |
 | `RuntimeRuns.kt` | 运行编排：发送、排队、重试、提醒、后台回合、停止、终态与事件投影 |
 | `RuntimeMcp.kt` | 对所有已打开会话重载 MCP 配置与重连单台服务器，输出状态日志 |
 | `RuntimeEventTranslator.kt` | 把 SDK 会话/Agent 事件翻译为运行时事件与活动状态 |
@@ -21,7 +21,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `PluginRuntimeHooks.kt` | `RuntimeHooks` 聚合（prompt/input/tool/会话绑定，`onSessionBound` 传 `SessionBinding`）与 Agent 级工具钩子桥（Block/Rewrite/Replace，保留 SDK 结果归一化） |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
 | `RuntimeDirectories.kt` | 会话目录与工作区目录的存储适配器 |
-| `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量、插件自定义消息追加 |
+| `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量、插件自定义消息追加、自定义 Provider 注册 |
 | `SessionBinding.kt` | 会话身份（id、文件、cwd）容器；保持身份相等供缓存；支持 host 注入的 live provider，插件工具执行时动态解析当前会话 |
 | `SessionCommandPlane.kt` | 会话运行状态机：忙闲、runId、停止、重配 |
 | `SessionIndex.kt` | 扫 JSONL 建索引，按大小与时间戳增量缓存 |
@@ -72,7 +72,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 
 | 文件 | 职责 |
 |---|---|
-| `ProviderCatalog.kt` | 从 pi 内置目录生成 Provider/模型清单与默认配置，并合并 models.json 中的自定义 provider（组合失败的单独隔离） |
+| `ProviderCatalog.kt` | 从 pi 内置目录生成 Provider/模型清单与默认配置，合并 models.json 中的自定义 provider（组合失败的单独隔离），并把组合结果暴露给宿主下发到已打开会话 |
 | `ProviderDirectory.kt` | Provider 与模型查询、配置归一接口 |
 | `ProviderOAuthService.kt` | Provider OAuth 登录/登出，复用 pi 流程 |
 | `SdkCredentialStore.kt` | 内存凭据缓存、串行写盘与鉴权种类流 |

@@ -98,14 +98,18 @@ class ProviderCatalogTest {
     fun updatesCustomProvidersAtRuntime() {
         val catalog = ProviderCatalog(transport, credentials)
         assertEquals(42, catalog.summaries.size)
+        assertEquals(emptyList<String>(), catalog.customSdkProviders().map { it.id })
         catalog.setCustomProviders(listOf(customProviderConfig()))
         assertEquals(43, catalog.summaries.size)
         assertEquals(listOf("custom-model"), catalog.models("custom-test").map { it.id })
         assertNotNull(catalog.sdkModel("custom-test", "custom-model"))
+        assertEquals(listOf("custom-test"), catalog.customSdkProviders().map { it.id })
+        assertEquals(listOf("custom-model"), catalog.customSdkProviders().single().models.map { it.id })
         catalog.setCustomProviders(emptyList())
         assertEquals(42, catalog.summaries.size)
         assertEquals(null, catalog.summary("custom-test"))
         assertEquals(null, catalog.sdkModel("custom-test", "custom-model"))
+        assertEquals(emptyList<String>(), catalog.customSdkProviders().map { it.id })
     }
 
     private fun thinkingProviderConfig(): CustomProviderConfig = CustomProviderConfig(

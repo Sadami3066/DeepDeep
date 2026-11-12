@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import io.github.whywood.deepdeep.sdk.ai.Provider
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
@@ -138,6 +139,14 @@ internal class RuntimePool(
                 .onFailure { logError(TAG, "reconfigure failed session=$sessionId", it) }
         }
         emitListChanged()
+    }
+
+    suspend fun syncCustomProviders(providers: List<Provider>) = withContext(Dispatchers.IO) {
+        if (providers.isEmpty()) return@withContext
+        val snapshot = mutex.withLock { handles.values.toList() }
+        for (handle in snapshot) {
+            for (provider in providers) handle.session.registerProvider(provider)
+        }
     }
 
     internal suspend fun sweepIdleHandles() {
