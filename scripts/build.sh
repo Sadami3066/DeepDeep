@@ -34,7 +34,7 @@ case "${1:-}" in
     ;;
   status)
     ps -eo pid,rss,args | grep -E 'GradleDaemon|KotlinCompileDaemon' | grep -v grep || true
-    free -h
+    if command -v free >/dev/null 2>&1; then free -h; else vm_stat 2>/dev/null | head -5; fi
     swapon --show 2>/dev/null || true
     du -sh "$HOME/.gradle/caches/build-cache-1" 2>/dev/null || true
     ;;

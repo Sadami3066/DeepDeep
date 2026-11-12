@@ -33,7 +33,7 @@ if [[ ! -f "$AAR" ]]; then
   exit 1
 fi
 
-TMP="$(mktemp -d)"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/deepdeep-abi.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
 unzip -q "$AAR" classes.jar -d "$TMP"

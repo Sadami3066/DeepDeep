@@ -37,7 +37,7 @@ deepdeep_ensure_root "$serial"
   ./scripts/gradlew-locked "${tasks[@]}"
 )
 
-UPDATE_BACKUP="$(mktemp)"
+UPDATE_BACKUP="$(mktemp "${TMPDIR:-/tmp}/deepdeep-update.XXXXXX")"
 cp "$UPDATE_MANIFEST" "$UPDATE_BACKUP"
 restore_update_manifest() {
   cp "$UPDATE_BACKUP" "$UPDATE_MANIFEST"
