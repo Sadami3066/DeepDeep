@@ -10,7 +10,7 @@
 | `ComposerVoice.kt` | 输入卡语音：录音状态机、麦克风权限、音量/转写与提交 |
 | `Haptics.kt` | 触感开关的 CompositionLocal（LocalHapticsEnabled） |
 | `HostFilesProvider.kt` | 文件访问入口的 CompositionLocal（LocalHostFiles + ProvideHostFiles），由 App 根层注入 `graph.hostFiles` |
-| `market/` | 市场页共用：`MarketSection.kt` 放市场 tab（加载/失败/离线/空态、条目行、详情弹层、预览卡片与全屏查看、安装）、`MarketLogic.kt` 放纯过滤/状态/体积格式化与权限档位比较、`MarketIconLoader.kt` 下载并缓存条目图标、`MarketPreviewLoader.kt` 加载并缓存插件预览图（内存 LRU、下采样、去重与失败重试）、`MarketPreviewLogic.kt` 放预览纯逻辑、`MarketAccessTag.kt` 画运行所需权限档位标签（普通/ADB/Root） |
+| `market/` | 市场页共用：`MarketSection.kt` 放市场 tab（加载/失败/离线/空态、条目行、详情弹层、预览卡片与全屏查看、安装）、`MarketLogic.kt` 放纯过滤/状态/体积格式化与权限档位比较、`MarketIconLoader.kt` 下载并缓存条目图标（内存 LRU + 磁盘缓存，超过 8MB 按最旧文件淘汰）、`MarketPreviewLoader.kt` 加载并缓存插件预览图（内存 LRU、下采样、去重与失败重试）、`MarketPreviewLogic.kt` 放预览纯逻辑、`MarketAccessTag.kt` 画运行所需权限档位标签（普通/ADB/Root） |
 | `OAuthLoginSession.kt` | OAuth 登录交互状态机：URL/提示/选择/输入，供 service 驱动 |
 | `OAuthLoginSheet.kt` | OAuth 登录弹层：打开浏览器、等待、选择与验证码输入 |
 | `ProviderIcon.kt` | 厂商图标：provider id 映射 drawable，缺图回退首字母 |

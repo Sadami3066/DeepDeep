@@ -38,6 +38,17 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+internal fun pruneIconCache(dir: File, maxBytes: Long, keepBytes: Long) {
+    val files = dir.listFiles()?.filter { it.isFile }.orEmpty()
+    var total = files.sumOf { it.length() }
+    if (total <= maxBytes) return
+    files.sortedBy { it.lastModified() }.forEach { file ->
+        if (total <= keepBytes) return
+        val length = file.length()
+        if (file.delete()) total -= length
+    }
+}
+
 internal class MarketIconLoader(
     context: Context,
     private val http: OkHttpClient = defaultHttpClient(),
@@ -104,6 +115,7 @@ internal class MarketIconLoader(
             val bitmap = decode(bytes) ?: return@use null
             dir.mkdirs()
             runCatching { fileFor(url).writeBytes(bytes) }
+            pruneIconCache(dir, MAX_DISK_BYTES, KEEP_DISK_BYTES)
             bitmap
         }
     }.getOrNull()
@@ -124,6 +136,8 @@ internal class MarketIconLoader(
 
     companion object {
         private const val MAX_CACHE_BYTES = 4 * 1024 * 1024
+        private const val MAX_DISK_BYTES = 8L * 1024L * 1024L
+        private const val KEEP_DISK_BYTES = 6L * 1024L * 1024L
         private const val MAX_ICON_BYTES = 512 * 1024L
         private const val TARGET_PX = 192
         private const val FAIL_RETRY_MS = 5 * 60 * 1000L
