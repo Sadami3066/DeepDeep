@@ -48,11 +48,11 @@
 
 - `./scripts/api-compat.sh`：生成 `plugin-api` 与 `design` 的公开 ABI dump，并与 `plugin-api/compat/`、`design/compat/` 基线比对；出现删除/签名变化时 CI 失败，新增行允许；
 - `--update` 仅用于升 level 或首次建基线；
-- `check.sh --full` 包含该检查；`release.yml` 复用同一命令；
-- 旧插件二进制回归：`scripts/plugin-binary-compat.sh`（设备侧，按需执行），拿市场发布的 `.ddp` 在新宿主上验证安装/启用；
+- `check.sh --full` 包含该检查；`release.yml` 在签名打包前运行 `check.sh --full`，发布构建同样受门禁约束；
+- 旧插件二进制回归：`scripts/plugin-binary-compat.sh`（设备侧，按需执行，不纳入 `check.sh`），拿市场已发布的 `.ddp` 在设备上走安装/启用/停用/升级/卸载；
 - 兼容矩阵：
 
 | apiLevel | SDK（plugin-api / design） | 宿主版本 | 说明 |
 |---|---|---|---|
 | 5 | 0.8.1 / 0.6.1 | ≤1.0.3 | 历史契约，1.0.4 起拒绝 |
-| 6 | 1.0.0 / 0.6.1 | 1.0.4+ | 当前契约；工厂式构造、事件接口、prompt override 实验能力 |
+| 6 | 1.0.x / 0.6.1 | 1.0.4+ | 当前契约；工厂式构造、事件接口、prompt override 实验能力 |

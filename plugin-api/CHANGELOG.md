@@ -1,5 +1,12 @@
 # Plugin API changelog
 
+## 1.0.1 / API level 6
+
+补丁版本，契约与 apiLevel 不变。
+
+- 修复 `PluginTool` 工厂的执行递归（`PluginToolImpl.execute` 自调用导致栈溢出）。
+- 发布纪律：从该版本起已发布坐标不可覆盖，后续修复只递增补丁版本；曾解析过被覆盖前 `1.0.0` AAR 的机器升级到 `1.0.1`，或执行 `--refresh-dependencies`。
+
 ## 1.0.0 / API level 6
 
 破坏性升级，不保留 level 5 兼容层。
