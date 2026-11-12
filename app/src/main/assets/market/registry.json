@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-11-12T05:23:25Z",
+  "generatedAt": "2026-11-12T08:36:59Z",
   "keyId": "ec256:db63256431bd66db",
   "entries": [
     {
@@ -31,19 +31,19 @@
           "Messaging"
         ]
       },
-      "version": "1.0.3",
+      "version": "2.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/feishu-1.0.3.ddp",
-        "sha256": "119abc51755387e69a32eae18997e7ab3937a13708bfc17301bd5f8e9c54f540",
-        "size": 929061
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112-2/feishu-2.0.0.ddp",
+        "sha256": "c44920e15542ea88c775e00ae4e2d1139ae489544ea0f883610df62b59bdbc65",
+        "size": 929128
       },
       "plugin": {
-        "apiLevel": 5,
-        "minHostVersion": "1.0.1",
+        "apiLevel": 6,
+        "minHostVersion": "1.0.4",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "1.0.3"
+        "version": "2.0.0"
       }
     },
     {
@@ -74,19 +74,19 @@
           "Photos"
         ]
       },
-      "version": "1.0.4",
+      "version": "2.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/micloud-1.0.4.ddp",
-        "sha256": "d99cea18838d50c4234e9293ee839972c76c804fe56370e940e7aa938e02680d",
-        "size": 929115
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112-2/micloud-2.0.0.ddp",
+        "sha256": "8d41833e1d4bf937704e6008daa1e9b455b3ba3abee227898609fcf1637b141e",
+        "size": 928953
       },
       "plugin": {
-        "apiLevel": 5,
-        "minHostVersion": "1.0.1",
+        "apiLevel": 6,
+        "minHostVersion": "1.0.4",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "1.0.4"
+        "version": "2.0.0"
       }
     },
     {
@@ -117,15 +117,15 @@
           "CLI"
         ]
       },
-      "version": "1.2.4",
+      "version": "2.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/sysu-1.2.4.ddp",
-        "sha256": "fef6c4809c9a4909e2bfa32186f804e3288fe4b00668c5bee77053e3ba7d7bc8",
-        "size": 949235
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112-2/sysu-2.0.0.ddp",
+        "sha256": "b04ee6758fa31fa4dc65328f8f7825c2d0e1a12c0ae8fb53baf9117011d6ecc4",
+        "size": 949280
       },
       "plugin": {
-        "apiLevel": 5,
-        "minHostVersion": "1.0.1",
+        "apiLevel": 6,
+        "minHostVersion": "1.0.4",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -133,7 +133,7 @@
           "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-1.jpg",
           "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-2.jpg"
         ],
-        "version": "1.2.4"
+        "version": "2.0.0"
       }
     },
     {
@@ -164,19 +164,19 @@
           "Chat history"
         ]
       },
-      "version": "0.2.2",
+      "version": "0.3.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/wechat-0.2.2.ddp",
-        "sha256": "3b079a26db896f21d3408918a7380d194c5ec47f1f63b0b20b20824d92f53aa1",
-        "size": 868072
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112-2/wechat-0.3.0.ddp",
+        "sha256": "0f28df818a32351cb58fc243846801083f787ca98575204574102a58a510fd97",
+        "size": 868117
       },
       "plugin": {
-        "apiLevel": 5,
-        "minHostVersion": "1.0.1",
+        "apiLevel": 6,
+        "minHostVersion": "1.0.4",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "root",
-        "version": "0.2.2"
+        "version": "0.3.0"
       }
     },
     {
@@ -207,19 +207,19 @@
           "Messaging"
         ]
       },
-      "version": "1.0.3",
+      "version": "2.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112/wecom-1.0.3.ddp",
-        "sha256": "0eb0c58cba1a175f04b6bba24109de7363fc61158463e445c978448088b4c80e",
-        "size": 964812
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261112-2/wecom-2.0.0.ddp",
+        "sha256": "1a14564ba70c3768a120c59fe0de8dc5652acaf05e12b42c637f72d99aace82d",
+        "size": 964937
       },
       "plugin": {
-        "apiLevel": 5,
-        "minHostVersion": "1.0.1",
+        "apiLevel": 6,
+        "minHostVersion": "1.0.4",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "1.0.3"
+        "version": "2.0.0"
       }
     },
     {
