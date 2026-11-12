@@ -89,20 +89,21 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 
 ## 2. 编译进 APK 的代码库
 
-### 2.1 DeepDeep SDK 0.6.0
+### 2.1 pi2kotlin SDK 0.6.3（DeepDeep-KotlinSDK）
 
-- 构件：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.0`（其余 `pi-ai`/`pi-agent`/`pi-mcp` 及 `-jvm` 变体同组），经 JitPack 构建设置 `io.github.whywood.deepdeep.sdk` 发布
+- 构件：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`、`pi-ai-android`、`pi-agent-android`、`pi-mcp-android`（JitPack 构建，版本标签 `v0.6.3`）
 - 版权行：`Copyright (c) 2026 pi2kotlin contributors`、`Copyright (c) 2025 Mario Zechner and pi contributors`
 - 许可证：MIT
-- 来源：<https://github.com/Sadami3066/DeepDeep-KotlinSDK> 提交 `504e1d5edfd5c1dd66741d41dcac97083b739ee1`（`LICENSE`）
-- 本仓库内声明：`gradle/libs.versions.toml`（`pi = "v0.6.0"`，JitPack 坐标）
+- 来源：<https://github.com/Sadami3066/DeepDeep-KotlinSDK> 标签 `v0.6.3`，提交 `df388d6d737ee079303e4e4acb5776d9ee62746f`（`LICENSE`）
+- 本仓库内声明：`gradle/libs.versions.toml`（`pi = "v0.6.3"`，依赖坐标见同文件 `[libraries]`）
 - 许可全文：`licenses/pi2kotlin-MIT.txt`
 - 说明：上游 AAR/POM 未携带 LICENSE/NOTICE 元数据；本条目构成随二进制分发所需的版权与许可声明。
 
-### 2.2 AndroidX / Jetpack Compose / Kotlin / kotlinx.coroutines / Okio / WebKit
+### 2.2 AndroidX / CameraX / Jetpack Compose / Kotlin / kotlinx.coroutines / Okio / WebKit
 
 - 构件与版本（Maven 坐标即固定版本，构件不可变）：
   - AndroidX：`androidx.core:core-ktx:1.17.0`、`androidx.activity:activity-compose:1.12.4`、`androidx.lifecycle:*:2.10.0`、`androidx.datastore:datastore-preferences:1.2.0`、`androidx.webkit:webkit:1.18.0`
+  - CameraX：`androidx.camera:camera-camera2:1.6.2`、`androidx.camera:camera-lifecycle:1.6.2`、`androidx.camera:camera-compose:1.6.2`
   - Jetpack Compose：BOM `2026.03.00`（`androidx.compose.*`）
   - Kotlin stdlib：`2.4.21`
   - kotlinx.coroutines：`org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0`、`kotlinx-coroutines-android:1.11.0`
@@ -158,7 +159,15 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
   - 用途：访问本机 daemon 的 HTTP 回环接口
   - 许可全文：`licenses/Apache-2.0.txt`
 
-### 2.5 仅构建/测试期使用、不随 APK 分发
+### 2.5 ML Kit 条码扫描（非开源）
+
+- 构件：`com.google.mlkit:barcode-scanning:17.3.0`（内置模型版，代码与模型随 APK 分发）
+- 版权与许可：Google ML Kit Terms of Service，非开源；不适用 Apache-2.0，随 APK 的 ML Kit 代码与模型按 Google 条款使用。
+- 来源：<https://developers.google.com/ml-kit/terms>、<https://maven.google.com>（`com.google.mlkit:barcode-scanning:17.3.0`）
+- 用途：相机扫码的本地条码识别，离线运行，不依赖 Google Play 服务
+- 本仓库内声明：`gradle/libs.versions.toml`（`mlkit-barcode = "17.3.0"`）
+
+### 2.6 仅构建/测试期使用、不随 APK 分发
 
 Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress 1.28.0、androidx.test.runner 1.7.0、androidx.test.ext:junit 1.3.0、Android SDK/build-tools。它们在构建机或测试 APK 中使用，不属于本 APK 的分发内容，不在本声明范围。
 
@@ -225,17 +234,27 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
   <https://github.com/earendil-works/elanor/blob/f9e904c08d2e2274714f35b9c848ba7bab19e2b3/packages/logos/sources/radius/mark.svg>
 - 处理方式：保留官方图形、色彩 token 与 1/4 标志宽度的留白，图形未改。
 
-### 4.4 飞书插件图标 — `app/src/main/res/drawable-nodpi/ic_plugin_feishu.png`
+### 4.4 厂商图标 — `app/src/main/res/drawable-nodpi/vendor_*.png`（10 个）
+
+| 图标 | 来源 | 许可/权利 |
+|---|---|---|
+| dingtalk、github、notion、slack、telegram、discord | Tabler Icons brand 图标，提交 `ed177a085b652fe04ec4f37ced867c94621e7840`（v3.50.0） | MIT，`Copyright (c) 2020-2026 Paweł Kuna`；`licenses/tabler-MIT.txt` |
+| xiaomi | Wikimedia Commons [File:Xiaomi_logo.svg](https://commons.wikimedia.org/wiki/File:Xiaomi_logo.svg)（源自小米官方媒体素材包） | Public domain（简单几何/文字组合，低于版权独创性门槛）；"Xiaomi"/"mi" 为小米公司商标 |
+| feishu | Apple App Store 公开应用图标（iTunes Search API `artworkUrl512`，中国区，2026-10-29）：<https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/45/f4/d8/45f4d8ef-fc19-8e6e-19eb-4e1e4ee1aabd/AppIcon-0-0-1x_U007epad-0-0-0-1-0-0-85-220.png/512x512bb.jpg> | **非开源素材**；图形与商标归 Beijing Feishu Technology Co., Ltd.（字节跳动） |
+| wecom | 同上（企业微信）：<https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3e/ba/6b/3eba6be1-a7fd-00c5-7f0d-2415c8258ef5/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg> | **非开源素材**；图形与商标归 Tencent Technology (Shenzhen) Company Limited |
+| wechat | 同上（微信）：<https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/84/6b/3a/846b3ab8-9dea-e3e5-861e-f6ecaa0b3387/AppIcon-0-0-1x_U007epad-0-1-0-sRGB-0-0-85-220.png/512x512bb.jpg> | **非开源素材**；图形与商标归 Tencent Technology (Shenzhen) Company Limited |
+
+### 4.5 飞书插件图标 — `app/src/main/res/drawable-nodpi/ic_plugin_feishu.png`
 
 - 内容：飞书品牌图形（96×96）
 - 版权行/权利人：飞书（Feishu）品牌，商标归北京字节跳动科技有限公司
 - 来源：**非开源素材**；本仓库未保留该文件的原始下载记录（该文件于提交 `41b6885` 引入）
 - 处置：公开分发前应改为与 4.4 一致的可追溯来源，或替换为已授权素材。
 
-### 4.5 非开源素材替换预案
+### 4.6 非开源素材替换预案
 
 公开分发或商用前，以下非开源素材应替换为已授权素材，或从发行版移除：
-`provider_radius.png`（Radius 品牌条款）、`ic_plugin_feishu.png`（来源未记录）。
+`provider_radius.png`（Radius 品牌条款）、`vendor_feishu.png`、`vendor_wecom.png`、`vendor_wechat.png`（App Store 公开图标）、`ic_plugin_feishu.png`（来源未记录）。
 替换时同步更新本文件对应条目与素材清单。
 
 ## 5. 应用内插画
@@ -264,7 +283,7 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 | `licenses/BSD-2-Clause.txt` | <https://spdx.org/licenses/BSD-2-Clause.txt>（下载原文 sha256 `ffcd6a8c421ee58d9f85b115ee0642805be3b497d2023565739622f044dc11e2`） | `0b86240ad7fea85ddf41452089afc233637d0879dc833cf425d73dac9fd4dee0` |
 | `licenses/BSD-3-Clause.txt` | <https://spdx.org/licenses/BSD-3-Clause.txt>（下载原文 sha256 `0fe4dd6931c4c2fc418940de41074fa3c506cad24bfd891743ea7f2fcfe631ef`） | `7d4b8b9f72b9a4795b33e71ab9fcddd8df245b2a609aa82fd455270e103b70a8` |
 | `licenses/Bouncy-Castle.txt` | <https://www.bouncycastle.org/licence.html> | c61027784b36d538c8ca196869d6a3e3f3937e3cd0e5869c38c1c10bdbb6723d |
-| `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/DeepDeep-KotlinSDK/504e1d5edfd5c1dd66741d41dcac97083b739ee1/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
+| `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/DeepDeep-KotlinSDK/94f300abef96516204358a8fe549f9d774c373df/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
 | `licenses/lobehub-MIT.txt` | <https://raw.githubusercontent.com/lobehub/lobe-icons/680f1d7f95b5ae6a494fe43539da8a992f17b53d/LICENSE> | `add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a` |
 | `licenses/lora-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt>（与 cyrealtype/Lora-Cyrillic 的 OFL.txt 字节一致） | `1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716` |
 | `licenses/manrope-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt> | `58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b` |
@@ -282,3 +301,5 @@ Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress
 - 2026-11-01：pi2kotlin SDK 升级至 0.3.0，构件与来源提交同步更新。
 - 2026-11-01：pi2kotlin SDK 升级至 0.4.0，构件与来源提交同步更新。
 - 2026-11-05：新增 Open Runde（Regular/Medium/Semibold，静态 OTF）与 Fredoka（`wght`/`wdth` 可变 TTF）两款 OFL-1.1 字体，补充版权行、上游来源与提交、文件 sha256 及许可全文；默认字体改为 Open Runde。
+- 2026-11-09：pi2kotlin SDK 升级至 0.6.2（JitPack 坐标 `com.github.Sadami3066.DeepDeep-KotlinSDK`），构件、来源提交与版本声明同步更新。
+- 2026-11-11：pi2kotlin SDK 升级至 0.6.3（标签 `v0.6.3`，提交 `df388d6d737ee079303e4e4acb5776d9ee62746f`），构件坐标与版本声明同步更新。

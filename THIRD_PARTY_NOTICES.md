@@ -99,10 +99,11 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 - 许可全文：`licenses/pi2kotlin-MIT.txt`
 - 说明：上游 AAR/POM 未携带 LICENSE/NOTICE 元数据；本条目构成随二进制分发所需的版权与许可声明。
 
-### 2.2 AndroidX / Jetpack Compose / Kotlin / kotlinx.coroutines / Okio / WebKit
+### 2.2 AndroidX / CameraX / Jetpack Compose / Kotlin / kotlinx.coroutines / Okio / WebKit
 
 - 构件与版本（Maven 坐标即固定版本，构件不可变）：
   - AndroidX：`androidx.core:core-ktx:1.17.0`、`androidx.activity:activity-compose:1.12.4`、`androidx.lifecycle:*:2.10.0`、`androidx.datastore:datastore-preferences:1.2.0`、`androidx.webkit:webkit:1.18.0`
+  - CameraX：`androidx.camera:camera-camera2:1.6.2`、`androidx.camera:camera-lifecycle:1.6.2`、`androidx.camera:camera-compose:1.6.2`
   - Jetpack Compose：BOM `2026.03.00`（`androidx.compose.*`）
   - Kotlin stdlib：`2.4.21`
   - kotlinx.coroutines：`org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0`、`kotlinx-coroutines-android:1.11.0`
@@ -158,7 +159,15 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
   - 用途：访问本机 daemon 的 HTTP 回环接口
   - 许可全文：`licenses/Apache-2.0.txt`
 
-### 2.5 仅构建/测试期使用、不随 APK 分发
+### 2.5 ML Kit 条码扫描（非开源）
+
+- 构件：`com.google.mlkit:barcode-scanning:17.3.0`（内置模型版，代码与模型随 APK 分发）
+- 版权与许可：Google ML Kit Terms of Service，非开源；不适用 Apache-2.0，随 APK 的 ML Kit 代码与模型按 Google 条款使用。
+- 来源：<https://developers.google.com/ml-kit/terms>、<https://maven.google.com>（`com.google.mlkit:barcode-scanning:17.3.0`）
+- 用途：相机扫码的本地条码识别，离线运行，不依赖 Google Play 服务
+- 本仓库内声明：`gradle/libs.versions.toml`（`mlkit-barcode = "17.3.0"`）
+
+### 2.6 仅构建/测试期使用、不随 APK 分发
 
 Android Gradle Plugin 9.4.1、Kotlin 编译器、JUnit 4.13.2、commons-compress 1.28.0、androidx.test.runner 1.7.0、androidx.test.ext:junit 1.3.0、Android SDK/build-tools。它们在构建机或测试 APK 中使用，不属于本 APK 的分发内容，不在本声明范围。
 

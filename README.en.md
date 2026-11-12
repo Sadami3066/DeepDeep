@@ -105,8 +105,8 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 1. **Download the APK.** Get the latest version from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases).
 2. **Install and open.** Android 10 or later is required. The first launch opens a setup guide; follow it, or skip it and complete the steps later in Settings.
 3. **Connect a model.** Open **Settings → Providers**, choose a provider, and enter an API key or sign in with OAuth. DeepSeek or a GPT subscription is recommended.
-4. **Initialize Linux.** Open **Settings → Linux Settings** and initialize Alpine. This step is strongly recommended; complete the basic setup as prompted.
-5. **Choose permissions.** The default tier is Standard. To operate other apps, follow the guide under **Settings → Permissions** to enable Wireless debugging or Root. When enabling Wireless debugging, you can enter the pairing code from the system notification. If notifications are unavailable, open DeepDeep in split-screen or a floating window, read the code from the wireless pairing screen, and enter it in DeepDeep.
+4. **Initialize Linux.** Open **Settings → System access** and initialize Alpine in the **Linux environment** section. This step is strongly recommended; complete the basic setup as prompted.
+5. **Choose system access.** The default tier is Standard. To operate other apps, follow the guide under **Settings → System access** to enable Wireless debugging or Root. When enabling Wireless debugging, you can enter the pairing code from the system notification. If notifications are unavailable, open DeepDeep in split-screen or a floating window, read the code from the wireless pairing screen, and enter it in DeepDeep.
 
 ## Installation & Configuration
 
@@ -125,9 +125,10 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 | Item | Location | Description |
 |---|---|---|
 | Model providers | Settings → Providers | 42 providers; API key or browser OAuth |
-| Permissions | Settings → Permissions | Standard / Wireless debugging / Root; screen control is off by default |
-| Linux | Settings → Linux Settings | Initialize Alpine; install commands, Node, Python, and build toolchains |
-| Android integration | Settings → Android Settings | Overlay, system assistant, notifications, and share intake |
+| System access | Settings → System access | Standard / Wireless debugging / Root; sets the identity for bash and file operations |
+| Agent behavior | Settings → Agent behavior | Screen control is off by default |
+| Linux | Settings → System access → Linux environment | Initialize Alpine; install commands, Node, Python, and build toolchains |
+| Android integration | Settings → Android settings | Overlay, system assistant, notifications, and share intake |
 | Remote connection | Drawer → Remote connection | Pair a computer through [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) |
 | Plugins | Drawer → Plugins | Import signed `.ddp` packages; inspect capabilities and status |
 | Memory | Automatic | Consolidated at session end; searchable and injectable into the current conversation |
@@ -157,16 +158,35 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 | `design/` | Theme, icons, shared components, and design tokens |
 | `plugin-api/` | Plugin contracts and publishable SDK |
 
-Requires JDK 17 or newer, Android SDK Platform 36, and build-tools 36.0.0.
+Development requirements:
+
+- JDK 17; the build pins Java 17 (`jvmToolchain` 17).
+- Android SDK Platform 36 and build-tools 36.0.0 (about 5.6 GB).
+- At least 8 GB of RAM and 10 GB of free disk space. A cold first build takes roughly 15–30 minutes, including JitPack building the SDK on demand and downloading dependencies.
+- The Android SDK defaults to `~/Library/Android/sdk` on macOS and is commonly at `~/Android/Sdk` on Linux. The setup script checks environment variables, then an existing `local.properties`, then common paths; use `ANDROID_HOME` or `ANDROID_SDK_ROOT` to override.
+- Windows is not supported natively: the scripts need bash and flock. Use WSL2, Linux, or macOS.
 
 ```bash
-./scripts/dev-setup.sh        # First run: check tools, write local.properties, fetch SDK, build APK
-./scripts/check.sh            # Daily: compile + unit tests + lint + module boundaries + APK
-./scripts/check.sh --full     # Before release: add the plugin SDK ABI baseline
-./scripts/check.sh --device   # Also install over the device and launch
+./scripts/dev-setup.sh            # First run: check JDK and Android SDK, install Platform 36/build-tools as needed, build debug APK
+./scripts/build.sh quick          # Daily compile
+./scripts/build.sh test           # Targeted unit tests
+./scripts/build.sh check          # Full verification (same as check.sh --full)
+./scripts/build.sh release        # Build the release APK after full verification
+./scripts/check.sh                # Compile + unit tests + lint + module boundaries + APK
+./scripts/check.sh --full         # Before delivery: add the plugin SDK ABI baseline
+./scripts/check.sh --device       # Also install over the device and launch
+./scripts/plugin-e2e.sh           # Plugin end-to-end on a device
+./scripts/plugin-bundles-e2e.sh   # Regression for the four official plugin bundles (build the plugin repository first)
+./scripts/plugin-api-abi.sh       # Check the plugin SDK ABI baseline alone (--update refreshes it)
 ```
 
-The `dev.pi` SDK is downloaded from the pi2kotlin `v0.6.3` release and verified by sha256; it does not depend on a local `~/.m2`. All Gradle calls go through `./scripts/gradlew-locked`; concurrent local builds may run out of memory.
+The Agent SDK comes from JitPack: `com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3` (the version is `pi` in `gradle/libs.versions.toml`). On the first build, JitPack may compile the SDK on demand, which can take minutes or time out; once the dependency is cached, later builds can run offline. In an offline environment, run a full build online once first.
+
+Device scripts need `adb`. With more than one device online, set `ANDROID_SERIAL`; without it the script uses the only online device and fails when several are online. `plugin-e2e.sh` defaults to `../plugins` and `plugin-bundles-e2e.sh` to `../DeepDeep-Official-Plugins`; set `PLUGINS_DIR` to override. Both need an arm64 device with root (`su -c` working, or a successful `adb root`). `plugin-e2e.sh` also expects a `sample` module in the plugin repository; DeepDeep-Plugins currently ships only `template`, so the script fails fast with a clear message. `plugin-api-abi.sh` needs `unzip` and `javap` (`jar` is optional and falls back to `unzip`).
+
+An x86_64 AVD can run unit tests, compile, install and launch the app, and cover most UI work; the Linux environment, plugin e2e, screen control, and Root-tier system access require an arm64 device.
+
+All Gradle calls go through `./scripts/gradlew-locked`; concurrent local builds may run out of memory.
 
 See the [Developer Guide](docs/DEVELOPER_GUIDE.md) and [Plugin Development](docs/PLUGIN_DEV.md) for details.
 
@@ -174,7 +194,7 @@ See the [Developer Guide](docs/DEVELOPER_GUIDE.md) and [Plugin Development](docs
 
 ## Docs & Feedback
 
-- [User Guide](docs/USER_GUIDE.md): installation, permissions, Linux, plugins, mini apps, remote connection, and FAQ.
+- [User Guide](docs/USER_GUIDE.md): installation, system access, Linux, plugins, mini apps, remote connection, and FAQ.
 - [Developer Guide](docs/DEVELOPER_GUIDE.md): environment, modules, build, tests, and conventions.
 - [Plugin Development](docs/PLUGIN_DEV.md): plugin contracts, manifest, signing, lifecycle, and UI extensions.
 - [Release Notes](docs/RELEASE.md): signing, packaging, and distribution.
@@ -190,4 +210,4 @@ Original code is licensed under [Apache-2.0](LICENSE). Third-party components, f
 
 ---
 
-<sub>Built on [pi](https://pi.dev) · [pi2kotlin](https://github.com/Sadami3066/DeepDeep-KotlinSDK) · Alpine Linux · Jetpack Compose</sub>
+<sub>Built on [pi](https://pi.dev) · [DeepDeep-KotlinSDK](https://github.com/Sadami3066/DeepDeep-KotlinSDK) · Alpine Linux · Jetpack Compose</sub>

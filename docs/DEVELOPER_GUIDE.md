@@ -4,9 +4,12 @@
 
 ## 环境
 
-- JDK 17 或更新
-- Android SDK Platform 36、build-tools 36.0.0
+- JDK 17；构建固定使用 Java 17（`jvmToolchain` 17）。
+- Android SDK Platform 36、build-tools 36.0.0（约 5.6 GB）。
+- 内存 ≥ 8 GB、空闲磁盘 ≥ 10 GB；冷缓存首次构建约 15–30 分钟（含 JitPack 现场编译 SDK 与依赖下载）。
 - 仓库自带 Gradle wrapper；日常构建走 `scripts/build.sh`，底层统一 `scripts/gradlew-locked`，不要直接跑 `./gradlew`，避免本机并发构建 OOM。内存参数只在 `gradle.properties` 维护，`gradlew-locked` 会忽略命令行覆盖，防止 daemon 增殖。
+- Android SDK 默认位置：macOS `~/Library/Android/sdk`，Linux 常见 `~/Android/Sdk`。可用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 指定。
+- Windows 不原生支持：脚本依赖 bash 与 flock，请在 WSL2、Linux 或 macOS 上构建。
 
 首次环境：
 
@@ -14,22 +17,24 @@
 ./scripts/dev-setup.sh
 ```
 
-它会检查工具链、写 `local.properties`、拉取依赖并产出 APK。
+它会检查 `java` 与 `javac`（JDK 17，必须有编译器），按环境变量 → 已有 `local.properties` → 常见路径定位 Android SDK，必要时用 `sdkmanager` 安装 Platform 36 与 build-tools 36.0.0，保留已有 `local.properties`，然后构建 debug APK；不碰签名材料。
+
+Agent SDK 依赖经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`（版本在 `gradle/libs.versions.toml` 的 `pi`）。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
 
 ## 构建与验证
 
 ```bash
-./scripts/build.sh quick        # 日常编译（固定内存 profile，单 Gradle daemon）
+./scripts/build.sh quick        # 日常编译
 ./scripts/build.sh test         # 定向单测
 ./scripts/build.sh check        # 完整验证（等价 check.sh --full）
 ./scripts/build.sh release      # 完整验证后构建 release APK
 ./scripts/build.sh stop         # 回收 Gradle/Kotlin daemon 内存
-./scripts/check.sh              # 编译 + 单测 + lint + 模块/包边界 + APK
-./scripts/check.sh --full       # 再加插件 SDK ABI 基线
+./scripts/check.sh              # 编译 + 单测 + lint + 模块边界 + APK
+./scripts/check.sh --full       # 交付前：再加插件 SDK ABI 基线
 ./scripts/check.sh --device     # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh         # 真机插件端到端
 ./scripts/plugin-bundles-e2e.sh # 四个官方插件包回归（需先构建插件仓库）
-./scripts/plugin-api-abi.sh     # 单独校验插件 SDK ABI（--update 更新基线）
+./scripts/plugin-api-abi.sh     # 单独校验插件 SDK ABI 基线（--update 更新）
 ```
 
 Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Kotlin 2g / workers 2）；`gradlew-locked` 用 flock 串行化构建并丢弃 `-Dorg.gradle.jvmargs`、`-Pkotlin.daemon.jvmargs` 覆盖。长时间不构建时用 `build.sh stop` 回收内存。
@@ -46,8 +51,6 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 | `shell/` | proot 与 ADB/Root 系统访问后端 |
 | `design/` | 主题、图标、通用组件与设计 token |
 | `plugin-api/` | 插件契约与可发布 SDK |
-
-`dev.pi` SDK 由 Gradle 任务从 pi2kotlin `v0.6.3` Release 下载并校验 sha256，不依赖本机 `~/.m2`。
 
 ## 运行时
 
@@ -81,6 +84,18 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 - 插件相关改动至少跑一次 `plugin-e2e.sh`；涉及官方插件包时再跑 `plugin-bundles-e2e.sh`。
 - 可能删除真实数据、不可逆迁移、换签名或改变关键产品取舍时，先和用户确认。
 
+**真机与模拟器**
+
+- x86_64 AVD 可以完成单测、编译、安装启动和绝大多数 UI 检查。
+- 以下必须用 arm64 真机：Linux 环境（内置 rootfs 只有 aarch64）、`plugin-e2e.sh` / `plugin-bundles-e2e.sh`、屏幕操作/虚拟屏与 Root 档系统访问。
+- 插件 e2e 还要求设备已 root：`su -c` 可用，或 `adb root` 成功。
+
+**设备脚本**
+
+- 需要 `adb`。多设备在线时用 `ANDROID_SERIAL` 指定；脚本优先用它，其次是唯一在线的设备，多台在线且未指定会报错。
+- 插件 e2e 需要同级的插件仓库：`PLUGINS_DIR` 可覆盖，`plugin-e2e.sh` 默认 `../plugins`（DeepDeep-Plugins 模板仓库），`plugin-bundles-e2e.sh` 默认 `../DeepDeep-Official-Plugins`（四个官方插件仓库）。`plugin-e2e.sh` 还需要插件仓库里的 `sample` 模块；DeepDeep-Plugins 目前只有 `template`，缺失时脚本会直接报错退出。
+- `plugin-api-abi.sh` 需要 `unzip`、`jar`、`javap`；后两者由 JDK 提供，脚本会自检并提示缺什么。
+
 ## 发布
 
 签名材料与换签流程见 [RELEASE.md](RELEASE.md)。
@@ -106,4 +121,4 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 - [插件开发](PLUGIN_DEV.md)
 - [发布](RELEASE.md)
 - [变更记录](../CHANGELOG.md)
-- 内部设计记录不随仓库分发；需要时从作者备份恢复到 `docs/DECISIONS.md`、`docs/GUIDE.md`、`docs/plan.md`（已被 `docs/.gitignore` 忽略）。
+- 内部设计记录（`docs/DECISIONS.md`、`docs/GUIDE.md`）不随仓库分发，托管在私有仓库 `Sadami3066/DeepDeep-Private`；新机器用其中的 `bootstrap.sh` 落位到本地 `docs/`。

@@ -12,17 +12,17 @@ Thanks for your interest in DeepDeep. This repository contains the Android app, 
 
 - Keep each change focused. Split unrelated work into separate commits.
 - Use `type: summary` for commit subjects, for example `fix: handle empty provider list`.
-- Run `./scripts/check.sh` before submitting. For plugin API changes, also run `./scripts/check.sh --full`. For device behavior, run `./scripts/check.sh --device` when possible.
+- Pull requests run CI (`./scripts/check.sh`); documentation-only changes are skipped. Run `./scripts/check.sh` locally before submitting. For plugin API changes, also run `./scripts/check.sh --full`. For device behavior, run `./scripts/check.sh --device` when possible.
 - Add or update tests and documentation with the change.
 - Do not commit API keys, signing keys, tokens, session files, recordings, or personal data.
 - Plugin changes belong in the official plugins repository unless they change the host contract.
 
 ## Development setup
 
-Requirements: JDK 17 or newer, Android SDK Platform 36, and build-tools 36.0.0.
+Requirements: JDK 17 (the build pins the Java toolchain to 17), Android SDK Platform 36, and build-tools 36.0.0 (about 5.6 GB). A cold first build takes roughly 15–30 minutes. Windows is not supported natively; use WSL2, Linux, or macOS.
 
 ```bash
-./scripts/dev-setup.sh        # first run
+./scripts/dev-setup.sh        # first run: check the toolchain and SDK, build the debug APK
 ./scripts/check.sh            # compile, tests, lint, module boundaries, APK
 ./scripts/check.sh --full     # add plugin SDK ABI baseline
 ./scripts/check.sh --device   # install over a connected device and launch
