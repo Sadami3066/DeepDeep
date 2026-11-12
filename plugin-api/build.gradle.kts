@@ -4,7 +4,7 @@ plugins {
     `maven-publish`
 }
 
-val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("0.8.1")
+val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("1.0.0")
 
 android {
     namespace = "io.github.whywood.deepdeep.plugin.api"
@@ -28,6 +28,7 @@ android {
 }
 
 kotlin {
+    explicitApi()
     jvmToolchain(17)
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

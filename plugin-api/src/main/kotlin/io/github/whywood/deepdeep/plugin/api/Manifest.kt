@@ -1,69 +1,41 @@
 package io.github.whywood.deepdeep.plugin.api
 
-data class PublisherInfo(
-    val name: String,
-    val keyId: String,
-)
-
-data class UiManifest(
-    val apiLevel: Int = HOST_UI_API_LEVEL,
-    val kotlin: String? = null,
-    val compose: String? = null,
-)
-
-enum class PluginCapability(val wire: String) {
-    LINUX("linux"),
-    SCREEN("screen"),
-    NOTIFICATIONS("notifications"),
-    SECRETS("secrets"),
-    NETWORK("network"),
-    FILES("files"),
-    SESSIONS("sessions"),
-    JOBS("jobs"),
-    TIMERS("timers"),
-    GOALS("goals"),
-    MINIAPP("miniapp"),
-    MCP("mcp"),
-    UI("ui"),
-    APP("app"),
-    BUS("bus"),
-    LOGS("logs"),
-    CHAT("chat"),
-    ;
-
-    companion object {
-        fun fromWire(value: String): PluginCapability? = entries.firstOrNull { it.wire == value }
-    }
+public interface PublisherInfo {
+    public val name: String
+    public val keyId: String
 }
 
-data class Provides(
-    val tools: List<String> = emptyList(),
-    val skills: List<String> = emptyList(),
-    val uiSlots: List<String> = emptyList(),
-    val pages: List<String> = emptyList(),
-) {
-    val isEmpty: Boolean
-        get() = tools.isEmpty() &&
-            skills.isEmpty() &&
-            uiSlots.isEmpty() &&
-            pages.isEmpty()
+public interface UiManifest {
+    public val apiLevel: Int
+    public val kotlin: String?
+    public val compose: String?
 }
 
-data class PluginManifest(
-    val id: String,
-    val version: String,
-    val apiLevel: Int = PLUGIN_API_LEVEL,
-    val minHostVersion: String? = null,
-    val ui: UiManifest? = null,
-    val name: LocalizedText,
-    val summary: LocalizedText,
-    val description: LocalizedText? = null,
-    val homepage: String? = null,
-    val changelog: String? = null,
-    val icon: IconRef? = null,
-    val entryClass: String? = null,
-    val publisher: PublisherInfo? = null,
-    val provides: Provides = Provides(),
-    val capabilities: Set<String>? = null,
-    val defaultEnabled: Boolean = true,
-)
+public interface Provides {
+    public val tools: List<String>
+    public val skills: List<String>
+    public val uiSlots: List<String>
+    public val pages: List<String>
+
+    public val isEmpty: Boolean
+        get() = tools.isEmpty() && skills.isEmpty() && uiSlots.isEmpty() && pages.isEmpty()
+}
+
+public interface PluginManifest {
+    public val id: String
+    public val version: String
+    public val apiLevel: Int
+    public val minHostVersion: String?
+    public val ui: UiManifest?
+    public val name: LocalizedText
+    public val summary: LocalizedText
+    public val description: LocalizedText?
+    public val homepage: String?
+    public val changelog: String?
+    public val icon: IconRef?
+    public val entryClass: String?
+    public val publisher: PublisherInfo?
+    public val provides: Provides
+    public val capabilities: Set<PluginCapability>
+    public val defaultEnabled: Boolean
+}

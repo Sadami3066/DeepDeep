@@ -4,122 +4,188 @@ import android.content.Context
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 
-interface DeepDeepPlugin {
-    suspend fun availability(host: PluginHost): PluginAvailability
+public interface DeepDeepPlugin {
+    public suspend fun availability(host: PluginHost): PluginAvailability
 
-    suspend fun uninstall(host: PluginHost) = Unit
+    public suspend fun uninstall(host: PluginHost): Unit = Unit
 
-    suspend fun onEnable(host: PluginHost) = Unit
+    public suspend fun onEnable(host: PluginHost): Unit = Unit
 
-    suspend fun onDisable(host: PluginHost) = Unit
+    public suspend fun onDisable(host: PluginHost): Unit = Unit
 
-    suspend fun onUpgrade(host: PluginHost, fromVersion: String) = Unit
+    public suspend fun onUpgrade(host: PluginHost, fromVersion: String): Unit = Unit
 
-    fun skills(host: PluginHost): List<PluginSkill> = emptyList()
+    public fun skills(host: PluginHost): List<PluginSkill> = emptyList()
 
-    fun promptSections(host: PluginHost): List<PromptSection> = emptyList()
+    public fun promptSections(host: PluginHost): List<PromptSection> = emptyList()
 
-    fun contributions(host: PluginHost): Contributions = Contributions()
+    public fun contributions(host: PluginHost): Contributions = contributions()
 
-    fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions = contributions(host)
+    public fun contributionsFor(host: PluginHost, session: PluginSessionInfo?): Contributions =
+        contributions(host)
 
-    fun ui(host: PluginHost): PluginUiContributions = PluginUiContributions.None
+    public fun ui(host: PluginHost): PluginUiContributions = PluginUiContributions.None
 
-    suspend fun close() = Unit
+    public suspend fun close(): Unit = Unit
 }
 
-interface PluginHost {
-    val manifest: PluginManifest
+public interface PluginHost {
+    public val manifest: PluginManifest
 
-    val context: Context
+    public val context: Context
 
-    val dataDir: File
+    public val dataDir: File
 
-    val assetsDir: File
+    public val assetsDir: File
 
-    val scope: CoroutineScope
+    public val scope: CoroutineScope
 
-    fun text(source: LocalizedText, vararg args: Any): String
+    public fun text(source: LocalizedText, vararg args: Any): String
 
-    fun linux(): LinuxService
+    public fun linux(): LinuxService
 
-    fun screen(): ScreenService
+    public fun screen(): ScreenService
 
-    fun notifications(): NotificationService
+    public fun notifications(): NotificationService
 
-    fun secrets(): SecretService
+    public fun secrets(): SecretService
 
-    fun network(): NetworkService
+    public fun network(): NetworkService
 
-    fun files(): FileService
+    public fun files(): FileService
 
-    fun sessions(): SessionService
+    public fun sessions(): SessionService
 
-    fun jobs(): JobService
+    public fun jobs(): JobService
 
-    fun timers(): TimerService
+    public fun timers(): TimerService
 
-    fun goals(): GoalService
+    public fun goals(): GoalService
 
-    fun miniapp(): MiniappService
+    public fun miniapp(): MiniappService
 
-    fun mcp(): McpService
+    public fun mcp(): McpService
 
-    fun ui(): UiService
+    public fun ui(): UiService
 
-    fun app(): AppInfoService
+    public fun app(): AppInfoService
 
-    fun bus(): PluginBus
+    public fun bus(): PluginBus
 
-    fun logs(): LogService
+    public fun logs(): LogService
 
-    fun chat(): ChatService = throw PluginServiceUnavailable("chat")
+    public fun chat(): ChatService = throw PluginServiceUnavailable("chat")
 
-    fun requestContributionsRefresh()
+    public fun requestContributionsRefresh()
 }
 
-data class PluginSessionSnapshot(
-    val sessionId: String,
-    val file: String?,
-    val cwd: String,
+public data class PluginSessionSnapshot(
+    public val sessionId: String,
+    public val file: String?,
+    public val cwd: String,
 )
 
-class PluginSessionInfo(
-    val supportsChatDelivery: Boolean,
-    private val lookup: () -> PluginSessionSnapshot?,
-) {
-    fun snapshot(): PluginSessionSnapshot? = lookup()
+public interface PluginSessionInfo {
+    public val supportsChatDelivery: Boolean
+
+    public fun snapshot(): PluginSessionSnapshot?
 }
 
-sealed interface PluginAvailability {
-    data object Available : PluginAvailability
+public interface PluginAvailability {
+    public val available: Boolean
 
-    data class Unavailable(val reason: String) : PluginAvailability
+    public val reason: String?
 }
 
-val PluginAvailability.isReady: Boolean
-    get() = this is PluginAvailability.Available
+public fun available(): PluginAvailability = PluginAvailabilityImpl(available = true, reason = null)
 
-data class PluginSkill(
-    val id: String,
-    val markdown: String,
-    val files: List<PluginSkillFile> = emptyList(),
-)
+public fun unavailable(reason: String): PluginAvailability =
+    PluginAvailabilityImpl(available = false, reason = reason)
 
-data class PluginSkillFile(
-    val path: String,
-    val content: String? = null,
-    val assetPath: String? = null,
-)
+internal data class PluginAvailabilityImpl(
+    override val available: Boolean,
+    override val reason: String?,
+) : PluginAvailability
 
-/**
- * 插件注入系统提示词的一段正文。
- *
- * [body] 为纯文本或 Markdown，会直接拼进 `<plugins>` 段（与其他插件正文之间空一行）。
- * 不要写 XML 标签：整段内容会被转义为实体。不要用 `#` 一级标题：`<plugins>` 已是顶层段，正文标题请从 `##` 开始。
- */
-data class PromptSection(
-    val id: String,
-    val body: String,
-    val priority: Int = 0,
-)
+public val PluginAvailability.isReady: Boolean
+    get() = available
+
+public interface PluginSkill {
+    public val id: String
+    public val markdown: String
+    public val files: List<PluginSkillFile>
+}
+
+public fun pluginSkill(
+    id: String,
+    markdown: String,
+    files: List<PluginSkillFile> = emptyList(),
+): PluginSkill = PluginSkillImpl(id, markdown, files)
+
+internal data class PluginSkillImpl(
+    override val id: String,
+    override val markdown: String,
+    override val files: List<PluginSkillFile>,
+) : PluginSkill
+
+public interface PluginSkillFile {
+    public val path: String
+    public val content: String?
+    public val assetPath: String?
+}
+
+public fun pluginSkillFile(
+    path: String,
+    content: String? = null,
+    assetPath: String? = null,
+): PluginSkillFile = PluginSkillFileImpl(path, content, assetPath)
+
+internal data class PluginSkillFileImpl(
+    override val path: String,
+    override val content: String?,
+    override val assetPath: String?,
+) : PluginSkillFile
+
+public interface PromptSection {
+    public val id: String
+    public val body: String
+    public val priority: Int
+}
+
+public fun promptSection(id: String, body: String, priority: Int = 0): PromptSection =
+    PromptSectionImpl(id, body, priority)
+
+internal data class PromptSectionImpl(
+    override val id: String,
+    override val body: String,
+    override val priority: Int,
+) : PromptSection
+
+@PluginExperimentalApi
+public interface PromptOverride {
+    public val preamble: String?
+    public val rules: String?
+    public val sections: List<PromptSection>
+    public val priority: Int
+}
+
+@PluginExperimentalApi
+public fun promptOverride(
+    preamble: String? = null,
+    rules: String? = null,
+    sections: List<PromptSection> = emptyList(),
+    priority: Int = 0,
+): PromptOverride = PromptOverrideImpl(preamble, rules, sections, priority)
+
+@OptIn(PluginExperimentalApi::class)
+internal data class PromptOverrideImpl(
+    override val preamble: String?,
+    override val rules: String?,
+    override val sections: List<PromptSection>,
+    override val priority: Int,
+) : PromptOverride
+
+@PluginExperimentalApi
+public interface PromptOverridePlugin {
+    public fun promptOverride(host: PluginHost): PromptOverride
+}

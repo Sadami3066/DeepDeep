@@ -10,7 +10,11 @@ class PluginSessionInfoTest {
     @Test
     fun snapshotReadsLiveLookupEveryTime() {
         var current: PluginSessionSnapshot? = null
-        val info = PluginSessionInfo(supportsChatDelivery = true) { current }
+        val info = object : PluginSessionInfo {
+            override val supportsChatDelivery: Boolean = true
+
+            override fun snapshot(): PluginSessionSnapshot? = current
+        }
 
         assertNull(info.snapshot())
 
@@ -27,8 +31,16 @@ class PluginSessionInfoTest {
 
     @Test
     fun supportsChatDeliveryIsExposed() {
-        val enabled = PluginSessionInfo(supportsChatDelivery = true) { null }
-        val disabled = PluginSessionInfo(supportsChatDelivery = false) { null }
+        val enabled = object : PluginSessionInfo {
+            override val supportsChatDelivery: Boolean = true
+
+            override fun snapshot(): PluginSessionSnapshot? = null
+        }
+        val disabled = object : PluginSessionInfo {
+            override val supportsChatDelivery: Boolean = false
+
+            override fun snapshot(): PluginSessionSnapshot? = null
+        }
 
         assertTrue(enabled.supportsChatDelivery)
         assertFalse(disabled.supportsChatDelivery)

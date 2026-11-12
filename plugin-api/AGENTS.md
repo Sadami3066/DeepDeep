@@ -1,47 +1,32 @@
 # plugin-api · 插件契约 SDK
 
-外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放类型与校验，不含宿主实现；`apiLevel = 5`。
+外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放契约类型与顶层工厂，不含宿主实现；manifest 解析/校验/版本比较已移到 `:app` 的 `plugin/host/external/`。`PLUGIN_API_LEVEL = 6`，`HOST_UI_API_LEVEL = 2`。
 
 ## 文件
 
 | 文件 | 职责 |
 |---|---|
-| `PluginApi.kt` | API/UI 等级常量（`PLUGIN_API_LEVEL=5`、`BASELINE_API_LEVEL=5`、`MIN_SUPPORTED_API_LEVEL=5`、`HOST_UI_API_LEVEL=1`）与默认语言 |
-| `Text.kt` | `LocalizedText`（`Literal` 为唯一可用形态，`Resource` 分支保留给宿主内部）、`IconRef`（`Asset` 为唯一可用形态，`Resource` 分支保留） |
-| `Manifest.kt` | `PluginManifest` / `Provides`（tools/skills/uiSlots/pages）/ `PluginCapability`（17 个宿主服务）/ `PublisherInfo` / `UiManifest` |
-| `PluginVersion.kt` | `major.minor.patch` 解析；完整 semver 比较（release > prerelease、build 忽略）与只比内核的 `compareCore` |
-| `PluginValidation.kt` | 格式/ABI/技能校验，返回带 `Severity` 的 `Issue` 列表；id 只接受反向域名，文本只接受 `Literal`、图标只接受 asset 路径 |
-| `PluginManifestCodec.kt` | `plugin.json`（`JsonObject`）→ `PluginManifest`；`parse` 宽容、`validate` 严格、`decode` 汇总为 `Result` |
-| `Plugin.kt` | `DeepDeepPlugin` 生命周期（availability/uninstall/onEnable/onDisable/onUpgrade/skills/promptSections/contributions/contributionsFor/ui/close）、`PluginHost` 服务入口、live 会话句柄 `PluginSessionInfo`/`PluginSessionSnapshot`、`PluginAvailability` 与 `isReady` |
-| `Contributions.kt` | `Contributions(tools, hooks)`、`PluginTool` 与工具结果 DTO |
-| `Hooks.kt` | `PluginEvent` 事件层级、3 类决策（输入/工具调用/工具结果）、prompt/context 文本变换与 `PluginHooks` |
-| `Ui.kt` | 槽位目录 `SlotIds`（tool.card/chat.message）、`SlotBinding` / `SlotContent.Compose`、`PluginPage`（页面内容内联）、`ComposerAction` |
-| `SlotStates.kt` | 槽位状态 DTO（`ToolCardSlotState`/`CustomMessageSlotState`）与 `SlotState`/`NoSlotState` |
-| `ServiceModels.kt` | 宿主服务 DTO：Linux/屏幕/通知/网络/文件/会话/job/timer/goal/小程序/MCP/App/总线 |
-| `Services.kt` | 宿主服务接口、`ChatService.sendMessage` 投递 DTO 与 `PluginServiceUnavailable` |
+| `PluginApi.kt` | 等级常量（`PLUGIN_API_LEVEL=6`、`BASELINE_API_LEVEL=6`、`MIN_SUPPORTED_API_LEVEL=6`、`HOST_UI_API_LEVEL=2`）与默认语言 |
+| `Annotations.kt` | `@PluginExperimentalApi`（`@RequiresOptIn` 实验通道） |
+| `Text.kt` | `LocalizedText` / `IconRef` 只读接口与 `localizedText()` / `assetIcon()` 工厂；外部插件不出现资源 id |
+| `Capabilities.kt` | `PluginCapability` value class + 18 个常量（含 `PROMPT`）与 `fromWire` |
+| `Manifest.kt` | `PluginManifest` / `UiManifest` / `PublisherInfo` / `Provides` 只读接口；宿主构造，插件不构造 |
+| `Plugin.kt` | `DeepDeepPlugin`、`PluginHost`、`PluginSessionInfo`、`PluginSessionSnapshot`、`PluginAvailability`、`PluginSkill`、`PromptSection`、`PromptOverridePlugin` 与工厂 |
+| `Contributions.kt` | `Contributions`、`PluginTool`、`PluginToolCall`、`PluginRunSignal`、`PluginToolResult`、`ToolBlock` 与工厂 |
+| `Hooks.kt` | `PluginEvent` 标记接口、21 个观察事件接口、5 个变换/闸门请求与决策、`PluginHooks`（默认空实现） |
+| `Ui.kt` | `SlotIds`、`SlotBinding`、`SlotContent`、`PluginPage`、`ComposerAction`、`PluginUiContributions` 与工厂 |
+| `SlotStates.kt` | `SlotState` 标记接口与 `ToolCardSlotState` / `CustomMessageSlotState` 只读接口 |
+| `Services.kt` | 17 个宿主服务接口、`PluginServiceUnavailable`、聊天 DTO 与工厂 |
+| `ServiceModels.kt` | 服务 DTO：插件构造走接口+工厂，结果状态用 value class，宿主构造的结果保留 data class |
+| `COMPATIBILITY.md` | 公开 ABI 承诺、允许/禁止改动、实验/弃用、兼容矩阵 |
+| `compat/` | ABI 基线（`level-6.api`、allowlist） |
 
-测试在 `src/test/kotlin`（JUnit4），覆盖 manifest 编解码与校验、版本比较（semver 与 `compareCore`）、槽位 ID 规则、capabilities 校验、hooks 默认值；运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`。公开 ABI 由 `scripts/plugin-api-abi.sh` + `plugin-api/abi/` 的 golden 清单固定，删改公开类型/签名必须显式更新清单并升版本。
+## 规则
 
-对外发布：`./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository`（产物在 `app/build/maven-repo`，group `io.github.sadami3066.deepdeep`，发布后复制到 `deepdeep-maven` 仓库并推送 Pages）；`plugin-api` 与 `design` 的版本号分别在各自 `build.gradle.kts` 的 `pluginApiVersion` 里维护，发布时按目标版本调整，不在文档里抄写具体版本。`design` 是 App 的设计系统，通过 `api(project(":design"))` 成为插件 UI 的编译期依赖，版本独立维护。发布前 ABI 可随时删改且不升级 `PLUGIN_API_LEVEL`，发布后才按「只做加法 + 改 ABI 升等级」执行）。
-
-## ABI 规则（对外承诺）
-
-- `PLUGIN_API_LEVEL` 现在是 5，`MIN_SUPPORTED_API_LEVEL = 5`；宿主只接受 `5..5` 的插件。**发布前没有兼容承诺**：当前可随时删改类型/签名且不升 level，插件必须按最新 SDK 重编译；发布后才启用「同一 level 只允许加法、删改变必须升 level、宿主拒绝 `apiLevel > 宿主`」的规则。
-- `BASELINE_API_LEVEL = 5`：manifest 未写 `apiLevel` 时按此值处理，`PluginManifestCodec.parse` 用它兜底；`PluginManifest` 程序化构造的默认值仍是 `PLUGIN_API_LEVEL`。
-- `minHostVersion` 用 `PluginVersion.compareCore` 比较，只看 major.minor.patch、忽略后缀（`0.2.0-dev` 视为 `0.2.0`），避免开发版被自己的 `minHostVersion` 卡住；完整 `compareTo` 按 semver 处理预发布与 build 元数据。
-- `PluginSessionInfo` 是宿主持有的 live handle：`contributionsFor` 拿到它时不要缓存/拷贝字段，需要会话时在工具回调里调 `snapshot()`；`PluginToolCall.sessionId` 也由宿主在 execute 时解析。
-- `ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL` 不匹配、或 `ui.kotlin`/`ui.compose` 与宿主不一致时，只禁用该插件的 UI（`pagesOf` 返回空、槽位不渲染），不拒绝插件本身。
-- 插件依赖必须 `compileOnly`，禁止打包 `plugin-api`、Compose、coroutines、kotlinx-serialization；宿主 parent-first，两边共享同一份类。
-- 字符串/图标不走资源 id：外部插件只能用 `LocalizedText.Literal` 与 `icon: asset:<path>`；校验器拒绝 `LocalizedText.Resource` / `IconRef.Resource`。
-- 宿主服务未在 manifest `capabilities` 声明、或已声明但当前不可用，均抛 `PluginServiceUnavailable`（`reason` 区分 `not declared in manifest` / `unavailable`），不返回 null。
-- 工具 DTO（`PluginTool`/`PluginToolResult`）是本模块自有类型，宿主在边界转成 pi SDK 的 `CodingTool`；`:runtime` 不依赖本模块，避免把 SDK ABI 绑进运行时。
-
-## 要点
-
-- `PluginManifestCodec` 必须是纯 JVM（不 import Android），宿主装载器只解析一次；未知字段忽略，错误标量类型退化为默认值交给 `validate` 报 `Issue`。
-- 槽位目录只有 `tool.card.content:<toolName>` 与 `chat.message:<customType>` 两类；整页界面用 `PluginPage(id, title, icon?, content)` 声明，内容内联，输入区动作用 `ComposerAction`，都不是 `SlotBinding`。实例后缀必填且要过 `SlotIds.matches`；页面 id 允许点号。
-- 插件 UI 只有自由 Compose 一条轨道：`SlotContent.Compose(render: @Composable (SlotState) -> Unit)` 用于工具卡/自定义消息槽位，`PluginPage.content` 用于整页界面；宿主不再有声明式节点渲染。插件 UI 直接用 App 的 `:design` 设计系统（`DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()` 等），与 App 视觉完全同源；`design` 由本模块 `api()` 传递，插件仍 `compileOnly` 不打包，运行时由宿主 parent classloader 解析。
-- `PluginHooks` 21 个通知回调按 `OBSERVE_TIMEOUT_MS`（5s）派发，5 个变换/闸门按 `TRANSFORM_TIMEOUT_MS`（2s）；默认实现全部 no-op，`PluginHooks.None` 是一个空实现。闸门失败按 fail-closed 由宿主决定。
-- 插件不再有安装/连接/状态/设置/动作/详情行的声明式面；外部包由宿主安装，插件自己的 CLI 下载、登录与状态管理由插件页面自行完成。
-- `PluginHost` 暴露 17 个宿主服务访问器（linux/screen/notifications/secrets/network/files/sessions/jobs/timers/goals/miniapp/mcp/ui/app/bus/logs/chat）与 `requestContributionsRefresh()`（插件页面改完状态后请求宿主重物化贡献并重建会话），另保留 `manifest/context/dataDir/assetsDir/scope/text` 旧签名；`text` 的 `vararg args: Any` 是 P0 兼容保留，格式化参数只接受字符串与数字，新 API 不再引入 `Any`。
-- 本模块没有 res 与用户可见文案；诊断信息是开发侧英文，用户可见字符串由宿主用 `host.text` 解析 `LocalizedText`。
+- **构造走工厂**：插件需要构造的类型只提供接口 + 顶层工厂（`pluginTool`、`pluginSkill`、`promptSection`、`pluginPage`、`slotBinding`、`textResult`、`localizedText`、`timerRequest` 等）；不要新增公开 data class 构造器或把内部实现暴露成公共类型。
+- **事件走接口**：`PluginEvent` 是非 sealed 标记接口，每个事件是宿主实现的只读接口；新增事件用新的 `PluginHooks` 默认方法，不往旧 sealed 里加子类型。
+- **状态用 value class**：可能增长的结果状态（`MessageRole`、`ToolPhase`、`JobStatus`、`GoalPhase`、`McpServerStatus`、`ChatSendKind` 等）用 `@JvmInline value class` + 常量；请求侧闭合枚举保留。
+- **实验能力**：prompt 覆盖等新能力标 `@PluginExperimentalApi`，转正时只去注解、不改签名。
+- explicit API 模式开启：新增公共声明必须显式 `public`，内部实现保持 `internal`。
+- 改公开类型/签名前后跑 `./scripts/api-compat.sh`；破坏性变更必须升 `PLUGIN_API_LEVEL`、更新兼容基线并写 `CHANGELOG.md`。
+- 测试在 `src/test/kotlin`（JUnit4），运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`；`./scripts/gradlew-locked :plugin-api:publishAllPublicationsToPagesRepository` 发布 SDK 到 `build/maven-repo`，再复制到 `deepdeep-maven` 仓库。

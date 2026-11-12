@@ -2,250 +2,329 @@ package io.github.whywood.deepdeep.plugin.api
 
 import kotlinx.serialization.json.JsonObject
 
-sealed interface PluginEvent {
-    data class SessionStarted(
-        val sessionId: String,
-        val title: String? = null,
-        val workspace: String? = null,
-    ) : PluginEvent
+public interface PluginEvent
 
-    data class SessionClosed(val sessionId: String) : PluginEvent
-
-    data class RunStarted(
-        val sessionId: String,
-        val runId: String,
-    ) : PluginEvent
-
-    data class RunFinished(
-        val sessionId: String,
-        val runId: String,
-        val error: String? = null,
-    ) : PluginEvent {
-        val succeeded: Boolean get() = error == null
-    }
-
-    data class TurnStarted(
-        val sessionId: String,
-        val turnId: String,
-    ) : PluginEvent
-
-    data class TurnFinished(
-        val sessionId: String,
-        val turnId: String,
-        val failed: Boolean = false,
-    ) : PluginEvent
-
-    enum class MessageRole {
-        USER,
-        ASSISTANT,
-        TOOL,
-        SYSTEM,
-    }
-
-    data class MessageStarted(
-        val sessionId: String,
-        val messageId: String,
-        val role: MessageRole,
-    ) : PluginEvent
-
-    data class MessageDelta(
-        val sessionId: String,
-        val messageId: String,
-        val delta: String,
-    ) : PluginEvent
-
-    data class MessageFinished(
-        val sessionId: String,
-        val messageId: String,
-        val text: String? = null,
-    ) : PluginEvent
-
-    enum class ToolPhase {
-        STARTED,
-        PARTIAL,
-        FINISHED,
-        FAILED,
-    }
-
-    data class ToolExecutionUpdate(
-        val sessionId: String,
-        val callId: String,
-        val toolName: String,
-        val phase: ToolPhase,
-        val partial: PluginToolResult? = null,
-    ) : PluginEvent
-
-    data class CompactionStarted(val sessionId: String) : PluginEvent
-
-    data class CompactionFinished(
-        val sessionId: String,
-        val tokensBefore: Long,
-        val tokensAfter: Long,
-    ) : PluginEvent
-
-    data class CompactionFailed(
-        val sessionId: String,
-        val error: String,
-    ) : PluginEvent
-
-    data class ModelChanged(
-        val sessionId: String,
-        val model: String,
-    ) : PluginEvent
-
-    data class ThinkingLevelChanged(
-        val sessionId: String,
-        val level: String,
-    ) : PluginEvent
-
-    data class RetryScheduled(
-        val sessionId: String,
-        val attempt: Int,
-        val delayMs: Long,
-        val reason: String? = null,
-    ) : PluginEvent
-
-    data class RetrySucceeded(
-        val sessionId: String,
-        val attempt: Int,
-    ) : PluginEvent
-
-    data class RetryExhausted(
-        val sessionId: String,
-        val attempts: Int,
-        val error: String,
-    ) : PluginEvent
-
-    data class McpStatusChanged(
-        val server: String,
-        val status: McpServerStatus,
-    ) : PluginEvent
-
-    data class McpToolsChanged(
-        val server: String,
-        val tools: List<String>,
-    ) : PluginEvent
-
-    data class BusEvent(val event: PluginBusEvent) : PluginEvent
+public interface SessionStartedEvent : PluginEvent {
+    public val sessionId: String
+    public val title: String?
+    public val workspace: String?
 }
 
-data class PromptRequest(
-    val sessionId: String,
-    val prompt: String,
-)
+public interface SessionClosedEvent : PluginEvent {
+    public val sessionId: String
+}
 
-data class PluginContextRequest(
-    val sessionId: String,
-    val cwd: String,
-    val providerId: String? = null,
-    val modelId: String? = null,
-)
+public interface RunStartedEvent : PluginEvent {
+    public val sessionId: String
+    public val runId: String
+}
 
-data class InputRequest(
-    val sessionId: String,
-    val text: String,
-    val imagePaths: List<String> = emptyList(),
-)
+public interface RunFinishedEvent : PluginEvent {
+    public val sessionId: String
+    public val runId: String
+    public val error: String?
 
-sealed interface InputDecision {
-    data class Continue(
-        val text: String,
-        val imagePaths: List<String> = emptyList(),
-    ) : InputDecision
+    public val succeeded: Boolean
+        get() = error == null
+}
 
-    data object Handled : InputDecision
+public interface TurnStartedEvent : PluginEvent {
+    public val sessionId: String
+    public val turnId: String
+}
 
-    companion object {
-        fun continueWith(request: InputRequest): Continue = Continue(request.text, request.imagePaths)
+public interface TurnFinishedEvent : PluginEvent {
+    public val sessionId: String
+    public val turnId: String
+    public val failed: Boolean
+}
+
+@JvmInline
+public value class MessageRole private constructor(public val wire: String) {
+    public companion object {
+        public val USER: MessageRole = MessageRole("user")
+        public val ASSISTANT: MessageRole = MessageRole("assistant")
+        public val TOOL: MessageRole = MessageRole("tool")
+        public val SYSTEM: MessageRole = MessageRole("system")
+        public val ALL: List<MessageRole> = listOf(USER, ASSISTANT, TOOL, SYSTEM)
+
+        public fun fromWire(value: String): MessageRole? = ALL.firstOrNull { it.wire == value }
     }
+
+    override fun toString(): String = wire
 }
 
-data class ToolCallRequest(
-    val sessionId: String,
-    val callId: String,
-    val toolName: String,
-    val args: JsonObject,
+public interface MessageStartedEvent : PluginEvent {
+    public val sessionId: String
+    public val messageId: String
+    public val role: MessageRole
+}
+
+public interface MessageDeltaEvent : PluginEvent {
+    public val sessionId: String
+    public val messageId: String
+    public val delta: String
+}
+
+public interface MessageFinishedEvent : PluginEvent {
+    public val sessionId: String
+    public val messageId: String
+    public val text: String?
+}
+
+@JvmInline
+public value class ToolPhase private constructor(public val wire: String) {
+    public companion object {
+        public val STARTED: ToolPhase = ToolPhase("started")
+        public val PARTIAL: ToolPhase = ToolPhase("partial")
+        public val FINISHED: ToolPhase = ToolPhase("finished")
+        public val FAILED: ToolPhase = ToolPhase("failed")
+        public val ALL: List<ToolPhase> = listOf(STARTED, PARTIAL, FINISHED, FAILED)
+
+        public fun fromWire(value: String): ToolPhase? = ALL.firstOrNull { it.wire == value }
+    }
+
+    override fun toString(): String = wire
+}
+
+public interface ToolExecutionUpdateEvent : PluginEvent {
+    public val sessionId: String
+    public val callId: String
+    public val toolName: String
+    public val phase: ToolPhase
+    public val partial: PluginToolResult?
+}
+
+public interface CompactionStartedEvent : PluginEvent {
+    public val sessionId: String
+}
+
+public interface CompactionFinishedEvent : PluginEvent {
+    public val sessionId: String
+    public val tokensBefore: Long
+    public val tokensAfter: Long
+}
+
+public interface CompactionFailedEvent : PluginEvent {
+    public val sessionId: String
+    public val error: String
+}
+
+public interface ModelChangedEvent : PluginEvent {
+    public val sessionId: String
+    public val model: String
+}
+
+public interface ThinkingLevelChangedEvent : PluginEvent {
+    public val sessionId: String
+    public val level: String
+}
+
+public interface RetryScheduledEvent : PluginEvent {
+    public val sessionId: String
+    public val attempt: Int
+    public val delayMs: Long
+    public val reason: String?
+}
+
+public interface RetrySucceededEvent : PluginEvent {
+    public val sessionId: String
+    public val attempt: Int
+}
+
+public interface RetryExhaustedEvent : PluginEvent {
+    public val sessionId: String
+    public val attempts: Int
+    public val error: String
+}
+
+public interface McpStatusChangedEvent : PluginEvent {
+    public val server: String
+    public val status: McpServerStatus
+}
+
+public interface McpToolsChangedEvent : PluginEvent {
+    public val server: String
+    public val tools: List<String>
+}
+
+public interface BusEventReceived : PluginEvent {
+    public val event: PluginBusEvent
+}
+
+public data class PromptRequest(
+    public val sessionId: String,
+    public val prompt: String,
 )
 
-sealed interface ToolCallDecision {
-    data object Continue : ToolCallDecision
-
-    data class Block(val reason: String) : ToolCallDecision
-
-    data class Rewrite(val args: JsonObject) : ToolCallDecision
-}
-
-data class ToolExecutionResult(
-    val sessionId: String,
-    val callId: String,
-    val toolName: String,
-    val result: PluginToolResult,
+public data class PluginContextRequest(
+    public val sessionId: String,
+    public val cwd: String,
+    public val providerId: String? = null,
+    public val modelId: String? = null,
 )
 
-sealed interface ToolResultDecision {
-    data object Keep : ToolResultDecision
+public data class InputRequest(
+    public val sessionId: String,
+    public val text: String,
+    public val imagePaths: List<String> = emptyList(),
+)
 
-    data class Replace(val result: PluginToolResult) : ToolResultDecision
+public interface InputDecision {
+    public val text: String?
+    public val imagePaths: List<String>
+    public val handled: Boolean
 }
 
-interface PluginHooks {
-    suspend fun sessionStarted(event: PluginEvent.SessionStarted) = Unit
+public fun inputContinue(text: String, imagePaths: List<String> = emptyList()): InputDecision =
+    InputDecisionImpl(text = text, imagePaths = imagePaths, handled = false)
 
-    suspend fun sessionClosed(event: PluginEvent.SessionClosed) = Unit
+public fun inputHandled(): InputDecision =
+    InputDecisionImpl(text = null, imagePaths = emptyList(), handled = true)
 
-    suspend fun runStarted(event: PluginEvent.RunStarted) = Unit
+internal data class InputDecisionImpl(
+    override val text: String?,
+    override val imagePaths: List<String>,
+    override val handled: Boolean,
+) : InputDecision
 
-    suspend fun runFinished(event: PluginEvent.RunFinished) = Unit
+public data class ToolCallRequest(
+    public val sessionId: String,
+    public val callId: String,
+    public val toolName: String,
+    public val args: JsonObject,
+)
 
-    suspend fun turnStarted(event: PluginEvent.TurnStarted) = Unit
+@JvmInline
+public value class ToolCallAction private constructor(public val wire: String) {
+    public companion object {
+        public val CONTINUE: ToolCallAction = ToolCallAction("continue")
+        public val BLOCK: ToolCallAction = ToolCallAction("block")
+        public val REWRITE: ToolCallAction = ToolCallAction("rewrite")
+        public val ALL: List<ToolCallAction> = listOf(CONTINUE, BLOCK, REWRITE)
 
-    suspend fun turnFinished(event: PluginEvent.TurnFinished) = Unit
+        public fun fromWire(value: String): ToolCallAction? = ALL.firstOrNull { it.wire == value }
+    }
 
-    suspend fun messageStarted(event: PluginEvent.MessageStarted) = Unit
+    override fun toString(): String = wire
+}
 
-    suspend fun messageDelta(event: PluginEvent.MessageDelta) = Unit
+public interface ToolCallDecision {
+    public val action: ToolCallAction
+    public val reason: String?
+    public val args: JsonObject?
+}
 
-    suspend fun messageFinished(event: PluginEvent.MessageFinished) = Unit
+public fun toolContinue(): ToolCallDecision =
+    ToolCallDecisionImpl(ToolCallAction.CONTINUE, reason = null, args = null)
 
-    suspend fun toolExecutionUpdate(event: PluginEvent.ToolExecutionUpdate) = Unit
+public fun toolBlock(reason: String): ToolCallDecision =
+    ToolCallDecisionImpl(ToolCallAction.BLOCK, reason = reason, args = null)
 
-    suspend fun compactionStarted(event: PluginEvent.CompactionStarted) = Unit
+public fun toolRewrite(args: JsonObject): ToolCallDecision =
+    ToolCallDecisionImpl(ToolCallAction.REWRITE, reason = null, args = args)
 
-    suspend fun compactionFinished(event: PluginEvent.CompactionFinished) = Unit
+internal data class ToolCallDecisionImpl(
+    override val action: ToolCallAction,
+    override val reason: String?,
+    override val args: JsonObject?,
+) : ToolCallDecision
 
-    suspend fun compactionFailed(event: PluginEvent.CompactionFailed) = Unit
+public data class ToolExecutionResult(
+    public val sessionId: String,
+    public val callId: String,
+    public val toolName: String,
+    public val result: PluginToolResult,
+)
 
-    suspend fun modelChanged(event: PluginEvent.ModelChanged) = Unit
+@JvmInline
+public value class ToolResultAction private constructor(public val wire: String) {
+    public companion object {
+        public val KEEP: ToolResultAction = ToolResultAction("keep")
+        public val REPLACE: ToolResultAction = ToolResultAction("replace")
+        public val ALL: List<ToolResultAction> = listOf(KEEP, REPLACE)
 
-    suspend fun thinkingLevelChanged(event: PluginEvent.ThinkingLevelChanged) = Unit
+        public fun fromWire(value: String): ToolResultAction? = ALL.firstOrNull { it.wire == value }
+    }
 
-    suspend fun retryScheduled(event: PluginEvent.RetryScheduled) = Unit
+    override fun toString(): String = wire
+}
 
-    suspend fun retrySucceeded(event: PluginEvent.RetrySucceeded) = Unit
+public interface ToolResultDecision {
+    public val action: ToolResultAction
+    public val result: PluginToolResult?
+}
 
-    suspend fun retryExhausted(event: PluginEvent.RetryExhausted) = Unit
+public fun resultKeep(): ToolResultDecision =
+    ToolResultDecisionImpl(ToolResultAction.KEEP, result = null)
 
-    suspend fun mcpStatusChanged(event: PluginEvent.McpStatusChanged) = Unit
+public fun resultReplace(result: PluginToolResult): ToolResultDecision =
+    ToolResultDecisionImpl(ToolResultAction.REPLACE, result = result)
 
-    suspend fun mcpToolsChanged(event: PluginEvent.McpToolsChanged) = Unit
+internal data class ToolResultDecisionImpl(
+    override val action: ToolResultAction,
+    override val result: PluginToolResult?,
+) : ToolResultDecision
 
-    suspend fun busEvent(event: PluginEvent.BusEvent) = Unit
+public interface PluginHooks {
+    public suspend fun sessionStarted(event: SessionStartedEvent): Unit = Unit
 
-    suspend fun promptTransform(request: PromptRequest): String = request.prompt
+    public suspend fun sessionClosed(event: SessionClosedEvent): Unit = Unit
 
-    suspend fun context(request: PluginContextRequest): String? = null
+    public suspend fun runStarted(event: RunStartedEvent): Unit = Unit
 
-    suspend fun inputTransform(request: InputRequest): InputDecision = InputDecision.continueWith(request)
+    public suspend fun runFinished(event: RunFinishedEvent): Unit = Unit
 
-    suspend fun beforeToolCall(request: ToolCallRequest): ToolCallDecision = ToolCallDecision.Continue
+    public suspend fun turnStarted(event: TurnStartedEvent): Unit = Unit
 
-    suspend fun afterToolExecution(request: ToolExecutionResult): ToolResultDecision = ToolResultDecision.Keep
+    public suspend fun turnFinished(event: TurnFinishedEvent): Unit = Unit
 
-    companion object {
-        const val TRANSFORM_TIMEOUT_MS: Long = 2_000
+    public suspend fun messageStarted(event: MessageStartedEvent): Unit = Unit
 
-        const val OBSERVE_TIMEOUT_MS: Long = 5_000
+    public suspend fun messageDelta(event: MessageDeltaEvent): Unit = Unit
 
-        val None: PluginHooks = object : PluginHooks {}
+    public suspend fun messageFinished(event: MessageFinishedEvent): Unit = Unit
+
+    public suspend fun toolExecutionUpdate(event: ToolExecutionUpdateEvent): Unit = Unit
+
+    public suspend fun compactionStarted(event: CompactionStartedEvent): Unit = Unit
+
+    public suspend fun compactionFinished(event: CompactionFinishedEvent): Unit = Unit
+
+    public suspend fun compactionFailed(event: CompactionFailedEvent): Unit = Unit
+
+    public suspend fun modelChanged(event: ModelChangedEvent): Unit = Unit
+
+    public suspend fun thinkingLevelChanged(event: ThinkingLevelChangedEvent): Unit = Unit
+
+    public suspend fun retryScheduled(event: RetryScheduledEvent): Unit = Unit
+
+    public suspend fun retrySucceeded(event: RetrySucceededEvent): Unit = Unit
+
+    public suspend fun retryExhausted(event: RetryExhaustedEvent): Unit = Unit
+
+    public suspend fun mcpStatusChanged(event: McpStatusChangedEvent): Unit = Unit
+
+    public suspend fun mcpToolsChanged(event: McpToolsChangedEvent): Unit = Unit
+
+    public suspend fun busEvent(event: BusEventReceived): Unit = Unit
+
+    public suspend fun promptTransform(request: PromptRequest): String = request.prompt
+
+    public suspend fun context(request: PluginContextRequest): String? = null
+
+    public suspend fun inputTransform(request: InputRequest): InputDecision =
+        inputContinue(request.text, request.imagePaths)
+
+    public suspend fun beforeToolCall(request: ToolCallRequest): ToolCallDecision = toolContinue()
+
+    public suspend fun afterToolExecution(request: ToolExecutionResult): ToolResultDecision = resultKeep()
+
+    public companion object {
+        public const val TRANSFORM_TIMEOUT_MS: Long = 2_000
+
+        public const val OBSERVE_TIMEOUT_MS: Long = 5_000
+
+        public val None: PluginHooks = object : PluginHooks {}
     }
 }

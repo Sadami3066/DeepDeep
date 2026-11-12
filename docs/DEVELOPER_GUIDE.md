@@ -34,7 +34,7 @@ Agent SDK 依赖经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:p
 ./scripts/check.sh --device     # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh         # 插件端到端（设备或模拟器，无需 root）
 ./scripts/plugin-bundles-e2e.sh # 四个官方插件包回归（需先构建插件仓库）
-./scripts/plugin-api-abi.sh     # 单独校验插件 SDK ABI 基线（--update 更新）
+./scripts/api-compat.sh         # 校验 plugin-api 与 design 的公开 ABI（--update 重建基线）
 ```
 
 Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Kotlin 2g / workers 2）；`gradlew-locked` 用 flock 串行化构建并丢弃 `-Dorg.gradle.jvmargs`、`-Pkotlin.daemon.jvmargs` 覆盖。长时间不构建时用 `build.sh stop` 回收内存。
@@ -96,7 +96,7 @@ Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Ko
 - 需要 `adb`。多设备在线时用 `ANDROID_SERIAL` 指定；脚本优先用它，其次是唯一在线的设备，多台在线且未指定会报错。
 - 插件 e2e 需要插件仓库：默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`（`plugin-e2e.sh` 对应 DeepDeep-Plugins，`plugin-bundles-e2e.sh` 对应官方插件仓库），找不到或换位置时用 `PLUGINS_DIR` 指定。`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具；缺夹具时脚本会提示用 `E2E_DDP` 指定已签名的包。
 - `check.sh --device` 与两个 e2e 都覆盖安装 debug 包：设备上已有同包名但签名不同的构建（例如 release APK）时会安装失败，debug 与 release 签名不能互换，需先卸载（会清 App 数据）或换设备/模拟器；e2e 失败会以非 0 退出码结束。
-- `plugin-api-abi.sh` 需要 `unzip`、`jar`、`javap`；后两者由 JDK 提供，脚本会自检并提示缺什么。
+- `api-compat.sh` 需要 `unzip`、`jar`、`javap`；后两者由 JDK 提供，脚本会自检并提示缺什么。
 
 ## 发布
 

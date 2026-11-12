@@ -1,0 +1,444 @@
+public final class io.github.whywood.deepdeep.design.ComposableSingletons$DdDialogKt {
+  public static final io.github.whywood.deepdeep.design.ComposableSingletons$DdDialogKt INSTANCE;
+  public io.github.whywood.deepdeep.design.ComposableSingletons$DdDialogKt();
+  public final kotlin.jvm.functions.Function3<androidx.compose.foundation.layout.ColumnScope, androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> getLambda$643308315$design();
+}
+public final class io.github.whywood.deepdeep.design.DdAlpha {
+  public static final io.github.whywood.deepdeep.design.DdAlpha INSTANCE;
+  public static final float Disabled;
+  public static final float Hairline;
+  public static final float Divider;
+  public static final float Border;
+  public static final float Muted;
+  public static final float Secondary;
+  public static final float Press;
+  public static final float Ripple;
+  public static final float TrackLight;
+  public static final float TrackDark;
+  public static final float IndicatorDark;
+  public static final float Spot;
+  public static final float SpotFocused;
+  public static final int $stable;
+}
+public final class io.github.whywood.deepdeep.design.DdAvatarKt {
+  public static final void DdAvatar--b7W0Lw(androidx.compose.ui.Modifier, androidx.compose.ui.graphics.ImageBitmap, java.lang.String, float, io.github.whywood.deepdeep.design.DdIcon, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdComponentsKt {
+  public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.unit.Dp> getLocalDdRowHorizontalPadding();
+  public static final void DdPressable-hYmLsZ8(kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, androidx.compose.ui.graphics.Shape, long, boolean, java.lang.String, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.BoxScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdPressable-d9l2l_o(kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.foundation.interaction.MutableInteractionSource, androidx.compose.ui.Modifier, androidx.compose.ui.graphics.Shape, long, boolean, androidx.compose.ui.hapticfeedback.HapticFeedbackType, java.lang.String, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.BoxScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdIconButton-1DmPjLc(io.github.whywood.deepdeep.design.DdIcon, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, androidx.compose.ui.Modifier, float, float, long, long, boolean, androidx.compose.runtime.Composer, int, int);
+  public static final void DdWordmark-eopBjH0(androidx.compose.ui.Modifier, long, long, androidx.compose.ui.text.TextStyle, androidx.compose.runtime.Composer, int, int);
+  public static final void DdHairline-iJQMabo(androidx.compose.ui.Modifier, long, androidx.compose.runtime.Composer, int, int);
+  public static final void DdRowDivider-9IZ8Weo(androidx.compose.ui.Modifier, float, long, androidx.compose.runtime.Composer, int, int);
+  public static final void DdSectionLabel(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
+  public static final void DdTextAction-uDo3WH8(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, long, boolean, androidx.compose.runtime.Composer, int, int);
+  public static final void DdListRow(java.lang.String, androidx.compose.ui.Modifier, java.lang.String, java.lang.String, io.github.whywood.deepdeep.design.DdIcon, kotlin.jvm.functions.Function0<kotlin.Unit>, boolean, boolean, int, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdListRow-0S3VyRs(java.lang.String, io.github.whywood.deepdeep.design.DdIcon, androidx.compose.ui.Modifier, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, boolean, boolean, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, long, long, androidx.compose.runtime.Composer, int, int);
+  public static final void DdChip(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, boolean, io.github.whywood.deepdeep.design.DdIcon, boolean, androidx.compose.runtime.Composer, int, int);
+  public static final void DdPrimaryButton(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, boolean, androidx.compose.runtime.Composer, int, int);
+  public static final void DdSheet-drOMvmE(kotlin.jvm.functions.Function0<kotlin.Unit>, boolean, androidx.compose.ui.graphics.Color, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdSheetHeader(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.runtime.Composer, int);
+}
+public final class io.github.whywood.deepdeep.design.DdCompositeFont extends androidx.compose.ui.text.font.AndroidFont {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdCompositeFont(int, androidx.compose.ui.text.font.FontWeight, boolean);
+  public final int getLatinRes$design();
+  public androidx.compose.ui.text.font.FontWeight getWeight();
+  public final boolean getVariable$design();
+  public int getStyle-_-LCdwA();
+}
+public final class io.github.whywood.deepdeep.design.DdCompositeFontKt {
+  public static final int SYSTEM_LATIN_RES;
+}
+public final class io.github.whywood.deepdeep.design.DdCompositeTypefaceLoader implements androidx.compose.ui.text.font.AndroidFont$TypefaceLoader {
+  public static final io.github.whywood.deepdeep.design.DdCompositeTypefaceLoader INSTANCE;
+  public static final int $stable;
+  public android.graphics.Typeface loadBlocking(android.content.Context, androidx.compose.ui.text.font.AndroidFont);
+  public java.lang.Object awaitLoad(android.content.Context, androidx.compose.ui.text.font.AndroidFont, kotlin.coroutines.Continuation<? super android.graphics.Typeface>);
+  public final void preload(android.content.Context, java.util.List<io.github.whywood.deepdeep.design.DdCompositeFont>);
+  public static final android.graphics.Typeface access$typeface(io.github.whywood.deepdeep.design.DdCompositeTypefaceLoader, android.content.Context, io.github.whywood.deepdeep.design.DdCompositeFont);
+}
+final class io.github.whywood.deepdeep.design.DdCompositeTypefaceLoader$awaitLoad$3 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super android.graphics.Typeface>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super android.graphics.Typeface>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdControlsKt {
+  public static final void DdSwitch-FV1VA1c(boolean, kotlin.jvm.functions.Function1<? super java.lang.Boolean, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, java.lang.String, androidx.compose.ui.graphics.Color, androidx.compose.runtime.Composer, int, int);
+  public static final <T> void DdSegmentedControl(java.util.List<? extends T>, T, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, kotlin.jvm.functions.Function4<? super T, ? super java.lang.Boolean, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final <T> void DdSegmentedControl(java.util.List<? extends T>, T, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, kotlin.jvm.functions.Function3<? super T, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, java.lang.String>, androidx.compose.runtime.Composer, int, int);
+  public static final <T> void DdSegmentedCore-w9Mgt0o(java.util.List<? extends T>, T, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, float, androidx.compose.ui.graphics.Shape, androidx.compose.ui.graphics.Shape, float, long, java.util.List<java.lang.String>, kotlin.jvm.functions.Function4<? super T, ? super java.lang.Boolean, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdDialogKt {
+  public static final void DdDialog(kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, java.lang.String, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+final class io.github.whywood.deepdeep.design.DdDialogKt$DdDialog$1$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdDropdownKt {
+  public static final void DdDropdown(boolean, kotlin.jvm.functions.Function0<kotlin.Unit>, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void access$DdDropdown$lambda$8(androidx.compose.runtime.MutableState, boolean);
+}
+final class io.github.whywood.deepdeep.design.DdDropdownKt$DdDropdown$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdDropdownKt$DdDropdown$lambda$10$0$$inlined$onDispose$1 implements androidx.compose.runtime.DisposableEffectResult {
+  public io.github.whywood.deepdeep.design.DdDropdownKt$DdDropdown$lambda$10$0$$inlined$onDispose$1(androidx.lifecycle.LifecycleOwner, androidx.lifecycle.LifecycleEventObserver);
+  public void dispose();
+}
+public final class io.github.whywood.deepdeep.design.DdElevation {
+  public static final io.github.whywood.deepdeep.design.DdElevation INSTANCE;
+  public static final int $stable;
+  public final float getNone-D9Ej5fM();
+  public final float getIndicator-D9Ej5fM();
+  public final float getThumb-D9Ej5fM();
+  public final float getSoft-D9Ej5fM();
+  public final float getComposer-D9Ej5fM();
+  public final float getOverlay-D9Ej5fM();
+  public final float getPanel-D9Ej5fM();
+  public final float getComposerFocused-D9Ej5fM();
+  public final float getMenu-D9Ej5fM();
+}
+public final class io.github.whywood.deepdeep.design.DdEmptyStateKt {
+  public static final void DdEmptyState(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
+  public static final void DdEmptyState(java.lang.String, io.github.whywood.deepdeep.design.DdIcon, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdFonts {
+  public static final io.github.whywood.deepdeep.design.DdFonts INSTANCE;
+  public static final int $stable;
+  public final io.github.whywood.deepdeep.design.DdFontStyle getStyle();
+  public final void apply(io.github.whywood.deepdeep.design.DdFontStyle);
+  public final androidx.compose.ui.text.font.FontFamily familyFor(io.github.whywood.deepdeep.design.DdFontStyle);
+  public final void preload(android.content.Context);
+  public final androidx.compose.ui.text.font.FontFamily getSans();
+  public final androidx.compose.ui.text.font.FontFamily getDisplay();
+}
+public final class io.github.whywood.deepdeep.design.DdFonts$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+}
+public final class io.github.whywood.deepdeep.design.DdFontStyle extends java.lang.Enum<io.github.whywood.deepdeep.design.DdFontStyle> {
+  public static final io.github.whywood.deepdeep.design.DdFontStyle$Companion Companion;
+  public static final io.github.whywood.deepdeep.design.DdFontStyle FREDOKA;
+  public static final io.github.whywood.deepdeep.design.DdFontStyle OPEN_RUNDE;
+  public static final io.github.whywood.deepdeep.design.DdFontStyle LORA;
+  public static final io.github.whywood.deepdeep.design.DdFontStyle MANROPE;
+  public static final io.github.whywood.deepdeep.design.DdFontStyle SYSTEM;
+  public final java.lang.String getId();
+  public final java.lang.String getDisplayName();
+  public static io.github.whywood.deepdeep.design.DdFontStyle[] values();
+  public static io.github.whywood.deepdeep.design.DdFontStyle valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.DdFontStyle> getEntries();
+}
+public final class io.github.whywood.deepdeep.design.DdFontStyle$Companion {
+  public final io.github.whywood.deepdeep.design.DdFontStyle fromId(java.lang.String);
+  public io.github.whywood.deepdeep.design.DdFontStyle$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public final class io.github.whywood.deepdeep.design.DdGroupCardKt {
+  public static final void DdGroupCard(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdGroupCard(kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdIcon {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdIcon(int);
+  public final int getRes();
+}
+public final class io.github.whywood.deepdeep.design.DdIconBoxKt {
+  public static final void DdIconBox-18CubZ8(io.github.whywood.deepdeep.design.DdIcon, androidx.compose.ui.Modifier, float, float, androidx.compose.ui.graphics.Shape, long, long, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdIconKt {
+  public static final void DdIcon-T3al52E(io.github.whywood.deepdeep.design.DdIcon, long, androidx.compose.ui.Modifier, float, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdIcons {
+  public static final io.github.whywood.deepdeep.design.DdIcons INSTANCE;
+  public static final int $stable;
+  public final io.github.whywood.deepdeep.design.DdIcon getApps();
+  public final io.github.whywood.deepdeep.design.DdIcon getArchive();
+  public final io.github.whywood.deepdeep.design.DdIcon getArrowLeft();
+  public final io.github.whywood.deepdeep.design.DdIcon getArrowUp();
+  public final io.github.whywood.deepdeep.design.DdIcon getAudioLines();
+  public final io.github.whywood.deepdeep.design.DdIcon getBook();
+  public final io.github.whywood.deepdeep.design.DdIcon getBrain();
+  public final io.github.whywood.deepdeep.design.DdIcon getCamera();
+  public final io.github.whywood.deepdeep.design.DdIcon getChatPreferences();
+  public final io.github.whywood.deepdeep.design.DdIcon getCheck();
+  public final io.github.whywood.deepdeep.design.DdIcon getChevronDown();
+  public final io.github.whywood.deepdeep.design.DdIcon getChevronRight();
+  public final io.github.whywood.deepdeep.design.DdIcon getClock();
+  public final io.github.whywood.deepdeep.design.DdIcon getClose();
+  public final io.github.whywood.deepdeep.design.DdIcon getCloud();
+  public final io.github.whywood.deepdeep.design.DdIcon getCompose();
+  public final io.github.whywood.deepdeep.design.DdIcon getCopy();
+  public final io.github.whywood.deepdeep.design.DdIcon getDatabase();
+  public final io.github.whywood.deepdeep.design.DdIcon getDesktop();
+  public final io.github.whywood.deepdeep.design.DdIcon getDotsVertical();
+  public final io.github.whywood.deepdeep.design.DdIcon getDownload();
+  public final io.github.whywood.deepdeep.design.DdIcon getExpand();
+  public final io.github.whywood.deepdeep.design.DdIcon getExternal();
+  public final io.github.whywood.deepdeep.design.DdIcon getEye();
+  public final io.github.whywood.deepdeep.design.DdIcon getFile();
+  public final io.github.whywood.deepdeep.design.DdIcon getFloatingWindow();
+  public final io.github.whywood.deepdeep.design.DdIcon getFolder();
+  public final io.github.whywood.deepdeep.design.DdIcon getFolderOpen();
+  public final io.github.whywood.deepdeep.design.DdIcon getFont();
+  public final io.github.whywood.deepdeep.design.DdIcon getGitFork();
+  public final io.github.whywood.deepdeep.design.DdIcon getGlobe();
+  public final io.github.whywood.deepdeep.design.DdIcon getHandClick();
+  public final io.github.whywood.deepdeep.design.DdIcon getImage();
+  public final io.github.whywood.deepdeep.design.DdIcon getInfo();
+  public final io.github.whywood.deepdeep.design.DdIcon getLicense();
+  public final io.github.whywood.deepdeep.design.DdIcon getMenu();
+  public final io.github.whywood.deepdeep.design.DdIcon getMessage();
+  public final io.github.whywood.deepdeep.design.DdIcon getMic();
+  public final io.github.whywood.deepdeep.design.DdIcon getMonitor();
+  public final io.github.whywood.deepdeep.design.DdIcon getMoon();
+  public final io.github.whywood.deepdeep.design.DdIcon getMore();
+  public final io.github.whywood.deepdeep.design.DdIcon getNotifications();
+  public final io.github.whywood.deepdeep.design.DdIcon getPackage();
+  public final io.github.whywood.deepdeep.design.DdIcon getPaperclip();
+  public final io.github.whywood.deepdeep.design.DdIcon getPen();
+  public final io.github.whywood.deepdeep.design.DdIcon getPhone();
+  public final io.github.whywood.deepdeep.design.DdIcon getPin();
+  public final io.github.whywood.deepdeep.design.DdIcon getPlay();
+  public final io.github.whywood.deepdeep.design.DdIcon getPlug();
+  public final io.github.whywood.deepdeep.design.DdIcon getPlus();
+  public final io.github.whywood.deepdeep.design.DdIcon getPrivacy();
+  public final io.github.whywood.deepdeep.design.DdIcon getPuzzle();
+  public final io.github.whywood.deepdeep.design.DdIcon getQuote();
+  public final io.github.whywood.deepdeep.design.DdIcon getRadioOff();
+  public final io.github.whywood.deepdeep.design.DdIcon getRaw();
+  public final io.github.whywood.deepdeep.design.DdIcon getRefresh();
+  public final io.github.whywood.deepdeep.design.DdIcon getScan();
+  public final io.github.whywood.deepdeep.design.DdIcon getSearch();
+  public final io.github.whywood.deepdeep.design.DdIcon getSelectAll();
+  public final io.github.whywood.deepdeep.design.DdIcon getSettings();
+  public final io.github.whywood.deepdeep.design.DdIcon getShare();
+  public final io.github.whywood.deepdeep.design.DdIcon getShield();
+  public final io.github.whywood.deepdeep.design.DdIcon getSparkles();
+  public final io.github.whywood.deepdeep.design.DdIcon getStop();
+  public final io.github.whywood.deepdeep.design.DdIcon getSun();
+  public final io.github.whywood.deepdeep.design.DdIcon getSync();
+  public final io.github.whywood.deepdeep.design.DdIcon getTarget();
+  public final io.github.whywood.deepdeep.design.DdIcon getTerminal();
+  public final io.github.whywood.deepdeep.design.DdIcon getTheme();
+  public final io.github.whywood.deepdeep.design.DdIcon getTrash();
+  public final io.github.whywood.deepdeep.design.DdIcon getVolume();
+  public final io.github.whywood.deepdeep.design.DdIcon getVolumeX();
+  public final io.github.whywood.deepdeep.design.DdIcon getWorkspace();
+}
+public final class io.github.whywood.deepdeep.design.DdLoadingBlockKt {
+  public static final void DdLoadingBlock(androidx.compose.ui.Modifier, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdMenuKt {
+  public static final void DdMenu-1OG2048(boolean, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, long, float, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdMenuItem(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, boolean, io.github.whywood.deepdeep.design.DdIcon, boolean, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdMotion {
+  public static final io.github.whywood.deepdeep.design.DdMotion INSTANCE;
+  public static final int PRESS;
+  public static final int PRESS_IN;
+  public static final int PRESS_OUT;
+  public static final int FAST;
+  public static final int BASE;
+  public static final int ENTER;
+  public static final int PAGE;
+  public static final int DRAWER;
+  public static final int SHEET;
+  public static final int STAGGER;
+  public static final int NAV;
+  public static final int SCREEN;
+  public static final int SPATIAL;
+  public static final int EFFECTS;
+  public static final int $stable;
+  public final androidx.compose.animation.core.CubicBezierEasing getEaseOut();
+  public final androidx.compose.animation.core.CubicBezierEasing getEaseInOut();
+  public final androidx.compose.animation.core.SpringSpec<java.lang.Float> getSwitchSpring();
+  public final androidx.compose.animation.core.SpringSpec<java.lang.Float> getSegmentedSpring();
+  public final <T> androidx.compose.animation.core.TweenSpec<T> spec(int, int, androidx.compose.animation.core.Easing);
+  public static androidx.compose.animation.core.TweenSpec spec$default(io.github.whywood.deepdeep.design.DdMotion, int, int, androidx.compose.animation.core.Easing, int, java.lang.Object);
+  public final <T> androidx.compose.animation.core.TweenSpec<T> spatial(int, int);
+  public static androidx.compose.animation.core.TweenSpec spatial$default(io.github.whywood.deepdeep.design.DdMotion, int, int, int, java.lang.Object);
+  public final <T> androidx.compose.animation.core.TweenSpec<T> effects(int, int);
+  public static androidx.compose.animation.core.TweenSpec effects$default(io.github.whywood.deepdeep.design.DdMotion, int, int, int, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdPageScaffoldKt {
+  public static final void DdPageScaffold(kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdRadius {
+  public static final io.github.whywood.deepdeep.design.DdRadius INSTANCE;
+  public static final int $stable;
+  public final float getSmall-D9Ej5fM();
+  public final float getIndicator-D9Ej5fM();
+  public final float getMedium-D9Ej5fM();
+  public final float getSegmented-D9Ej5fM();
+  public final float getButton-D9Ej5fM();
+  public final float getLarge-D9Ej5fM();
+  public final float getCard-D9Ej5fM();
+  public final float getRow-D9Ej5fM();
+  public final float getSheet-D9Ej5fM();
+}
+public final class io.github.whywood.deepdeep.design.DdSearchFieldKt {
+  public static final void DdSearchField(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.focus.FocusRequester, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, java.lang.String, androidx.compose.runtime.Composer, int, int);
+  public static final void DdSearchField(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, androidx.compose.ui.focus.FocusRequester, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, java.lang.String, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int, int);
+}
+final class io.github.whywood.deepdeep.design.DdSearchFieldKt$DdSearchFieldCore$1$1$1 implements kotlin.jvm.functions.Function1<androidx.compose.ui.input.key.KeyEvent, java.lang.Boolean> {
+  public final java.lang.Boolean invoke-ZmokQxo(android.view.KeyEvent);
+  public java.lang.Object invoke(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdSegmentedKt {
+  public static final void DdSegmented(java.util.List<java.lang.String>, int, kotlin.jvm.functions.Function1<? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, java.util.List<java.lang.String>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdShapes {
+  public static final io.github.whywood.deepdeep.design.DdShapes INSTANCE;
+  public static final int $stable;
+  public final androidx.compose.ui.graphics.Shape getPill();
+  public final androidx.compose.ui.graphics.Shape getSmall();
+  public final androidx.compose.ui.graphics.Shape getMedium();
+  public final androidx.compose.ui.graphics.Shape getSegmented();
+  public final androidx.compose.ui.graphics.Shape getButton();
+  public final androidx.compose.ui.graphics.Shape getLarge();
+  public final androidx.compose.ui.graphics.Shape getCard();
+  public final androidx.compose.ui.graphics.Shape getRow();
+  public final androidx.compose.ui.graphics.Shape getSheet();
+  public final androidx.compose.ui.graphics.Shape getSheetTop();
+}
+public final class io.github.whywood.deepdeep.design.DdSpacing {
+  public static final io.github.whywood.deepdeep.design.DdSpacing INSTANCE;
+  public static final int $stable;
+  public final float getNone-D9Ej5fM();
+  public final float getXxs-D9Ej5fM();
+  public final float getXs-D9Ej5fM();
+  public final float getSm-D9Ej5fM();
+  public final float getMd-D9Ej5fM();
+  public final float getLg-D9Ej5fM();
+  public final float getXl-D9Ej5fM();
+  public final float getXxl-D9Ej5fM();
+  public final float getXxxl-D9Ej5fM();
+  public final float getHuge-D9Ej5fM();
+  public final float getScreenHorizontal-D9Ej5fM();
+  public final float getSection-D9Ej5fM();
+  public final float getCard-D9Ej5fM();
+  public final float getRowHorizontal-D9Ej5fM();
+}
+public final class io.github.whywood.deepdeep.design.DdSpinnerKt {
+  public static final void DdSpinner-oMI9zvI(androidx.compose.ui.Modifier, long, float, float, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdTextFieldKt {
+  public static final void DdTextField(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.focus.FocusRequester, boolean, androidx.compose.foundation.text.KeyboardOptions, androidx.compose.ui.text.input.VisualTransformation, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, androidx.compose.runtime.Composer, int, int);
+  public static final void DdTextArea-3GLzNTs(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.Modifier, float, float, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdTextKt {
+  public static final void DdText-K1EFg4o(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.text.TextStyle, long, int, int, androidx.compose.ui.text.style.TextAlign, boolean, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdText-qdGssJg(androidx.compose.ui.text.AnnotatedString, androidx.compose.ui.Modifier, androidx.compose.ui.text.TextStyle, long, int, int, androidx.compose.ui.text.style.TextAlign, boolean, kotlin.jvm.functions.Function1<? super androidx.compose.ui.text.TextLayoutResult, kotlin.Unit>, java.util.Map<java.lang.String, androidx.compose.foundation.text.InlineTextContent>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdTheme {
+  public static final io.github.whywood.deepdeep.design.DdTheme INSTANCE;
+  public static final int $stable;
+  public final io.github.whywood.deepdeep.design.DeepDeepColors lightSantorini();
+  public final io.github.whywood.deepdeep.design.DeepDeepColors darkOceanic();
+}
+public final class io.github.whywood.deepdeep.design.DdType {
+  public static final io.github.whywood.deepdeep.design.DdType INSTANCE;
+  public static final int $stable;
+  public final androidx.compose.ui.text.TextStyle getWordmark();
+  public final androidx.compose.ui.text.TextStyle getDisplay();
+  public final androidx.compose.ui.text.TextStyle getPageTitle();
+  public final androidx.compose.ui.text.TextStyle getHeading();
+  public final androidx.compose.ui.text.TextStyle getBody();
+  public final androidx.compose.ui.text.TextStyle getBodySmall();
+  public final androidx.compose.ui.text.TextStyle getLabel();
+  public final androidx.compose.ui.text.TextStyle getChip();
+  public final androidx.compose.ui.text.TextStyle getButton();
+  public final androidx.compose.ui.text.TextStyle getMicro();
+  public final androidx.compose.ui.text.TextStyle getNumeric();
+}
+public final class io.github.whywood.deepdeep.design.DdTypingDotsKt {
+  public static final void DdTypingDots-KfjZ6_A(long, androidx.compose.ui.Modifier, float, float, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DeepDeepColors {
+  public static final int $stable;
+  public final boolean getDark();
+  public final long getPaper-0d7_KjU();
+  public final long getSurface-0d7_KjU();
+  public final long getRaised-0d7_KjU();
+  public final long getInk-0d7_KjU();
+  public final long getInkSecondary-0d7_KjU();
+  public final long getInkTertiary-0d7_KjU();
+  public final long getAccent-0d7_KjU();
+  public final long getAccentPressed-0d7_KjU();
+  public final long getOnAccent-0d7_KjU();
+  public final long getAccentSoft-0d7_KjU();
+  public final long getDanger-0d7_KjU();
+  public final long getSuccess-0d7_KjU();
+  public final long getWarning-0d7_KjU();
+  public final long getHairline-0d7_KjU();
+  public final long getWash-0d7_KjU();
+  public final long getComposer-0d7_KjU();
+  public final long getScrim-0d7_KjU();
+  public final long getCodeBackground-0d7_KjU();
+  public final long getInlineCodeBackground-0d7_KjU();
+  public final long getCodeKeyword-0d7_KjU();
+  public final long getCodeString-0d7_KjU();
+  public final long getCodeComment-0d7_KjU();
+  public final long getCodeNumber-0d7_KjU();
+  public final long getCodeFunction-0d7_KjU();
+  public final long getCodeType-0d7_KjU();
+  public final long getUserBubble-0d7_KjU();
+  public final long getOnUserBubble-0d7_KjU();
+  public final boolean component1();
+  public final long component2-0d7_KjU();
+  public final long component3-0d7_KjU();
+  public final long component4-0d7_KjU();
+  public final long component5-0d7_KjU();
+  public final long component6-0d7_KjU();
+  public final long component7-0d7_KjU();
+  public final long component8-0d7_KjU();
+  public final long component9-0d7_KjU();
+  public final long component10-0d7_KjU();
+  public final long component11-0d7_KjU();
+  public final long component12-0d7_KjU();
+  public final long component13-0d7_KjU();
+  public final long component14-0d7_KjU();
+  public final long component15-0d7_KjU();
+  public final long component16-0d7_KjU();
+  public final long component17-0d7_KjU();
+  public final long component18-0d7_KjU();
+  public final long component19-0d7_KjU();
+  public final long component20-0d7_KjU();
+  public final long component21-0d7_KjU();
+  public final long component22-0d7_KjU();
+  public final long component23-0d7_KjU();
+  public final long component24-0d7_KjU();
+  public final long component25-0d7_KjU();
+  public final long component26-0d7_KjU();
+  public final io.github.whywood.deepdeep.design.DeepDeepColors copy-8uk84-o(boolean, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long);
+  public static io.github.whywood.deepdeep.design.DeepDeepColors copy-8uk84-o$default(io.github.whywood.deepdeep.design.DeepDeepColors, boolean, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+  public io.github.whywood.deepdeep.design.DeepDeepColors(boolean, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, long, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public final class io.github.whywood.deepdeep.design.DeepDeepThemeKt {
+  public static final androidx.compose.runtime.ProvidableCompositionLocal<io.github.whywood.deepdeep.design.DeepDeepColors> getLocalDeepDeepColors();
+  public static final void DeepDeepTheme(io.github.whywood.deepdeep.design.ThemePreset, io.github.whywood.deepdeep.design.DdFontStyle, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final io.github.whywood.deepdeep.design.DeepDeepColors deepDeepColors(androidx.compose.runtime.Composer, int);
+}
+public final class io.github.whywood.deepdeep.design.DeepDeepThemeKt$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+}
+public final class io.github.whywood.deepdeep.design.ThemePreset extends java.lang.Enum<io.github.whywood.deepdeep.design.ThemePreset> {
+  public static final io.github.whywood.deepdeep.design.ThemePreset SYSTEM;
+  public static final io.github.whywood.deepdeep.design.ThemePreset DEEP_DEEP;
+  public static final io.github.whywood.deepdeep.design.ThemePreset SANTORINI;
+  public static final io.github.whywood.deepdeep.design.ThemePreset OCEANIC;
+  public static io.github.whywood.deepdeep.design.ThemePreset[] values();
+  public static io.github.whywood.deepdeep.design.ThemePreset valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.ThemePreset> getEntries();
+}

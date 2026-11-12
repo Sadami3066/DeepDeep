@@ -2,19 +2,19 @@ package io.github.whywood.deepdeep.plugin.api
 
 import kotlinx.serialization.json.JsonObject
 
-sealed interface SlotState
+public interface SlotState
 
-data object NoSlotState : SlotState
+public data object NoSlotState : SlotState
 
-data class ToolCardSlotState(
-    val callId: String,
-    val toolName: String,
-    val args: JsonObject = JsonObject(emptyMap()),
-    val result: PluginToolResult? = null,
-) : SlotState
+public interface ToolCardSlotState : SlotState {
+    public val callId: String
+    public val toolName: String
+    public val args: JsonObject
+    public val result: PluginToolResult?
+}
 
-data class CustomMessageSlotState(
-    val messageId: String,
-    val customType: String,
-    val payload: JsonObject = JsonObject(emptyMap()),
-) : SlotState
+public interface CustomMessageSlotState : SlotState {
+    public val messageId: String
+    public val customType: String
+    public val payload: JsonObject
+}

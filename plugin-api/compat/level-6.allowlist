@@ -1,0 +1,1 @@
+# 破坏性改动的显式放行清单：每行一条 javap 签名，需同时在 CHANGELOG 与 release notes 说明。

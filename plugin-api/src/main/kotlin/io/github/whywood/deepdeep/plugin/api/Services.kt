@@ -3,45 +3,45 @@ package io.github.whywood.deepdeep.plugin.api
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonObject
 
-class PluginServiceUnavailable(
-    val service: String,
-    val reason: String? = null,
+public class PluginServiceUnavailable(
+    public val service: String,
+    public val reason: String? = null,
 ) : IllegalStateException(
     if (reason == null) "plugin service is not available: $service" else "plugin service is not available: $service ($reason)",
 )
 
-interface LinuxService {
-    val available: Boolean
+public interface LinuxService {
+    public val available: Boolean
 
-    suspend fun exec(command: String, cwd: String? = null, timeoutMs: Long = DEFAULT_TIMEOUT_MS): LinuxResult
+    public suspend fun exec(command: String, cwd: String? = null, timeoutMs: Long = DEFAULT_TIMEOUT_MS): LinuxResult
 
-    fun stream(command: String, cwd: String? = null): Flow<LinuxChunk>
+    public fun stream(command: String, cwd: String? = null): Flow<LinuxChunk>
 
-    companion object {
-        const val DEFAULT_TIMEOUT_MS: Long = 15_000
+    public companion object {
+        public const val DEFAULT_TIMEOUT_MS: Long = 15_000
     }
 }
 
-interface ScreenService {
-    val status: ScreenStatus
+public interface ScreenService {
+    public val status: ScreenStatus
 
-    suspend fun startVirtual(): ScreenStatus
+    public suspend fun startVirtual(): ScreenStatus
 
-    suspend fun stopVirtual()
+    public suspend fun stopVirtual()
 
-    suspend fun observe(target: ScreenTarget = ScreenTarget.VIRTUAL, packageName: String? = null): ScreenObservation
+    public suspend fun observe(target: ScreenTarget = ScreenTarget.VIRTUAL, packageName: String? = null): ScreenObservation
 
-    suspend fun screenshot(target: ScreenTarget = ScreenTarget.VIRTUAL): ScreenScreenshot
+    public suspend fun screenshot(target: ScreenTarget = ScreenTarget.VIRTUAL): ScreenScreenshot
 
-    suspend fun apps(): List<ScreenApp>
+    public suspend fun apps(): List<ScreenApp>
 
-    suspend fun launch(packageName: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
+    public suspend fun launch(packageName: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
 
-    suspend fun tap(x: Int, y: Int, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
+    public suspend fun tap(x: Int, y: Int, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
 
-    suspend fun tapNode(ref: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
+    public suspend fun tapNode(ref: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
 
-    suspend fun swipe(
+    public suspend fun swipe(
         fromX: Int,
         fromY: Int,
         toX: Int,
@@ -50,45 +50,45 @@ interface ScreenService {
         target: ScreenTarget = ScreenTarget.VIRTUAL,
     ): Boolean
 
-    suspend fun scroll(deltaY: Int, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
+    public suspend fun scroll(deltaY: Int, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
 
-    suspend fun type(text: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
+    public suspend fun type(text: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
 
-    suspend fun key(keyCode: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
+    public suspend fun key(keyCode: String, target: ScreenTarget = ScreenTarget.VIRTUAL): Boolean
 
-    suspend fun waitFor(
+    public suspend fun waitFor(
         text: String,
         timeoutMs: Long = DEFAULT_WAIT_TIMEOUT_MS,
         target: ScreenTarget = ScreenTarget.VIRTUAL,
     ): Boolean
 
-    companion object {
-        const val DEFAULT_WAIT_TIMEOUT_MS: Long = 5_000
+    public companion object {
+        public const val DEFAULT_WAIT_TIMEOUT_MS: Long = 5_000
     }
 }
 
-interface NotificationService {
-    val enabled: Boolean
+public interface NotificationService {
+    public val enabled: Boolean
 
-    fun notify(notification: PluginNotification)
+    public fun notify(notification: PluginNotification)
 
-    fun updateProgress(id: String, progress: Int?, title: String? = null)
+    public fun updateProgress(id: String, progress: Int?, title: String? = null)
 
-    fun cancel(id: String)
+    public fun cancel(id: String)
 }
 
-interface SecretService {
-    suspend fun get(key: String): String?
+public interface SecretService {
+    public suspend fun get(key: String): String?
 
-    suspend fun put(key: String, value: String)
+    public suspend fun put(key: String, value: String)
 
-    suspend fun remove(key: String)
+    public suspend fun remove(key: String)
 
-    suspend fun clear()
+    public suspend fun clear()
 }
 
-interface NetworkService {
-    suspend fun request(
+public interface NetworkService {
+    public suspend fun request(
         method: String,
         url: String,
         headers: Map<String, String> = emptyMap(),
@@ -96,186 +96,217 @@ interface NetworkService {
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     ): NetworkResponse
 
-    suspend fun download(
+    public suspend fun download(
         url: String,
         targetPath: String,
         expectedSha256: String? = null,
         onProgress: ((Int?) -> Unit)? = null,
     ): DownloadResult
 
-    companion object {
-        const val DEFAULT_TIMEOUT_MS: Long = 30_000
+    public companion object {
+        public const val DEFAULT_TIMEOUT_MS: Long = 30_000
     }
 }
 
-suspend fun NetworkService.get(url: String, headers: Map<String, String> = emptyMap()): NetworkResponse =
-    request("GET", url, headers)
+public suspend fun NetworkService.get(
+    url: String,
+    headers: Map<String, String> = emptyMap(),
+): NetworkResponse = request("GET", url, headers)
 
-suspend fun NetworkService.post(
+public suspend fun NetworkService.post(
     url: String,
     body: String,
     headers: Map<String, String> = emptyMap(),
 ): NetworkResponse = request("POST", url, headers, body)
 
-interface FileService {
-    val rootDir: String
+public interface FileService {
+    public val rootDir: String
 
-    val workspaceDir: String?
+    public val workspaceDir: String?
 
-    suspend fun list(path: String = ""): List<FileEntry>
+    public suspend fun list(path: String = ""): List<FileEntry>
 
-    suspend fun readText(path: String): String
+    public suspend fun readText(path: String): String
 
-    suspend fun writeText(path: String, content: String, append: Boolean = false)
+    public suspend fun writeText(path: String, content: String, append: Boolean = false)
 
-    suspend fun readBytes(path: String): ByteArray
+    public suspend fun readBytes(path: String): ByteArray
 
-    suspend fun writeBytes(path: String, bytes: ByteArray)
+    public suspend fun writeBytes(path: String, bytes: ByteArray)
 
-    suspend fun delete(path: String): Boolean
+    public suspend fun delete(path: String): Boolean
 
-    suspend fun exists(path: String): Boolean
+    public suspend fun exists(path: String): Boolean
 
-    suspend fun resolve(path: String): String
+    public suspend fun resolve(path: String): String
 }
 
-interface SessionService {
-    val active: SessionInfo?
+public interface SessionService {
+    public val active: SessionInfo?
 
-    fun observe(): Flow<SessionInfo?>
+    public fun observe(): Flow<SessionInfo?>
 
-    suspend fun list(): List<SessionInfo>
+    public suspend fun list(): List<SessionInfo>
 
-    suspend fun prompt(text: String, sessionId: String? = null): Boolean
+    public suspend fun prompt(text: String, sessionId: String? = null): Boolean
 }
 
-interface JobService {
-    fun observe(): Flow<List<JobInfo>>
+public interface JobService {
+    public fun observe(): Flow<List<JobInfo>>
 
-    suspend fun start(command: String, label: String, cwd: String? = null, sessionId: String? = null): String?
+    public suspend fun start(command: String, label: String, cwd: String? = null, sessionId: String? = null): String?
 
-    suspend fun read(jobId: String): JobRead
+    public suspend fun read(jobId: String): JobRead
 
-    suspend fun kill(jobId: String): Boolean
+    public suspend fun kill(jobId: String): Boolean
 }
 
-interface TimerService {
-    suspend fun schedule(request: TimerRequest): TimerInfo?
+public interface TimerService {
+    public suspend fun schedule(request: TimerRequest): TimerInfo?
 
-    suspend fun list(): List<TimerInfo>
+    public suspend fun list(): List<TimerInfo>
 
-    suspend fun cancel(id: String): Boolean
+    public suspend fun cancel(id: String): Boolean
 }
 
-interface GoalService {
-    fun observe(): Flow<List<GoalInfo>>
+public interface GoalService {
+    public fun observe(): Flow<List<GoalInfo>>
 
-    suspend fun get(sessionId: String): GoalInfo?
+    public suspend fun get(sessionId: String): GoalInfo?
 
-    suspend fun create(sessionId: String, objective: String, maxRounds: Int? = null): GoalInfo?
+    public suspend fun create(sessionId: String, objective: String, maxRounds: Int? = null): GoalInfo?
 
-    suspend fun edit(sessionId: String, objective: String): GoalInfo?
+    public suspend fun edit(sessionId: String, objective: String): GoalInfo?
 
-    suspend fun pause(sessionId: String): GoalInfo?
+    public suspend fun pause(sessionId: String): GoalInfo?
 
-    suspend fun resume(sessionId: String): GoalInfo?
+    public suspend fun resume(sessionId: String): GoalInfo?
 
-    suspend fun complete(sessionId: String): GoalInfo?
+    public suspend fun complete(sessionId: String): GoalInfo?
 
-    suspend fun clear(sessionId: String)
+    public suspend fun clear(sessionId: String)
 }
 
-interface MiniappService {
-    suspend fun scan(): MiniappScan
+public interface MiniappService {
+    public suspend fun scan(): MiniappScan
 
-    suspend fun load(id: String): MiniappEntry
+    public suspend fun load(id: String): MiniappEntry
 
-    suspend fun create(request: MiniappCreateRequest): MiniappApp?
+    public suspend fun create(request: MiniappCreateRequest): MiniappApp?
 
-    suspend fun edit(id: String, instruction: String): MiniappRun
+    public suspend fun edit(id: String, instruction: String): MiniappRun
 
-    suspend fun delete(id: String): Boolean
+    public suspend fun delete(id: String): Boolean
 
-    suspend fun run(id: String, instruction: String): MiniappRun
+    public suspend fun run(id: String, instruction: String): MiniappRun
 }
 
-interface McpService {
-    suspend fun servers(): List<McpServer>
+public interface McpService {
+    public suspend fun servers(): List<McpServer>
 
-    suspend fun probe(name: String): McpProbe
+    public suspend fun probe(name: String): McpProbe
 
-    suspend fun tools(server: String): List<McpTool>
+    public suspend fun tools(server: String): List<McpTool>
 
-    suspend fun call(server: String, tool: String, arguments: JsonObject = JsonObject(emptyMap())): McpCallResult
+    public suspend fun call(server: String, tool: String, arguments: JsonObject = JsonObject(emptyMap())): McpCallResult
 }
 
-interface UiService {
-    fun openUrl(url: String)
+public interface UiService {
+    public fun openUrl(url: String)
 
-    fun share(request: ShareRequest)
+    public fun share(request: ShareRequest)
 
-    fun toast(message: String)
+    public fun toast(message: String)
 
-    fun openPage(pageId: String)
+    public fun openPage(pageId: String)
 }
 
-interface AppInfoService {
-    val info: AppInfo
+public interface AppInfoService {
+    public val info: AppInfo
 }
 
-interface LogService {
-    fun log(level: PluginLogLevel, message: String, error: Throwable? = null)
+public interface LogService {
+    public fun log(level: PluginLogLevel, message: String, error: Throwable? = null)
 
-    fun debug(message: String) = log(PluginLogLevel.DEBUG, message)
+    public fun debug(message: String): Unit = log(PluginLogLevel.DEBUG, message)
 
-    fun info(message: String) = log(PluginLogLevel.INFO, message)
+    public fun info(message: String): Unit = log(PluginLogLevel.INFO, message)
 
-    fun warn(message: String, error: Throwable? = null) = log(PluginLogLevel.WARN, message, error)
+    public fun warn(message: String, error: Throwable? = null): Unit = log(PluginLogLevel.WARN, message, error)
 
-    fun error(message: String, error: Throwable? = null) = log(PluginLogLevel.ERROR, message, error)
+    public fun error(message: String, error: Throwable? = null): Unit = log(PluginLogLevel.ERROR, message, error)
 }
 
-interface PluginBus {
-    fun publish(event: PluginBusEvent)
+public interface PluginBus {
+    public fun publish(event: PluginBusEvent)
 
-    fun subscribe(topic: String? = null): Flow<PluginBusEvent>
+    public fun subscribe(topic: String? = null): Flow<PluginBusEvent>
 }
 
-enum class ChatDelivery {
+public enum class ChatDelivery {
     STEER,
     FOLLOW_UP,
 }
 
-data class ChatDisplay(
-    val customType: String,
-    val payload: JsonObject,
-    val text: String = "",
-)
-
-data class ChatMessageOptions(
-    val triggerTurn: Boolean = true,
-    val deliverAs: ChatDelivery = ChatDelivery.STEER,
-    val display: ChatDisplay? = null,
-)
-
-sealed interface ChatSendResult {
-    data class Started(
-        val sessionId: String,
-        val runId: String? = null,
-    ) : ChatSendResult
-
-    data class Queued(
-        val sessionId: String,
-        val delivery: ChatDelivery,
-    ) : ChatSendResult
-
-    data class Displayed(
-        val sessionId: String,
-    ) : ChatSendResult
+public interface ChatDisplay {
+    public val customType: String
+    public val payload: JsonObject
+    public val text: String
 }
 
-interface ChatService {
-    suspend fun postCustomMessage(
+public fun chatDisplay(
+    customType: String,
+    payload: JsonObject = JsonObject(emptyMap()),
+    text: String = "",
+): ChatDisplay = ChatDisplayImpl(customType, payload, text)
+
+internal data class ChatDisplayImpl(
+    override val customType: String,
+    override val payload: JsonObject,
+    override val text: String,
+) : ChatDisplay
+
+public interface ChatMessageOptions {
+    public val triggerTurn: Boolean
+    public val deliverAs: ChatDelivery
+    public val display: ChatDisplay?
+}
+
+public fun chatMessageOptions(
+    triggerTurn: Boolean = true,
+    deliverAs: ChatDelivery = ChatDelivery.STEER,
+    display: ChatDisplay? = null,
+): ChatMessageOptions = ChatMessageOptionsImpl(triggerTurn, deliverAs, display)
+
+internal data class ChatMessageOptionsImpl(
+    override val triggerTurn: Boolean,
+    override val deliverAs: ChatDelivery,
+    override val display: ChatDisplay?,
+) : ChatMessageOptions
+
+@JvmInline
+public value class ChatSendKind private constructor(public val wire: String) {
+    public companion object {
+        public val STARTED: ChatSendKind = ChatSendKind("started")
+        public val QUEUED: ChatSendKind = ChatSendKind("queued")
+        public val DISPLAYED: ChatSendKind = ChatSendKind("displayed")
+        public val ALL: List<ChatSendKind> = listOf(STARTED, QUEUED, DISPLAYED)
+
+        public fun fromWire(value: String): ChatSendKind? = ALL.firstOrNull { it.wire == value }
+    }
+
+    override fun toString(): String = wire
+}
+
+public interface ChatSendResult {
+    public val kind: ChatSendKind
+    public val sessionId: String
+    public val runId: String?
+    public val delivery: ChatDelivery?
+}
+
+public interface ChatService {
+    public suspend fun postCustomMessage(
         sessionId: String,
         customType: String,
         payload: JsonObject,
@@ -283,9 +314,9 @@ interface ChatService {
         display: Boolean = true,
     ): Boolean
 
-    suspend fun sendMessage(
+    public suspend fun sendMessage(
         sessionId: String,
         text: String,
-        options: ChatMessageOptions = ChatMessageOptions(),
+        options: ChatMessageOptions = chatMessageOptions(),
     ): ChatSendResult
 }

@@ -26,7 +26,7 @@ if [[ "$full" -eq 0 ]]; then
 else
   ./scripts/gradlew-locked -Pdeepdeep.strictBoundaries=true \
     check :app:assembleDebug :plugin-api:assembleRelease
-  ./scripts/plugin-api-abi.sh
+  ./scripts/api-compat.sh
 fi
 
 if [[ "$device" -eq 1 ]]; then
