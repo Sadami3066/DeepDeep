@@ -10,7 +10,7 @@
 - 枚举收敛：`PluginCapability` 改为 value class；`MessageRole`、`ToolPhase`、`JobStatus`、`GoalPhase`、`McpServerStatus`、`ChatSendKind` 等结果状态改为 value class + 常量。
 - 文本与图标：删除 `LocalizedText.Resource` / `IconRef.Resource`，只保留 `localizedText()` / `assetIcon()` 工厂。
 - 新增能力：manifest capability `prompt`；`PromptOverridePlugin` / `PromptOverride`（preamble/rules/sections/priority，实验 API）。
-- Host Surface：`PluginHost.text(source, args: List<String>)`；manifest 类型改为只读接口。
+- Host Surface：`PluginHost.text(source, vararg args: Any)`（格式化参数只接受字符串与数字）；manifest 类型改为只读接口。
 - 工程：移动 manifest codec / validation / version 到宿主；开启 explicit API；新增 `scripts/api-compat.sh`（plugin-api 与 design ABI 只增不减门禁）与 `COMPATIBILITY.md` / `compat/` 基线。
 
 ## 0.8.1 / API level 5

@@ -51,7 +51,7 @@ public fun pluginTool(
     promptSnippet = promptSnippet,
     promptGuidelines = promptGuidelines,
     exposure = exposure,
-    execute = execute,
+    executeBlock = execute,
 )
 
 internal class PluginToolImpl(
@@ -62,9 +62,9 @@ internal class PluginToolImpl(
     override val promptSnippet: String?,
     override val promptGuidelines: List<String>,
     override val exposure: PluginToolExposure,
-    private val execute: suspend (PluginToolCall) -> PluginToolResult,
+    private val executeBlock: suspend (PluginToolCall) -> PluginToolResult,
 ) : PluginTool {
-    override suspend fun execute(call: PluginToolCall): PluginToolResult = execute(call)
+    override suspend fun execute(call: PluginToolCall): PluginToolResult = executeBlock(call)
 }
 
 public interface PluginToolCall {
