@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.plugin.manager
 
+import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.api.Contributions
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginHost
@@ -32,10 +33,28 @@ class PluginUiProjectionTest {
         }
     }
 
+    private class FakeStrings : PluginStrings {
+        override fun get(id: Int): String = "string_$id"
+
+        override fun get(id: Int, vararg args: Any): String = "retired:${args.joinToString()}"
+    }
+
     private fun projection(): PluginUiProjection {
         val resolver = PluginTextResolver(language = { "default" })
-        return PluginUiProjection(resolver)
+        return PluginUiProjection(resolver, FakeStrings())
     }
+
+    private fun externalRecord(apiLevel: Int): ExternalPluginRecord = ExternalPluginRecord(
+        id = "alpha",
+        version = "1.0.0",
+        installedAt = 0L,
+        installPath = "/tmp/alpha",
+        activeBundleSha256 = "sha",
+        size = 1L,
+        publisherKeyId = "ed25519:cb08701a59d66606",
+        apiLevel = apiLevel,
+        uiApiLevel = 1,
+    )
 
     private suspend fun registryFor(gate: PluginRuntimeRegistry): PluginRegistry {
         PluginContributionMaterializer(gate).refreshAll()
@@ -72,17 +91,7 @@ class PluginUiProjectionTest {
             publisher = HostPublisherInfo("milous", "ed25519:cb08"),
         )
         val runtime = managerRuntime(manifest, CountingPlugin()).apply {
-            externalRecord = ExternalPluginRecord(
-                id = "alpha",
-                version = "1.0.0",
-                installedAt = 0L,
-                installPath = "/tmp/alpha",
-                activeBundleSha256 = "sha",
-                size = 1L,
-                publisherKeyId = "ed25519:cb08701a59d66606",
-                apiLevel = 4,
-                uiApiLevel = 1,
-            )
+            externalRecord = externalRecord(apiLevel = 4)
         }
         gate.register(managerRecord("alpha"), runtime)
         val registry = registryFor(gate)
@@ -91,6 +100,22 @@ class PluginUiProjectionTest {
 
         assertEquals("milous", snapshot.publisher?.name)
         assertEquals("ed25519:cb08701a59d66606", snapshot.publisher?.keyId)
+        assertEquals(null, snapshot.lastError)
+    }
+
+    @Test
+    fun retiredApiLevelShowsUpdateNotice() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val runtime = managerRuntime(managerManifest("alpha"), null).apply {
+            externalRecord = externalRecord(apiLevel = 5)
+        }
+        gate.register(managerRecord("alpha", lastError = "plugin is not loaded"), runtime)
+        val registry = registryFor(gate)
+
+        val snapshot = projection().snapshots(gate.views(), registry.snapshot()).single()
+
+        assertEquals("retired:5", snapshot.lastError)
+        assertEquals(PluginAvailabilityUi.Unavailable("retired:5"), snapshot.availability)
     }
 
     @Test

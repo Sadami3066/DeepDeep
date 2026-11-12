@@ -70,6 +70,7 @@ internal class PluginExternalFlow(
                     runtime.clearStartupCount(view.id)
                     return@forEach
                 } ?: run {
+                    runtime.record(view.id)?.lastError?.let { message -> persistFailure(view.id, message) }
                     runtime.clearStartupCount(view.id)
                     return@forEach
                 }
@@ -113,7 +114,10 @@ internal class PluginExternalFlow(
         } catch (error: Throwable) {
             persistFailure(pluginId, errorMessage(error))
             return false
-        } ?: return false
+        } ?: run {
+            runtime.record(pluginId)?.lastError?.let { message -> persistFailure(pluginId, message) }
+            return false
+        }
         val handle = runtime.handle(pluginId) ?: return false
         gate.attachExternalRecord(pluginId, activated)
         gate.updateRecord(pluginId) {

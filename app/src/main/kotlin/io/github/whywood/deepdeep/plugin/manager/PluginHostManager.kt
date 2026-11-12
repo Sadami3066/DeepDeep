@@ -69,7 +69,7 @@ class PluginHostManager internal constructor(
         external = external,
     )
     private val materializer = PluginContributionMaterializer(gate)
-    private val uiProjection = PluginUiProjection(textResolver)
+    private val uiProjection = PluginUiProjection(textResolver, strings)
     override val sessionHooks: PluginSessionHooks = PluginSessionHooks(scope, gate, registry)
     override val externalFlow: PluginExternalFlow = PluginExternalFlow(
         gate = gate,
