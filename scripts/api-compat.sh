@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export LC_ALL=C
 cd "$(dirname "$0")/.."
 
 UPDATE=0
