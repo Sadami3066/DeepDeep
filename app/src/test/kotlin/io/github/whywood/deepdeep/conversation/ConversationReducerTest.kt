@@ -514,6 +514,9 @@ class ConversationReducerTest {
                 ToolResultPayload.Block.Image("aGk=", "image/png"),
             ),
         )
+        val details = buildJsonObject {
+            put("draftId", "draft-1")
+        }
         state = reduce(
             state,
             RuntimeEvent.ToolStarted(
@@ -536,6 +539,7 @@ class ConversationReducerTest {
                 isError = false,
                 durationMs = 10L,
                 payload = payload,
+                details = details,
             ),
             strings,
         )
@@ -543,6 +547,7 @@ class ConversationReducerTest {
         val trace = (state.messages.single().steps.single() as AssistantStep.Tool).trace
         assertEquals(rawArguments, trace.rawArguments)
         assertEquals(payload, trace.resultPayload)
+        assertEquals(details, trace.resultDetails)
         assertEquals(5, trace.rawArguments!!["limit"]!!.jsonPrimitive.int)
         assertEquals(ToolActivityStatus.DONE, trace.status)
         assertEquals("hello", trace.output)

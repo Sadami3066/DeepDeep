@@ -167,6 +167,7 @@ data class ToolTrace(
     val durationMs: Long? = null,
     val rawArguments: JsonObject? = null,
     val resultPayload: ToolResultPayload? = null,
+    val resultDetails: JsonObject? = null,
 )
 
 enum class MessageSummaryKind {
@@ -269,6 +270,7 @@ sealed interface RuntimeEvent {
         val isError: Boolean,
         val durationMs: Long?,
         val payload: ToolResultPayload? = null,
+        val details: JsonObject? = null,
     ) : RuntimeEvent
 
     data class RunFinished(

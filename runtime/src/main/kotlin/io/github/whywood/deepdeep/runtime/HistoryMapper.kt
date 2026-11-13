@@ -14,6 +14,7 @@ import io.github.whywood.deepdeep.sdk.coding.session.CompactionEntry
 import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
 import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
+import kotlinx.serialization.json.JsonObject
 
 private const val REMINDER_PREFIX = "[定时提醒]"
 
@@ -146,6 +147,7 @@ object HistoryMapper {
                                 output = payload.text().takeIf { it.isNotBlank() && !message.isError },
                                 error = payload.text().takeIf { it.isNotBlank() && message.isError },
                                 resultPayload = payload,
+                                resultDetails = message.details as? JsonObject,
                                 durationMs = message.durationMs ?: existing.durationMs,
                             )
                             traces[message.toolCallId] = updated
@@ -171,6 +173,7 @@ object HistoryMapper {
                                 error = payload.text().takeIf { it.isNotBlank() && message.isError },
                                 toolCallId = message.toolCallId,
                                 resultPayload = payload,
+                                resultDetails = message.details as? JsonObject,
                                 durationMs = message.durationMs,
                             )
                             traces[message.toolCallId] = trace

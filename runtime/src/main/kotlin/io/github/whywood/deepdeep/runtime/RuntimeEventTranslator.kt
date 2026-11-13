@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.sdk.ai.ToolCallStartEvent
 import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.serialization.json.JsonObject
 
 internal class RuntimeEventTranslator(
     private val sdkEvents: MutableSharedFlow<SessionSdkEvent>,
@@ -138,6 +139,7 @@ internal class RuntimeEventTranslator(
                         isError = event.isError,
                         durationMs = event.durationMs,
                         payload = payload,
+                        details = event.result.details as? JsonObject,
                     ),
                 )
                 emitActivity(handle, runId, RuntimeActivity.Thinking)

@@ -369,19 +369,20 @@ private fun ToolTrace.resultText(): String? =
 
 internal fun ToolTrace.pluginSlotResult(): PluginToolResult? {
     val isError = status == ToolActivityStatus.FAILED
+    val details = resultDetails
     val payload = resultPayload
     if (payload != null) {
         val blocks = payload.toPluginToolBlocks()
         if (blocks.isEmpty()) return null
         val first = blocks.firstOrNull()
         return if (blocks.size == 1 && first is TextBlock) {
-            textResult(first.text, isError = isError)
+            textResult(first.text, details, isError = isError)
         } else {
-            richResult(blocks, isError = isError)
+            richResult(blocks, details, isError = isError)
         }
     }
     val text = error?.takeIf { it.isNotBlank() } ?: output?.takeIf { it.isNotBlank() } ?: return null
-    return textResult(text, isError = isError)
+    return textResult(text, details, isError = isError)
 }
 
 internal fun ToolResultPayload.toPluginToolBlocks(): List<ToolBlock> = when (this) {

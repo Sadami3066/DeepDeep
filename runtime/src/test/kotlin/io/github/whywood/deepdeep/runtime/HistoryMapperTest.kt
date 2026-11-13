@@ -249,6 +249,33 @@ class HistoryMapperTest {
     }
 
     @Test
+    fun toolResultDetailsRestoreForSlots() {
+        val details = buildJsonObject { put("draftId", "draft-1") }
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                assistant(
+                    content = listOf(toolCall("call-1", "mail_draft")),
+                    stopReason = StopReason.ToolUse,
+                    timestamp = 1L,
+                ),
+                messageEntry(
+                    ToolResultMessage(
+                        toolCallId = "call-1",
+                        toolName = "mail_draft",
+                        content = listOf(TextContent("ok")),
+                        details = details,
+                        isError = false,
+                        timestamp = 2L,
+                    ),
+                ),
+            ),
+        )
+
+        val trace = (messages.single().steps.single() as AssistantStep.Tool).trace
+        assertEquals(details, trace.resultDetails)
+    }
+
+    @Test
     fun toolResultImagesSurviveAsStructuredBlocks() {
         val messages = HistoryMapper.mapEntries(
             listOf(

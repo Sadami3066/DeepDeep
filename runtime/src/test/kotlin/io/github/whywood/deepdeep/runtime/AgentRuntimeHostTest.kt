@@ -32,6 +32,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -292,6 +294,43 @@ class AgentRuntimeHostTest {
             assertEquals(listOf("custom-test"), draft.registeredProviders.map { it.id })
             assertEquals(listOf("custom-test"), persisted.registeredProviders.map { it.id })
         } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun toolFinishedCarriesResultDetails() = runTest {
+        val fixture = Fixture(backgroundScope)
+        val received = mutableListOf<SessionRuntimeEvent>()
+        val subscription = backgroundScope.launch {
+            fixture.host.events.collect { received += it }
+        }
+        try {
+            runCurrent()
+            val handle = fixture.open("session-1")
+            handle.suspendPrompt = true
+            backgroundScope.launch { fixture.host.send("session-1", "go") }
+            settle()
+            received.clear()
+
+            val details = buildJsonObject { put("draftId", "draft-1") }
+            handle.emit(toolStart("mail_draft"))
+            handle.emit(
+                SessionEvent.AgentEventReceived(
+                    AgentEvent.ToolExecutionEnd(
+                        "call-mail_draft",
+                        "mail_draft",
+                        AgentToolResult(details = details),
+                        false,
+                    ),
+                ),
+            )
+            settle()
+
+            val finished = received.map { it.event }.filterIsInstance<RuntimeEvent.ToolFinished>().single()
+            assertEquals(details, finished.details)
+        } finally {
+            subscription.cancel()
             fixture.close()
         }
     }

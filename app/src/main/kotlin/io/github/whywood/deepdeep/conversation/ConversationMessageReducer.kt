@@ -180,6 +180,7 @@ private fun AssistantMessage.withToolResult(event: RuntimeEvent.ToolFinished): A
                     toolCallId = event.callId,
                     durationMs = event.durationMs,
                     resultPayload = event.payload,
+                    resultDetails = event.details,
                 ),
             ),
         )
@@ -190,6 +191,7 @@ private fun AssistantMessage.withToolResult(event: RuntimeEvent.ToolFinished): A
         error = error,
         durationMs = event.durationMs,
         resultPayload = event.payload,
+        resultDetails = event.details,
     )
     return copy(steps = steps.toMutableList().also { it[index] = AssistantStep.Tool(trace) })
 }
