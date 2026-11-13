@@ -17,6 +17,7 @@ libadb = "3.1.1"
 hiddenapibypass = "6.1"
 bcpkix = "1.86"
 okhttp = "5.4.0"
+work = "2.10.5"
 pi = "v0.6.3"
 junit = "4.13.2"
 json = "20240303"
@@ -45,6 +46,7 @@ libadb = { module = "com.github.MuntashirAkon:libadb-android", version.ref = "li
 hiddenapibypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenapibypass" }
 bcpkix = { module = "org.bouncycastle:bcpkix-jdk15to18", version.ref = "bcpkix" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-foundation = { module = "androidx.compose.foundation:foundation" }

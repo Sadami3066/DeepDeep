@@ -1,6 +1,17 @@
 package io.github.whywood.deepdeep.graph
 
 import android.content.Context
+import io.github.whywood.deepdeep.adb.AdbBootstrap
+import io.github.whywood.deepdeep.arrange.ArrangeCalendarGateway
+import io.github.whywood.deepdeep.data.CustomProviderStore
+import io.github.whywood.deepdeep.data.HostFiles
+import io.github.whywood.deepdeep.data.update.UpdateInstaller
+import io.github.whywood.deepdeep.host.AppHostAccessController
+import io.github.whywood.deepdeep.runtime.ProviderCatalog
+import io.github.whywood.deepdeep.runtime.SdkCredentialStore
+import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.deepdeep.shell.RootShell
+import io.github.whywood.deepdeep.web.WebProvider
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.plugin.PluginStrings
 import io.github.whywood.deepdeep.plugin.host.services.PluginBusImpl
@@ -49,4 +60,15 @@ internal class PluginGraphDeps(
     val pluginScreenController: () -> ScreenController,
     val pluginMainScreenController: () -> ScreenController,
     val mcpPluginBridge: () -> McpPluginBridge,
+    val hostFiles: HostFiles,
+    val arrangeCalendar: ArrangeCalendarGateway,
+    val webProvider: WebProvider,
+    val credentials: SdkCredentialStore,
+    val customProviderStore: CustomProviderStore,
+    val providerCatalog: ProviderCatalog,
+    val mcpTokenStore: FileMcpTokenStore,
+    val rootShell: RootShell,
+    val adbBridge: AdbBootstrap,
+    val hostAccess: AppHostAccessController,
+    val updateInstaller: UpdateInstaller,
 )

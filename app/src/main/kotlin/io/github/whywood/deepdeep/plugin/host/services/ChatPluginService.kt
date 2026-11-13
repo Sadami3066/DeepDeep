@@ -1,10 +1,12 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
+import io.github.whywood.deepdeep.plugin.api.ChatAttachment
 import io.github.whywood.deepdeep.plugin.api.ChatDelivery
 import io.github.whywood.deepdeep.plugin.api.ChatMessageOptions
 import io.github.whywood.deepdeep.plugin.api.ChatSendKind
 import io.github.whywood.deepdeep.plugin.api.ChatSendResult
 import io.github.whywood.deepdeep.plugin.api.ChatService
+import java.io.File
 import io.github.whywood.deepdeep.runtime.PluginTurnResult
 import io.github.whywood.deepdeep.runtime.SessionCommands
 import kotlinx.serialization.json.JsonObject
@@ -36,6 +38,30 @@ internal class ChatPluginService(
             is PluginTurnResult.Started -> HostChatSendResult(ChatSendKind.STARTED, sessionId, result.runId, null)
             is PluginTurnResult.Queued -> HostChatSendResult(ChatSendKind.QUEUED, sessionId, null, options.deliverAs)
         }
+    }
+
+    override suspend fun sendMessageWithAttachments(
+        sessionId: String,
+        text: String,
+        attachments: List<ChatAttachment>,
+        options: ChatMessageOptions,
+    ): ChatSendResult {
+        val usable = attachments.mapNotNull { attachment ->
+            val file = File(attachment.path)
+            if (!file.isFile || !file.canRead()) null else attachment
+        }
+        if (usable.isEmpty()) return sendMessage(sessionId, text, options)
+        val suffix = usable.joinToString("\n") { attachment ->
+            val name = attachment.name?.takeIf { it.isNotBlank() } ?: File(attachment.path).name
+            val mime = attachment.mimeType.orEmpty()
+            if (mime.startsWith("image/")) {
+                "![$name](${attachment.path})"
+            } else {
+                "file: ${attachment.path} ($name${if (mime.isBlank()) "" else ", $mime"})"
+            }
+        }
+        val merged = if (text.isBlank()) suffix else text + "\n\n" + suffix
+        return sendMessage(sessionId, merged, options)
     }
 
     private class HostChatSendResult(

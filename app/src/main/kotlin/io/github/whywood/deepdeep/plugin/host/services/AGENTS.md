@@ -1,27 +1,27 @@
 # plugin/host/services · 宿主服务适配器
 
-`plugin-api` 的 `PluginHost` 17 个服务（Linux/屏幕/通知/密钥/网络/文件/会话/任务/定时/目标/小程序/MCP/UI/App/总线/日志/聊天）在 `:app` 侧的真实实现。宿主只在本目录构造 `PluginServices`，`PluginHostImpl` 负责在服务缺失时抛 `PluginServiceUnavailable`。
+`plugin-api` 的 `PluginHost` 基础服务（Linux/屏幕/通知/密钥/网络/文件/会话/任务/定时/目标/小程序/MCP/UI/App/总线/日志/聊天）在 `:app` 侧的真实实现；1.1.0 新增的设备与数据能力在 `../extensions/`。宿主只在本目录构造 `PluginServices`，`PluginHostImpl` 负责在服务缺失时抛 `PluginServiceUnavailable`。
 
 ## 文件
 
 | 文件 | 职责 |
 |---|---|
-| `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
+| `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调，含 `interaction`/`dataServices`/`deviceServices`）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
 | `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果（合并输出在 `stdout`，`stderr` 恒空）；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送，24 小时超时），当前环境无流式实现时回退为命令完成后一次性推送；输出经无界 channel 背压排队，不丢弃行；`available` 由注入的 lambda 决定；chunk 用宿主 `HostLinuxChunk` + `LinuxChunkKind` |
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
-| `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限 |
+| `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限；1.1.0 增加 `notifyChecked`、通知动作按钮（`PluginNotificationActionReceiver`）与监听侧 `recent/received/removed/dismiss/listenerGranted`（读 `PluginNotificationEvents`，权限与组件门槛见 manifest） |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |
 | `NetworkPluginService.kt` | `io.github.whywood.deepdeep.sdk.ai.http.HttpTransport`：`request`（2 MiB 截断）与 `download`（512 MiB 上限、sha256 校验、进度回调） |
 | `FilePluginService.kt` | 以插件 data 目录为根，经 `HostEnvironment.files`（okio `FileSystem`）读写/列举/删除/resolve；`workspaceDir`/`sharedStorageDir` 只作属性暴露，绝对路径原样放行 |
-| `SessionPluginService.kt` | `ConversationQueries`/`SessionCommands`：会话列表、当前会话观察（同时观察 active 与 busySessionIds）、向会话发消息 |
+| `SessionPluginService.kt` | `ConversationQueries`/`SessionCommands`/`Maintenance`：会话列表与观察、向会话发消息、history/stop/create/rename/delete/open/archive |
 | `JobPluginService.kt` | `runtime.JobRegistry`：启动/读取/列表/终止后台任务，`sessionId` 缺省取当前会话 |
 | `TimerPluginService.kt` | `runtime.TimerService`：创建/列表/取消；`sessionId` 缺省取当前会话并从会话目录解析 session file/cwd |
 | `GoalPluginService.kt` | `runtime.GoalService`：目标观察与创建/编辑/暂停/恢复/完成/清除 |
 | `MiniappPluginService.kt` | `MiniappStore` 的扫描/加载/创建草稿/删除；`MiniappAgentService` 的 create/edit/run 以 fire-and-forget 方式执行 |
 | `McpPluginService.kt` | `McpConfigStore` 的服务器列表、`McpServerProbe` 探测；工具列表/调用需 deps 回调 |
 | `McpModelMapping.kt` | MCP 模型对象 ↔ plugin-api DTO 映射（工具、调用结果内容块） |
-| `UiAppInfoBus.kt` | `UiService`（openUrl/share/toast/openPage 回调，某个回调未注入时调用即抛 `PluginServiceUnavailable`）、`AppInfoService`（版本/语言/SDK/机型/安装 id）、`PluginBusImpl`/`ScopedPluginBus`（进程内 topic 总线，发布时用 `HostPluginBusEvent` 盖 pluginId 与时间戳） |
-| `ChatPluginService.kt` | `ChatService.postCustomMessage`/`sendMessage` → 宿主会话投递；返回宿主实现的 `ChatSendResult`（`ChatSendKind`） |
+| `UiAppInfoBus.kt` | `UiService`（openUrl/share/toast/openPage 回调 + 1.1.0 的页面参数/关页/页面上下文/确认/输入/选择/日期时间/文件/图片/扫码/目录/Snackbar/多文件分享/深色，交互类委托 `PluginInteraction`，未注入时抛 `PluginServiceUnavailable` 或安全降级）、`AppInfoService`（版本/语言/SDK/机型/安装 id）、`PluginBusImpl`/`ScopedPluginBus`（进程内 topic 总线，发布时用 `HostPluginBusEvent` 盖 pluginId 与时间戳） |
+| `ChatPluginService.kt` | `ChatService.postCustomMessage`/`sendMessage`/`sendMessageWithAttachments` → 宿主会话投递；附件按图片 Markdown 内联、其它文件写为 `file:` 引用；返回宿主实现的 `ChatSendResult`（`ChatSendKind`） |
 | `PluginUiBridge.kt` | UI 请求桥：`share` 起系统分享 chooser（FileProvider），`openPage` 写 pending 页请求并拉起 MainActivity（DeepDeepApp 消费后导航到插件页） |
 | `LogPluginService.kt` | `android.util.Log`，tag 带 pluginId；测试可注入 sink |
 

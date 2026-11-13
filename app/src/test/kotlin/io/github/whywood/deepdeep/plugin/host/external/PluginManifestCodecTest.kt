@@ -443,4 +443,38 @@ class PluginManifestCodecTest {
         assertTrue(result is PluginManifestCodec.Result.Invalid)
         assertTrue(codes(result).contains(PluginValidation.Code.API_LEVEL_UNSUPPORTED))
     }
+
+    @Test
+    fun parsesPermissionsAndComponents() {
+        val manifest = PluginManifestCodec.parse(
+            json(
+                """
+                {
+                  "id": "com.example.plugin",
+                  "version": "1.0.0",
+                  "apiLevel": 6,
+                  "capabilities": ["location", "notifications", "background", "share", "deeplink"],
+                  "entryClass": "com.example.plugin.Plugin",
+                  "name": "Plugin",
+                  "summary": "Summary",
+                  "permissions": ["location.fine", "notifications.listen"],
+                  "components": {
+                    "background": true,
+                    "foregroundService": true,
+                    "notificationListener": true,
+                    "share": true,
+                    "deeplinks": ["mail"]
+                  }
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertEquals(listOf("location.fine", "notifications.listen"), manifest.permissions)
+        val components = requireNotNull(manifest.components)
+        assertTrue(components.background)
+        assertTrue(components.foregroundService)
+        assertTrue(components.notificationListener)
+        assertEquals(listOf("mail"), components.deeplinks)
+        assertFalse(components.accessibility)
+    }
 }

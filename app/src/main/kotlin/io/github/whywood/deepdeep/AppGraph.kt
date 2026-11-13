@@ -161,11 +161,13 @@ class AppGraph(context: Context) : AppDependencies {
     override val goalService: GoalService get() = dataGraph.goalService
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
 
+    private val updateInstaller: AndroidUpdateInstaller by lazy { AndroidUpdateInstaller(appContext) }
+
     override val updateManager: UpdateManager by lazy {
         UpdateManager(
             transport = dataGraph.httpTransport,
             store = DataStoreUpdateStore(appContext),
-            installer = AndroidUpdateInstaller(appContext),
+            installer = updateInstaller,
             updatesDir = File(appContext.filesDir, "updates"),
             scope = scope,
             currentVersionName = BuildConfig.VERSION_NAME,
@@ -358,6 +360,17 @@ class AppGraph(context: Context) : AppDependencies {
         pluginScreenController = { platformGraph.pluginScreenController },
         pluginMainScreenController = { platformGraph.pluginMainScreenController },
         mcpPluginBridge = { platformGraph.mcpPluginBridge },
+        hostFiles = dataGraph.hostFiles,
+        arrangeCalendar = runtimeGraph.pluginArrangeCalendar,
+        webProvider = runtimeGraph.pluginWebProvider,
+        credentials = dataGraph.credentials,
+        customProviderStore = dataGraph.customProviderStore,
+        providerCatalog = dataGraph.providerCatalog,
+        mcpTokenStore = dataGraph.mcpTokenStore,
+        rootShell = platformGraph.rootShell,
+        adbBridge = platformGraph.adbBridge,
+        hostAccess = platformGraph.hostAccess,
+        updateInstaller = updateInstaller,
     )
 
     override suspend fun prepare() {

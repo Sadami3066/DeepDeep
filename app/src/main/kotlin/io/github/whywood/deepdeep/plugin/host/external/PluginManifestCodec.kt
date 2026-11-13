@@ -78,6 +78,8 @@ internal object PluginManifestCodec {
                     provides = json.objectOrNull("provides")?.let(::parseProvides) ?: HostProvides(),
                     capabilities = capabilities,
                     defaultEnabled = json.boolean("defaultEnabled") ?: true,
+                    permissions = json.stringList("permissions"),
+                    components = json.objectOrNull("components")?.let(::parseComponents),
                 )
                 return PluginManifestFields(manifest, declaredCapabilities)
             }
@@ -92,6 +94,16 @@ internal object PluginManifestCodec {
                 name = json.string("name").orEmpty(),
                 keyId = json.string("keyId").orEmpty(),
             )
+
+            private fun parseComponents(json: JsonObject): HostPluginComponentDeclaration =
+                HostPluginComponentDeclaration(
+                    background = json.boolean("background") ?: false,
+                    foregroundService = json.boolean("foregroundService") ?: false,
+                    notificationListener = json.boolean("notificationListener") ?: false,
+                    accessibility = json.boolean("accessibility") ?: false,
+                    share = json.boolean("share") ?: false,
+                    deeplinks = json.stringList("deeplinks"),
+                )
 
             private fun parseProvides(json: JsonObject): HostProvides = HostProvides(
                 tools = json.stringList("tools"),

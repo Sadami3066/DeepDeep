@@ -15,7 +15,10 @@
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主 |
-| `services/` | 17 个宿主服务的真实适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
+| `services/` | 基础宿主服务适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
+| `extensions/` | plugin-api 1.1.0 扩展能力适配器：`device/`（设备/剪贴板/权限/包管理/Root·ADB/Intent/代理组件/后台任务）与 `data/`（设置存储/定位/联系人/短信/日历/媒体/语音/网页/凭据/无障碍），各自持有 `build*PluginServices` 工厂与 `AGENTS.md` |
+| `interaction/` | 插件交互桥 `PluginInteraction`：ActivityResult 队列、确认/输入/选择/日期时间/文件/图片/扫码/目录、Snackbar 与页面上下文；`PluginInteractionOverlay` 挂在 MainActivity 根部，`PluginInteractionHost.forPlugin()` 为每个插件提供实现 |
+| `components/` | manifest 注册的插件宿主 Android 组件：`PluginHostService`（specialUse 前台服务）、`PluginSystemEventReceiver`（开机/更新/精确闹钟）、`PluginHostActivity`（独立插件窗口）、`PluginNotificationListenerService`/`PluginNotificationActionReceiver`（通知监听与动作，见目录内 AGENTS.md） |
 | `HostToolNames.kt` | 宿主保留工具名表：引擎默认（read/write/edit/bash）、宿主工具（ask_user_question/present/system_shell、goal/job/timer/miniapp 变体、web/arrange/screen/virtual 工具）、SDK 工具（tool_search/mcp_\*）与 `mcp__` 前缀；外部插件安装期做工具名冲突校验 |
 
 ## 要点
@@ -30,6 +33,7 @@
 - `partial` 更新经 unlimited channel 在 `execute` 内顺序转发，插件回调可在任意线程调用；`execute` 异常（取消/中断除外）转成 `isError` 结果。
 - 槽渲染没有崩溃隔离：插件 Compose 内容抛异常会带崩 App（与工具/回调异常一致）；插件作者需自测，宿主不会静默禁用绑定位。
 - 外部插件清单只解析一次（`PluginManifestCodec.parse`），严格校验（`decode/validate`）由安装流程负责。
-- manifest 契约（`PluginManifest`/`UiManifest`/`Provides`/`PublisherInfo`）是宿主实现的只读接口，内部实现与解析/校验在 `external/HostPluginManifest.kt` 与搬入的 `PluginManifestCodec/PluginValidation/PluginVersion`；事件同理由 `events/HostPluginEvents.kt` 实现。
+- manifest 契约（`PluginManifest`/`UiManifest`/`Provides`/`PublisherInfo`/`PluginComponentDeclaration`）是宿主实现的只读接口，内部实现与解析/校验在 `external/HostPluginManifest.kt` 与搬入的 `PluginManifestCodec/PluginValidation/PluginVersion`；1.1.0 起 manifest 还包含 `permissions` 与 `components`，安装期校验权限/组件与 capability 的一致性；事件同理由 `events/HostPluginEvents.kt` 实现。
+- 无会话系统事件（通知接收/动作、后台任务、分享、深链、应用前后台）由 `manager/PluginSystemEvents` 按 capability 与 `components` 门槛串行派发到各插件全局 hooks；会话内事件仍走 `PluginSessionHooks`。
 - 外部包安装/装载时 `apiLevel` 不在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` 会被拒绝；低于下限（level 5）由 manager 映射为「插件 API 5 已停用，请更新插件」。
 - 新增目录/文件时同步本索引。

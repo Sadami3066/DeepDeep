@@ -4,6 +4,7 @@ import io.github.whywood.deepdeep.plugin.api.DEFAULT_LANGUAGE
 import io.github.whywood.deepdeep.plugin.api.IconRef
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginCapability
+import io.github.whywood.deepdeep.plugin.api.PluginComponentDeclaration
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
 import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.api.PublisherInfo
@@ -27,6 +28,15 @@ internal data class HostUiManifest(
     override val kotlin: String? = null,
     override val compose: String? = null,
 ) : UiManifest
+
+internal data class HostPluginComponentDeclaration(
+    override val background: Boolean = false,
+    override val foregroundService: Boolean = false,
+    override val notificationListener: Boolean = false,
+    override val accessibility: Boolean = false,
+    override val share: Boolean = false,
+    override val deeplinks: List<String> = emptyList(),
+) : PluginComponentDeclaration
 
 internal data class HostProvides(
     override val tools: List<String> = emptyList(),
@@ -52,4 +62,6 @@ internal data class HostPluginManifest(
     override val provides: Provides = HostProvides(),
     override val capabilities: Set<PluginCapability> = emptySet(),
     override val defaultEnabled: Boolean = true,
+    override val permissions: List<String> = emptyList(),
+    override val components: PluginComponentDeclaration? = null,
 ) : PluginManifest

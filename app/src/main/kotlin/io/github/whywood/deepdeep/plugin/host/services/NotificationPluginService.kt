@@ -18,7 +18,13 @@ import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.api.NotificationService
 import io.github.whywood.deepdeep.plugin.api.PluginNotification
+import io.github.whywood.deepdeep.plugin.api.PluginNotificationAction
+import io.github.whywood.deepdeep.plugin.api.PluginNotificationHandle
+import io.github.whywood.deepdeep.plugin.api.PluginNotificationRecord
+import io.github.whywood.deepdeep.plugin.host.components.PluginNotificationActionReceiver
+import io.github.whywood.deepdeep.plugin.host.components.PluginNotificationEvents
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.flow.Flow
 import io.github.whywood.deepdeep.plugin.api.NotificationChannel as ApiChannel
 
 internal class NotificationPluginService(
@@ -41,6 +47,28 @@ internal class NotificationPluginService(
         posted[notification.id] = PostedNotification(notification.title, notification.body)
         post(notification)
     }
+
+    override fun notifyChecked(notification: PluginNotification): PluginNotificationHandle? {
+        posted[notification.id] = PostedNotification(notification.title, notification.body)
+        if (!enabled) return null
+        post(notification)
+        return PluginNotificationHandle(
+            id = notification.id,
+            key = pluginNotificationKey(pluginId, notification.id),
+        )
+    }
+
+    override val listenerGranted: Boolean
+        get() = PluginNotificationEvents.listenerGranted(context)
+
+    override suspend fun recent(limit: Int): List<PluginNotificationRecord> =
+        PluginNotificationEvents.recent(limit)
+
+    override fun received(): Flow<PluginNotificationRecord> = PluginNotificationEvents.received()
+
+    override fun removed(): Flow<String> = PluginNotificationEvents.removed()
+
+    override suspend fun dismiss(key: String): Boolean = PluginNotificationEvents.dismiss(key)
 
     override fun updateProgress(id: String, progress: Int?, title: String?) {
         val previous = posted[id]
@@ -74,6 +102,13 @@ internal class NotificationPluginService(
         contentIntent()?.let { intent ->
             builder.setContentIntent(intent).setAutoCancel(true)
         }
+        notification.actions.take(MaxActions).forEach { action ->
+            builder.addAction(
+                0,
+                action.label,
+                actionIntent(notificationId = notification.id, action = action, payload = notification.payload.toString()),
+            )
+        }
         notification.progress?.let { progress ->
             builder.setProgress(100, progress.coerceIn(0, 100), false)
         }
@@ -101,6 +136,25 @@ internal class NotificationPluginService(
             )
         }.getOrNull()
     }
+
+    private fun actionIntent(
+        notificationId: String,
+        action: PluginNotificationAction,
+        payload: String,
+    ): PendingIntent? = runCatching {
+        val intent = Intent(context, PluginNotificationActionReceiver::class.java)
+            .setAction(PluginNotificationActionReceiver.ACTION_PLUGIN_NOTIFICATION)
+            .putExtra(PluginNotificationActionReceiver.EXTRA_PLUGIN_ID, pluginId)
+            .putExtra(PluginNotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+            .putExtra(PluginNotificationActionReceiver.EXTRA_ACTION_ID, action.id)
+            .putExtra(PluginNotificationActionReceiver.EXTRA_PAYLOAD, payload)
+        PendingIntent.getBroadcast(
+            context,
+            ("$pluginId:$notificationId:${action.id}").hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }.getOrNull()
 
     private fun kindOf(notification: PluginNotification): ChannelKind = when (notification.channel) {
         ApiChannel.DEFAULT -> ChannelKind.DEFAULT
@@ -137,7 +191,11 @@ internal class NotificationPluginService(
 
     private companion object {
         const val PLUGIN_NOTIFICATION_BASE = 10_000
+        const val MaxActions = 3
     }
 }
+
+internal fun pluginNotificationKey(pluginId: String, notificationId: String): String =
+    "plugin:$pluginId:$notificationId"
 
 internal fun pluginChannelId(pluginId: String, kind: String): String = "deepdeep_plugin_${pluginId}_$kind"

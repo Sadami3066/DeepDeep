@@ -3,12 +3,15 @@ package io.github.whywood.deepdeep.plugin.manager
 import io.github.whywood.deepdeep.plugin.api.ComposerAction
 import io.github.whywood.deepdeep.plugin.api.PluginExperimentalApi
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginBackgroundKind
+import io.github.whywood.deepdeep.plugin.api.PluginNotificationRecord
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import java.io.File
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.JsonObject
 
 data class PluginComposerActionUi(
     val pluginId: String,
@@ -61,4 +64,16 @@ interface PluginManagerFacade {
     fun composerActions(): List<PluginComposerActionUi>
 
     fun resolveText(text: LocalizedText): String
+
+    fun onNotificationReceived(record: PluginNotificationRecord, removed: Boolean)
+
+    fun onNotificationAction(pluginId: String, notificationId: String, actionId: String, payload: JsonObject)
+
+    fun onBackgroundTask(pluginId: String, taskId: String, kind: PluginBackgroundKind)
+
+    fun onShareReceived(text: String?, title: String?, streams: List<PluginSharedStream>)
+
+    fun onDeepLinkReceived(pluginId: String, path: String, arguments: JsonObject)
+
+    fun onAppLifecycle(foreground: Boolean)
 }

@@ -10,6 +10,9 @@ import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginLogLevel
 import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.host.PluginServices
+import io.github.whywood.deepdeep.plugin.host.extensions.data.DataPluginServices
+import io.github.whywood.deepdeep.plugin.host.extensions.device.DevicePluginServices
+import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteraction
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.runtime.ConversationQueries
 import io.github.whywood.deepdeep.runtime.EncryptedSecretStore
@@ -17,6 +20,7 @@ import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.McpServerProbe
+import io.github.whywood.deepdeep.runtime.Maintenance
 import io.github.whywood.deepdeep.runtime.SessionCommands
 import io.github.whywood.deepdeep.runtime.TimerService
 import io.github.whywood.deepdeep.runtime.MiniappAgentService
@@ -29,8 +33,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonObject
 import okio.FileSystem
 
-data class PluginServiceDependencies(
+internal data class PluginServiceDependencies(
     val context: Context,
+    val appContext: Context,
     val scope: CoroutineScope,
     val pluginId: String = "",
     val pluginFirstPageId: String? = null,
@@ -50,6 +55,7 @@ data class PluginServiceDependencies(
     val network: HttpTransport? = null,
     val sessions: ConversationQueries? = null,
     val sessionCommands: SessionCommands? = null,
+    val maintenance: Maintenance? = null,
     val activeSessionId: StateFlow<String?>? = null,
     val jobs: JobRegistry? = null,
     val timers: TimerService? = null,
@@ -75,6 +81,9 @@ data class PluginServiceDependencies(
     },
     val bus: PluginBus? = null,
     val logSink: ((PluginLogLevel, String, Throwable?) -> Unit)? = null,
+    val interaction: PluginInteraction? = null,
+    val dataServices: DataPluginServices? = null,
+    val deviceServices: DevicePluginServices? = null,
 )
 
 internal fun buildPluginServices(deps: PluginServiceDependencies): PluginServices {
@@ -119,6 +128,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
                 runtime = deps.sessions,
                 commands = deps.sessionCommands,
                 activeSessionId = deps.activeSessionId,
+                maintenance = deps.maintenance,
             )
         } else {
             null
@@ -149,13 +159,16 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
             )
         },
         ui = if (
-            deps.openUrl != null || deps.share != null || deps.toast != null || deps.openPage != null
+            deps.openUrl != null || deps.share != null || deps.toast != null ||
+            deps.openPage != null || deps.interaction != null
         ) {
             UiPluginService(
                 openUrlCallback = deps.openUrl,
                 shareCallback = deps.share,
                 toastCallback = deps.toast,
                 openPageCallback = deps.openPage,
+                interaction = deps.interaction,
+                context = deps.context,
             )
         } else {
             null
@@ -174,5 +187,23 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
         chat = deps.chatSink?.let { sink ->
             deps.sessionCommands?.let { commands -> ChatPluginService(sink, commands) }
         },
+        settings = deps.dataServices?.settings,
+        location = deps.dataServices?.location,
+        contacts = deps.dataServices?.contacts,
+        sms = deps.dataServices?.sms,
+        calendar = deps.dataServices?.calendar,
+        media = deps.dataServices?.media,
+        speech = deps.dataServices?.speech,
+        web = deps.dataServices?.web,
+        credentials = deps.dataServices?.credentials,
+        accessibility = deps.dataServices?.accessibility,
+        device = deps.deviceServices?.device,
+        clipboard = deps.deviceServices?.clipboard,
+        permissions = deps.deviceServices?.permissions,
+        packages = deps.deviceServices?.packages,
+        privilege = deps.deviceServices?.privilege,
+        intents = deps.deviceServices?.intents,
+        components = deps.deviceServices?.components,
+        background = deps.deviceServices?.background,
     )
 }

@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.plugin.api.MIN_SUPPORTED_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.api.PluginPermission
 import io.github.whywood.deepdeep.plugin.api.assetIcon
 import io.github.whywood.deepdeep.plugin.api.pluginSkill
 import io.github.whywood.deepdeep.plugin.api.pluginSkillFile
@@ -210,5 +211,102 @@ class PluginValidationTest {
         )
         val codes = PluginValidation.validateSkill(invalid).map { it.code }
         assertTrue(codes.count { it == PluginValidation.Code.INVALID_SKILL } >= 6)
+    }
+}
+
+class PluginManifestExtensionValidationTest {
+    private val baseCapabilities = setOf(
+        PluginCapability.LOCATION,
+        PluginCapability.NOTIFICATIONS,
+        PluginCapability.BACKGROUND,
+        PluginCapability.SHARE,
+        PluginCapability.DEEPLINK,
+        PluginCapability.PERMISSIONS,
+        PluginCapability.ACCESSIBILITY,
+    )
+
+    private fun manifest(
+        capabilities: Set<PluginCapability> = baseCapabilities,
+        permissions: List<String> = emptyList(),
+        components: HostPluginComponentDeclaration? = null,
+    ): HostPluginManifest = HostPluginManifest(
+        id = "com.example.plugin",
+        version = "1.0.0",
+        apiLevel = PLUGIN_API_LEVEL,
+        name = hostLocalizedText("Plugin"),
+        summary = hostLocalizedText("Summary"),
+        entryClass = "com.example.plugin.Plugin",
+        capabilities = capabilities,
+        permissions = permissions,
+        components = components,
+    )
+
+    private fun codes(
+        capabilities: Set<PluginCapability> = baseCapabilities,
+        permissions: List<String> = emptyList(),
+        components: HostPluginComponentDeclaration? = null,
+    ): List<PluginValidation.Code> =
+        PluginValidation.validate(
+            manifest(capabilities, permissions, components),
+            capabilities.map { it.wire },
+        ).map { it.code }
+
+    @Test
+    fun acceptsPermissionsAndComponentsWhenCapabilitiesMatch() {
+        val issues = codes(
+            permissions = listOf(PluginPermission.LOCATION_FINE, PluginPermission.NOTIFICATIONS_LISTEN),
+            components = HostPluginComponentDeclaration(
+                background = true,
+                foregroundService = true,
+                notificationListener = true,
+                share = true,
+                deeplinks = listOf("mail", "mail/compose"),
+            ),
+        )
+        assertEquals(emptyList<PluginValidation.Code>(), issues)
+    }
+
+    @Test
+    fun rejectsUnknownAndDuplicatePermissions() {
+        assertEquals(
+            listOf(PluginValidation.Code.INVALID_PERMISSION),
+            codes(permissions = listOf("unknown.permission")),
+        )
+        assertEquals(
+            listOf(PluginValidation.Code.INVALID_PERMISSION),
+            codes(permissions = listOf(PluginPermission.LOCATION_FINE, PluginPermission.LOCATION_FINE)),
+        )
+    }
+
+    @Test
+    fun rejectsPermissionWithoutCapability() {
+        assertEquals(
+            listOf(PluginValidation.Code.PERMISSION_WITHOUT_CAPABILITY),
+            codes(capabilities = setOf(PluginCapability.APP), permissions = listOf(PluginPermission.LOCATION_FINE)),
+        )
+    }
+
+    @Test
+    fun rejectsComponentWithoutCapability() {
+        assertEquals(
+            listOf(PluginValidation.Code.COMPONENT_WITHOUT_CAPABILITY),
+            codes(capabilities = setOf(PluginCapability.APP), components = HostPluginComponentDeclaration(background = true)),
+        )
+        assertEquals(
+            listOf(PluginValidation.Code.COMPONENT_WITHOUT_CAPABILITY),
+            codes(capabilities = setOf(PluginCapability.APP), components = HostPluginComponentDeclaration(deeplinks = listOf("mail"))),
+        )
+    }
+
+    @Test
+    fun rejectsInvalidDeepLinks() {
+        assertEquals(
+            listOf(PluginValidation.Code.INVALID_DEEPLINK),
+            codes(components = HostPluginComponentDeclaration(deeplinks = listOf("Mail Page"))),
+        )
+        assertEquals(
+            listOf(PluginValidation.Code.INVALID_DEEPLINK),
+            codes(components = HostPluginComponentDeclaration(deeplinks = listOf("mail", "mail"))),
+        )
     }
 }

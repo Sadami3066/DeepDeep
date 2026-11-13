@@ -16,9 +16,18 @@ import io.github.whywood.deepdeep.plugin.host.services.McpModelMapping
 import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.plugin.host.declaredOnly
+import io.github.whywood.deepdeep.plugin.host.components.PluginHostActivity
+import io.github.whywood.deepdeep.plugin.host.extensions.data.DataServiceDeps
+import io.github.whywood.deepdeep.plugin.host.extensions.data.buildDataPluginServices
+import io.github.whywood.deepdeep.plugin.host.extensions.device.DeviceServiceDeps
+import io.github.whywood.deepdeep.plugin.host.extensions.device.PluginBackgroundDispatcher
+import io.github.whywood.deepdeep.plugin.host.extensions.device.buildDevicePluginServices
+import io.github.whywood.deepdeep.plugin.host.components.PluginNotificationEvents
+import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionHost
 import io.github.whywood.deepdeep.plugin.host.services.buildPluginServices
 import io.github.whywood.deepdeep.plugin.manager.ExternalPluginRuntime
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
+import io.github.whywood.deepdeep.service.AppVisibility
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +47,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             recordStore = recordStore,
             hostVersion = BuildConfig.VERSION_NAME,
         )
-        PluginHostManager(
+        val manager = PluginHostManager(
             context = deps.appContext,
             strings = deps.pluginStrings,
             filesDir = deps.appContext.filesDir,
@@ -65,6 +74,19 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             },
             busySessions = { deps.host.busySessionIds.value },
         )
+        PluginBackgroundDispatcher.install { pluginId, taskId, kind ->
+            manager.onBackgroundTask(pluginId, taskId, kind)
+        }
+        PluginNotificationEvents.receivedDispatcher = { record, removed ->
+            manager.onNotificationReceived(record, removed)
+        }
+        PluginNotificationEvents.actionDispatcher = { pluginId, notificationId, actionId, payload ->
+            manager.onNotificationAction(pluginId, notificationId, actionId, payload)
+        }
+        deps.scope.launch {
+            AppVisibility.foregroundFlow.collect { foreground -> manager.onAppLifecycle(foreground) }
+        }
+        manager
     }
 
     private fun pluginServices(
@@ -72,9 +94,64 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
         dataDir: File,
         pluginScope: CoroutineScope,
         firstPageId: String?,
-    ): PluginServiceDependencies =
-        PluginServiceDependencies(
+    ): PluginServiceDependencies {
+        val pluginRootDir = File(deps.appContext.filesDir, "plugins/$pluginId")
+        val pluginCacheDir = File(deps.appContext.cacheDir, "plugins/$pluginId")
+        val interaction = PluginInteractionHost.forPlugin(pluginId, deps.appContext)
+        val dataServices = buildDataPluginServices(
+            DataServiceDeps(
+                context = deps.uiContext,
+                appContext = deps.appContext,
+                scope = pluginScope,
+                pluginId = pluginId,
+                pluginDataDir = dataDir,
+                pluginCacheDir = pluginCacheDir,
+                pluginRootDir = pluginRootDir,
+                interaction = interaction,
+                language = { LanguagePreferences(deps.appContext).read() },
+                hostFiles = deps.hostFiles,
+                arrangeCalendar = deps.arrangeCalendar,
+                webProvider = deps.webProvider,
+                credentialStore = deps.credentials,
+                customProviders = deps.customProviderStore,
+                providerCatalog = deps.providerCatalog,
+                mcpConfig = deps.mcpConfigStore,
+                mcpTokenStore = deps.mcpTokenStore,
+                installationId = { deps.installationId.get() },
+                adbToken = { deps.adbBridge.token },
+            ),
+        )
+        val deviceServices = buildDevicePluginServices(
+            DeviceServiceDeps(
+                context = deps.uiContext,
+                appContext = deps.appContext,
+                scope = pluginScope,
+                pluginId = pluginId,
+                pluginDataDir = dataDir,
+                pluginCacheDir = pluginCacheDir,
+                rootDir = pluginRootDir,
+                interaction = interaction,
+                rootShell = deps.rootShell,
+                adb = deps.adbBridge,
+                hostAccess = deps.hostAccess.state,
+                launchPluginActivity = { targetPluginId, pageId, arguments, newTask ->
+                    PluginHostActivity.launch(
+                        context = deps.appContext,
+                        pluginId = targetPluginId,
+                        pageId = pageId,
+                        arguments = arguments,
+                        newTask = newTask,
+                    )
+                    true
+                },
+                installationId = { deps.installationId.get() },
+                firstPageId = firstPageId,
+                updateInstaller = deps.updateInstaller,
+            ),
+        )
+        return PluginServiceDependencies(
             context = deps.uiContext,
+            appContext = deps.appContext,
             scope = pluginScope,
             pluginId = pluginId,
             pluginFirstPageId = firstPageId,
@@ -92,6 +169,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             network = deps.httpTransport,
             sessions = deps.host,
             sessionCommands = deps.host,
+            maintenance = deps.host,
             screen = deps.pluginScreenController(),
             mainScreen = deps.pluginMainScreenController(),
             activeSessionId = deps.activeSessionId,
@@ -127,7 +205,11 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             toast = ::toast,
             share = { request -> PluginUiBridge.share(deps.uiContext, request) },
             openPage = { pageId -> PluginUiBridge.openPage(deps.uiContext, pluginId, pageId) },
+            interaction = interaction,
+            dataServices = dataServices,
+            deviceServices = deviceServices,
         )
+    }
 
     private fun openUrl(url: String) {
         runCatching {

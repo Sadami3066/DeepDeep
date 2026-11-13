@@ -17,7 +17,8 @@
 | `PluginSessionHooks.kt` | 会话 hooks 绑定（`SessionBinding`）、每 `SessionBinding` 一次 `contributionsFor`（工具与会话 hooks 共用）、per-session hook source、run 级冻结、运行期/SDK 事件派发 |
 | `PluginUiProjection.kt` | UI 状态投影：只读 record+runtime+descriptor，不调用插件 |
 | `PluginRecoveryPolicy.kt` | 崩溃恢复纯策略：激活中断（marker attempts）与同版本连续启动次数 → 继续/需手动重试/自动禁用 |
-| `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、启停/卸载、导入/更新、槽位、页面、composer 动作、恢复） |
+| `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、启停/卸载、导入/更新、槽位、页面、composer 动作、恢复、无会话系统事件入口） |
+| `PluginSystemEvents.kt` | 无会话系统事件派发：通知接收/动作、后台任务、分享、深链、应用前后台；按 capability 与 manifest `components` 过滤，串行队列 + 5s 超时，失败只记日志 |
 | `PluginUiModels.kt` | UI 状态模型：快照（含 pages）/相位/可用性/恢复结果 |
 | `PluginExternalUiModels.kt` | 外部包 UI 模型：导入检查/安装结果 |
 | `PluginExternalFlow.kt` | 外部 `.ddp` 流程：记录注册/启动激活（支持 skip 集合供崩溃守卫跳过）、导入校验/首装、启停装载、Staged 同步 pending\*、错误落盘 |

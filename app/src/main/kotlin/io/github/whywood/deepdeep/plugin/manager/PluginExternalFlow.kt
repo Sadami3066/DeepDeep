@@ -155,6 +155,8 @@ internal class PluginExternalFlow(
                 trusted = result.trusted != null,
                 provides = result.manifest.provides,
                 capabilities = result.manifest.capabilities.map { it.wire }.toSet(),
+                permissions = result.manifest.permissions,
+                components = componentWires(result.manifest.components),
                 error = null,
             )
 
@@ -170,8 +172,22 @@ internal class PluginExternalFlow(
                 trusted = false,
                 provides = HostProvides(),
                 capabilities = emptySet(),
+                permissions = emptyList(),
+                components = emptyList(),
                 error = rejectionMessage(result.code, result.reason, result.declaredApiLevel),
             )
+        }
+    }
+
+    private fun componentWires(components: io.github.whywood.deepdeep.plugin.api.PluginComponentDeclaration?): List<String> {
+        if (components == null) return emptyList()
+        return buildList {
+            if (components.background) add("background")
+            if (components.foregroundService) add("foregroundService")
+            if (components.notificationListener) add("notificationListener")
+            if (components.accessibility) add("accessibility")
+            if (components.share) add("share")
+            if (components.deeplinks.isNotEmpty()) add("deeplinks")
         }
     }
 

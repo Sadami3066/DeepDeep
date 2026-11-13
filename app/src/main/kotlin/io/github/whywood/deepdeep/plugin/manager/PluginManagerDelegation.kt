@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import io.github.whywood.deepdeep.plugin.api.LocalizedText
+import io.github.whywood.deepdeep.plugin.api.PluginBackgroundKind
+import io.github.whywood.deepdeep.plugin.api.PluginNotificationRecord
 import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
@@ -11,6 +13,7 @@ import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.serialization.json.JsonObject
 
 abstract class PluginManagerDelegation internal constructor() : PluginManagerFacade {
     internal abstract val appScope: CoroutineScope
@@ -54,6 +57,27 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
         }
 
     override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
+
+    private val systemEvents: PluginSystemEvents by lazy {
+        PluginSystemEvents(appScope) { registrySnapshot }
+    }
+
+    override fun onNotificationReceived(record: PluginNotificationRecord, removed: Boolean) =
+        systemEvents.notificationReceived(record, removed)
+
+    override fun onNotificationAction(pluginId: String, notificationId: String, actionId: String, payload: JsonObject) =
+        systemEvents.notificationAction(pluginId, notificationId, actionId, payload)
+
+    override fun onBackgroundTask(pluginId: String, taskId: String, kind: PluginBackgroundKind) =
+        systemEvents.backgroundTask(pluginId, taskId, kind)
+
+    override fun onShareReceived(text: String?, title: String?, streams: List<PluginSharedStream>) =
+        systemEvents.shareReceived(text, title, streams)
+
+    override fun onDeepLinkReceived(pluginId: String, path: String, arguments: JsonObject) =
+        systemEvents.deepLinkReceived(pluginId, path, arguments)
+
+    override fun onAppLifecycle(foreground: Boolean) = systemEvents.appLifecycle(foreground)
 
     internal fun bindSessionHooks(
         binding: SessionBinding,

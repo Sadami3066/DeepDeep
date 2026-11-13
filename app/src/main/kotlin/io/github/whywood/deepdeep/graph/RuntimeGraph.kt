@@ -37,6 +37,7 @@ import io.github.whywood.deepdeep.runtime.timerTools
 import io.github.whywood.deepdeep.service.LinuxJobRunner
 import io.github.whywood.deepdeep.web.DeepSeekWebProvider
 import io.github.whywood.deepdeep.web.RoutingWebProvider
+import io.github.whywood.deepdeep.web.WebProvider
 import io.github.whywood.deepdeep.web.braveBackend
 import io.github.whywood.deepdeep.web.exaBackend
 import io.github.whywood.deepdeep.web.serperBackend
@@ -59,6 +60,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
     }
 
     private val arrangeCalendar by lazy { AndroidArrangeCalendarGateway(deps.appContext) }
+
+    internal val pluginWebProvider: WebProvider get() = webProvider
+
+    internal val pluginArrangeCalendar: io.github.whywood.deepdeep.arrange.ArrangeCalendarGateway get() = arrangeCalendar
 
     private val memoryStore = MemoryStore(File(deps.agentDir, "memory"))
 

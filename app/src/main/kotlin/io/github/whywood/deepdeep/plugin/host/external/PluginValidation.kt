@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.plugin.api.MIN_SUPPORTED_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginManifest
+import io.github.whywood.deepdeep.plugin.api.PluginPermission
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.api.SlotIds
@@ -36,6 +37,10 @@ internal object PluginValidation {
         MISSING_CAPABILITIES,
         INVALID_UI_SLOT,
         INVALID_SKILL,
+        INVALID_PERMISSION,
+        PERMISSION_WITHOUT_CAPABILITY,
+        COMPONENT_WITHOUT_CAPABILITY,
+        INVALID_DEEPLINK,
     }
 
     data class Issue(
@@ -58,6 +63,10 @@ internal object PluginValidation {
     private val PAGE_ID = Regex("^[a-z][a-z0-9_.-]*$")
 
     private val SKILL_ID = Regex("^[a-z][a-z0-9_-]*$")
+
+    private val DEEPLINK = Regex("^[a-z0-9][a-z0-9/._-]*$")
+
+    private const val MAX_DEEPLINK_LENGTH = 128
 
     fun isValidId(id: String): Boolean = id.length in 1..MAX_ID_LENGTH && PLUGIN_ID.matches(id)
 
@@ -123,6 +132,7 @@ internal object PluginValidation {
         }
         validateProvides(manifest.provides)
         validateCapabilities(declaredCapabilities)
+        validatePermissions(manifest.permissions, manifest.components, manifest.capabilities)
     }
 
     fun validateSkill(skill: PluginSkill): List<Issue> = buildList {
@@ -190,6 +200,69 @@ internal object PluginValidation {
                 add(error(Code.INVALID_UI_SLOT, "provides.uiSlots[$index]", "unknown or incomplete slot id: $slot"))
             }
         }
+    }
+
+    private fun MutableList<Issue>.validatePermissions(
+        permissions: List<String>,
+        components: io.github.whywood.deepdeep.plugin.api.PluginComponentDeclaration?,
+        capabilities: Set<PluginCapability>,
+    ) {
+        val seen = mutableSetOf<String>()
+        permissions.forEachIndexed { index, wire ->
+            val field = "permissions[$index]"
+            when {
+                wire !in PluginPermission.ALL -> add(error(Code.INVALID_PERMISSION, field, "unknown permission: $wire"))
+                !seen.add(wire) -> add(error(Code.INVALID_PERMISSION, field, "duplicate permission: $wire"))
+                else -> permissionCapability(wire)?.let { required ->
+                    if (required !in capabilities) {
+                        add(
+                            error(
+                                Code.PERMISSION_WITHOUT_CAPABILITY,
+                                field,
+                                "permission $wire requires capability ${required.wire}",
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        if (components == null) return
+        fun requireComponent(enabled: Boolean, field: String, capability: PluginCapability) {
+            if (enabled && capability !in capabilities) {
+                add(error(Code.COMPONENT_WITHOUT_CAPABILITY, "components.$field", "components.$field requires capability ${capability.wire}"))
+            }
+        }
+        requireComponent(components.background, "background", PluginCapability.BACKGROUND)
+        requireComponent(components.foregroundService, "foregroundService", PluginCapability.BACKGROUND)
+        requireComponent(components.notificationListener, "notificationListener", PluginCapability.NOTIFICATIONS)
+        requireComponent(components.accessibility, "accessibility", PluginCapability.ACCESSIBILITY)
+        requireComponent(components.share, "share", PluginCapability.SHARE)
+        if (components.deeplinks.isNotEmpty() && PluginCapability.DEEPLINK !in capabilities) {
+            add(error(Code.COMPONENT_WITHOUT_CAPABILITY, "components.deeplinks", "components.deeplinks requires capability deeplink"))
+        }
+        val links = mutableSetOf<String>()
+        components.deeplinks.forEachIndexed { index, link ->
+            val field = "components.deeplinks[$index]"
+            when {
+                !DEEPLINK.matches(link) || link.length > MAX_DEEPLINK_LENGTH ->
+                    add(error(Code.INVALID_DEEPLINK, field, "invalid deep link path: $link"))
+                !links.add(link) -> add(error(Code.INVALID_DEEPLINK, field, "duplicate deep link path: $link"))
+            }
+        }
+    }
+
+    private fun permissionCapability(wire: String): PluginCapability? = when (wire) {
+        PluginPermission.LOCATION_COARSE, PluginPermission.LOCATION_FINE -> PluginCapability.LOCATION
+        PluginPermission.CONTACTS_READ, PluginPermission.CONTACTS_WRITE -> PluginCapability.CONTACTS
+        PluginPermission.SMS_READ, PluginPermission.SMS_SEND -> PluginCapability.SMS
+        PluginPermission.CALENDAR_READ, PluginPermission.CALENDAR_WRITE -> PluginCapability.CALENDAR
+        PluginPermission.CAMERA, PluginPermission.MICROPHONE -> PluginCapability.UI
+        PluginPermission.NOTIFICATIONS_POST, PluginPermission.NOTIFICATIONS_LISTEN -> PluginCapability.NOTIFICATIONS
+        PluginPermission.ACCESSIBILITY -> PluginCapability.ACCESSIBILITY
+        PluginPermission.OVERLAY, PluginPermission.USAGE_STATS, PluginPermission.BATTERY_OPTIMIZATION -> PluginCapability.PERMISSIONS
+        PluginPermission.INSTALL_PACKAGES -> PluginCapability.PACKAGES
+        PluginPermission.MANAGE_STORAGE -> PluginCapability.MEDIA
+        else -> null
     }
 
     private fun MutableList<Issue>.validateCapabilities(declaredCapabilities: List<String>?) {
