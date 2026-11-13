@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.market
 
+import io.github.whywood.deepdeep.plugin.host.external.PluginVersion
+
 internal data class InstalledContent(
     val plugins: Map<String, String> = emptyMap(),
     val skills: Map<String, String?> = emptyMap(),
@@ -34,9 +36,17 @@ internal fun resolveInstallStates(
         val installedVersion = installed.versionOf(entry)
         next[entry.id] = when {
             installedVersion == null -> MarketInstallState.NotInstalled
-            installedVersion == entry.version -> MarketInstallState.Installed(installedVersion)
+            !marketVersionIsNewer(entry.version, installedVersion) ->
+                MarketInstallState.Installed(installedVersion)
+
             else -> MarketInstallState.UpdateAvailable(installedVersion)
         }
     }
     return next
+}
+
+private fun marketVersionIsNewer(market: String, installed: String): Boolean {
+    val marketVersion = PluginVersion.parse(market) ?: return market != installed
+    val installedValue = PluginVersion.parse(installed) ?: return market != installed
+    return marketVersion > installedValue
 }

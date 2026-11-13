@@ -56,6 +56,28 @@ class MarketInstallStatesTest {
     }
 
     @Test
+    fun newerInstalledVersionStaysInstalled() {
+        val entry = entry(MarketEntryType.Plugin, "plugin.alpha", "1.2.0")
+        val states = resolveInstallStates(
+            entries = listOf(entry),
+            installed = InstalledContent(plugins = mapOf("plugin.alpha" to "1.3.0")),
+            previous = emptyMap(),
+        )
+        assertEquals(MarketInstallState.Installed("1.3.0"), states["plugin.alpha"])
+    }
+
+    @Test
+    fun unparseableDifferentVersionShowsUpdateAvailable() {
+        val entry = entry(MarketEntryType.Plugin, "plugin.alpha", "nightly")
+        val states = resolveInstallStates(
+            entries = listOf(entry),
+            installed = InstalledContent(plugins = mapOf("plugin.alpha" to "1.3.0")),
+            previous = emptyMap(),
+        )
+        assertEquals(MarketInstallState.UpdateAvailable("1.3.0"), states["plugin.alpha"])
+    }
+
+    @Test
     fun installingStateSurvivesRecompute() {
         val entry = entry(MarketEntryType.Skill, "skill.alpha", "1.0.0")
         val previous = mapOf<String, MarketInstallState>("skill.alpha" to MarketInstallState.Installing(null))
