@@ -8,7 +8,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.1.0`（以 `deepdeep-maven` 最新发布为准），配套 `design 0.7.0`；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.1.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0` 已单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
 
 `plugin-api 1.1.0` 是 level 6 内的纯加法：已发布、只用 1.0.x 能力的插件不需要重新编译；使用 1.1.0 新能力的插件要写 `minHostVersion: "1.0.6"`（宿主 1.0.6+）。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
 
@@ -17,7 +17,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.1.0` / `design 0.7.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.1.0` / `design 0.7.0`，另有 `design 0.8.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
@@ -88,7 +88,7 @@ cp -R template my-plugin && cd my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 6） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 6..6）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（6）处理；宿主 1.0.4 起 level 5 插件会被拒绝 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -755,7 +755,7 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 
 ### 插件界面只使用 `:design`
 
-插件 UI 直接使用 App 的设计系统 `io.github.whywood.deepdeep.design`（`plugin-api` 已通过 `api()` 传递，插件工程不需要再显式声明坐标）。组件与 App 完全同源，禁止自造样式；1.1.0 配套 `design 0.7.0`，新增组件见下表第二段：
+插件 UI 直接使用 App 的设计系统 `io.github.whywood.deepdeep.design`（`plugin-api` 已通过 `api()` 传递 `design 0.7.0`，插件工程不需要再显式声明坐标）。组件与 App 完全同源，禁止自造样式；新增组件见下表第二、三段：
 
 | 组件 | 用途 |
 |---|---|
@@ -790,6 +790,29 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 | `DdDatePicker(selected: LocalDate, onSelect, onDismiss, title, previousMonthLabel, nextMonthLabel)` | 日期选择弹层 |
 | `DdTimePicker(selected: LocalTime, onSelect, onDismiss, title, doneLabel)` | 时间选择弹层 |
 
+`design 0.8.0` 新增（需要显式依赖与 `minHostVersion: "1.0.7"`，见下）：
+
+| 组件 | 用途 |
+|---|---|
+| `DdSheet(onDismiss, fullBleed?, containerColor?, content)` | 重写后的底部弹层：只向下拖拽、遮罩点击/返回均先播完退出动画，高度上限为窗口高减状态栏；内容超长时由内容自己滚动（`verticalScroll`/`LazyColumn`），不要再写 `fillMaxHeight(0.94f)` |
+| `DdSwipeRow(key, actions, openKey, onOpenChange, enabled, content)` + `DdSwipeAction(icon, label, tint, background, onClick)` | 列表行滑动操作：双锚点吸附、同一时刻只展开一行、跨阈值触感；行内容自己负责不透明背景 |
+| `DdHtmlBlocks(html, loader, onLinkClick, onImageClick, imageLabel, ...)` + `DdHtmlImageLoader` | 带图片的 HTML 正文：按 `<img>` 切块，文本块沿用 `DdHtmlText` 的格式支持；loader 返回 `ImageBitmap`，失败显示占位 |
+| `DdInfoTooltip(text, contentDescription?, icon?)` | 行尾 info 图标 + 点击/长按提示，替代常驻说明小字 |
+| `LocalDdMotionEnabled` | 系统「减少动态效果」开关；自定义动画在它为 false 时跳过 |
+
+```kotlin
+compileOnly("io.github.sadami3066.deepdeep:design:0.8.0")
+```
+
+```kotlin
+DdHtmlBlocks(
+    html = detail.htmlBody.orEmpty(),
+    loader = myImageLoader,
+    imageLabel = host.t("含图片", "Image"),
+    onImageClick = { source -> /* 打开查看器 */ },
+)
+```
+
 直接 `import io.github.whywood.deepdeep.design.DdMarkdown` 等组件（或整包 import），不需要额外声明依赖。
 
 ```kotlin
@@ -803,7 +826,7 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`。
+日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`。
 
 约定：
 
@@ -853,6 +876,7 @@ val result = host.chat().sendMessage(
 - `options.display` 非空时先写卡片消息（等价于 `postCustomMessage`），再触发轮次；`triggerTurn = false` 只落卡片。
 - 返回 `ChatSendResult`，`kind` 为 `ChatSendKind.STARTED`/`QUEUED`/`DISPLAYED`；未知会话抛 `IllegalArgumentException`。
 - 卡片写入 pi JSONL 的 `custom_message` 条目，重开会话后仍可还原，由 `chat.message:<customType>` 槽位渲染；`postCustomMessage` 仍保留，适合只落卡片。
+- 卡片在有工具调用进行时投递，会作为该回合的一个节点按发生顺序内联渲染（不会堆到回答末尾）；会话空闲时投递的卡片仍作为独立消息出现在回合边界，重开会话后的顺序与实时一致。
 
 ## 宿主服务
 
