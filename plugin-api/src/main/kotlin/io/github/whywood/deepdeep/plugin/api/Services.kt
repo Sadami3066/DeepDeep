@@ -72,9 +72,21 @@ public interface NotificationService {
 
     public fun notify(notification: PluginNotification)
 
+    public fun notifyChecked(notification: PluginNotification): PluginNotificationHandle?
+
     public fun updateProgress(id: String, progress: Int?, title: String? = null)
 
     public fun cancel(id: String)
+
+    public val listenerGranted: Boolean
+
+    public suspend fun recent(limit: Int = 50): List<PluginNotificationRecord>
+
+    public fun received(): Flow<PluginNotificationRecord>
+
+    public fun removed(): Flow<String>
+
+    public suspend fun dismiss(key: String): Boolean
 }
 
 public interface SecretService {
@@ -141,6 +153,15 @@ public interface FileService {
     public suspend fun resolve(path: String): String
 }
 
+public data class PluginMessage(
+    public val id: String,
+    public val role: MessageRole,
+    public val text: String,
+    public val timestampMs: Long,
+    public val toolName: String? = null,
+    public val images: List<String> = emptyList(),
+)
+
 public interface SessionService {
     public val active: SessionInfo?
 
@@ -149,6 +170,20 @@ public interface SessionService {
     public suspend fun list(): List<SessionInfo>
 
     public suspend fun prompt(text: String, sessionId: String? = null): Boolean
+
+    public suspend fun history(sessionId: String, limit: Int = 50): List<PluginMessage>
+
+    public suspend fun stop(sessionId: String): Boolean
+
+    public suspend fun create(title: String? = null): SessionInfo?
+
+    public suspend fun rename(sessionId: String, title: String): Boolean
+
+    public suspend fun delete(sessionId: String): Boolean
+
+    public suspend fun open(sessionId: String): Boolean
+
+    public suspend fun archive(sessionId: String, archived: Boolean): Boolean
 }
 
 public interface JobService {
@@ -216,9 +251,39 @@ public interface UiService {
 
     public fun share(request: ShareRequest)
 
+    public fun shareFiles(paths: List<String>, mimeType: String? = null)
+
     public fun toast(message: String)
 
     public fun openPage(pageId: String)
+
+    public fun openPageWithArguments(pageId: String, arguments: JsonObject, newTask: Boolean = false)
+
+    public fun closePage(result: JsonObject? = null)
+
+    public fun pageContext(): PluginPageContext?
+
+    public val isDark: Boolean
+
+    public suspend fun confirm(request: UiConfirmRequest): Boolean
+
+    public suspend fun prompt(request: UiPromptRequest): String?
+
+    public suspend fun choose(request: UiChooseRequest): String?
+
+    public suspend fun pickDate(request: UiDatePickRequest = uiDatePickRequest()): Long?
+
+    public suspend fun pickTime(request: UiTimePickRequest = uiTimePickRequest()): Int?
+
+    public suspend fun pickFiles(request: UiFilePickRequest = uiFilePickRequest()): List<PluginPickedFile>
+
+    public suspend fun pickImage(request: UiImagePickRequest = uiImagePickRequest()): PluginPickedFile?
+
+    public suspend fun scanQr(): String?
+
+    public suspend fun pickDirectory(): String?
+
+    public fun snackbar(message: String, actionLabel: String? = null, action: (() -> Unit)? = null)
 }
 
 public interface AppInfoService {
@@ -305,6 +370,24 @@ public interface ChatSendResult {
     public val delivery: ChatDelivery?
 }
 
+public interface ChatAttachment {
+    public val path: String
+    public val mimeType: String?
+    public val name: String?
+}
+
+public fun chatAttachment(
+    path: String,
+    mimeType: String? = null,
+    name: String? = null,
+): ChatAttachment = ChatAttachmentImpl(path, mimeType, name)
+
+internal data class ChatAttachmentImpl(
+    override val path: String,
+    override val mimeType: String?,
+    override val name: String?,
+) : ChatAttachment
+
 public interface ChatService {
     public suspend fun postCustomMessage(
         sessionId: String,
@@ -317,6 +400,13 @@ public interface ChatService {
     public suspend fun sendMessage(
         sessionId: String,
         text: String,
+        options: ChatMessageOptions = chatMessageOptions(),
+    ): ChatSendResult
+
+    public suspend fun sendMessageWithAttachments(
+        sessionId: String,
+        text: String,
+        attachments: List<ChatAttachment>,
         options: ChatMessageOptions = chatMessageOptions(),
     ): ChatSendResult
 }

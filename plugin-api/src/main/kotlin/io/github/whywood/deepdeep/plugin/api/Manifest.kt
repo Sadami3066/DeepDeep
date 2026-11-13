@@ -21,6 +21,20 @@ public interface Provides {
         get() = tools.isEmpty() && skills.isEmpty() && uiSlots.isEmpty() && pages.isEmpty()
 }
 
+public interface PluginComponentDeclaration {
+    public val background: Boolean
+
+    public val foregroundService: Boolean
+
+    public val notificationListener: Boolean
+
+    public val accessibility: Boolean
+
+    public val share: Boolean
+
+    public val deeplinks: List<String>
+}
+
 public interface PluginManifest {
     public val id: String
     public val version: String
@@ -38,4 +52,8 @@ public interface PluginManifest {
     public val provides: Provides
     public val capabilities: Set<PluginCapability>
     public val defaultEnabled: Boolean
+    public val permissions: List<String>
+        get() = emptyList()
+    public val components: PluginComponentDeclaration?
+        get() = null
 }

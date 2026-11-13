@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.plugin.api
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.staticCompositionLocalOf
 
 public object SlotIds {
     public const val TOOL_CARD_PREFIX: String = "tool.card.content:"
@@ -113,3 +115,6 @@ public interface PluginUiContributions {
         }
     }
 }
+
+public val LocalPluginPageContext: ProvidableCompositionLocal<PluginPageContext?> =
+    staticCompositionLocalOf { null }

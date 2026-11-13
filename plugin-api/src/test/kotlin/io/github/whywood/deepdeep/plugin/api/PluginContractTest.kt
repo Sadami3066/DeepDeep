@@ -13,8 +13,11 @@ class PluginContractTest {
     fun capabilitiesExposeExperimentalPrompt() {
         assertNotNull(PluginCapability.fromWire("prompt"))
         assertEquals(PluginCapability.PROMPT, PluginCapability.fromWire("prompt"))
-        assertNull(PluginCapability.fromWire("privilege"))
-        assertEquals(18, PluginCapability.ALL.size)
+        assertEquals(PluginCapability.PRIVILEGE, PluginCapability.fromWire("privilege"))
+        assertEquals(PluginCapability.CREDENTIALS, PluginCapability.fromWire("credentials"))
+        assertNull(PluginCapability.fromWire("unknown"))
+        assertEquals(38, PluginCapability.ALL.size)
+        assertEquals(18, PluginPermission.ALL.size)
     }
 
     @Test

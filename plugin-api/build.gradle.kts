@@ -4,7 +4,7 @@ plugins {
     `maven-publish`
 }
 
-val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("1.0.1")
+val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("1.1.0")
 
 android {
     namespace = "io.github.whywood.deepdeep.plugin.api"

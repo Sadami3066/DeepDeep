@@ -76,6 +76,45 @@ public interface PluginHost {
 
     public fun chat(): ChatService = throw PluginServiceUnavailable("chat")
 
+    public fun settings(): PluginSettingsService
+
+    public fun device(): DeviceService
+
+    public fun clipboard(): ClipboardService
+
+    public fun permissions(): PermissionService
+
+    public fun packages(): PackageService
+
+    public fun privilege(): PrivilegeService
+
+    public fun intents(): IntentsService
+
+    @PluginExperimentalApi
+    public fun components(): ComponentService
+
+    public fun background(): BackgroundService
+
+    public fun location(): LocationService
+
+    public fun contacts(): ContactsService
+
+    public fun sms(): SmsService
+
+    public fun calendar(): CalendarService
+
+    public fun media(): MediaService
+
+    public fun speech(): SpeechService
+
+    public fun web(): WebService
+
+    @PluginExperimentalApi
+    public fun credentials(): CredentialService
+
+    @PluginExperimentalApi
+    public fun accessibility(): AccessibilityServicePlugin
+
     public fun requestContributionsRefresh()
 }
 

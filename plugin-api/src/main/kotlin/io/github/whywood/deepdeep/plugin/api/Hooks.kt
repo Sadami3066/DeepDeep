@@ -152,6 +152,45 @@ public interface BusEventReceived : PluginEvent {
     public val event: PluginBusEvent
 }
 
+
+public interface NotificationReceivedEvent : PluginEvent {
+    public val notification: PluginNotificationRecord
+    public val removed: Boolean
+}
+
+public interface NotificationActionEvent : PluginEvent {
+    public val notificationId: String
+    public val actionId: String
+    public val payload: JsonObject
+}
+
+public interface BackgroundTaskEvent : PluginEvent {
+    public val taskId: String
+    public val kind: PluginBackgroundKind
+    public val firedAtMs: Long
+}
+
+public interface SharedStream {
+    public val path: String
+    public val mimeType: String?
+    public val name: String?
+}
+
+public interface ShareReceivedEvent : PluginEvent {
+    public val text: String?
+    public val streams: List<SharedStream>
+    public val title: String?
+}
+
+public interface DeepLinkReceivedEvent : PluginEvent {
+    public val path: String
+    public val arguments: JsonObject
+}
+
+public interface AppLifecycleEvent : PluginEvent {
+    public val foreground: Boolean
+}
+
 public data class PromptRequest(
     public val sessionId: String,
     public val prompt: String,
@@ -308,6 +347,18 @@ public interface PluginHooks {
     public suspend fun mcpToolsChanged(event: McpToolsChangedEvent): Unit = Unit
 
     public suspend fun busEvent(event: BusEventReceived): Unit = Unit
+
+    public suspend fun notificationReceived(event: NotificationReceivedEvent): Unit = Unit
+
+    public suspend fun notificationAction(event: NotificationActionEvent): Unit = Unit
+
+    public suspend fun backgroundTask(event: BackgroundTaskEvent): Unit = Unit
+
+    public suspend fun shareReceived(event: ShareReceivedEvent): Unit = Unit
+
+    public suspend fun deepLinkReceived(event: DeepLinkReceivedEvent): Unit = Unit
+
+    public suspend fun appLifecycle(event: AppLifecycleEvent): Unit = Unit
 
     public suspend fun promptTransform(request: PromptRequest): String = request.prompt
 

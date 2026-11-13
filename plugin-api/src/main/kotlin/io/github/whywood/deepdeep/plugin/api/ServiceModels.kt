@@ -101,6 +101,12 @@ public interface PluginNotification {
     public val channel: NotificationChannel
     public val progress: Int?
     public val ongoing: Boolean
+
+    public val actions: List<PluginNotificationAction>
+        get() = emptyList()
+
+    public val payload: JsonObject
+        get() = JsonObject(emptyMap())
 }
 
 public fun pluginNotification(
@@ -119,6 +125,28 @@ internal data class PluginNotificationImpl(
     override val channel: NotificationChannel,
     override val progress: Int?,
     override val ongoing: Boolean,
+) : PluginNotification
+
+public fun pluginNotificationWithActions(
+    id: String,
+    title: String,
+    body: String,
+    channel: NotificationChannel = NotificationChannel.DEFAULT,
+    progress: Int? = null,
+    ongoing: Boolean = false,
+    actions: List<PluginNotificationAction> = emptyList(),
+    payload: JsonObject = JsonObject(emptyMap()),
+): PluginNotification = PluginNotificationWithActionsImpl(id, title, body, channel, progress, ongoing, actions, payload)
+
+internal data class PluginNotificationWithActionsImpl(
+    override val id: String,
+    override val title: String,
+    override val body: String,
+    override val channel: NotificationChannel,
+    override val progress: Int?,
+    override val ongoing: Boolean,
+    override val actions: List<PluginNotificationAction>,
+    override val payload: JsonObject,
 ) : PluginNotification
 
 public data class NetworkResponse(
