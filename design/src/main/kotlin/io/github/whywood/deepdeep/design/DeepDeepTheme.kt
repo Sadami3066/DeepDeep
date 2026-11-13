@@ -56,36 +56,7 @@ data class DeepDeepColors(
     val onUserBubble: Color get() = ink
 }
 
-private val Light = DeepDeepColors(
-    dark = false,
-    paper = Color(0xFFF7F8F8),
-    surface = Color(0xFFFFFFFF),
-    raised = Color(0xFFFFFFFF),
-    ink = Color(0xFF0B1220),
-    inkSecondary = Color(0xFF354451),
-    inkTertiary = Color(0xFF64727E),
-    accent = Color(0xFF2563EB),
-    accentPressed = Color(0xFF1D4ED8),
-    onAccent = Color(0xFFFFFFFF),
-    accentSoft = Color(0xFFE8F0FE),
-    danger = Color(0xFFD93025),
-    success = Color(0xFF188038),
-    warning = Color(0xFFB45309),
-    hairline = Color(0xFFDDE5E7),
-    wash = Color(0xFFEDF3F4),
-    composer = Color(0xFFFFFFFF),
-    scrim = Color(0x520B1220),
-    codeBackground = Color(0x0F0B1220),
-    inlineCodeBackground = Color(0xFFF2F3F4),
-    codeKeyword = Color(0xFF7C3AED),
-    codeString = Color(0xFF15803D),
-    codeComment = Color(0xFF64727E),
-    codeNumber = Color(0xFFB45309),
-    codeFunction = Color(0xFF1D4ED8),
-    codeType = Color(0xFF0E7490),
-)
-
-val LocalDeepDeepColors = staticCompositionLocalOf { Light }
+val LocalDeepDeepColors = staticCompositionLocalOf { DdTheme.lightDeepDeep() }
 
 enum class DdFontStyle(val id: String, val displayName: String) {
     FREDOKA("fredoka", "Fredoka"),
@@ -320,7 +291,7 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
     )
 }
 @Composable
-fun DeepDeepTheme(
+public fun DeepDeepTheme(
     preset: ThemePreset = ThemePreset.SYSTEM,
     fontStyle: DdFontStyle = DdFonts.style,
     content: @Composable () -> Unit,
@@ -330,8 +301,17 @@ fun DeepDeepTheme(
         ThemePreset.SYSTEM -> if (systemDark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
         ThemePreset.SANTORINI -> DdTheme.lightSantorini()
         ThemePreset.OCEANIC -> DdTheme.darkOceanic()
-        ThemePreset.DEEP_DEEP -> Light
+        ThemePreset.DEEP_DEEP -> DdTheme.lightDeepDeep()
     }
+    DeepDeepTheme(colors = colors, fontStyle = fontStyle, content = content)
+}
+
+@Composable
+public fun DeepDeepTheme(
+    colors: DeepDeepColors,
+    fontStyle: DdFontStyle = DdFonts.style,
+    content: @Composable () -> Unit,
+) {
     DdFonts.apply(fontStyle)
     val typography = remember(fontStyle) { deepDeepTypography() }
     val colorScheme = remember(colors) { colors.materialScheme() }

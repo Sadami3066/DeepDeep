@@ -632,8 +632,26 @@ public final class io.github.whywood.deepdeep.design.DdMotion {
 public final class io.github.whywood.deepdeep.design.DdMotionKt {
   public static final androidx.compose.runtime.ProvidableCompositionLocal<java.lang.Boolean> getLocalDdMotionEnabled();
 }
+public final class io.github.whywood.deepdeep.design.DdNoticeBarKt {
+  public static final void DdNoticeBar(java.lang.String, androidx.compose.ui.Modifier, io.github.whywood.deepdeep.design.DdNoticeTone, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdNoticeBarKt$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+}
+public final class io.github.whywood.deepdeep.design.DdNoticeTone extends java.lang.Enum<io.github.whywood.deepdeep.design.DdNoticeTone> {
+  public static final io.github.whywood.deepdeep.design.DdNoticeTone INFO;
+  public static final io.github.whywood.deepdeep.design.DdNoticeTone SUCCESS;
+  public static final io.github.whywood.deepdeep.design.DdNoticeTone WARNING;
+  public static final io.github.whywood.deepdeep.design.DdNoticeTone DANGER;
+  public static io.github.whywood.deepdeep.design.DdNoticeTone[] values();
+  public static io.github.whywood.deepdeep.design.DdNoticeTone valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.DdNoticeTone> getEntries();
+}
 public final class io.github.whywood.deepdeep.design.DdPageScaffoldKt {
   public static final void DdPageScaffold(kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdProgressBarKt {
+  public static final void DdProgressBar(java.lang.Float, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
 }
 public final class io.github.whywood.deepdeep.design.DdPullToRefreshKt {
   public static final void DdPullToRefresh(boolean, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, androidx.compose.material3.pulltorefresh.PullToRefreshState, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.BoxScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
@@ -772,6 +790,22 @@ public final class io.github.whywood.deepdeep.design.DdSpacing {
 public final class io.github.whywood.deepdeep.design.DdSpinnerKt {
   public static final void DdSpinner-oMI9zvI(androidx.compose.ui.Modifier, long, float, float, androidx.compose.runtime.Composer, int, int);
 }
+public final class io.github.whywood.deepdeep.design.DdStatusRowKt {
+  public static final void DdStatusRow(java.lang.String, java.lang.String, androidx.compose.ui.Modifier, io.github.whywood.deepdeep.design.DdStatusTone, boolean, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdStatusRowKt$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+}
+public final class io.github.whywood.deepdeep.design.DdStatusTone extends java.lang.Enum<io.github.whywood.deepdeep.design.DdStatusTone> {
+  public static final io.github.whywood.deepdeep.design.DdStatusTone NEUTRAL;
+  public static final io.github.whywood.deepdeep.design.DdStatusTone ACCENT;
+  public static final io.github.whywood.deepdeep.design.DdStatusTone SUCCESS;
+  public static final io.github.whywood.deepdeep.design.DdStatusTone WARNING;
+  public static final io.github.whywood.deepdeep.design.DdStatusTone DANGER;
+  public static io.github.whywood.deepdeep.design.DdStatusTone[] values();
+  public static io.github.whywood.deepdeep.design.DdStatusTone valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.DdStatusTone> getEntries();
+}
 public final class io.github.whywood.deepdeep.design.DdSwipeAction {
   public static final int $stable;
   public final io.github.whywood.deepdeep.design.DdIcon getIcon();
@@ -840,6 +874,7 @@ public final class io.github.whywood.deepdeep.design.DdTextKt {
 public final class io.github.whywood.deepdeep.design.DdTheme {
   public static final io.github.whywood.deepdeep.design.DdTheme INSTANCE;
   public static final int $stable;
+  public final io.github.whywood.deepdeep.design.DeepDeepColors lightDeepDeep();
   public final io.github.whywood.deepdeep.design.DeepDeepColors lightSantorini();
   public final io.github.whywood.deepdeep.design.DeepDeepColors darkOceanic();
 }
@@ -1043,6 +1078,7 @@ public final class io.github.whywood.deepdeep.design.DeepDeepColors {
 public final class io.github.whywood.deepdeep.design.DeepDeepThemeKt {
   public static final androidx.compose.runtime.ProvidableCompositionLocal<io.github.whywood.deepdeep.design.DeepDeepColors> getLocalDeepDeepColors();
   public static final void DeepDeepTheme(io.github.whywood.deepdeep.design.ThemePreset, io.github.whywood.deepdeep.design.DdFontStyle, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DeepDeepTheme(io.github.whywood.deepdeep.design.DeepDeepColors, io.github.whywood.deepdeep.design.DdFontStyle, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
   public static final io.github.whywood.deepdeep.design.DeepDeepColors deepDeepColors(androidx.compose.runtime.Composer, int);
 }
 public final class io.github.whywood.deepdeep.design.DeepDeepThemeKt$WhenMappings {
