@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-11-13T10:35:30Z",
+  "generatedAt": "2026-11-13T16:24:46Z",
   "keyId": "ec256:db63256431bd66db",
   "entries": [
     {
@@ -31,19 +31,19 @@
           "Messaging"
         ]
       },
-      "version": "2.1.0",
+      "version": "2.2.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113-2/feishu-2.1.0.ddp",
-        "sha256": "62b850d0674c0f6b9f3dead28a162ff37db1e290679a8f5902e429713b7120b4",
-        "size": 935996
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/feishu-2.2.1.ddp",
+        "sha256": "877ccbc06332b459dbc29b7364947c3f34b1bc9f5bc3f1bc6ee68a7e79591791",
+        "size": 955811
       },
       "plugin": {
         "apiLevel": 6,
-        "minHostVersion": "1.0.6",
+        "minHostVersion": "1.0.8",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "2.1.0"
+        "version": "2.2.1"
       }
     },
     {
@@ -54,12 +54,12 @@
         "en": "Mail"
       },
       "summary": {
-        "zh": "接入 IMAP/SMTP 邮箱，读信、找信、带附件起草回复",
-        "en": "Read, search, and draft replies with attachments in your IMAP/SMTP mailbox"
+        "zh": "接入 IMAP/SMTP 邮箱，读信、找信、起草与发送",
+        "en": "Read, search, draft and send from your IMAP/SMTP mailbox"
       },
       "description": {
-        "zh": "用授权码或应用专用密码接入 QQ、163、126、腾讯企业邮、阿里云邮箱、Gmail、iCloud、Fastmail、Yahoo、Zoho 与自定义 IMAP/SMTP 邮箱。\n插件提供邮件列表、会话阅读、写信（含附件）、账户管理、后台定时同步与新邮件通知，并让 Agent 搜索、阅读、归档邮件和起草带附件的回复；发送前由你确认。",
-        "en": "Connect QQ, 163, 126, Tencent Exmail, Alibaba Mail, Gmail, iCloud, Fastmail, Yahoo, Zoho or any custom IMAP/SMTP mailbox with an authorization code or app password.\nThe plugin provides a message list, conversation reading, composing with attachments, account management, background sync and new mail notifications, and lets the agent search, read, archive and draft replies with attachments; you confirm before anything is sent."
+        "zh": "用授权码或应用专用密码接入 QQ、163、126、腾讯企业邮、阿里云邮箱、Gmail、iCloud、Fastmail、Yahoo、Zoho 与自定义 IMAP/SMTP 邮箱。\n插件提供邮件列表、会话阅读、写信（含附件）、账户管理、后台定时同步与新邮件通知；聊天里的邮件卡片可以直接打开线程 sheet，Agent 可以搜索、阅读、归档、起草，并在你明确要求时直接发送。",
+        "en": "Connect QQ, 163, 126, Tencent Exmail, Alibaba Mail, Gmail, iCloud, Fastmail, Yahoo, Zoho or any custom IMAP/SMTP mailbox with an authorization code or app password.\nThe plugin provides a message list, conversation reading, composing with attachments, account management, background sync and notifications; mail cards in chat open the thread sheet in place, and the agent can search, read, archive, draft and send directly when you ask."
       },
       "icon": "icons/mail.png?v=e0094a7740c7",
       "tags": {
@@ -74,19 +74,19 @@
           "Productivity"
         ]
       },
-      "version": "1.2.0",
+      "version": "1.4.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113-2/mail-1.2.0.ddp",
-        "sha256": "1ce9326ebbe0bce9c494e6270f2e68caee74a42332744c539266d47963781d57",
-        "size": 1710762
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/mail-1.4.0.ddp",
+        "sha256": "50ae40951edbe472cf2ca56f324472ffc5b69b7cddd2922e7e010a048b583361",
+        "size": 1739646
       },
       "plugin": {
         "apiLevel": 6,
-        "minHostVersion": "1.0.6",
+        "minHostVersion": "1.0.8",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "1.2.0"
+        "version": "1.4.0"
       }
     },
     {
@@ -117,19 +117,19 @@
           "Photos"
         ]
       },
-      "version": "2.1.0",
+      "version": "2.2.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113-2/micloud-2.1.0.ddp",
-        "sha256": "39284c1492b942d9112097f9ce63f0faadec7f0c4310b701c09eafa3089f2b2d",
-        "size": 933094
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/micloud-2.2.0.ddp",
+        "sha256": "fe5ad991c77686ecc68a8b5977b52f25c9fef36601594773225329f93bf52846",
+        "size": 943887
       },
       "plugin": {
         "apiLevel": 6,
-        "minHostVersion": "1.0.6",
+        "minHostVersion": "1.0.8",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "2.1.0"
+        "version": "2.2.0"
       }
     },
     {
@@ -205,15 +205,15 @@
           "CLI"
         ]
       },
-      "version": "2.1.0",
+      "version": "2.2.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113-2/sysu-2.1.0.ddp",
-        "sha256": "a53807f99e8b30bc2ea99cdae62211c51f990ba516f43da9f90737610c792213",
-        "size": 954276
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/sysu-2.2.0.ddp",
+        "sha256": "63b9511802adb07485bcd8ab7f4eacb0a371f5dacc54fcd51b4aaf65ddec7a4d",
+        "size": 971771
       },
       "plugin": {
         "apiLevel": 6,
-        "minHostVersion": "1.0.6",
+        "minHostVersion": "1.0.8",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -221,7 +221,50 @@
           "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-1.jpg",
           "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-2.jpg"
         ],
-        "version": "2.1.0"
+        "version": "2.2.0"
+      }
+    },
+    {
+      "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.themes",
+      "name": {
+        "zh": "主题",
+        "en": "Themes"
+      },
+      "summary": {
+        "zh": "八套精选配色，为 DeepDeep 换一种气质",
+        "en": "Eight curated palettes that give DeepDeep a different mood"
+      },
+      "description": {
+        "zh": "为主题库加入海盐、苔原、晚霞、樱、墨玉、夜航、咖啡与石墨八套固定配色，在设置 → 主题里一键切换。\n主题只改变颜色，主界面、插件页面、系统助手浮层、悬浮窗与状态栏会一起生效；不需要工具或后台权限。",
+        "en": "Adds eight fixed palettes — Harbor, Tundra, Dusk, Sakura, Jade, Nightfall, Mocha and Graphite — to the theme library, switched from Settings → Theme.\nThemes only change colours and apply across the main UI, plugin pages, the assistant overlay, floating windows and the status bar; no tools or background access are required."
+      },
+      "icon": "icons/themes.png?v=f488fe06b543",
+      "tags": {
+        "zh": [
+          "主题",
+          "配色",
+          "外观"
+        ],
+        "en": [
+          "Themes",
+          "Colours",
+          "Appearance"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/themes-1.0.0.ddp",
+        "sha256": "343c30d711ee4a2b82a20e37e8769f39f3138a42b3fbe2758c5a11cf05f9a0c5",
+        "size": 815861
+      },
+      "plugin": {
+        "apiLevel": 6,
+        "minHostVersion": "1.0.8",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "version": "1.0.0"
       }
     },
     {
@@ -252,19 +295,19 @@
           "Chat history"
         ]
       },
-      "version": "0.4.0",
+      "version": "0.5.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113-2/wechat-0.4.0.ddp",
-        "sha256": "5bb6508523395445255ba37759705902da52e70186f92e6bc547a5927c2b7566",
-        "size": 874183
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/wechat-0.5.1.ddp",
+        "sha256": "7e2c75b5cb4bb652935b50737139f8922892cc7919c0dbcf1732ba99eac4824b",
+        "size": 894531
       },
       "plugin": {
         "apiLevel": 6,
-        "minHostVersion": "1.0.6",
+        "minHostVersion": "1.0.8",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "root",
-        "version": "0.4.0"
+        "version": "0.5.1"
       }
     },
     {
@@ -295,19 +338,19 @@
           "Messaging"
         ]
       },
-      "version": "2.1.0",
+      "version": "2.2.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113-2/wecom-2.1.0.ddp",
-        "sha256": "3a459d174f65873c9cca2b1ab68f5430416a3132d84e2ea28dd3dc0cf06bc338",
-        "size": 968864
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114/wecom-2.2.0.ddp",
+        "sha256": "28149fe1923fdfe14d7006e0421744367da69ced7c1f65de849563f040930ec3",
+        "size": 985302
       },
       "plugin": {
         "apiLevel": 6,
-        "minHostVersion": "1.0.6",
+        "minHostVersion": "1.0.8",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
-        "version": "2.1.0"
+        "version": "2.2.0"
       }
     },
     {
