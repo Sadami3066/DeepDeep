@@ -11,7 +11,7 @@ DEVICE_DIR="/sdcard/Android/data/${PACKAGE}/files/plugin-e2e"
 PLUGINS_DIR="${PLUGINS_DIR:-$(deepdeep_neighbor_dir DeepDeep-Official-Plugins || true)}"
 UPDATE_MODULE="${UPDATE_MODULE:-wecom}"
 UPDATE_VERSION="9.9.9"
-MODULES=(feishu wecom sysu micloud)
+MODULES=(feishu wecom sysu micloud mail)
 
 UPDATE_MANIFEST="${PLUGINS_DIR}/${UPDATE_MODULE}/src/main/assets/plugin.json"
 UPDATE_BUNDLE="${PLUGINS_DIR}/${UPDATE_MODULE}/build/plugin/${UPDATE_MODULE}.ddp"

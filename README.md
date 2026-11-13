@@ -177,7 +177,7 @@ https://github.com/user-attachments/assets/11c0d18c-192d-4e15-98bf-c6fb95498fae
 ./scripts/check.sh --full         # 交付前：再加插件 SDK ABI 基线
 ./scripts/check.sh --device       # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh           # 插件端到端（设备或模拟器，无需 root）
-./scripts/plugin-bundles-e2e.sh   # 四个官方插件包回归（需先构建插件仓库）
+./scripts/plugin-bundles-e2e.sh   # 五个官方插件包回归（需先构建插件仓库）
 ./scripts/api-compat.sh           # 校验插件 SDK（plugin-api / design）的公开 ABI（--update 重建基线）
 ```
 
