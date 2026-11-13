@@ -32,6 +32,22 @@ class PluginToolAdapterTest {
     private val emptyArgs = JsonObject(emptyMap())
 
     @Test
+    fun errorResultReturnedWhenToolThrowsError() = runTest {
+        val tool = pluginTool(
+            name = "explode",
+            description = "explode",
+            parameters = emptyArgs,
+            execute = { throw StackOverflowError("too deep") },
+        )
+
+        val coding = PluginToolAdapter.toCodingTool(tool)
+        val result = coding.execute("call-1", emptyArgs, null, null)
+
+        assertEquals("too deep", (result.content.single() as TextContent).text)
+        assertEquals(true, result.isError)
+    }
+
+    @Test
     fun mapsToolMetadata() {
         val parameters = buildJsonObject {
             put("type", "object")

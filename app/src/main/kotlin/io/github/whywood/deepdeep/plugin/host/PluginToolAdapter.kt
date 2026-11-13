@@ -102,7 +102,7 @@ internal object PluginToolAdapter {
         throw error
     } catch (error: CancellationException) {
         throw error
-    } catch (error: Exception) {
+    } catch (error: Throwable) {
         toolError(error.message ?: error.javaClass.simpleName)
     }
 

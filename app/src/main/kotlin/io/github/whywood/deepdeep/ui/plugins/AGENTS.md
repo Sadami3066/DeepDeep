@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `PluginsScreen.kt` | 插件页：搜索、64dp 顶栏（导入「+」；市场 tab 为刷新按钮）、单列表行（图标+名称+摘要+开关+「⋯」动作菜单）、插件详情底部弹层、卸载确认弹窗；`pendingImportUri` 承接文件管理器/分享打开的 `.ddp` 并复用导入确认弹窗 |
-| `PluginsStateHolder.kt` | 纯 UI 临时状态（搜索词、启停中 id）与命令分发（启停、卸载、导入、恢复） |
+| `PluginsStateHolder.kt` | 纯 UI 临时状态（搜索词、启停中/更新中 id）与命令分发（启停、卸载、导入、恢复、应用待更新版本） |
 | `PluginImportDialogs.kt` | 外部插件导入确认/结果弹窗 |
 | `PluginUiSupport.kt` | `LocalizedText.values` 按语言解析、asset 图标按显示尺寸降采样解码（缺失/损坏回退占位）、phase/search/size 纯函数、列表分组卡片 |
 | `PluginHostSlots.kt` | `PluginPageHost`：按 `manager.pagesOf(pluginId)` 找页面并直接渲染 `PluginPage.content`（UI 不兼容/页面不存在时回退提示）与 composer 动作查询 |
@@ -16,9 +16,9 @@
 
 - 插件页分「市场 / 我的」两个 tab：市场 tab 直接嵌 `ui/common/market/MarketTab`（签名索引、刷新、详情与安装），我的是已安装插件单列表；两个 tab 各自保存搜索词，搜索框在选项卡下方。无插件时是居中空态（图标 + 提示 + 顶栏导入说明）。
 - 列表行 = 图标 + 名称 + 市场标注的权限档位标签 + 摘要 + `DdSwitch`；行尾「⋯」菜单只放动作：「插件信息」、`FAILED`/`DEGRADED` 且 `lastError` 非空时的「重试激活」与「回滚到 <version>」（调 `retryActivation`/`rollbackPlugin`，失败文本由 `lastError` 回显在行内）、最后是破坏性「卸载」。只读信息不下拉菜单。已安装插件按 id 关联市场条目：显示 `requiredAccess` 标签（普通绿 / ADB 黄 / Root 红），当前启用档位低于要求时摘要位提示权限不足（失败文本优先）。
-- 插件详情是 `DdSheet` 底部弹层（`plugin_detail`）：状态、版本、已安装版本（与当前版本不同时）、发布者、来源（外部导入/内置）、大小、技能；只读无动作。
+- 插件详情是 `DdSheet` 底部弹层（`plugin_detail`）：状态、版本、已安装版本（与当前版本不同时）、发布者、来源（外部导入/内置）、大小、技能；当存在待更新版本（`PENDING_RESTART`）时显示「更新已准备好」卡片与「立即更新」主按钮，点按调用 `applyPendingUpdate`，不做自动应用。
 - 有 `pages` 的插件点整行进入第一个页面（`AppDestination.PluginPage`）；没有 `pages` 的行不可点。插件页面是插件唯一的自绘界面，内容由 `PluginPage.content` 内联提供，宿主用 `PluginPageHost` 直接渲染；UI 不兼容或页面不存在时显示不可用提示。
 - 图标：asset 图标按实际显示尺寸 `inSampleSize` 降采样解码、不染色；文件缺失或损坏回退 `DdIcons.Puzzle`。
 - `LocalPluginManager` 由 `MainActivity` 的 `ProvidePluginManager` 提供；无管理器时槽位一律静默不渲染。
-- 槽位渲染不做崩溃隔离：插件内容抛异常会带崩 App；UI 不兼容或页面不存在时只禁用该插件 UI，不影响工具/技能。
+- 槽位渲染不做崩溃隔离：插件内容抛异常会带崩 App；UI 不兼容或页面不存在时只禁用该插件 UI，不影响工具/技能。插件运行期的未捕获异常由宿主生命周期统一兜底（标记失败并记日志），不会带崩宿主。
 - 用户可见文案走 `res/values*/strings_plugins.xml`（中英同步）；颜色/字号只用 `:design` token。

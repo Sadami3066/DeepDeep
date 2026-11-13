@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.plugin.manager
 
 import android.content.Context
+import android.util.Log
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.PluginStrings
@@ -67,6 +68,7 @@ class PluginHostManager internal constructor(
         gate = gate,
         skillStore = skillStore,
         external = external,
+        onPluginCrash = ::onPluginCrash,
     )
     private val materializer = PluginContributionMaterializer(gate)
     private val uiProjection = PluginUiProjection(textResolver, strings)
@@ -96,6 +98,12 @@ class PluginHostManager internal constructor(
         clearStartupCount = { pluginId -> external?.clearStartupCount(pluginId) ?: false },
         onContributionsChanged = onContributionsChanged,
     )
+
+    private fun onPluginCrash(pluginId: String, error: Throwable) {
+        runCatching { Log.e(TAG, "uncaught exception in plugin $pluginId", error) }
+        scope.launch { runCatching { refreshNow() } }
+        runCatching { onContributionsChanged() }
+    }
 
     override val appScope: CoroutineScope get() = scope
 
@@ -149,6 +157,12 @@ class PluginHostManager internal constructor(
     }
 
     override suspend fun refreshNow() = mutex.withLock { refreshLocked() }
+
+    override suspend fun applyPendingUpdate(pluginId: String): Boolean = mutex.withLock {
+        externalFlow.activatePendingVersion(pluginId)
+        refreshLocked()
+        external?.record(pluginId)?.pendingVersion == null
+    }
 
     override fun skillIds(pluginId: String): List<String> =
         gate.view(pluginId)?.skillIds.orEmpty()
@@ -236,5 +250,9 @@ class PluginHostManager internal constructor(
         external?.setEnabled(pluginId, false)
         gate.setEnabled(pluginId, false)
         gate.markFailure(pluginId, strings.get(message))
+    }
+
+    private companion object {
+        const val TAG = "PluginHostManager"
     }
 }

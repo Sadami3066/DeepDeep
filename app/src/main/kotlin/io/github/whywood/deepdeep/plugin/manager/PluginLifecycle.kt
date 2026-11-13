@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import io.github.whywood.deepdeep.plugin.host.external.LoadedPluginHandle
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -25,13 +26,14 @@ internal class PluginLifecycle(
     private val gate: PluginRuntimeRegistry,
     private val skillStore: PluginSkillStore,
     private val external: ExternalPluginRuntime?,
+    private val onPluginCrash: (pluginId: String, error: Throwable) -> Unit = { _, _ -> },
 ) {
     fun createRuntime(
         record: PluginRecord,
         manifest: PluginManifest,
         externalRecord: ExternalPluginRecord? = null,
     ): ManagedPlugin {
-        val scope = newScope()
+        val scope = newScope(record.id)
         return ManagedPlugin(
             id = record.id,
             manifest = manifest,
@@ -42,14 +44,21 @@ internal class PluginLifecycle(
         )
     }
 
-    fun newScope(): CoroutineScope =
-        CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
+    fun newScope(pluginId: String): CoroutineScope {
+        val handler = CoroutineExceptionHandler { _, error ->
+            runCatching { gate.markFailure(pluginId, error.message ?: error.javaClass.simpleName) }
+            runCatching { onPluginCrash(pluginId, error) }
+        }
+        return CoroutineScope(
+            parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]) + handler,
+        )
+    }
 
     fun createHost(pluginId: String, manifest: PluginManifest, scope: CoroutineScope): PluginHost =
         hostFactory(pluginId, manifest, scope)
 
     fun attachHandle(view: PluginRuntimeView, handle: LoadedPluginHandle): PluginRuntimeView? {
-        val scope = newScope()
+        val scope = newScope(view.id)
         val host = createHost(view.id, handle.manifest, scope)
         return gate.markLoaded(
             pluginId = view.id,
@@ -95,7 +104,7 @@ internal class PluginLifecycle(
 
     private fun freshScopeView(view: PluginRuntimeView): PluginRuntimeView {
         if (view.scope.coroutineContext[Job]?.isActive == true) return view
-        val scope = newScope()
+        val scope = newScope(view.id)
         val host = createHost(view.id, view.manifest, scope)
         return gate.updateHost(view.id, host, scope) ?: view
     }

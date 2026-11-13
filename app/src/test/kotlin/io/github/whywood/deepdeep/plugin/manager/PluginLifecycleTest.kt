@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,6 +43,31 @@ class PluginLifecycleTest {
             host = testPluginHost(manifest, gate.view("alpha")!!.scope),
             scope = gate.view("alpha")!!.scope,
         )
+    }
+
+    @Test
+    fun uncaughtCoroutineExceptionIsContainedAndMarksFailure() = runTest {
+        val gate = PluginRuntimeRegistry()
+        val crashes = mutableListOf<Pair<String, Throwable>>()
+        val root = Files.createTempDirectory("plugin-lifecycle").toFile()
+        val lifecycle = PluginLifecycle(
+            parentScope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler)),
+            hostFactory = { _, manifest, scope -> testPluginHost(manifest, scope) },
+            gate = gate,
+            skillStore = PluginSkillStore(root.resolve("skills"), root.resolve("repo")),
+            external = null,
+            onPluginCrash = { pluginId, error -> crashes += pluginId to error },
+        )
+        val record = managerRecord("alpha")
+        val runtime = lifecycle.createRuntime(record, managerManifest("alpha"))
+        gate.register(record, runtime)
+
+        runtime.scope.launch { throw IllegalStateException("boom") }.join()
+
+        assertEquals("alpha", crashes.single().first)
+        assertEquals("boom", crashes.single().second.message)
+        assertEquals("boom", gate.record("alpha")?.lastError)
+        assertTrue(runtime.scope.isActive)
     }
 
     @Test
