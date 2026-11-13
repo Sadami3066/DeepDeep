@@ -8,16 +8,16 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.1.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0` 已单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.2.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0`/`0.9.0` 单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
 
-`plugin-api 1.1.0` 是 level 6 内的纯加法：已发布、只用 1.0.x 能力的插件不需要重新编译；使用 1.1.0 新能力的插件要写 `minHostVersion: "1.0.6"`（宿主 1.0.6+）。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
+`plugin-api 1.2.0` 是 level 6 内的纯加法：已发布、只用 1.0.x/1.1.x 能力的插件不需要重新编译；使用 1.2.0 新能力的插件要写 `minHostVersion: "1.0.8"`（宿主 1.0.8+）。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
 
 插件工程从 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) 的 `template/` 起步：独立 Gradle Android 工程，包含一个示例工具、一个示例技能、一段提示词与完整的 `.ddp` 打包/签名/验签实现，复制或改名即起点。官方插件实现见 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)。
 
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.1.0` / `design 0.7.0`，另有 `design 0.8.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.2.0` / `design 0.9.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
@@ -88,7 +88,7 @@ cp -R template my-plugin && cd my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 6） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 6..6）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（6）处理；宿主 1.0.4 起 level 5 插件会被拒绝 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"`；使用 design 0.9.0 组件或 plugin-api 1.2.0 新能力的插件写 `"1.0.8"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -114,8 +114,9 @@ cp -R template my-plugin && cd my-plugin
 | `skills` | 技能 id 列表，如 `template-skill` |
 | `uiSlots` | 注册的槽位 id，如 `tool.card.content:template_echo`、`chat.message:card`；插件页面不走槽位，见 `pages` |
 | `pages` | 插件页面 id 列表 |
+| `themes` | 主题 id 列表；与 `assets/themes.json` 中的 `id` 一一对应，见「主题包」 |
 
-`capabilities` 声明插件实际使用的宿主服务与能力；安装确认页与插件详情会展示，宿主只注入声明过的服务。**未声明的服务访问器在运行时抛 `PluginServiceUnavailable`**（不是返回 null）。1.1.0 共 38 项，分四组；标「实验」的访问器需要 `@OptIn(PluginExperimentalApi::class)`。
+`capabilities` 声明插件实际使用的宿主服务与能力；安装确认页与插件详情会展示，宿主只注入声明过的服务。**未声明的服务访问器在运行时抛 `PluginServiceUnavailable`**（不是返回 null）。1.2.0 共 38 项，分四组；标「实验」的访问器需要 `@OptIn(PluginExperimentalApi::class)`。
 
 **基础能力（1.0 起）**
 
@@ -238,6 +239,61 @@ cp -R template my-plugin && cd my-plugin
 - `host.text(source, *args)` 支持 `String.format` 占位符（`%s`/`%d`），参数只传字符串/数字（签名保留 `vararg Any`，新代码不要再传其它类型）。
 - `LocalizedText` 与 `IconRef` 是只读接口：文本用 `localizedText(default, zh?, en?)` 构造，图标用 `assetIcon("asset:<路径>")` 构造；level 5 的 `Literal`/`Resource` 等构造在 v6 已删除。
 - 外部插件没有 App 资源，`host.text()` 负责解析与格式化。
+
+### 主题包（`assets/themes.json`）
+
+插件可以贡献固定浅色或深色主题，用户在「设置 → 主题」里切换后全局生效。主题包只读取安装目录里的 JSON，不执行插件代码；插件停用或文件缺失时，主题选择回退「跟随系统」。`plugin.json` 的 `provides.themes` 声明主题 id，`assets/themes.json` 给出定义，两边必须完全一致。
+
+```json
+{
+  "schema": 1,
+  "themes": [
+    {
+      "id": "aurora",
+      "name": { "default": "Aurora", "zh": "极光", "en": "Aurora" },
+      "dark": false,
+      "base": "santorini",
+      "tokens": {
+        "paper": "#F7F8F8",
+        "accent": "#7C3AED",
+        "ink": "#1E3A47"
+      }
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `schema` | int | 是 | 固定为 `1` |
+| `themes` | array | 是 | 1–24 个主题，id 不能重复 |
+| `id` | string | 是 | 主题 id，正则 `^[a-z][a-z0-9_-]*$`，最长 64 字符；与 `provides.themes` 对应 |
+| `name` | object | 是 | `default` 必填，`zh`/`en` 可选；按 App 语言取，缺失回退 `default`；每项最长 64 字符 |
+| `dark` | bool | 是 | 主题明暗；决定色块标记、状态栏图标与插件的 `ui.isDark` |
+| `base` | string | 是 | `deepdeep`、`santorini` 或 `oceanic`，提供未覆盖 token 的默认色 |
+| `tokens` | object | 是 | 颜色覆盖；键必须在下方白名单内，值只能是 `#RRGGBB` 或 `#AARRGGBB` |
+
+`base` 只作为底稿：`deepdeep` 为默认浅色，`santorini` 为浅色，`oceanic` 为深色；`dark` 可以与 `base` 的明暗不同，最终明暗以 `dark` 为准。未写的 token 沿用 `base`。
+
+可用 token：
+
+```
+paper surface raised ink inkSecondary inkTertiary accent accentPressed onAccent
+accentSoft danger success warning hairline wash composer scrim
+codeBackground inlineCodeBackground codeKeyword codeString codeComment
+codeNumber codeFunction codeType
+```
+
+对比度在最终配色上校验：
+
+| 组合 | 最低对比度 |
+|---|---|
+| `ink` / `paper` | 4.5:1 |
+| `ink` / `surface` | 4.5:1 |
+| `inkSecondary` / `paper` | 4.5:1 |
+| `onAccent` / `accent` | 3:1 |
+
+安装时读取并校验主题文件；文件超过 64 KiB、schema 或字段非法、token 未知、颜色格式错误、对比度不足、id 重复、主题数超过 24、`provides.themes` 与文件不一致，都会以 `THEMES_INVALID` 拒绝安装，并在确认页/提示里给出具体原因。主题文件通过校验后随 `assets/**` 解包到安装目录，宿主启动时只读取该文件，不依赖插件运行。
 
 校验错误码（宿主在安装时执行，`PluginValidation`）：
 
@@ -681,6 +737,21 @@ host.ui().openPageWithArguments(
 - 页面内用 `host.ui().pageContext()` 或 Compose 的 `LocalPluginPageContext.current` 读取 `PluginPageContext(pageId, arguments)`；不在插件页内调用时返回 null。
 - 关闭页面用 `host.ui().closePage(result)`，`result` 是可选的 JSON；独立窗口关闭后回到宿主界面。
 - 打开别人的页面不行：`openPage(...)`/`openPageWithArguments(...)` 只接受本插件声明的页面 id。
+1.2.0 起还可以把页面作为 sheet 直接叠在聊天上打开，适合“点聊天卡片看详情”这类不该离开当前会话的场景：
+
+```kotlin
+host.ui().openPageSheet(
+    pageId = "detail",
+    arguments = buildJsonObject { put("threadId", threadId) },
+)
+```
+
+- 宿主用底部 sheet 承载同一个 `PluginPage.content()`，不会 push 导航页；下滑、点遮罩、返回或插件调用 `closePage()` 都会关闭 sheet，回到聊天。
+- 页面内用 `LocalPluginPageContext.current?.presentation == PluginPagePresentation.SHEET` 判断当前呈现方式；`pageContext().presentation` 默认是 `PAGE`，普通页面与独立窗口不受影响。
+- 同一时刻只允许一个插件页 sheet；sheet 内再打开 `DdSheet`（例如写信、选择器）是允许的，关闭顺序由最上层开始。
+- 需要完整页面时仍用 `openPage(...)`/`openPageWithArguments(...)`；插件卡片里常见的做法是「点内容开 sheet，footer 打开完整页面」。
+- `isDark` 跟随宿主当前主题（内置或插件主题），不再只看系统夜间模式。
+
 
 ### 交互与选择器
 
@@ -813,6 +884,31 @@ DdHtmlBlocks(
 )
 ```
 
+`design 0.9.0` 新增（需要显式依赖与 `minHostVersion: "1.0.8"`，见下）：
+
+| 组件 / API | 用途 |
+|---|---|
+| `DdStatusRow(label, value, tone, busy)` | 状态摘要行：左侧标签、右侧值，`DdStatusTone` 控制圆点/加载圈颜色；刷新时保留旧值只让该行 busy |
+| `DdNoticeBar(text, tone, actionLabel?, onAction?)` | 页面内联提示：`DdNoticeTone.INFO/SUCCESS/WARNING/DANGER`，适合错误 + 重试、未登录说明、操作结果 |
+| `DdProgressBar(progress: Float?)` | 下载/安装/同步进度；`null` 为不确定进度，确定性进度传 0..1；尊重减少动态效果 |
+| `DeepDeepTheme(colors, fontStyle)` | 用自定义 `DeepDeepColors` 包裹页面（宿主已统一设置，插件通常不需要主动调用） |
+| `DdTheme.lightDeepDeep()` | 默认浅色调色板，可作为主题包 `base` 或自定义配色的起点 |
+| `DdStatusTone` / `DdNoticeTone` | 上面的状态/提示色调 |
+
+```kotlin
+DdGroupCard {
+    DdStatusRow("运行环境", if (linuxAvailable) "已就绪" else "不可用", if (linuxAvailable) DdStatusTone.SUCCESS else DdStatusTone.DANGER)
+    DdStatusRow("登录状态", if (connected) "已连接" else "未连接", if (connected) DdStatusTone.SUCCESS else DdStatusTone.NEUTRAL, busy = checking)
+}
+if (error != null) {
+    DdNoticeBar(error, DdNoticeTone.DANGER, actionLabel = "重试") { retry() }
+}
+DdProgressBar(progress = if (downloading) percent else null)
+```
+
+
+
+
 直接 `import io.github.whywood.deepdeep.design.DdMarkdown` 等组件（或整包 import），不需要额外声明依赖。
 
 ```kotlin
@@ -826,7 +922,7 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`。
+日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`。
 
 约定：
 
@@ -851,6 +947,29 @@ private fun StatusCard(host: PluginHost, status: Status) {
     }
 }
 ```
+
+### 插件界面规范
+
+同一轮升级里所有官方插件按这套骨架收敛，第三方插件也可以照做：
+
+- 页面骨架：横向 20dp、顶部 12dp、**底部 24dp**、组间 16dp；宿主已有 64dp 顶栏，页面内不再重复标题。
+- 首屏先说状态：用 `DdStatusRow` 组成摘要（运行环境、组件/CLI、账号、登录状态），值写人类可读的「已就绪 / 待更新 / 未连接」，不写版本号、路径、布尔值；刷新保留旧值，只有该行显示 busy。
+- 操作层级：每屏最多一个 `DdPrimaryButton`；次要操作放文字按钮或菜单；退出、删除这类不可逆操作走 `host.ui().confirm(destructive = true)`。
+- 反馈：错误就近用 `DdNoticeBar`（危险色）+「重试」，重试要重跑刚才失败的动作，不要只刷新页面；成功/撤销可用 `snackbar` 或结果卡，不要只用 Toast 报路径。
+- 进度：安装、下载、同步这类超过一两秒的操作给 `DdProgressBar` + 阶段文字；可取消的提供取消，取消后停在可重试状态。
+- 子流程：登录、扫码、验证码、WebView 作为子页面进入和退出要有过渡，系统返回要先退子页；表单就地校验、键盘避让、密码可显示/隐藏。
+- 动效：时长与曲线走 `DdMotion`，并尊重 `LocalDdMotionEnabled`；不做布局跳动，不用动画掩盖状态变化。
+- 文案：中英成对，不出现 CLI、路径、proot、版本号等开发用语；需要解释的实现细节删掉，确实必要的用 `InfoTooltip`。
+- 图标：统一线性 `DdIcons`，不用 emoji；不新增一次性控件，能用 `DdGroupCard`/`DdListRow`/`DdTextAction` 就不用自绘。
+
+### 自主能力
+
+插件工具就是 Agent 的自主路径，页面是给人的可选路径，不要只把能力做在 UI 里：
+
+- 用户明确要求某个动作时，Agent 应该能直接调用工具完成，而不是要求用户进插件页点按钮；例如邮箱提供 `mail_draft` + `mail_send`，发送不需要用户再点一次。
+- 工具执行默认不需要每次确认；不要在工具里加“等待用户点一下”的闸门，否则定时、后台任务、目标回合会被卡住。需要更谨慎的动作，把后果写进描述/提示词，让模型在调用前自行判断，或由用户在对话里明确要求。
+- UI 升级不能删除或隐藏工具、不能把已有能力改成只有 UI 能做；对每个页面改动检查“Agent 还能不能完成同样的事”。
+- 不可逆操作仍要留痕：优先用「先生成对象（草稿/预览）再执行」的工具组合，让用户能在对话历史或卡片里看到将要发生什么。
 
 ### 自定义消息卡
 
@@ -1331,6 +1450,10 @@ if (host.accessibility().enabled) {
 
 ## 兼容与迁移
 
+### 1.1.x → 1.2.0（纯加法）
+
+`plugin-api 1.2.0` 不升 apiLevel：现有插件不需要改代码或重新编译。使用新能力（主题包、`openPageSheet`、页面呈现模式、design 0.9.0 组件）时：依赖升到 `plugin-api 1.2.0`/`design 0.9.0`，清单写 `minHostVersion: "1.0.8"`；主题包在 `provides.themes` 声明 id 并放 `assets/themes.json`。
+
 ### 1.0.x → 1.1.0（纯加法）
 
 `plugin-api 1.1.0` 不升 apiLevel：已发布的 1.0.x 插件不需要改代码或重新编译，在 1.0.4+ 宿主上照常运行。只有使用 1.1.0 新能力（需要宿主 1.0.6+）时才需要迁移：
@@ -1431,9 +1554,10 @@ cd template && ./gradlew assemblePlugin signPlugin verifyPlugin
   - `permissions`/`components` 与实际使用一致，且与 `capabilities` 成对（安装期校验）；
   - `entryClass` 类名合法、类在某个根 `classes*.dex` 里且有无参构造；
   - `provides` 与实际贡献一致（tools/skills/uiSlots/pages），工具名不与宿主保留名冲突；
+  - `provides.themes` 与 `assets/themes.json` 的 id 完全一致，主题字段/颜色/对比度/体积过校验；
   - 槽位 id 过 `SlotIds.matches`（`tool.card.content:<tool>`、`chat.message:<customType>`），插件页面 id 过 `pages` 校验；
   - 包内 `assets/plugin.json` 路径正确、至少一个根 `classes*.dex`。
-- **安装被拒**：确认页/提示会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、签名错误（包被改动/公钥与 keyId 不匹配/缺签名文件）、发布者不匹配（升级换了密钥）、工具名冲突（`provides.tools` 与宿主或已装插件冲突）、版本冲突（版本不比已装新）。
+- **安装被拒**：确认页/提示会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、签名错误（包被改动/公钥与 keyId 不匹配/缺签名文件）、发布者不匹配（升级换了密钥）、工具名冲突（`provides.tools` 与宿主或已装插件冲突）、版本冲突（版本不比已装新）、主题包错误（`THEMES_INVALID`：schema/token/颜色/对比度/体积/id 不一致）。
 - **安装被拒（权限/组件）**：`INVALID_PERMISSION` 权限取值未知或重复；`PERMISSION_WITHOUT_CAPABILITY` 权限没有对应 capability；`COMPONENT_WITHOUT_CAPABILITY` components 字段类型/结构非法；`COMPONENT_WITHOUT_CAPABILITY` 开启了组件但 capability 缺失；`INVALID_DEEPLINK` 深链路径格式非法或重复。
 - **调用服务抛 `PluginServiceUnavailable`**：清单 `capabilities` 没有声明该服务访问器；capability 在安装期生效，运行中不能补声明，补上后重新安装。
 - **权限/特殊授权拿不到**：运行时权限用 `permissions().request(...)`；通知使用权、无障碍、悬浮窗等特殊授权只能 `permissions().openSettings(...)` 引导用户在系统设置开启，`special(...).granted` 才会变 true。

@@ -21,7 +21,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ./scripts/check.sh --full      # 交付前完整验证：编译 + 单测 + lint + 模块/包边界 + APK + ABI 基线
 ./scripts/check.sh --device    # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh        # 设备插件端到端（无需 root；需插件仓库的 sample 夹具，见 PLUGIN_DEV.md）
-./scripts/plugin-bundles-e2e.sh  # 设备回归五个官方插件包（无需 root；需先构建插件工程）
+./scripts/plugin-bundles-e2e.sh  # 设备回归七个官方插件包（无需 root；需先构建插件工程）
 ./scripts/plugin-binary-compat.sh  # 设备回归已发布 .ddp 的安装/升级/卸载二进制兼容（发布前手工跑）
 ./scripts/api-compat.sh        # 校验 plugin-api 与 design 的公开 ABI（--update 重建基线）
 ./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository  # 发布插件 SDK 到 build/maven-repo
@@ -30,7 +30,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 
 插件 SDK 发布产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库；`design` 与 `plugin-api` 版本独立维护，版本号在各自 `build.gradle.kts` 的 `pluginApiVersion` 里维护。
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 2680（app 1945 / runtime 581 / shell 74 / plugin-api 15 / design 65）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 2723（app 1977 / runtime 587 / shell 74 / plugin-api 20 / design 65）、0 失败 0 skip、lint 0 error。
 
 ## 关键事实
 
