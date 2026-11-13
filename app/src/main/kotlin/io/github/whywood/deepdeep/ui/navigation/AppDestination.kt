@@ -1,6 +1,9 @@
 package io.github.whywood.deepdeep.ui.navigation
 
 import java.util.Base64
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 sealed interface AppDestination {
     val routeKey: String
@@ -160,9 +163,19 @@ sealed interface AppDestination {
     data class PluginPage(
         val pluginId: String,
         val pageId: String,
+        val arguments: JsonObject = JsonObject(emptyMap()),
         val title: String = "",
     ) : AppDestination {
-        override val routeKey: String = "plugins/$pluginId/page/" + encodeRoutePath(pageId)
+        override val routeKey: String = buildString {
+            append(PLUGIN_DETAIL_PREFIX)
+            append(pluginId)
+            append(PLUGIN_PAGE_MARKER)
+            append(encodeRoutePath(pageId))
+            if (arguments.isNotEmpty()) {
+                append(PLUGIN_ARGUMENTS_QUERY)
+                append(encodePluginArguments(arguments))
+            }
+        }
         override val depth: Int = 2
     }
 
@@ -182,6 +195,7 @@ sealed interface AppDestination {
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
         private const val PLUGIN_PAGE_MARKER = "/page/"
+        private const val PLUGIN_ARGUMENTS_QUERY = "?args="
         private val MINIAPP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
 
         fun encodeRoutePath(path: String): String =
@@ -190,6 +204,15 @@ sealed interface AppDestination {
         fun decodeRoutePath(value: String): String? = runCatching {
             String(Base64.getUrlDecoder().decode(value), Charsets.UTF_8)
         }.getOrNull()?.takeIf { it.isNotBlank() }
+
+        fun encodePluginArguments(arguments: JsonObject): String =
+            Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(arguments.toString().toByteArray(Charsets.UTF_8))
+
+        fun decodePluginArguments(value: String): JsonObject? = runCatching {
+            val raw = String(Base64.getUrlDecoder().decode(value), Charsets.UTF_8)
+            Json.parseToJsonElement(raw).jsonObject
+        }.getOrNull()
 
         fun fromRouteKey(routeKey: String): AppDestination? = when {
             routeKey == Chat.routeKey -> Chat
@@ -227,11 +250,22 @@ sealed interface AppDestination {
             }
 
             routeKey.startsWith(PLUGIN_DETAIL_PREFIX) && PLUGIN_PAGE_MARKER in routeKey -> {
-                val rest = routeKey.removePrefix(PLUGIN_DETAIL_PREFIX)
+                val encodedArguments = routeKey.substringAfter(PLUGIN_ARGUMENTS_QUERY, "")
+                val base = routeKey.substringBefore(PLUGIN_ARGUMENTS_QUERY)
+                val rest = base.removePrefix(PLUGIN_DETAIL_PREFIX)
                 val pluginId = rest.substringBefore(PLUGIN_PAGE_MARKER)
                 val pageId = decodeRoutePath(rest.substringAfter(PLUGIN_PAGE_MARKER))
-                if (pluginId.isNotBlank() && !pluginId.contains('/') && pageId != null) {
-                    PluginPage(pluginId, pageId)
+                val arguments = if (encodedArguments.isEmpty()) {
+                    JsonObject(emptyMap())
+                } else {
+                    decodePluginArguments(encodedArguments)
+                }
+                if (pluginId.isNotBlank() &&
+                    !pluginId.contains('/') &&
+                    pageId != null &&
+                    (encodedArguments.isEmpty() || arguments != null)
+                ) {
+                    PluginPage(pluginId, pageId, arguments ?: JsonObject(emptyMap()))
                 } else {
                     null
                 }

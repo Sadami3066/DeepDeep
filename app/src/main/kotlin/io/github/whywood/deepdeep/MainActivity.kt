@@ -12,11 +12,14 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
@@ -31,13 +34,19 @@ import io.github.whywood.deepdeep.data.parseSharePayload
 import io.github.whywood.deepdeep.deeplink.DeepLink
 import io.github.whywood.deepdeep.design.DeepDeepTheme
 import io.github.whywood.deepdeep.design.ThemePreset
+import io.github.whywood.deepdeep.plugin.api.PluginCapability
+import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionHost
+import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionOverlay
+import io.github.whywood.deepdeep.plugin.manager.PluginSharedStream
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.ui.common.ProvideHostFiles
 import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
     private val graph by lazy { (application as DeepDeepApplication).graph }
@@ -69,25 +78,28 @@ class MainActivity : ComponentActivity() {
             DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
                 ProvideHostFiles(graph.hostFiles) {
                     ProvidePluginManager(graph.pluginManager) {
-                    DeepDeepApp(
-                        graph = graph,
-                        themePreset = preset,
-                        fontStyle = fontStyle,
-                        openSessionId = pendingSessionId.value,
-                        onOpenSessionConsumed = { pendingSessionId.value = null },
-                        pendingDeepDestination = pendingDeepDestination.value,
-                        onDeepDestinationConsumed = { pendingDeepDestination.value = null },
-                        pendingShare = pendingShare.value,
-                        onShareConsumed = { pendingShare.value = null },
-                        pendingPluginImportUri = pendingPluginImportUri.value,
-                        onPluginImportConsumed = { pendingPluginImportUri.value = null },
-                        onActiveSessionChanged = { graph.activeSessionId.value = it },
-                        onFontStyleChange = { style ->
-                            graph.fontPreferences.save(style)
-                            fontStyle = style
-                        },
-                        onThemePresetChange = { value -> scope.launch { graph.themePreferences.setPreset(value) } },
-                    )
+                        Box(Modifier.fillMaxSize()) {
+                            DeepDeepApp(
+                                graph = graph,
+                                themePreset = preset,
+                                fontStyle = fontStyle,
+                                openSessionId = pendingSessionId.value,
+                                onOpenSessionConsumed = { pendingSessionId.value = null },
+                                pendingDeepDestination = pendingDeepDestination.value,
+                                onDeepDestinationConsumed = { pendingDeepDestination.value = null },
+                                pendingShare = pendingShare.value,
+                                onShareConsumed = { pendingShare.value = null },
+                                pendingPluginImportUri = pendingPluginImportUri.value,
+                                onPluginImportConsumed = { pendingPluginImportUri.value = null },
+                                onActiveSessionChanged = { graph.activeSessionId.value = it },
+                                onFontStyleChange = { style ->
+                                    graph.fontPreferences.save(style)
+                                    fontStyle = style
+                                },
+                                onThemePresetChange = { value -> scope.launch { graph.themePreferences.setPreset(value) } },
+                            )
+                            PluginInteractionOverlay()
+                        }
                     }
                 }
             }
@@ -114,6 +126,7 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         AppVisibility.activityStarted()
         AppVisibility.taskId = taskId
+        PluginInteractionHost.attachActivity(this)
         graph.notificationCenter.clearQuestionNotifications()
         graph.processRuntime.onForeground()
         graph.updateManager.maybeAutoCheck()
@@ -121,6 +134,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         AppVisibility.activityStopped()
+        PluginInteractionHost.detachActivity(this)
         graph.notificationCenter.refreshQuestionNotifications()
         super.onStop()
     }
@@ -131,17 +145,21 @@ class MainActivity : ComponentActivity() {
             when (val link = DeepLink.parse(intent.dataString.orEmpty())) {
                 is DeepLink.Session -> pendingSessionId.value = link.sessionId
                 is DeepLink.Page -> pendingDeepDestination.value = link.destination
+                is DeepLink.PluginPath -> dispatchPluginDeepLink(link)
+
                 null -> {
                     val data = intent.data
                     if (data != null) {
                         if (isPluginPackage(data, intent.type)) {
                             pendingPluginImportUri.value = data.toString()
                         } else {
-                            pendingShare.value = parseSharePayload(
+                            val payload = parseSharePayload(
                                 action = Intent.ACTION_VIEW,
                                 type = intent.type,
                                 streamUris = listOf(data.toString()),
                             )
+                            pendingShare.value = payload
+                            dispatchPluginShare(payload)
                         }
                     }
                 }
@@ -192,6 +210,50 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, R.string.share_error_no_content, Toast.LENGTH_SHORT).show()
         } else {
             pendingShare.value = payload
+            dispatchPluginShare(payload)
+        }
+    }
+
+    private fun dispatchPluginDeepLink(link: DeepLink.PluginPath) {
+        graph.appScope.launch {
+            awaitPluginManagerLoaded()
+            graph.pluginManager.onDeepLinkReceived(link.pluginId, link.path, link.arguments)
+        }
+    }
+
+    private fun dispatchPluginShare(payload: SharePayload) {
+        graph.appScope.launch {
+            awaitPluginManagerLoaded()
+            val manager = graph.pluginManager
+            val shareCapable = manager.state.value.plugins.any { plugin ->
+                plugin.enabled && PluginCapability.SHARE.wire in plugin.capabilities
+            }
+            if (!shareCapable) return@launch
+            if (payload.streams.isEmpty()) {
+                if (payload.text.isNotBlank() || payload.title.isNotBlank()) {
+                    manager.onShareReceived(payload.text, payload.title, emptyList())
+                }
+                return@launch
+            }
+            val staged = graph.shareStaging.stage(payload.streams)
+            val streams = staged.files.map { file ->
+                PluginSharedStream(
+                    path = file.file.absolutePath,
+                    mimeType = file.mime,
+                    name = file.name,
+                )
+            }
+            if (streams.isNotEmpty() || payload.text.isNotBlank() || payload.title.isNotBlank()) {
+                manager.onShareReceived(payload.text, payload.title, streams)
+            }
+        }
+    }
+
+    private suspend fun awaitPluginManagerLoaded() {
+        val state = graph.pluginManager.state
+        withTimeoutOrNull(5_000) {
+            val current = state.first { it.plugins.isNotEmpty() || it.loading }
+            if (current.loading) state.first { !it.loading }
         }
     }
 

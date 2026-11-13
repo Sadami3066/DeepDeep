@@ -90,6 +90,20 @@ internal fun PluginImportDialog(
                                 value = capabilitySummary(inspection.capabilities),
                             )
                         }
+                        if (inspection.permissions.isNotEmpty()) {
+                            DdHairline()
+                            DdListRow(
+                                title = stringResource(R.string.plugins_import_permissions),
+                                value = permissionSummary(inspection.permissions),
+                            )
+                        }
+                        if (inspection.components.isNotEmpty()) {
+                            DdHairline()
+                            DdListRow(
+                                title = stringResource(R.string.plugins_import_components),
+                                value = componentSummary(inspection.components),
+                            )
+                        }
                     }
                     if (!inspection.trusted) {
                         Spacer(Modifier.height(10.dp))

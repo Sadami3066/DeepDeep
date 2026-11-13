@@ -43,6 +43,43 @@ class DeepLinkTest {
     }
 
     @Test
+    fun parsesSettingsSubPages() {
+        val pages = mapOf(
+            "deepdeep://settings/access" to AppDestination.SystemAccess,
+            "deepdeep://settings/personalization" to AppDestination.Personalization,
+            "deepdeep://settings/fonts" to AppDestination.Fonts,
+            "deepdeep://settings/assistant" to AppDestination.AssistantSettings,
+            "deepdeep://settings/chat" to AppDestination.ChatSettings,
+        )
+        pages.forEach { (raw, destination) ->
+            assertEquals(raw, DeepLink.Page(destination), DeepLink.parse(raw))
+        }
+    }
+
+    @Test
+    fun parsesPluginCustomPath() {
+        assertEquals(
+            DeepLink.PluginPath("io.github.whywood.deepdeep.sdk.mail", "thread/123"),
+            DeepLink.parse("deepdeep://plugins/io.github.whywood.deepdeep.sdk.mail/thread/123"),
+        )
+        val encoded = java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("""{"accountId":"a1","threadId":"t1"}""".toByteArray())
+        val link = DeepLink.parse("deepdeep://plugins/demo/thread/123?args=$encoded") as DeepLink.PluginPath
+        assertEquals("demo", link.pluginId)
+        assertEquals("thread/123", link.path)
+        assertEquals("a1", link.arguments["accountId"]?.toString()?.trim('"'))
+        assertEquals("t1", link.arguments["threadId"]?.toString()?.trim('"'))
+    }
+
+    @Test
+    fun rejectsInvalidPluginPaths() {
+        listOf(
+            "deepdeep://plugins/demo/Thread/123",
+            "deepdeep://plugins/demo/thread/123?args=not-base64",
+        ).forEach { raw -> assertNull(raw, DeepLink.parse(raw)) }
+    }
+
+    @Test
     fun parsesMiniappIdAtLengthLimit() {
         val id = "a".repeat(48)
         assertEquals(DeepLink.Page(AppDestination.MiniappDetail(id)), DeepLink.parse("deepdeep://miniapp/$id"))
@@ -129,7 +166,6 @@ class DeepLinkTest {
             "deepdeep://plugins/a%20b",
             "deepdeep://plugins/a%2Fb",
             "deepdeep://plugins/a",
-            "deepdeep://plugins/a/b/c",
             "deepdeep://plugins//feishu",
             "deepdeep://plugins/a/%20",
         ).forEach { raw -> assertNull(raw, DeepLink.parse(raw)) }

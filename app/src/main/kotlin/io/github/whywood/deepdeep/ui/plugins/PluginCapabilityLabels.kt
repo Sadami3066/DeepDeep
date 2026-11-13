@@ -36,5 +36,25 @@ private fun capabilityLabelRes(capability: PluginCapability): Int = when (capabi
     PluginCapability.LOGS -> R.string.plugins_capability_logs
     PluginCapability.CHAT -> R.string.plugins_capability_chat
     PluginCapability.PROMPT -> R.string.plugins_capability_prompt
+    PluginCapability.SETTINGS -> R.string.plugins_capability_settings
+    PluginCapability.DEVICE -> R.string.plugins_capability_device
+    PluginCapability.CLIPBOARD -> R.string.plugins_capability_clipboard
+    PluginCapability.PERMISSIONS -> R.string.plugins_capability_permissions
+    PluginCapability.PACKAGES -> R.string.plugins_capability_packages
+    PluginCapability.PRIVILEGE -> R.string.plugins_capability_privilege
+    PluginCapability.INTENTS -> R.string.plugins_capability_intents
+    PluginCapability.COMPONENTS -> R.string.plugins_capability_components
+    PluginCapability.BACKGROUND -> R.string.plugins_capability_background
+    PluginCapability.LOCATION -> R.string.plugins_capability_location
+    PluginCapability.CONTACTS -> R.string.plugins_capability_contacts
+    PluginCapability.SMS -> R.string.plugins_capability_sms
+    PluginCapability.CALENDAR -> R.string.plugins_capability_calendar
+    PluginCapability.MEDIA -> R.string.plugins_capability_media
+    PluginCapability.SPEECH -> R.string.plugins_capability_speech
+    PluginCapability.WEB -> R.string.plugins_capability_web
+    PluginCapability.CREDENTIALS -> R.string.plugins_capability_credentials
+    PluginCapability.ACCESSIBILITY -> R.string.plugins_capability_accessibility
+    PluginCapability.SHARE -> R.string.plugins_capability_share
+    PluginCapability.DEEPLINK -> R.string.plugins_capability_deeplink
     else -> R.string.plugins_capability_other
 }

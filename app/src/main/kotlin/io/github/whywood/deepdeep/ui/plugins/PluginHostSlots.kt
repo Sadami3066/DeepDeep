@@ -1,19 +1,26 @@
 package io.github.whywood.deepdeep.ui.plugins
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.whywood.deepdeep.plugin.api.LocalPluginPageContext
+import io.github.whywood.deepdeep.plugin.host.interaction.HostPluginPageContext
+import io.github.whywood.deepdeep.plugin.host.interaction.PluginPageContexts
 import io.github.whywood.deepdeep.plugin.manager.PluginComposerActionUi
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.ui.common.chat.LocalPluginManager
+import kotlinx.serialization.json.JsonObject
 
 @Composable
 internal fun PluginPageHost(
     pluginId: String,
     pageId: String,
     fallback: @Composable () -> Unit,
+    arguments: JsonObject = JsonObject(emptyMap()),
 ) {
     val manager = LocalPluginManager.current ?: run {
         fallback()
@@ -27,8 +34,17 @@ internal fun PluginPageHost(
         if (!uiState.loading && uiState.snapshot(pluginId) != null) fallback()
         return
     }
-    key(pluginId, pageId) {
-        page.content()
+    val pageContext = remember(pluginId, pageId, arguments) {
+        HostPluginPageContext(pageId = pageId, arguments = arguments)
+    }
+    DisposableEffect(pluginId, pageId, pageContext) {
+        PluginPageContexts.enter(pluginId, pageId, pageContext)
+        onDispose { PluginPageContexts.exit(pluginId, pageId) }
+    }
+    CompositionLocalProvider(LocalPluginPageContext provides pageContext) {
+        key(pluginId, pageId) {
+            page.content()
+        }
     }
 }
 

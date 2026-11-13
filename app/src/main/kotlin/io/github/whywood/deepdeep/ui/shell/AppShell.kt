@@ -178,8 +178,20 @@ internal fun AppShell(
     LaunchedEffect(pendingPluginPage) {
         val request = pendingPluginPage ?: return@LaunchedEffect
         drawerOpen = false
-        navigator.push(AppDestination.PluginPage(request.pluginId, request.pageId))
+        navigator.push(
+            AppDestination.PluginPage(
+                pluginId = request.pluginId,
+                pageId = request.pageId,
+                arguments = request.arguments,
+            ),
+        )
         PluginUiBridge.consumePage(request)
+    }
+    val pendingPluginPageClose by PluginUiBridge.pendingClosePage.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingPluginPageClose) {
+        if (!pendingPluginPageClose) return@LaunchedEffect
+        if (navigator.current is AppDestination.PluginPage) navigator.pop()
+        PluginUiBridge.consumeClosePage()
     }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
     val pendingQuestions by graph.questionCenter.pending.collectAsStateWithLifecycle()

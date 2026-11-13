@@ -104,6 +104,7 @@ internal fun PluginPageRoute(
         PluginPageHost(
             pluginId = destination.pluginId,
             pageId = destination.pageId,
+            arguments = destination.arguments,
             fallback = {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
