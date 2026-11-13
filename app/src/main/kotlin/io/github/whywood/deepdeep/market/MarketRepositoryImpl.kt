@@ -8,7 +8,6 @@ import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.api.PLUGIN_API_LEVEL
-import io.github.whywood.deepdeep.plugin.manager.PluginPhaseUi
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -63,7 +62,6 @@ class MarketRepositoryImpl(
     override val installStates: StateFlow<Map<String, MarketInstallState>> = _installStates.asStateFlow()
 
     private val installedContent = MutableStateFlow(InstalledContent())
-    private val autoUpdatePlanner = MarketAutoUpdatePlanner()
 
     init {
         scope.launch {
@@ -121,29 +119,7 @@ class MarketRepositoryImpl(
     private suspend fun completeRefresh(registry: MarketRegistry, source: MarketSource, fetchedAt: Long): Boolean {
         _state.value = MarketState.Ready(registry, source, fetchedAt)
         installMutex.withLock { withContext(Dispatchers.IO) { refreshInstalled() } }
-        autoUpdateInstalled(registry)
         return true
-    }
-
-    private suspend fun autoUpdateInstalled(registry: MarketRegistry) {
-        val pending = runCatching {
-            pluginManager.state.value.plugins
-                .filter { it.phase == PluginPhaseUi.PENDING_RESTART }
-                .map { it.id }
-                .toSet()
-        }.getOrDefault(emptySet())
-        val targets = autoUpdatePlanner.plan(registry.entries, _installStates.value)
-            .filter { it.id !in pending }
-            .filter { pluginCompatibility(it) == MarketPluginCompatibility.Compatible }
-        for (entry in targets) {
-            autoUpdatePlanner.markAttempt(entry.id)
-            val result = install(entry)
-            if (result.isSuccess) {
-                autoUpdatePlanner.markInstalled(entry.id)
-            } else {
-                Log.w(TAG, "market auto update failed: ${entry.id}")
-            }
-        }
     }
 
     override suspend fun install(entry: MarketEntry, apiKey: String?): Result<Unit> = installMutex.withLock {
