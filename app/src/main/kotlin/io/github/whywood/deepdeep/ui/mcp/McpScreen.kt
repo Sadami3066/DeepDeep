@@ -96,7 +96,7 @@ fun McpScreen(
     var marketQuery by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(holder) {
-        holder.load()
+        holder.refresh()
     }
 
     McpScreenContent(

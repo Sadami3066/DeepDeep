@@ -102,6 +102,12 @@ internal class PluginExternalFlow(
             .forEach { view -> activation.activate(view.id) }
     }
 
+    suspend fun activatePendingVersion(pluginId: String) {
+        val view = gate.view(pluginId) ?: return
+        if (!view.enabled || view.record.pendingVersion == null) return
+        activation.activate(pluginId)
+    }
+
     suspend fun loadForEnable(pluginId: String): Boolean {
         val runtime = external ?: return false
         val view = gate.view(pluginId) ?: return false
@@ -215,9 +221,6 @@ internal class PluginExternalFlow(
             }
         }
     }
-
-    suspend fun hasPendingUpdates(): Boolean =
-        gate.views().any { view -> view.enabled && view.record.pendingVersion != null }
 
     internal suspend fun activateStagedNow(pluginId: String): Boolean {
         if (busySessions().isNotEmpty()) return false

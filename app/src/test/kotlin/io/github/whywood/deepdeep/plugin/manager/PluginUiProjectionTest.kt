@@ -70,6 +70,7 @@ class PluginUiProjectionTest {
         val snapshot = projection().snapshots(gate.views(), registry.snapshot()).single()
 
         assertEquals(PluginPhaseUi.PENDING_RESTART, snapshot.phase)
+        assertEquals("2.0.0", snapshot.pendingVersion)
     }
 
     @Test

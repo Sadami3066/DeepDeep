@@ -48,7 +48,7 @@ interface PluginManagerFacade {
 
     suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi
 
-    suspend fun applyPendingUpdates()
+    suspend fun applyPendingUpdate(pluginId: String): Boolean
 
     suspend fun retryActivation(pluginId: String): PluginRecoveryResult
 

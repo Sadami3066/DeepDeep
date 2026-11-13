@@ -36,12 +36,6 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
     override suspend fun installExternal(file: File, acceptPublisher: Boolean): ExternalInstallUi =
         externalFlow.installExternal(file, acceptPublisher)
 
-    override suspend fun applyPendingUpdates() {
-        if (!externalFlow.hasPendingUpdates()) return
-        externalFlow.activatePendingVersions()
-        refreshNow()
-    }
-
     override fun slotEntries(slotId: String): List<SlotRenderEntry> = slotRegistry.bindings(slotId)
 
     override fun pagesOf(pluginId: String): List<PluginPage> =

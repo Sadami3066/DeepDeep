@@ -22,6 +22,9 @@ internal class PluginsStateHolder(
     private val _togglingIds = MutableStateFlow<Set<String>>(emptySet())
     val togglingIds: StateFlow<Set<String>> = _togglingIds.asStateFlow()
 
+    private val _updatingIds = MutableStateFlow<Set<String>>(emptySet())
+    val updatingIds: StateFlow<Set<String>> = _updatingIds.asStateFlow()
+
     fun setQuery(query: String) {
         _query.value = query
     }
@@ -40,6 +43,18 @@ internal class PluginsStateHolder(
                 manager.setEnabled(pluginId, enabled)
             } finally {
                 _togglingIds.update { it - pluginId }
+            }
+        }
+    }
+
+    fun applyPendingUpdate(pluginId: String) {
+        if (pluginId in _updatingIds.value) return
+        _updatingIds.update { it + pluginId }
+        scope.launch {
+            try {
+                manager.applyPendingUpdate(pluginId)
+            } finally {
+                _updatingIds.update { it - pluginId }
             }
         }
     }

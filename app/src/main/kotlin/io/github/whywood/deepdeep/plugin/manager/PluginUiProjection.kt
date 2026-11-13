@@ -26,6 +26,7 @@ internal class PluginUiProjection(
             description = descriptor.manifest.description?.let(textResolver::resolve),
             version = descriptor.manifest.version,
             installedVersion = view.record.installedVersion,
+            pendingVersion = view.record.pendingVersion,
             previousVersion = view.record.previousVersion,
             icon = descriptor.manifest.icon,
             enabled = view.enabled,

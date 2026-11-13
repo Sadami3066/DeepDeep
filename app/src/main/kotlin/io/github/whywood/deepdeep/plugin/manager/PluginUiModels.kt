@@ -31,6 +31,7 @@ data class PluginSnapshot(
     val description: String?,
     val version: String,
     val installedVersion: String?,
+    val pendingVersion: String? = null,
     val previousVersion: String?,
     val icon: IconRef?,
     val enabled: Boolean,

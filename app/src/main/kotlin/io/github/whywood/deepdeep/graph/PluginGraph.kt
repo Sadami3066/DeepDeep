@@ -67,20 +67,6 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
         )
     }
 
-    init {
-        deps.scope.launch {
-            var wasBusy = false
-            deps.host.busySessionIds.collect { busy ->
-                if (busy.isNotEmpty()) {
-                    wasBusy = true
-                } else if (wasBusy) {
-                    wasBusy = false
-                    manager.applyPendingUpdates()
-                }
-            }
-        }
-    }
-
     private fun pluginServices(
         pluginId: String,
         dataDir: File,

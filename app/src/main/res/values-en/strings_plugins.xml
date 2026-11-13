@@ -50,8 +50,7 @@
     <string name="plugins_phase_degraded">Limited</string>
     <string name="plugins_phase_failed">Load failed</string>
     <string name="plugins_phase_disabled">Disabled</string>
-    <string name="plugins_phase_pending_restart">Restart pending</string>
-    <string name="plugins_pending_restart_notice">Takes effect after DeepDeep restarts</string>
+    <string name="plugins_phase_pending_restart">Update ready</string>
     <string name="plugins_size_kb">%1$.0f KB</string>
     <string name="plugins_size_mb">%1$.1f MB</string>
 
@@ -78,4 +77,9 @@
     <string name="plugins_recovery_retry">Retry activation</string>
     <string name="plugins_recovery_rollback">Roll back to %1$s</string>
     <string name="plugins_api_level_retired">Plugin API %1$d is no longer supported. Update the plugin.</string>
+    <string name="plugins_pending_update_title">Update %1$s is ready</string>
+    <string name="plugins_pending_update_hint">Updates are not applied automatically. Tap the button to apply it.</string>
+    <string name="plugins_pending_update_notice">Update ready to apply</string>
+    <string name="plugins_apply_update">Update now</string>
+    <string name="plugins_updating_update">Updating…</string>
 </resources>

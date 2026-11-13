@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +58,7 @@ import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMenu
 import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdPressable
+import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdShapes
@@ -105,6 +108,7 @@ internal fun PluginsScreen(
     val state by manager.state.collectAsStateWithLifecycle()
     val query by holder.query.collectAsStateWithLifecycle()
     val togglingIds by holder.togglingIds.collectAsStateWithLifecycle()
+    val updatingIds by holder.updatingIds.collectAsStateWithLifecycle()
     var inspection by remember { mutableStateOf<ExternalInspectionUi?>(null) }
     var trustPublisher by remember { mutableStateOf(false) }
     var importBusy by remember { mutableStateOf(false) }
@@ -181,6 +185,8 @@ internal fun PluginsScreen(
         PluginDetailSheet(
             snapshot = snapshot,
             pluginsRoot = resolvedPluginsRoot,
+            applyingUpdate = snapshot.id in updatingIds,
+            onApplyUpdate = { holder.applyPendingUpdate(snapshot.id) },
             onDismiss = { detailPluginId = null },
         )
     }
@@ -619,6 +625,8 @@ private fun PluginRow(
 private fun PluginDetailSheet(
     snapshot: PluginSnapshot,
     pluginsRoot: File?,
+    applyingUpdate: Boolean,
+    onApplyUpdate: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
@@ -688,7 +696,7 @@ private fun PluginDetailSheet(
                         title = stringResource(R.string.plugins_info_status),
                         value = stringResource(pluginPhaseLabelRes(snapshot.phase)),
                         subtitle = if (snapshot.phase == PluginPhaseUi.PENDING_RESTART) {
-                            stringResource(R.string.plugins_pending_restart_notice)
+                            stringResource(R.string.plugins_pending_update_notice)
                         } else {
                             null
                         },
@@ -746,6 +754,37 @@ private fun PluginDetailSheet(
                             title = stringResource(R.string.plugins_info_capabilities),
                             subtitle = capabilitySummary(snapshot.capabilities),
                             subtitleMaxLines = 3,
+                        )
+                    }
+                }
+                val pendingVersion = snapshot.pendingVersion
+                if (pendingVersion != null) {
+                    Spacer(Modifier.height(DdSpacing.Lg))
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.raised)
+                            .padding(16.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.plugins_pending_update_title, pendingVersion),
+                            style = DdType.bodySmall,
+                            color = colors.ink,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(R.string.plugins_pending_update_hint),
+                            style = DdType.micro,
+                            color = colors.inkTertiary,
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        DdPrimaryButton(
+                            text = stringResource(
+                                if (applyingUpdate) R.string.plugins_updating_update else R.string.plugins_apply_update,
+                            ),
+                            enabled = !applyingUpdate,
+                            onClick = onApplyUpdate,
                         )
                     }
                 }
