@@ -47,6 +47,18 @@ object HistoryMapper {
                         is PlainTextContent -> content.text
                         is BlockContent -> content.asText()
                     }
+                    if (entry.customType == CAPABILITIES_NOTICE_CUSTOM_TYPE) {
+                        flush()
+                        val delta = CapabilityNotices.decodeDelta(entry.details)
+                        result += AssistantMessage(
+                            id = messageId++,
+                            role = AssistantRole.ASSISTANT,
+                            text = text,
+                            status = MessageStatus.DONE,
+                            notice = TurnNotice.CapabilitiesChanged(delta ?: CapabilityDelta()),
+                        )
+                        continue
+                    }
                     val payload = entry.details?.toString().orEmpty()
                     val card = AssistantStep.CustomCard(
                         id = stepId++,

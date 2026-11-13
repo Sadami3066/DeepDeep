@@ -365,6 +365,7 @@ internal class RuntimeRuns(
     ) {
         try {
             if (setTitle) ensureTitle(handle, text)
+            if (handle.state.turnSource == TurnSource.USER) publishCapabilityChanges(handle, runId)
             val prompt = if (handle.state.turnSource == TurnSource.USER) text else ""
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis(), prompt))
             emitActivity(handle, runId, RuntimeActivity.Thinking)
@@ -389,6 +390,58 @@ internal class RuntimeRuns(
             }
         } finally {
             release(handle, runId)
+        }
+    }
+
+    private suspend fun publishCapabilityChanges(handle: RuntimeHandle, runId: String) {
+        val session = handle.session
+        val current = try {
+            session.capabilitySnapshot()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            logWarn(TAG, "capability snapshot failed session=${session.sessionId}", error)
+            return
+        }
+        val baseline = try {
+            session.capabilityBaseline()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            logWarn(TAG, "capability baseline read failed session=${session.sessionId}", error)
+            null
+        }
+        if (baseline == null) {
+            writeCapabilityBaseline(handle, current)
+            return
+        }
+        val delta = CapabilityNotices.diff(baseline, current) ?: return
+        try {
+            session.appendCustomMessage(
+                CAPABILITIES_NOTICE_CUSTOM_TYPE,
+                CapabilityNotices.encodeDelta(delta).toString(),
+                CapabilityNotices.message(delta),
+                display = true,
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            logWarn(TAG, "capability notice append failed session=${session.sessionId}", error)
+        }
+        emit(handle, RuntimeEvent.CapabilitiesChanged(runId, delta))
+        writeCapabilityBaseline(handle, current)
+    }
+
+    private suspend fun writeCapabilityBaseline(handle: RuntimeHandle, snapshot: CapabilitySnapshot) {
+        try {
+            handle.session.appendCustomEntry(
+                CAPABILITIES_BASELINE_CUSTOM_TYPE,
+                CapabilityNotices.encodeSnapshot(snapshot).toString(),
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            logWarn(TAG, "capability baseline append failed session=${handle.session.sessionId}", error)
         }
     }
 

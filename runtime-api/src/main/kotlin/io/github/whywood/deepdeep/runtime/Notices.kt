@@ -1,5 +1,21 @@
 package io.github.whywood.deepdeep.runtime
 
+import kotlinx.serialization.Serializable
+
+const val CAPABILITIES_NOTICE_CUSTOM_TYPE: String = "deepdeep.capabilities"
+const val CAPABILITIES_BASELINE_CUSTOM_TYPE: String = "deepdeep.capabilities.baseline"
+
+@Serializable
+data class CapabilityDelta(
+    val toolsAdded: List<String> = emptyList(),
+    val toolsRemoved: List<String> = emptyList(),
+    val skillsAdded: List<String> = emptyList(),
+    val skillsRemoved: List<String> = emptyList(),
+) {
+    val isEmpty: Boolean
+        get() = toolsAdded.isEmpty() && toolsRemoved.isEmpty() && skillsAdded.isEmpty() && skillsRemoved.isEmpty()
+}
+
 enum class TurnSource {
     USER,
     RETRY,
@@ -21,6 +37,8 @@ sealed interface TurnNotice {
     data class InterruptedQuestions(val count: Int) : TurnNotice
 
     data class InterruptedRun(val count: Int) : TurnNotice
+
+    data class CapabilitiesChanged(val delta: CapabilityDelta) : TurnNotice
 }
 
 data class NoticeEvent(

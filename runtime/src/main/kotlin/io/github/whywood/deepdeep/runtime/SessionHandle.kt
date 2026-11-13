@@ -46,6 +46,9 @@ interface SessionHandle {
     suspend fun appendTitle(title: String)
 
     suspend fun appendCustomMessage(customType: String, payloadJson: String, text: String, display: Boolean = true)
+    suspend fun appendCustomEntry(customType: String, dataJson: String)
+    suspend fun capabilitySnapshot(): CapabilitySnapshot
+    fun capabilityBaseline(): CapabilitySnapshot?
     suspend fun reloadMcp(servers: Map<String, McpServerConfig>)
     suspend fun reconnectMcp(server: String)
     fun mcpServers(): List<SessionMcpServerStatus>

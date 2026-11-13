@@ -8,6 +8,9 @@ import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.CAPABILITIES_BASELINE_CUSTOM_TYPE
+import io.github.whywood.deepdeep.runtime.CapabilityNotices
+import io.github.whywood.deepdeep.runtime.CapabilitySnapshot
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.SessionCompaction
 import io.github.whywood.deepdeep.runtime.SessionHandle
@@ -128,8 +131,30 @@ class FakeSessionHandle(
 
     val customMessages = CopyOnWriteArrayList<CustomMessageRecord>()
 
+    val customEntries = CopyOnWriteArrayList<CustomEntryRecord>()
+
+    var capabilitySnapshotValue: CapabilitySnapshot = CapabilitySnapshot()
+
+    var failCustomMessageAppend: Boolean = false
+
+    var failCustomEntryAppend: Boolean = false
+
     override suspend fun appendCustomMessage(customType: String, payloadJson: String, text: String, display: Boolean) {
+        if (failCustomMessageAppend) throw IllegalStateException("append custom message failed")
         customMessages += CustomMessageRecord(customType, payloadJson, text, display)
+    }
+
+    override suspend fun appendCustomEntry(customType: String, dataJson: String) {
+        if (failCustomEntryAppend) throw IllegalStateException("append custom entry failed")
+        customEntries += CustomEntryRecord(customType, dataJson)
+    }
+
+    override suspend fun capabilitySnapshot(): CapabilitySnapshot = capabilitySnapshotValue
+
+    override fun capabilityBaseline(): CapabilitySnapshot? {
+        val baseline = customEntries.lastOrNull { it.customType == CAPABILITIES_BASELINE_CUSTOM_TYPE } ?: return null
+        val element = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(baseline.dataJson) }.getOrNull()
+        return CapabilityNotices.decodeSnapshot(element)
     }
 
     override suspend fun appendTitle(title: String) {
@@ -150,4 +175,9 @@ data class CustomMessageRecord(
     val payloadJson: String,
     val text: String,
     val display: Boolean,
+)
+
+data class CustomEntryRecord(
+    val customType: String,
+    val dataJson: String,
 )

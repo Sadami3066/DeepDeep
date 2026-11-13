@@ -337,6 +337,11 @@ sealed interface RuntimeEvent {
     data class SessionListChanged(
         override val runId: String = "",
     ) : RuntimeEvent
+
+    data class CapabilitiesChanged(
+        override val runId: String,
+        val delta: CapabilityDelta,
+    ) : RuntimeEvent
 }
 
 sealed interface PluginTurnResult {

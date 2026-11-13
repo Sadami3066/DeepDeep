@@ -12,10 +12,12 @@ import io.github.whywood.deepdeep.sdk.coding.createAgentSession
 import io.github.whywood.deepdeep.sdk.coding.mcp.McpConfigLoader
 import io.github.whywood.deepdeep.sdk.coding.mcp.McpOptions
 import io.github.whywood.deepdeep.sdk.coding.paths.AgentPaths
+import io.github.whywood.deepdeep.sdk.coding.prompt.loadPromptResources
 import io.github.whywood.deepdeep.sdk.coding.settings.SettingsManager
 import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.sdk.coding.session.AgentSession
 import io.github.whywood.deepdeep.sdk.coding.session.CodingHooks
+import io.github.whywood.deepdeep.sdk.coding.session.CustomEntry
 import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
 import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
 import io.github.whywood.deepdeep.sdk.coding.session.SessionInfo
@@ -27,6 +29,7 @@ import io.github.whywood.deepdeep.sdk.coding.tools.defaultCodingTools
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import kotlinx.coroutines.CancellationException
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.time.OffsetDateTime
 import io.github.whywood.deepdeep.runtime.host.DynamicFileSystem
 import io.github.whywood.deepdeep.runtime.host.DynamicShellExecutor
@@ -62,6 +65,7 @@ class PiSessionEngine(
     val cwd: Path = workspace.absolutePath.toPath()
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
+    private val sessionBindings = ConcurrentHashMap<String, SessionBinding>()
 
     suspend fun createSession(
         file: Path?,
@@ -193,8 +197,41 @@ class PiSessionEngine(
         created = session
         session.agent.installToolExecutionHooks(hooks.toolHooks)
         binding.attach(session)
+        sessionBindings[session.sessionId] = binding
         hooks.onSessionBound?.invoke(binding)
         return session
+    }
+
+    internal suspend fun capabilitySnapshot(session: AgentSession): CapabilitySnapshot {
+        val binding = sessionBindings[session.sessionId]
+        val direct = session.activeToolNames
+        val mcpDeferred = runCatching { session.mcp.deferredCatalog().map { it.name } }.getOrDefault(emptyList())
+        val pluginDeferred = runCatching {
+            if (binding == null) emptyList() else toolContext?.pluginDeferredTools?.invoke(binding).orEmpty().map { it.name }
+        }.getOrDefault(emptyList())
+        val skills = runCatching {
+            loadPromptResources(
+                cwd = cwd,
+                agentDir = agentDirectory,
+                fs = fs,
+                projectTrusted = true,
+                excludedSkills = excludedSkills,
+            ).skills.map { it.name }
+        }.getOrDefault(emptyList())
+        return CapabilitySnapshot.of(direct + mcpDeferred + pluginDeferred, skills)
+    }
+
+    internal fun capabilityBaseline(session: AgentSession): CapabilitySnapshot? {
+        val entries = runCatching { session.sessionManager.getBranch() }.getOrNull() ?: return null
+        val baseline = entries.asReversed()
+            .filterIsInstance<CustomEntry>()
+            .firstOrNull { it.customType == CAPABILITIES_BASELINE_CUSTOM_TYPE }
+            ?: return null
+        return CapabilityNotices.decodeSnapshot(baseline.data)
+    }
+
+    internal fun releaseSession(sessionId: String) {
+        sessionBindings.remove(sessionId)
     }
 
     internal fun captureMemory(sessionId: String, sessionFile: String?, entries: List<io.github.whywood.deepdeep.sdk.coding.session.SessionEntry>?) {
@@ -371,6 +408,7 @@ internal class PiSessionHandle(
         val sessionFile = session.sessionFile?.toString()
         session.close()
         engine.captureMemory(sessionId, sessionFile, entries)
+        engine.releaseSession(sessionId)
         engine.hooks.onSessionClosed?.let { it(sessionId) }
     }
 
@@ -435,6 +473,15 @@ internal class PiSessionHandle(
         val details = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(payloadJson) }.getOrNull()
         session.appendCustomMessage(customType, io.github.whywood.deepdeep.sdk.ai.PlainTextContent(text), display, details)
     }
+
+    override suspend fun appendCustomEntry(customType: String, dataJson: String) {
+        val data = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(dataJson) }.getOrNull()
+        session.sessionManager.appendCustomEntry(customType, data)
+    }
+
+    override suspend fun capabilitySnapshot(): CapabilitySnapshot = engine.capabilitySnapshot(session)
+
+    override fun capabilityBaseline(): CapabilitySnapshot? = engine.capabilityBaseline(session)
 
     override suspend fun reloadMcp(servers: Map<String, McpServerConfig>) {
         session.mcp.reload(servers)
