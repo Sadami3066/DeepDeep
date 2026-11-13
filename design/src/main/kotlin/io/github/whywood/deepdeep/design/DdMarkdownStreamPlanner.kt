@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.design
 
 private class MarkdownQuoteGroup(
     val startLine: Int,

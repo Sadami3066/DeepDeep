@@ -4,7 +4,7 @@ plugins {
     `maven-publish`
 }
 
-val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("0.6.1")
+val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("0.7.0")
 
 android {
     namespace = "io.github.whywood.deepdeep.design"
@@ -45,6 +45,7 @@ dependencies {
     api(libs.compose.material3)
     implementation(libs.compose.preview)
     debugImplementation(libs.compose.tooling)
+    testImplementation(libs.junit)
 }
 
 val publishGroup = providers.gradleProperty("deepdeepPublishGroup")

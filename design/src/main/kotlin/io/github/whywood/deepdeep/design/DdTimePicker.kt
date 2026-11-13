@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.timers
+package io.github.whywood.deepdeep.design
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,18 +22,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdShapes
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdTextAction
-import io.github.whywood.deepdeep.design.deepDeepColors
 import java.time.LocalTime
 
 private val ROW_HEIGHT = 44.dp
@@ -52,13 +44,15 @@ fun DdTimePicker(
     selected: LocalTime,
     onSelect: (LocalTime) -> Unit,
     onDismiss: () -> Unit,
+    title: String,
+    doneLabel: String,
 ) {
     val colors = deepDeepColors()
     var hour by remember { mutableStateOf(selected.hour) }
     var minute by remember { mutableStateOf(selected.minute) }
 
     DdSheet(onDismiss = onDismiss) {
-        TimerPickerHeader(title = stringResource(R.string.timers_time_label), onDismiss = onDismiss)
+        DdSheetHeader(title = title, onClose = onDismiss)
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Huge),
             horizontalArrangement = Arrangement.spacedBy(DdSpacing.Xxl),
@@ -88,7 +82,7 @@ fun DdTimePicker(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DdTextAction(
-                text = stringResource(R.string.timers_done),
+                text = doneLabel,
                 onClick = onDismiss,
                 color = colors.ink,
             )

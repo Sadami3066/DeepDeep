@@ -1,21 +1,21 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.design
 
-import io.github.whywood.deepdeep.ui.common.chat.markdownToPlainText
+import io.github.whywood.deepdeep.design.markdownToPlainText
 
-import io.github.whywood.deepdeep.ui.common.chat.parseMarkdownChunked
+import io.github.whywood.deepdeep.design.parseMarkdownChunked
 
-import io.github.whywood.deepdeep.ui.common.chat.parseMarkdownDocument
+import io.github.whywood.deepdeep.design.parseMarkdownDocument
 
-import io.github.whywood.deepdeep.ui.common.chat.MarkdownBlock
+import io.github.whywood.deepdeep.design.MarkdownBlock
 
 
-import io.github.whywood.deepdeep.ui.common.chat.parseMarkdownChunk
+import io.github.whywood.deepdeep.design.parseMarkdownChunk
 
-import io.github.whywood.deepdeep.ui.common.chat.MarkdownStreamPlanner
+import io.github.whywood.deepdeep.design.MarkdownStreamPlanner
 
-import io.github.whywood.deepdeep.ui.common.chat.planMarkdownStream
+import io.github.whywood.deepdeep.design.planMarkdownStream
 
-import io.github.whywood.deepdeep.ui.common.chat.MarkdownStreamPlan
+import io.github.whywood.deepdeep.design.MarkdownStreamPlan
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame

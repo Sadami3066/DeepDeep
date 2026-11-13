@@ -76,7 +76,7 @@ import io.github.whywood.deepdeep.ui.common.chat.AnimatedImage
 import io.github.whywood.deepdeep.ui.common.chat.ChatMarkdown
 import io.github.whywood.deepdeep.ui.common.chat.animatedImageFile
 import io.github.whywood.deepdeep.ui.common.chat.copyToClipboard
-import io.github.whywood.deepdeep.ui.common.chat.highlightedCode
+import io.github.whywood.deepdeep.design.highlightedCode
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

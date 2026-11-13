@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdDatePicker
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
@@ -41,6 +42,7 @@ import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
+import io.github.whywood.deepdeep.design.DdTimePicker
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
@@ -161,8 +163,31 @@ internal fun TimerEditor(
         }
     }
 
-    if (showTimePicker) DdTimePicker(draft.time, { draft = draft.copy(time = it); validationError = null }) { showTimePicker = false }
-    if (showDatePicker) DdDatePicker(draft.date, { draft = draft.copy(date = it); validationError = null }) { showDatePicker = false }
+    if (showTimePicker) {
+        DdTimePicker(
+            selected = draft.time,
+            onSelect = {
+                draft = draft.copy(time = it)
+                validationError = null
+            },
+            onDismiss = { showTimePicker = false },
+            title = stringResource(R.string.timers_time_label),
+            doneLabel = stringResource(R.string.timers_done),
+        )
+    }
+    if (showDatePicker) {
+        DdDatePicker(
+            selected = draft.date,
+            onSelect = {
+                draft = draft.copy(date = it)
+                validationError = null
+            },
+            onDismiss = { showDatePicker = false },
+            title = stringResource(R.string.timers_date_label),
+            previousMonthLabel = stringResource(R.string.timers_prev_month),
+            nextMonthLabel = stringResource(R.string.timers_next_month),
+        )
+    }
     if (showConversationPicker) ConversationPickerSheet(conversations, workspaceNames, draft.sessionId, { session ->
         draft = draft.copy(
             sessionId = session.id,

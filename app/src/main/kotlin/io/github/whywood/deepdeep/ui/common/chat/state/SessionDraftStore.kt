@@ -9,7 +9,7 @@ import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.NormalizedImage
 import io.github.whywood.deepdeep.data.encodeAttachmentBlock
 import io.github.whywood.deepdeep.runtime.ImagePart
-import io.github.whywood.deepdeep.ui.common.chat.markdownToPlainText
+import io.github.whywood.deepdeep.design.markdownToPlainText
 import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.QuotedMessage
 import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor

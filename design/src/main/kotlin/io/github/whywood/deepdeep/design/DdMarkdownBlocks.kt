@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.design
 
 internal sealed interface MarkdownBlock {
     data class Heading(val level: Int, val text: String) : MarkdownBlock
@@ -70,7 +70,7 @@ internal fun parseMarkdownChunked(source: String): MarkdownDocument {
     )
 }
 
-internal fun markdownToPlainText(text: String): String = markdownToPlainText(parseMarkdownDocument(text))
+fun markdownToPlainText(text: String): String = markdownToPlainText(parseMarkdownDocument(text))
 
 internal fun markdownToPlainText(document: MarkdownDocument): String {
     val parts = document.blocks.map { blockPlainText(it, document) }.filter { it.isNotBlank() }.toMutableList()

@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.media.ExifInterface
+import io.github.whywood.deepdeep.design.DdImageScaling
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Base64
@@ -23,7 +24,7 @@ data class NormalizedImage(
 
 @SuppressLint("ExifInterface")
 object ImageNormalizer {
-    const val MAX_EDGE = ImageScaling.MAX_EDGE
+    const val MAX_EDGE = DdImageScaling.MAX_EDGE
     const val MAX_BASE64_LENGTH = 1_500_000
     private const val MAX_PIXELS = 64L * 1024L * 1024L
     private val JPEG_QUALITIES = intArrayOf(85, 75, 65, 55, 45)
@@ -48,12 +49,12 @@ object ImageNormalizer {
         if (sourceWidth <= 0 || sourceHeight <= 0) return null
         if (sourceWidth.toLong() * sourceHeight.toLong() > MAX_PIXELS) return null
         options.inJustDecodeBounds = false
-        options.inSampleSize = ImageScaling.sampleSizeFor(sourceWidth, sourceHeight)
+        options.inSampleSize = DdImageScaling.sampleSizeFor(sourceWidth, sourceHeight)
         options.inPreferredConfig = Bitmap.Config.ARGB_8888
         val decoded = BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
         val oriented = applyOrientation(decoded, readOrientation(file))
         if (oriented !== decoded) decoded.recycle()
-        val target = ImageScaling.scaledSizeFor(oriented.width, oriented.height)
+        val target = DdImageScaling.scaledSizeFor(oriented.width, oriented.height)
         val output = if (target.width == oriented.width && target.height == oriented.height) {
             oriented
         } else {

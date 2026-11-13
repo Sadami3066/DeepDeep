@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.design
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -278,7 +278,7 @@ internal fun highlightCode(code: String, language: String?): List<CodeToken> {
     return lex(code, spec)
 }
 
-internal fun highlightedCode(code: String, language: String?, colors: DeepDeepColors): AnnotatedString {
+fun highlightedCode(code: String, language: String?, colors: DeepDeepColors): AnnotatedString {
     val tokens = highlightCode(code, language)
     if (tokens.isEmpty()) return AnnotatedString(code)
     return buildAnnotatedString {

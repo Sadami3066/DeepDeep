@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.design
 
 internal sealed interface InlineNode {
     data class Text(val text: String) : InlineNode

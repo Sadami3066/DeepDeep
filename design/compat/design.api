@@ -1,3 +1,43 @@
+final class io.github.whywood.deepdeep.design.CodeLanguage {
+  public io.github.whywood.deepdeep.design.CodeLanguage(java.util.List<java.lang.String>, java.util.List<kotlin.Pair<java.lang.String, java.lang.String>>, java.util.List<java.lang.String>, java.util.Set<java.lang.String>, java.util.Set<java.lang.String>, boolean, boolean, boolean);
+  public io.github.whywood.deepdeep.design.CodeLanguage(java.util.List, java.util.List, java.util.List, java.util.Set, java.util.Set, boolean, boolean, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.util.List<java.lang.String> getLineComments();
+  public final java.util.List<kotlin.Pair<java.lang.String, java.lang.String>> getBlockComments();
+  public final java.util.List<java.lang.String> getStrings();
+  public final java.util.Set<java.lang.String> getMultilineStrings();
+  public final java.util.Set<java.lang.String> getKeywords();
+  public final boolean getAnnotations();
+  public final boolean getTypeByCapital();
+  public final boolean getCaseSensitive();
+  public io.github.whywood.deepdeep.design.CodeLanguage();
+}
+public final class io.github.whywood.deepdeep.design.CodeToken {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.CodeToken(int, int, io.github.whywood.deepdeep.design.CodeTokenType);
+  public final int getStart();
+  public final int getEnd();
+  public final io.github.whywood.deepdeep.design.CodeTokenType getType();
+  public final int component1();
+  public final int component2();
+  public final io.github.whywood.deepdeep.design.CodeTokenType component3();
+  public final io.github.whywood.deepdeep.design.CodeToken copy(int, int, io.github.whywood.deepdeep.design.CodeTokenType);
+  public static io.github.whywood.deepdeep.design.CodeToken copy$default(io.github.whywood.deepdeep.design.CodeToken, int, int, io.github.whywood.deepdeep.design.CodeTokenType, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.CodeTokenType extends java.lang.Enum<io.github.whywood.deepdeep.design.CodeTokenType> {
+  public static final io.github.whywood.deepdeep.design.CodeTokenType KEYWORD;
+  public static final io.github.whywood.deepdeep.design.CodeTokenType STRING;
+  public static final io.github.whywood.deepdeep.design.CodeTokenType COMMENT;
+  public static final io.github.whywood.deepdeep.design.CodeTokenType NUMBER;
+  public static final io.github.whywood.deepdeep.design.CodeTokenType ANNOTATION;
+  public static final io.github.whywood.deepdeep.design.CodeTokenType FUNCTION;
+  public static final io.github.whywood.deepdeep.design.CodeTokenType TYPE;
+  public static io.github.whywood.deepdeep.design.CodeTokenType[] values();
+  public static io.github.whywood.deepdeep.design.CodeTokenType valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.CodeTokenType> getEntries();
+}
 public final class io.github.whywood.deepdeep.design.ComposableSingletons$DdDialogKt {
   public static final io.github.whywood.deepdeep.design.ComposableSingletons$DdDialogKt INSTANCE;
   public io.github.whywood.deepdeep.design.ComposableSingletons$DdDialogKt();
@@ -22,6 +62,14 @@ public final class io.github.whywood.deepdeep.design.DdAlpha {
 }
 public final class io.github.whywood.deepdeep.design.DdAvatarKt {
   public static final void DdAvatar--b7W0Lw(androidx.compose.ui.Modifier, androidx.compose.ui.graphics.ImageBitmap, java.lang.String, float, io.github.whywood.deepdeep.design.DdIcon, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdCodeHighlighterKt {
+  public static final java.util.List<io.github.whywood.deepdeep.design.CodeToken> highlightCode(java.lang.String, java.lang.String);
+  public static final androidx.compose.ui.text.AnnotatedString highlightedCode(java.lang.String, java.lang.String, io.github.whywood.deepdeep.design.DeepDeepColors);
+  public static final long codeColor(io.github.whywood.deepdeep.design.CodeTokenType, io.github.whywood.deepdeep.design.DeepDeepColors);
+}
+public final class io.github.whywood.deepdeep.design.DdCodeHighlighterKt$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
 }
 public final class io.github.whywood.deepdeep.design.DdComponentsKt {
   public static final androidx.compose.runtime.ProvidableCompositionLocal<androidx.compose.ui.unit.Dp> getLocalDdRowHorizontalPadding();
@@ -71,6 +119,12 @@ public final class io.github.whywood.deepdeep.design.DdControlsKt {
   public static final <T> void DdSegmentedControl(java.util.List<? extends T>, T, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, kotlin.jvm.functions.Function3<? super T, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, java.lang.String>, androidx.compose.runtime.Composer, int, int);
   public static final <T> void DdSegmentedCore-w9Mgt0o(java.util.List<? extends T>, T, kotlin.jvm.functions.Function1<? super T, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, float, androidx.compose.ui.graphics.Shape, androidx.compose.ui.graphics.Shape, float, long, java.util.List<java.lang.String>, kotlin.jvm.functions.Function4<? super T, ? super java.lang.Boolean, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
+public final class io.github.whywood.deepdeep.design.DdDatePickerKt {
+  public static final void DdDatePicker(java.time.LocalDate, kotlin.jvm.functions.Function1<? super java.time.LocalDate, kotlin.Unit>, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, java.lang.String, java.lang.String, androidx.compose.runtime.Composer, int);
+}
+public final class io.github.whywood.deepdeep.design.DdDatePickerKt$EntriesMappings {
+  public static final kotlin.enums.EnumEntries<java.time.DayOfWeek> entries$0;
+}
 public final class io.github.whywood.deepdeep.design.DdDialogKt {
   public static final void DdDialog(kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, java.lang.String, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
@@ -111,18 +165,8 @@ public final class io.github.whywood.deepdeep.design.DdEmptyStateKt {
   public static final void DdEmptyState(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
   public static final void DdEmptyState(java.lang.String, io.github.whywood.deepdeep.design.DdIcon, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
-public final class io.github.whywood.deepdeep.design.DdFonts {
-  public static final io.github.whywood.deepdeep.design.DdFonts INSTANCE;
-  public static final int $stable;
-  public final io.github.whywood.deepdeep.design.DdFontStyle getStyle();
-  public final void apply(io.github.whywood.deepdeep.design.DdFontStyle);
-  public final androidx.compose.ui.text.font.FontFamily familyFor(io.github.whywood.deepdeep.design.DdFontStyle);
-  public final void preload(android.content.Context);
-  public final androidx.compose.ui.text.font.FontFamily getSans();
-  public final androidx.compose.ui.text.font.FontFamily getDisplay();
-}
-public final class io.github.whywood.deepdeep.design.DdFonts$WhenMappings {
-  public static final int[] $EnumSwitchMapping$0;
+public final class io.github.whywood.deepdeep.design.DdFileRowKt {
+  public static final void DdFileRow(java.lang.String, androidx.compose.ui.Modifier, java.lang.String, io.github.whywood.deepdeep.design.DdIcon, kotlin.jvm.functions.Function0<kotlin.Unit>, boolean, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
 public final class io.github.whywood.deepdeep.design.DdFontStyle extends java.lang.Enum<io.github.whywood.deepdeep.design.DdFontStyle> {
   public static final io.github.whywood.deepdeep.design.DdFontStyle$Companion Companion;
@@ -141,9 +185,47 @@ public final class io.github.whywood.deepdeep.design.DdFontStyle$Companion {
   public final io.github.whywood.deepdeep.design.DdFontStyle fromId(java.lang.String);
   public io.github.whywood.deepdeep.design.DdFontStyle$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
+public final class io.github.whywood.deepdeep.design.DdFonts {
+  public static final io.github.whywood.deepdeep.design.DdFonts INSTANCE;
+  public static final int $stable;
+  public final io.github.whywood.deepdeep.design.DdFontStyle getStyle();
+  public final void apply(io.github.whywood.deepdeep.design.DdFontStyle);
+  public final androidx.compose.ui.text.font.FontFamily familyFor(io.github.whywood.deepdeep.design.DdFontStyle);
+  public final void preload(android.content.Context);
+  public final androidx.compose.ui.text.font.FontFamily getSans();
+  public final androidx.compose.ui.text.font.FontFamily getDisplay();
+}
+public final class io.github.whywood.deepdeep.design.DdFonts$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+}
 public final class io.github.whywood.deepdeep.design.DdGroupCardKt {
   public static final void DdGroupCard(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
   public static final void DdGroupCard(kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlTextKt {
+  public static final void DdHtmlText-WMdw5o4(java.lang.String, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.text.TextStyle, long, long, androidx.compose.runtime.Composer, int, int);
+  public static final java.lang.String access$stripHtmlNoise(java.lang.String);
+  public static final java.lang.String access$decodeEntities(java.lang.String);
+  public static final java.lang.String access$attribute(java.lang.String, java.lang.String);
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlTextKt$DdHtmlText$text$1$listener$1$1 implements androidx.compose.ui.text.LinkInteractionListener {
+  public void onClick(androidx.compose.ui.text.LinkAnnotation);
+}
+final class io.github.whywood.deepdeep.design.DdHtmlWriter {
+  public final androidx.compose.ui.text.AnnotatedString write(java.lang.String);
+  public io.github.whywood.deepdeep.design.DdHtmlWriter(io.github.whywood.deepdeep.design.DeepDeepColors, androidx.compose.ui.text.LinkInteractionListener, long, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+final class io.github.whywood.deepdeep.design.DdHtmlWriter$PendingLink {
+  public io.github.whywood.deepdeep.design.DdHtmlWriter$PendingLink(java.lang.String, int);
+  public final java.lang.String getHref();
+  public final int getStart();
+  public final java.lang.String component1();
+  public final int component2();
+  public final io.github.whywood.deepdeep.design.DdHtmlWriter$PendingLink copy(java.lang.String, int);
+  public static io.github.whywood.deepdeep.design.DdHtmlWriter$PendingLink copy$default(io.github.whywood.deepdeep.design.DdHtmlWriter$PendingLink, java.lang.String, int, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.design.DdIcon {
   public static final int $stable;
@@ -233,8 +315,182 @@ public final class io.github.whywood.deepdeep.design.DdIcons {
   public final io.github.whywood.deepdeep.design.DdIcon getVolumeX();
   public final io.github.whywood.deepdeep.design.DdIcon getWorkspace();
 }
+public final class io.github.whywood.deepdeep.design.DdImageKt {
+  public static final void DdImage(java.lang.String, java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.layout.ContentScale, androidx.compose.ui.graphics.Shape, int, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.BoxScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdImage(byte[], java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.layout.ContentScale, androidx.compose.ui.graphics.Shape, int, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.BoxScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void DdImage(androidx.compose.ui.graphics.ImageBitmap, java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.layout.ContentScale, androidx.compose.ui.graphics.Shape, androidx.compose.runtime.Composer, int, int);
+  public static final android.graphics.Bitmap decodeSampledFile(java.lang.String, int);
+  public static final android.graphics.Bitmap decodeSampledBytes(byte[], int);
+}
+final class io.github.whywood.deepdeep.design.DdImageKt$DdImage$load$2$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<androidx.compose.runtime.ProduceStateScope<io.github.whywood.deepdeep.design.DdImageLoad>, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(androidx.compose.runtime.ProduceStateScope<io.github.whywood.deepdeep.design.DdImageLoad>, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageKt$DdImage$load$2$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.design.DdImageLoad>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.design.DdImageLoad>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageKt$DdImage$load$5$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<androidx.compose.runtime.ProduceStateScope<io.github.whywood.deepdeep.design.DdImageLoad>, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(androidx.compose.runtime.ProduceStateScope<io.github.whywood.deepdeep.design.DdImageLoad>, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageKt$DdImage$load$5$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.design.DdImageLoad>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.design.DdImageLoad>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+interface io.github.whywood.deepdeep.design.DdImageLoad {
+}
+public final class io.github.whywood.deepdeep.design.DdImageLoad$Failed implements io.github.whywood.deepdeep.design.DdImageLoad {
+  public static final io.github.whywood.deepdeep.design.DdImageLoad$Failed INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdImageLoad$Loading implements io.github.whywood.deepdeep.design.DdImageLoad {
+  public static final io.github.whywood.deepdeep.design.DdImageLoad$Loading INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdImageLoad$Ready implements io.github.whywood.deepdeep.design.DdImageLoad {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdImageLoad$Ready(androidx.compose.ui.graphics.ImageBitmap);
+  public final androidx.compose.ui.graphics.ImageBitmap getBitmap();
+  public final androidx.compose.ui.graphics.ImageBitmap component1();
+  public final io.github.whywood.deepdeep.design.DdImageLoad$Ready copy(androidx.compose.ui.graphics.ImageBitmap);
+  public static io.github.whywood.deepdeep.design.DdImageLoad$Ready copy$default(io.github.whywood.deepdeep.design.DdImageLoad$Ready, androidx.compose.ui.graphics.ImageBitmap, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdImageScaling {
+  public static final io.github.whywood.deepdeep.design.DdImageScaling INSTANCE;
+  public static final int MAX_EDGE;
+  public static final long MAX_DECODE_PIXELS;
+  public static final int $stable;
+  public final int sampleSizeFor(int, int, long);
+  public static int sampleSizeFor$default(io.github.whywood.deepdeep.design.DdImageScaling, int, int, long, int, java.lang.Object);
+  public final io.github.whywood.deepdeep.design.DdScaledSize scaledSizeFor(int, int, int);
+  public static io.github.whywood.deepdeep.design.DdScaledSize scaledSizeFor$default(io.github.whywood.deepdeep.design.DdImageScaling, int, int, int, int, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdImageViewerKt {
+  public static final void DdImageViewer(androidx.compose.ui.graphics.ImageBitmap, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, java.lang.String, androidx.compose.runtime.Composer, int, int);
+  public static final void DdImageViewer(java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, java.lang.String, int, androidx.compose.runtime.Composer, int, int);
+  public static final void DdImageViewer(byte[], kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, java.lang.String, int, androidx.compose.runtime.Composer, int, int);
+  public static final void access$DdImageViewerDialog$lambda$0$2(androidx.compose.runtime.MutableState, boolean);
+}
+final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewer$bitmap$2$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<androidx.compose.runtime.ProduceStateScope<androidx.compose.ui.graphics.ImageBitmap>, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(androidx.compose.runtime.ProduceStateScope<androidx.compose.ui.graphics.ImageBitmap>, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewer$bitmap$2$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super androidx.compose.ui.graphics.ImageBitmap>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super androidx.compose.ui.graphics.ImageBitmap>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewer$bitmap$5$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<androidx.compose.runtime.ProduceStateScope<androidx.compose.ui.graphics.ImageBitmap>, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(androidx.compose.runtime.ProduceStateScope<androidx.compose.ui.graphics.ImageBitmap>, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewer$bitmap$5$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super androidx.compose.ui.graphics.ImageBitmap>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super androidx.compose.ui.graphics.ImageBitmap>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewerDialog$1$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewerDialog$1$3$1 implements androidx.compose.ui.input.pointer.PointerInputEventHandler {
+  public final java.lang.Object invoke(androidx.compose.ui.input.pointer.PointerInputScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+}
 public final class io.github.whywood.deepdeep.design.DdLoadingBlockKt {
   public static final void DdLoadingBlock(androidx.compose.ui.Modifier, java.lang.String, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownBlockScannerKt {
+  public static final java.util.List<io.github.whywood.deepdeep.design.MarkdownDefinition> collectQuoteEntries(java.util.List<java.lang.String>);
+  public static final void scanStructure(java.util.List<java.lang.String>, int, kotlin.jvm.functions.Function1<? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function2<? super java.lang.Integer, ? super java.util.List<java.lang.String>, kotlin.Unit>);
+  public static void scanStructure$default(java.util.List, int, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function2, int, java.lang.Object);
+  public static final boolean isChunkBoundary(java.util.List<java.lang.String>, int);
+  public static final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> parseBlocks(java.lang.String, io.github.whywood.deepdeep.design.InlineContext);
+  public static final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> parseBlockLines(java.util.List<java.lang.String>, io.github.whywood.deepdeep.design.InlineContext);
+  public static final boolean extractDefinitionLines(java.util.List<java.lang.String>, int, int, boolean, java.util.List<java.lang.String>, java.util.List<io.github.whywood.deepdeep.design.MarkdownDefinition>);
+  public static final void applyDefinition(io.github.whywood.deepdeep.design.MarkdownDefinition, io.github.whywood.deepdeep.design.InlineContext);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownBlocksKt {
+  public static final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> parseMarkdown(java.lang.String);
+  public static final io.github.whywood.deepdeep.design.MarkdownDocument parseMarkdownDocument(java.lang.String);
+  public static final io.github.whywood.deepdeep.design.MarkdownStreamPlan planMarkdownStream(java.lang.String);
+  public static final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> parseMarkdownChunk(java.lang.String);
+  public static final io.github.whywood.deepdeep.design.MarkdownDocument parseMarkdownChunked(java.lang.String);
+  public static final java.lang.String markdownToPlainText(java.lang.String);
+  public static final java.lang.String markdownToPlainText(io.github.whywood.deepdeep.design.MarkdownDocument);
+  public static final java.lang.String inlinePlainText(java.lang.String, java.util.Map<java.lang.String, java.lang.String>, java.util.Map<java.lang.String, java.lang.Integer>);
+  public static java.lang.String inlinePlainText$default(java.lang.String, java.util.Map, java.util.Map, int, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownImage {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdMarkdownImage(java.lang.String, java.lang.String, java.lang.String);
+  public io.github.whywood.deepdeep.design.DdMarkdownImage(java.lang.String, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getAlt();
+  public final java.lang.String getSource();
+  public final java.lang.String getTitle();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final io.github.whywood.deepdeep.design.DdMarkdownImage copy(java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.design.DdMarkdownImage copy$default(io.github.whywood.deepdeep.design.DdMarkdownImage, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownInlineScannerKt {
+  public static final java.util.List<io.github.whywood.deepdeep.design.InlineNode> inlineNodes(java.lang.String, java.util.Map<java.lang.String, java.lang.String>, java.util.Map<java.lang.String, java.lang.Integer>);
+  public static java.util.List inlineNodes$default(java.lang.String, java.util.Map, java.util.Map, int, java.lang.Object);
+  public static final boolean isPathLikeInlineCode(java.lang.String);
+  public static final boolean isWorkspaceFileReference(java.lang.String);
+  public static final java.util.Set access$getEscapableChars$p();
+  public static final int access$fileReferenceEnd(java.lang.String, int);
+  public static final java.util.Set access$getUrlTrailingChars$p();
+  public static final java.lang.String access$normalizeCodeSpan(java.lang.String);
+  public static final java.lang.String access$linkDestination(java.lang.String);
+  public static final kotlin.text.Regex access$getAngleUrlPattern$p();
+  public static final kotlin.text.Regex access$getAngleEmailPattern$p();
+  public static final kotlin.text.Regex access$getHtmlTagPattern$p();
+  public static final int access$indexOfIgnoreCase(java.lang.String, java.lang.String, int);
+  public static final kotlin.text.Regex access$getHrefPattern$p();
+  public static final kotlin.text.Regex access$getColorPattern$p();
+  public static final java.lang.Integer access$parseHexColor(java.lang.String);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownKt {
+  public static final void DdMarkdown(java.lang.String, androidx.compose.ui.Modifier, boolean, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function3<? super io.github.whywood.deepdeep.design.DdMarkdownImage, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownKt$appendFileReference$annotation$1 implements androidx.compose.ui.text.LinkInteractionListener {
+  public void onClick(androidx.compose.ui.text.LinkAnnotation);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownKt$appendInlineNodes$1$annotation$1 implements androidx.compose.ui.text.LinkInteractionListener {
+  public void onClick(androidx.compose.ui.text.LinkAnnotation);
+}
+public final class io.github.whywood.deepdeep.design.DdMarkdownKt$appendInlineNodes$1$annotation$2 implements androidx.compose.ui.text.LinkInteractionListener {
+  public void onClick(androidx.compose.ui.text.LinkAnnotation);
 }
 public final class io.github.whywood.deepdeep.design.DdMenuKt {
   public static final void DdMenu-1OG2048(boolean, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, long, float, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
@@ -271,6 +527,9 @@ public final class io.github.whywood.deepdeep.design.DdMotion {
 public final class io.github.whywood.deepdeep.design.DdPageScaffoldKt {
   public static final void DdPageScaffold(kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
+public final class io.github.whywood.deepdeep.design.DdPullToRefreshKt {
+  public static final void DdPullToRefresh(boolean, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, androidx.compose.material3.pulltorefresh.PullToRefreshState, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.BoxScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+}
 public final class io.github.whywood.deepdeep.design.DdRadius {
   public static final io.github.whywood.deepdeep.design.DdRadius INSTANCE;
   public static final int $stable;
@@ -283,6 +542,19 @@ public final class io.github.whywood.deepdeep.design.DdRadius {
   public final float getCard-D9Ej5fM();
   public final float getRow-D9Ej5fM();
   public final float getSheet-D9Ej5fM();
+}
+public final class io.github.whywood.deepdeep.design.DdScaledSize {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdScaledSize(int, int);
+  public final int getWidth();
+  public final int getHeight();
+  public final int component1();
+  public final int component2();
+  public final io.github.whywood.deepdeep.design.DdScaledSize copy(int, int);
+  public static io.github.whywood.deepdeep.design.DdScaledSize copy$default(io.github.whywood.deepdeep.design.DdScaledSize, int, int, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.design.DdSearchFieldKt {
   public static final void DdSearchField(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.focus.FocusRequester, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, java.lang.String, androidx.compose.runtime.Composer, int, int);
@@ -308,6 +580,18 @@ public final class io.github.whywood.deepdeep.design.DdShapes {
   public final androidx.compose.ui.graphics.Shape getRow();
   public final androidx.compose.ui.graphics.Shape getSheet();
   public final androidx.compose.ui.graphics.Shape getSheetTop();
+}
+public final class io.github.whywood.deepdeep.design.DdSnackbarHostKt {
+  public static final void DdSnackbarHost(io.github.whywood.deepdeep.design.DdSnackbarHostState, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdSnackbarHostState {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdSnackbarHostState();
+  public final androidx.compose.material3.SnackbarHostState getHostState$design();
+  public final androidx.compose.material3.SnackbarData getCurrentSnackbarData();
+  public final java.lang.Object showSnackbar(java.lang.String, java.lang.String, boolean, androidx.compose.material3.SnackbarDuration, kotlin.coroutines.Continuation<? super androidx.compose.material3.SnackbarResult>);
+  public static java.lang.Object showSnackbar$default(io.github.whywood.deepdeep.design.DdSnackbarHostState, java.lang.String, java.lang.String, boolean, androidx.compose.material3.SnackbarDuration, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public final void dismiss();
 }
 public final class io.github.whywood.deepdeep.design.DdSpacing {
   public static final io.github.whywood.deepdeep.design.DdSpacing INSTANCE;
@@ -344,6 +628,36 @@ public final class io.github.whywood.deepdeep.design.DdTheme {
   public final io.github.whywood.deepdeep.design.DeepDeepColors lightSantorini();
   public final io.github.whywood.deepdeep.design.DeepDeepColors darkOceanic();
 }
+public final class io.github.whywood.deepdeep.design.DdTimePickerKt {
+  public static final void DdTimePicker(java.time.LocalTime, kotlin.jvm.functions.Function1<? super java.time.LocalTime, kotlin.Unit>, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, java.lang.String, androidx.compose.runtime.Composer, int);
+  public static final float access$getROW_HEIGHT$p();
+  public static final androidx.compose.ui.text.TextStyle access$getTIME_TEXT_STYLE$p();
+}
+final class io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$1$1$2$1$1 implements kotlin.jvm.functions.Function0<kotlin.Unit> {
+  public final void invoke();
+  public java.lang.Object invoke();
+}
+public final class io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$1 implements kotlin.jvm.functions.Function1 {
+  public static final io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$1 INSTANCE;
+  public io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$1();
+  public final java.lang.Void invoke(java.lang.Integer);
+  public java.lang.Object invoke(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$2 implements kotlin.jvm.functions.Function1<java.lang.Integer, java.lang.Object> {
+  public io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$2(kotlin.jvm.functions.Function1, java.util.List);
+  public final java.lang.Object invoke(int);
+  public java.lang.Object invoke(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$3 implements kotlin.jvm.functions.Function1<java.lang.Integer, java.lang.Object> {
+  public io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$3(kotlin.jvm.functions.Function1, java.util.List);
+  public final java.lang.Object invoke(int);
+  public java.lang.Object invoke(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$4 implements kotlin.jvm.functions.Function4<androidx.compose.foundation.lazy.LazyItemScope, java.lang.Integer, androidx.compose.runtime.Composer, java.lang.Integer, kotlin.Unit> {
+  public io.github.whywood.deepdeep.design.DdTimePickerKt$TimeColumn$lambda$0$0$$inlined$items$default$4(java.util.List, int, io.github.whywood.deepdeep.design.DeepDeepColors, kotlin.jvm.functions.Function1);
+  public final void invoke(androidx.compose.foundation.lazy.LazyItemScope, int, androidx.compose.runtime.Composer, int);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object);
+}
 public final class io.github.whywood.deepdeep.design.DdType {
   public static final io.github.whywood.deepdeep.design.DdType INSTANCE;
   public static final int $stable;
@@ -361,6 +675,92 @@ public final class io.github.whywood.deepdeep.design.DdType {
 }
 public final class io.github.whywood.deepdeep.design.DdTypingDotsKt {
   public static final void DdTypingDots-KfjZ6_A(long, androidx.compose.ui.Modifier, float, float, androidx.compose.runtime.Composer, int, int);
+}
+public interface io.github.whywood.deepdeep.design.DdWebContent {
+}
+public final class io.github.whywood.deepdeep.design.DdWebContent$Html implements io.github.whywood.deepdeep.design.DdWebContent {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdWebContent$Html(java.lang.String, java.lang.String);
+  public io.github.whywood.deepdeep.design.DdWebContent$Html(java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getHtml();
+  public final java.lang.String getBaseUrl();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.DdWebContent$Html copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.design.DdWebContent$Html copy$default(io.github.whywood.deepdeep.design.DdWebContent$Html, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdWebContent$Url implements io.github.whywood.deepdeep.design.DdWebContent {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdWebContent$Url(java.lang.String);
+  public final java.lang.String getUrl();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.DdWebContent$Url copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.DdWebContent$Url copy$default(io.github.whywood.deepdeep.design.DdWebContent$Url, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdWebViewError {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdWebViewError(io.github.whywood.deepdeep.design.DdWebViewErrorKind, java.lang.String, java.lang.String, java.lang.Integer);
+  public io.github.whywood.deepdeep.design.DdWebViewError(io.github.whywood.deepdeep.design.DdWebViewErrorKind, java.lang.String, java.lang.String, java.lang.Integer, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final io.github.whywood.deepdeep.design.DdWebViewErrorKind getKind();
+  public final java.lang.String getUrl();
+  public final java.lang.String getDescription();
+  public final java.lang.Integer getHttpStatusCode();
+  public final io.github.whywood.deepdeep.design.DdWebViewErrorKind component1();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final java.lang.Integer component4();
+  public final io.github.whywood.deepdeep.design.DdWebViewError copy(io.github.whywood.deepdeep.design.DdWebViewErrorKind, java.lang.String, java.lang.String, java.lang.Integer);
+  public static io.github.whywood.deepdeep.design.DdWebViewError copy$default(io.github.whywood.deepdeep.design.DdWebViewError, io.github.whywood.deepdeep.design.DdWebViewErrorKind, java.lang.String, java.lang.String, java.lang.Integer, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdWebViewErrorKind extends java.lang.Enum<io.github.whywood.deepdeep.design.DdWebViewErrorKind> {
+  public static final io.github.whywood.deepdeep.design.DdWebViewErrorKind NETWORK;
+  public static final io.github.whywood.deepdeep.design.DdWebViewErrorKind HTTP;
+  public static final io.github.whywood.deepdeep.design.DdWebViewErrorKind RENDERER;
+  public static io.github.whywood.deepdeep.design.DdWebViewErrorKind[] values();
+  public static io.github.whywood.deepdeep.design.DdWebViewErrorKind valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.DdWebViewErrorKind> getEntries();
+}
+public final class io.github.whywood.deepdeep.design.DdWebViewKt {
+  public static final void DdWebView(java.lang.String, androidx.compose.ui.Modifier, io.github.whywood.deepdeep.design.DdWebViewState, boolean, boolean, boolean, boolean, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super io.github.whywood.deepdeep.design.DdWebViewError, kotlin.Unit>, androidx.compose.runtime.Composer, int, int, int);
+  public static final void DdWebView(io.github.whywood.deepdeep.design.DdWebContent, androidx.compose.ui.Modifier, io.github.whywood.deepdeep.design.DdWebViewState, boolean, boolean, boolean, boolean, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super io.github.whywood.deepdeep.design.DdWebViewError, kotlin.Unit>, androidx.compose.runtime.Composer, int, int, int);
+  public static final void access$destroyDdWebView(android.webkit.WebView);
+}
+public final class io.github.whywood.deepdeep.design.DdWebViewKt$DdWebView$lambda$3$0$$inlined$onDispose$1 implements androidx.compose.runtime.DisposableEffectResult {
+  public io.github.whywood.deepdeep.design.DdWebViewKt$DdWebView$lambda$3$0$$inlined$onDispose$1(io.github.whywood.deepdeep.design.DdWebViewState);
+  public void dispose();
+}
+public final class io.github.whywood.deepdeep.design.DdWebViewKt$createDdWebView$2 extends android.webkit.WebViewClient {
+  public void onPageStarted(android.webkit.WebView, java.lang.String, android.graphics.Bitmap);
+  public void onPageFinished(android.webkit.WebView, java.lang.String);
+  public void doUpdateVisitedHistory(android.webkit.WebView, java.lang.String, boolean);
+  public void onReceivedError(android.webkit.WebView, android.webkit.WebResourceRequest, android.webkit.WebResourceError);
+  public void onReceivedHttpError(android.webkit.WebView, android.webkit.WebResourceRequest, android.webkit.WebResourceResponse);
+  public boolean onRenderProcessGone(android.webkit.WebView, android.webkit.RenderProcessGoneDetail);
+}
+public final class io.github.whywood.deepdeep.design.DdWebViewState {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdWebViewState();
+  public final android.webkit.WebView getWebView$design();
+  public final void setWebView$design(android.webkit.WebView);
+  public final boolean getCanGoBack();
+  public final boolean getCanGoForward();
+  public final java.lang.String getCurrentUrl();
+  public final void goBack();
+  public final void goForward();
+  public final void reload();
+  public final void stopLoading();
+  public final void evaluateJavascript(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>);
+  public static void evaluateJavascript$default(io.github.whywood.deepdeep.design.DdWebViewState, java.lang.String, kotlin.jvm.functions.Function1, int, java.lang.Object);
+  public final void dispose();
 }
 public final class io.github.whywood.deepdeep.design.DeepDeepColors {
   public static final int $stable;
@@ -432,6 +832,438 @@ public final class io.github.whywood.deepdeep.design.DeepDeepThemeKt {
 }
 public final class io.github.whywood.deepdeep.design.DeepDeepThemeKt$WhenMappings {
   public static final int[] $EnumSwitchMapping$0;
+}
+public final class io.github.whywood.deepdeep.design.InlineContext {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineContext();
+  public final java.util.LinkedHashMap<java.lang.String, java.lang.String> getLinks();
+  public final java.util.LinkedHashMap<java.lang.String, java.lang.Integer> getFootnoteNumbers();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote> getFootnotes();
+}
+public interface io.github.whywood.deepdeep.design.InlineNode {
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Bold implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Bold(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Bold copy(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public static io.github.whywood.deepdeep.design.InlineNode$Bold copy$default(io.github.whywood.deepdeep.design.InlineNode$Bold, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Code implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Code(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Code copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.InlineNode$Code copy$default(io.github.whywood.deepdeep.design.InlineNode$Code, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Colored implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Colored(int, java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public final int getColor();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final int component1();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component2();
+  public final io.github.whywood.deepdeep.design.InlineNode$Colored copy(int, java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public static io.github.whywood.deepdeep.design.InlineNode$Colored copy$default(io.github.whywood.deepdeep.design.InlineNode$Colored, int, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$FileRef implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$FileRef(java.lang.String, java.lang.String, boolean);
+  public io.github.whywood.deepdeep.design.InlineNode$FileRef(java.lang.String, java.lang.String, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final java.lang.String getText();
+  public final java.lang.String getPath();
+  public final boolean getCode();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final boolean component3();
+  public final io.github.whywood.deepdeep.design.InlineNode$FileRef copy(java.lang.String, java.lang.String, boolean);
+  public static io.github.whywood.deepdeep.design.InlineNode$FileRef copy$default(io.github.whywood.deepdeep.design.InlineNode$FileRef, java.lang.String, java.lang.String, boolean, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$FootnoteRef implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$FootnoteRef(int);
+  public final int getNumber();
+  public final int component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$FootnoteRef copy(int);
+  public static io.github.whywood.deepdeep.design.InlineNode$FootnoteRef copy$default(io.github.whywood.deepdeep.design.InlineNode$FootnoteRef, int, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Italic implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Italic(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Italic copy(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public static io.github.whywood.deepdeep.design.InlineNode$Italic copy$default(io.github.whywood.deepdeep.design.InlineNode$Italic, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Kbd implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Kbd(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Kbd copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.InlineNode$Kbd copy$default(io.github.whywood.deepdeep.design.InlineNode$Kbd, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Link implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Link(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>, java.lang.String);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final java.lang.String getDestination();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.InlineNode$Link copy(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>, java.lang.String);
+  public static io.github.whywood.deepdeep.design.InlineNode$Link copy$default(io.github.whywood.deepdeep.design.InlineNode$Link, java.util.List, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Math implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Math(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Math copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.InlineNode$Math copy$default(io.github.whywood.deepdeep.design.InlineNode$Math, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Strike implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Strike(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Strike copy(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public static io.github.whywood.deepdeep.design.InlineNode$Strike copy$default(io.github.whywood.deepdeep.design.InlineNode$Strike, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Subscript implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Subscript(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Subscript copy(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public static io.github.whywood.deepdeep.design.InlineNode$Subscript copy$default(io.github.whywood.deepdeep.design.InlineNode$Subscript, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Superscript implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Superscript(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> getChildren();
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Superscript copy(java.util.List<? extends io.github.whywood.deepdeep.design.InlineNode>);
+  public static io.github.whywood.deepdeep.design.InlineNode$Superscript copy$default(io.github.whywood.deepdeep.design.InlineNode$Superscript, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.InlineNode$Text implements io.github.whywood.deepdeep.design.InlineNode {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.InlineNode$Text(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.InlineNode$Text copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.InlineNode$Text copy$default(io.github.whywood.deepdeep.design.InlineNode$Text, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.InlineScanner {
+  public io.github.whywood.deepdeep.design.InlineScanner(java.util.Map<java.lang.String, java.lang.String>, java.util.Map<java.lang.String, java.lang.Integer>);
+  public final java.util.List<io.github.whywood.deepdeep.design.InlineNode> parse(java.lang.String);
+}
+public interface io.github.whywood.deepdeep.design.MarkdownBlock {
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Code implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Code(java.lang.String, java.lang.String);
+  public final java.lang.String getLanguage();
+  public final java.lang.String getCode();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Code copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Code copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Code, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Heading implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Heading(int, java.lang.String);
+  public final int getLevel();
+  public final java.lang.String getText();
+  public final int component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Heading copy(int, java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Heading copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Heading, int, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Image implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Image(java.lang.String, java.lang.String, java.lang.String);
+  public final java.lang.String getAlt();
+  public final java.lang.String getSource();
+  public final java.lang.String getTitle();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Image copy(java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Image copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Image, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$ListBlock implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$ListBlock(java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem>);
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem> getItems();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem> component1();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$ListBlock copy(java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem>);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$ListBlock copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$ListBlock, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Math implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Math(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Math copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Math copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Math, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Paragraph implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Paragraph(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Paragraph copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Paragraph copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Paragraph, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Quote implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Quote(java.util.List<? extends io.github.whywood.deepdeep.design.MarkdownBlock>);
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> getBlocks();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> component1();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Quote copy(java.util.List<? extends io.github.whywood.deepdeep.design.MarkdownBlock>);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Quote copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Quote, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Rule implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final io.github.whywood.deepdeep.design.MarkdownBlock$Rule INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownBlock$Table implements io.github.whywood.deepdeep.design.MarkdownBlock {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownBlock$Table(java.util.List<java.lang.String>, java.util.List<? extends java.util.List<java.lang.String>>);
+  public final java.util.List<java.lang.String> getHeader();
+  public final java.util.List<java.util.List<java.lang.String>> getRows();
+  public final java.util.List<java.lang.String> component1();
+  public final java.util.List<java.util.List<java.lang.String>> component2();
+  public final io.github.whywood.deepdeep.design.MarkdownBlock$Table copy(java.util.List<java.lang.String>, java.util.List<? extends java.util.List<java.lang.String>>);
+  public static io.github.whywood.deepdeep.design.MarkdownBlock$Table copy$default(io.github.whywood.deepdeep.design.MarkdownBlock$Table, java.util.List, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownChunk {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownChunk(java.lang.String);
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.MarkdownChunk copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownChunk copy$default(io.github.whywood.deepdeep.design.MarkdownChunk, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public interface io.github.whywood.deepdeep.design.MarkdownDefinition {
+}
+public final class io.github.whywood.deepdeep.design.MarkdownDefinition$Footnote implements io.github.whywood.deepdeep.design.MarkdownDefinition {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownDefinition$Footnote(java.lang.String, java.lang.String);
+  public final java.lang.String getLabel();
+  public final java.lang.String getText();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.MarkdownDefinition$Footnote copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownDefinition$Footnote copy$default(io.github.whywood.deepdeep.design.MarkdownDefinition$Footnote, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownDefinition$Link implements io.github.whywood.deepdeep.design.MarkdownDefinition {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownDefinition$Link(java.lang.String, java.lang.String);
+  public final java.lang.String getLabel();
+  public final java.lang.String getDestination();
+  public final java.lang.String component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.MarkdownDefinition$Link copy(java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownDefinition$Link copy$default(io.github.whywood.deepdeep.design.MarkdownDefinition$Link, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownDocument {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownDocument(java.util.List<? extends io.github.whywood.deepdeep.design.MarkdownBlock>, java.util.Map<java.lang.String, java.lang.String>, java.util.Map<java.lang.String, java.lang.Integer>, java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote>);
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> getBlocks();
+  public final java.util.Map<java.lang.String, java.lang.String> getLinks();
+  public final java.util.Map<java.lang.String, java.lang.Integer> getFootnoteNumbers();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote> getFootnotes();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownBlock> component1();
+  public final java.util.Map<java.lang.String, java.lang.String> component2();
+  public final java.util.Map<java.lang.String, java.lang.Integer> component3();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote> component4();
+  public final io.github.whywood.deepdeep.design.MarkdownDocument copy(java.util.List<? extends io.github.whywood.deepdeep.design.MarkdownBlock>, java.util.Map<java.lang.String, java.lang.String>, java.util.Map<java.lang.String, java.lang.Integer>, java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote>);
+  public static io.github.whywood.deepdeep.design.MarkdownDocument copy$default(io.github.whywood.deepdeep.design.MarkdownDocument, java.util.List, java.util.Map, java.util.Map, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownFootnote {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownFootnote(int, java.lang.String);
+  public final int getNumber();
+  public final java.lang.String getText();
+  public final int component1();
+  public final java.lang.String component2();
+  public final io.github.whywood.deepdeep.design.MarkdownFootnote copy(int, java.lang.String);
+  public static io.github.whywood.deepdeep.design.MarkdownFootnote copy$default(io.github.whywood.deepdeep.design.MarkdownFootnote, int, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownListItem {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownListItem(io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.String, java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem>);
+  public io.github.whywood.deepdeep.design.MarkdownListItem(io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.String, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final io.github.whywood.deepdeep.design.MarkdownMarker getMarker();
+  public final java.lang.String getText();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem> getChildren();
+  public final io.github.whywood.deepdeep.design.MarkdownMarker component1();
+  public final java.lang.String component2();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem> component3();
+  public final io.github.whywood.deepdeep.design.MarkdownListItem copy(io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.String, java.util.List<io.github.whywood.deepdeep.design.MarkdownListItem>);
+  public static io.github.whywood.deepdeep.design.MarkdownListItem copy$default(io.github.whywood.deepdeep.design.MarkdownListItem, io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.String, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public interface io.github.whywood.deepdeep.design.MarkdownMarker {
+}
+public final class io.github.whywood.deepdeep.design.MarkdownMarker$Bullet implements io.github.whywood.deepdeep.design.MarkdownMarker {
+  public static final io.github.whywood.deepdeep.design.MarkdownMarker$Bullet INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownMarker$Ordered implements io.github.whywood.deepdeep.design.MarkdownMarker {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownMarker$Ordered(int);
+  public final int getNumber();
+  public final int component1();
+  public final io.github.whywood.deepdeep.design.MarkdownMarker$Ordered copy(int);
+  public static io.github.whywood.deepdeep.design.MarkdownMarker$Ordered copy$default(io.github.whywood.deepdeep.design.MarkdownMarker$Ordered, int, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.MarkdownMarker$Task implements io.github.whywood.deepdeep.design.MarkdownMarker {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownMarker$Task(boolean);
+  public final boolean getChecked();
+  public final boolean component1();
+  public final io.github.whywood.deepdeep.design.MarkdownMarker$Task copy(boolean);
+  public static io.github.whywood.deepdeep.design.MarkdownMarker$Task copy$default(io.github.whywood.deepdeep.design.MarkdownMarker$Task, boolean, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.MarkdownQuoteGroup {
+  public io.github.whywood.deepdeep.design.MarkdownQuoteGroup(int, java.util.List<? extends io.github.whywood.deepdeep.design.MarkdownDefinition>);
+  public final int getStartLine();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownDefinition> getEntries();
+}
+public final class io.github.whywood.deepdeep.design.MarkdownStreamPlan {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownStreamPlan(java.util.List<io.github.whywood.deepdeep.design.MarkdownChunk>, java.util.Map<java.lang.String, java.lang.String>, java.util.Map<java.lang.String, java.lang.Integer>, java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote>);
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownChunk> getChunks();
+  public final java.util.Map<java.lang.String, java.lang.String> getLinks();
+  public final java.util.Map<java.lang.String, java.lang.Integer> getFootnoteNumbers();
+  public final java.util.List<io.github.whywood.deepdeep.design.MarkdownFootnote> getFootnotes();
+}
+public final class io.github.whywood.deepdeep.design.MarkdownStreamPlanner {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.MarkdownStreamPlanner();
+  public final io.github.whywood.deepdeep.design.MarkdownStreamPlan plan(java.lang.String);
+}
+final class io.github.whywood.deepdeep.design.RawListItem {
+  public io.github.whywood.deepdeep.design.RawListItem(int, io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.StringBuilder);
+  public final int getIndent();
+  public final io.github.whywood.deepdeep.design.MarkdownMarker getMarker();
+  public final java.lang.StringBuilder getText();
+  public final int component1();
+  public final io.github.whywood.deepdeep.design.MarkdownMarker component2();
+  public final java.lang.StringBuilder component3();
+  public final io.github.whywood.deepdeep.design.RawListItem copy(int, io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.StringBuilder);
+  public static io.github.whywood.deepdeep.design.RawListItem copy$default(io.github.whywood.deepdeep.design.RawListItem, int, io.github.whywood.deepdeep.design.MarkdownMarker, java.lang.StringBuilder, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.RenderedInline {
+  public io.github.whywood.deepdeep.design.RenderedInline(androidx.compose.ui.text.AnnotatedString, java.util.List<kotlin.ranges.IntRange>);
+  public final androidx.compose.ui.text.AnnotatedString getText();
+  public final java.util.List<kotlin.ranges.IntRange> getCodeRanges();
+  public final androidx.compose.ui.text.AnnotatedString component1();
+  public final java.util.List<kotlin.ranges.IntRange> component2();
+  public final io.github.whywood.deepdeep.design.RenderedInline copy(androidx.compose.ui.text.AnnotatedString, java.util.List<kotlin.ranges.IntRange>);
+  public static io.github.whywood.deepdeep.design.RenderedInline copy$default(io.github.whywood.deepdeep.design.RenderedInline, androidx.compose.ui.text.AnnotatedString, java.util.List, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.design.ThemePreset extends java.lang.Enum<io.github.whywood.deepdeep.design.ThemePreset> {
   public static final io.github.whywood.deepdeep.design.ThemePreset SYSTEM;

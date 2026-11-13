@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.timers
+package io.github.whywood.deepdeep.design
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -26,17 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import io.github.whywood.deepdeep.R
-import io.github.whywood.deepdeep.design.DdIconButton
-import io.github.whywood.deepdeep.design.DdIcons
-import io.github.whywood.deepdeep.design.DdMotion
-import io.github.whywood.deepdeep.design.DdSheet
-import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdType
-import io.github.whywood.deepdeep.design.deepDeepColors
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -44,13 +35,16 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 private val CELL_HEIGHT = 44.dp
-private val TODAY_OUTLINE_ALPHA = 0.35f
+private const val TODAY_OUTLINE_ALPHA = 0.35f
 
 @Composable
 fun DdDatePicker(
     selected: LocalDate,
     onSelect: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
+    title: String,
+    previousMonthLabel: String,
+    nextMonthLabel: String,
 ) {
     val colors = deepDeepColors()
     val configuration = LocalConfiguration.current
@@ -63,7 +57,7 @@ fun DdDatePicker(
     val today = remember { LocalDate.now() }
 
     DdSheet(onDismiss = onDismiss) {
-        TimerPickerHeader(title = stringResource(R.string.timers_date_label), onDismiss = onDismiss)
+        DdSheetHeader(title = title, onClose = onDismiss)
         Row(
             modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = DdSpacing.Md),
             verticalAlignment = Alignment.CenterVertically,
@@ -71,7 +65,7 @@ fun DdDatePicker(
             DdIconButton(
                 icon = DdIcons.ChevronRight,
                 onClick = { month = month.minusMonths(1) },
-                contentDescription = stringResource(R.string.timers_prev_month),
+                contentDescription = previousMonthLabel,
                 modifier = Modifier.rotate(180f),
                 tint = colors.inkSecondary,
                 iconSize = 18.dp,
@@ -86,7 +80,7 @@ fun DdDatePicker(
             DdIconButton(
                 icon = DdIcons.ChevronRight,
                 onClick = { month = month.plusMonths(1) },
-                contentDescription = stringResource(R.string.timers_next_month),
+                contentDescription = nextMonthLabel,
                 tint = colors.inkSecondary,
                 iconSize = 18.dp,
             )
@@ -106,7 +100,7 @@ fun DdDatePicker(
         Crossfade(
             targetState = month,
             animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-            label = "timer-date-month",
+            label = "dd-date-month",
         ) { currentMonth ->
             MonthGrid(
                 month = currentMonth,
@@ -117,29 +111,6 @@ fun DdDatePicker(
             )
         }
         Spacer(Modifier.height(DdSpacing.Lg))
-    }
-}
-
-@Composable
-internal fun TimerPickerHeader(title: String, onDismiss: () -> Unit) {
-    val colors = deepDeepColors()
-    Row(
-        modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = DdSpacing.Xxl, end = DdSpacing.Md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            style = DdType.heading,
-            color = colors.ink,
-        )
-        DdIconButton(
-            icon = DdIcons.Close,
-            onClick = onDismiss,
-            contentDescription = stringResource(R.string.timers_close),
-            tint = colors.inkSecondary,
-            iconSize = 20.dp,
-        )
     }
 }
 

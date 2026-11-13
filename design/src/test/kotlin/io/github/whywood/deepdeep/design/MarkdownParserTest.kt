@@ -1,29 +1,29 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.design
 
-import io.github.whywood.deepdeep.ui.common.chat.isPathLikeInlineCode
+import io.github.whywood.deepdeep.design.isPathLikeInlineCode
 
-import io.github.whywood.deepdeep.ui.common.chat.isWorkspaceFileReference
+import io.github.whywood.deepdeep.design.isWorkspaceFileReference
 
-import io.github.whywood.deepdeep.ui.common.chat.CodeTokenType
+import io.github.whywood.deepdeep.design.CodeTokenType
 
-import io.github.whywood.deepdeep.ui.common.chat.highlightCode
+import io.github.whywood.deepdeep.design.highlightCode
 
-import io.github.whywood.deepdeep.ui.common.chat.parseMarkdownDocument
+import io.github.whywood.deepdeep.design.parseMarkdownDocument
 
-import io.github.whywood.deepdeep.ui.common.chat.InlineNode
+import io.github.whywood.deepdeep.design.InlineNode
 
-import io.github.whywood.deepdeep.ui.common.chat.inlineNodes
+import io.github.whywood.deepdeep.design.inlineNodes
 
-import io.github.whywood.deepdeep.ui.common.chat.inlinePlainText
+import io.github.whywood.deepdeep.design.inlinePlainText
 
-import io.github.whywood.deepdeep.ui.common.chat.markdownToPlainText
+import io.github.whywood.deepdeep.design.markdownToPlainText
 
-import io.github.whywood.deepdeep.ui.common.chat.MarkdownMarker
+import io.github.whywood.deepdeep.design.MarkdownMarker
 
 
-import io.github.whywood.deepdeep.ui.common.chat.MarkdownBlock
+import io.github.whywood.deepdeep.design.MarkdownBlock
 
-import io.github.whywood.deepdeep.ui.common.chat.parseMarkdown
+import io.github.whywood.deepdeep.design.parseMarkdown
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

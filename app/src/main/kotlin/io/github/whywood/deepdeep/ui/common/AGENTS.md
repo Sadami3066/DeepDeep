@@ -19,7 +19,7 @@
 | `VoiceRecordingBar.kt` | 录音条：波形历史与取消/停止/发送 |
 | `VoiceTranscriptPreview.kt` | 语音转写预览：已提交与临时文本、自动滚底 |
 | `scan/` | 扫码策略 5 个文件：匹配规则、JSON、持久化、按策略拉起 App |
-| `chat/` | 聊天/浮层/悬浮窗共用的渲染组件：消息回合、Markdown、工具卡与工具图标/简洁标题（`ToolPresentation.kt`）、交付卡、提问卡、插件槽位、todo 面板、输入卡与附件、相机扫码、`QrScan.kt`（扫码状态机与结果 sheet）、文件预览、滚动控制；`state/` 放草稿与附件导入 |
+| `chat/` | 聊天/浮层/悬浮窗共用的渲染组件：消息回合、Markdown（渲染在 `:design` 的 `DdMarkdown`，`ChatMarkdown.kt` 只注入文案/复制反馈/图片加载）、工具卡与工具图标/简洁标题（`ToolPresentation.kt`）、交付卡、提问卡、插件槽位、todo 面板、输入卡与附件、相机扫码、`QrScan.kt`（扫码状态机与结果 sheet）、文件预览、滚动控制；`state/` 放草稿与附件导入 |
 
 ## 要点
 
@@ -27,5 +27,6 @@
 - OAuth：`OAuthLoginSession` 是 runtime `OAuthInteraction` 的实现，`ProviderOAuthService.login` 在协程里驱动；关闭必须 `cancel()`，否则挂起的 prompt/select 不返回。
 - 扫码策略：官方内置 `assets/scan/strategies.json`（只读），自定义落 `files/scan/strategies.json`；匹配优先级 scheme > host > regex > contains，`ScanLauncher` 打不开时回退复制。
 - 用户可见文件预览/分享统一从 `LocalHostFiles` 取文件（Root 档文件先暂存到 cache）；不要直接用 `FileViewerDialog` 传入的路径做 `BitmapFactory`/`bufferedReader` 假设可读。预览/分享无法物化的超大文件显示「导出到下载目录」：ROOT 档由 `HostFiles` 导出到共享存储再分享，其余档写入系统下载目录。
+- Markdown 解析与渲染只有 `:design` 一套（`DdMarkdown`/`markdownToPlainText`/`codeLabel`/`copyCodeLabel`/`onCopyCode`/`onImage` 由调用方注入）；聊天侧 `ChatMarkdown.kt` 只做文案、复制反馈与图片加载注入，不要在 `ui/` 再放解析器或第二套块渲染。
 - Markdown 内联图片：本地源先经 `readableMarkdownLocalFile`（`HostFiles.isFile` + 可读性，不可读则 `HostFiles.stage` 到 cache）再交给解码器；GIF/WebP 等动画按文件名判定后走 `AnimatedImage`，暂存副本沿用 `HostFiles` 的 1 小时清理，别在 UI 里用裸 `File.isFile` 判断。
 - `ProviderIcon` 是静态映射，新增厂商要同时补 `res/drawable-nodpi/provider_*`（含 `-night`）与映射表，否则回退首字母。
