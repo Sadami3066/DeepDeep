@@ -126,6 +126,8 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.ScrollAnchor
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.common.chat.TodoPanel
+import io.github.whywood.deepdeep.ui.common.chat.TodoWriteCustomType
+import io.github.whywood.deepdeep.ui.common.chat.latestTodoPayload
 import io.github.whywood.deepdeep.ui.goal.GoalBar
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import java.io.File
@@ -271,7 +273,7 @@ fun ChatScreen(
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
-    val streamMessages = remember(messages) { messages.filterNot { it.customType == "todo_write" } }
+    val streamMessages = remember(messages) { messages.filterNot { it.customType == TodoWriteCustomType } }
     val sessionKey = state.conversationId.orEmpty()
     var visibleMessageCount by rememberSaveable(sessionKey) { mutableStateOf(0) }
     var trackedMessageTotal by remember { mutableIntStateOf(streamMessages.size) }
@@ -310,7 +312,7 @@ fun ChatScreen(
             visible = shownMessageCount,
         )
     }
-    val todoPayload = messages.lastOrNull { it.customType == "todo_write" }?.customPayload
+    val todoPayload = remember(messages) { latestTodoPayload(messages) }
     val retryActivity = state.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
     val stablePendingQuestions = remember(pendingQuestions) { pendingQuestions }

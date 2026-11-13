@@ -40,6 +40,16 @@ internal fun PluginToolCardSlot(
 
 
 @Composable
+internal fun rememberPluginToolCardNames(toolNames: List<String>): Set<String> {
+    val manager = LocalPluginManager.current ?: return emptySet()
+    if (toolNames.isEmpty()) return emptySet()
+    val uiState by manager.state.collectAsStateWithLifecycle()
+    return remember(uiState, toolNames) {
+        toolNames.filterTo(mutableSetOf()) { name -> manager.slotEntries(SlotIds.toolCard(name)).isNotEmpty() }
+    }
+}
+
+@Composable
 internal fun PluginCustomMessageSlot(
     messageId: String,
     customType: String,

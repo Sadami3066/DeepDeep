@@ -1,5 +1,9 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,10 +18,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +48,7 @@ import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
@@ -58,12 +64,12 @@ import io.github.whywood.deepdeep.runtime.MessageSummary
 import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
+import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.common.chat.AttachmentCards
 import io.github.whywood.deepdeep.ui.common.chat.PluginCustomMessageSlot
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import io.github.whywood.deepdeep.ui.common.chat.MiniappChatCard
-import io.github.whywood.deepdeep.ui.common.chat.parseRegisteredMiniapp
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -519,128 +525,101 @@ private fun AssistantTurn(
     retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
-    val context = LocalContext.current
-    val trailingText = message.steps.lastOrNull() as? AssistantStep.Text
-    val streamingAnswer = if (autoCollapseProcess && message.streaming) {
-        trailingText?.text.orEmpty()
-    } else {
-        ""
+    val toolNames = remember(message.steps) {
+        message.steps.filterIsInstance<AssistantStep.Tool>().map { it.trace.name }.distinct()
     }
-    val answer = message.text.trim().ifBlank { streamingAnswer.trim() }
-    val excludedStepId = if (message.text.isBlank() && streamingAnswer.isNotBlank()) trailingText?.id else null
-    val toolSteps = message.steps.filterIsInstance<AssistantStep.Tool>()
-    val liveAsk = remember(toolSteps, pendingQuestions) {
-        val liveQuestions = pendingQuestions.associateBy { it.toolCallId }
-        toolSteps.asSequence()
-            .map { it.trace }
-            .filter { it.name == "ask_user_question" }
-            .mapNotNull { trace -> liveQuestions[trace.toolCallId] }
-            .firstOrNull()
+    val pluginToolNames = rememberPluginToolCardNames(toolNames)
+    val blocks = remember(message.steps, pluginToolNames, pendingQuestions) {
+        turnBlocks(message, pluginToolNames, pendingQuestions)
     }
-    val presentedItems = remember(toolSteps) {
-        toolSteps.asSequence()
-            .map { it.trace }
-            .filter { it.name == "present" }
-            .flatMap { trace -> parsePresentedItems(trace).orEmpty().asSequence() }
-            .distinctBy { "${it.type}:${it.path ?: it.id}" }
-            .toList()
-    }
-    val miniappApps = remember(toolSteps) {
-        toolSteps.asSequence()
-            .map { it.trace }
-            .mapNotNull { trace -> parseRegisteredMiniapp(trace) }
-            .distinctBy { it.id }
-            .toList()
-    }
-    Column(Modifier.fillMaxWidth()) {
-        val hasVisibleProcess = message.steps.any { it.id != excludedStepId } || message.streaming
-        if (hasVisibleProcess) {
-            ProcessSection(
-                message = message,
-                onToggleStep = onToggleStep,
-                onCopyOutput = onCopyOutput,
-                onFileClick = onOpenFile,
-                autoCollapseProcess = autoCollapseProcess,
-                processDetail = processDetail,
-                excludedStepId = excludedStepId,
-            )
-        }
-        if (liveAsk != null) {
-            if (hasVisibleProcess) Spacer(Modifier.height(DdSpacing.Md))
-            key(liveAsk.requestId) {
-                AskQuestionCard(
-                    questions = liveAsk.questions,
-                    answers = null,
-                    submitted = false,
-                    onAnswer = { answers -> onAnswerQuestion(liveAsk, answers) },
-                )
+    val answer = remember(message.text, blocks) { answerText(message, blocks) }
+    val lastActivityKey = blocks.lastOrNull { it is TurnBlock.Activity }?.key
+    val hasActivity = blocks.any { it is TurnBlock.Activity }
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
+    ) {
+        if (blocks.isEmpty()) {
+            if (answer.isNotEmpty()) {
+                AnswerText(message = message, text = answer, onQuote = onQuote, onOpenFile = onOpenFile)
             }
-        }
-        if (answer.isNotEmpty()) {
-            when {
-                liveAsk != null -> Spacer(Modifier.height(14.dp))
-                hasVisibleProcess -> Spacer(Modifier.height(6.dp))
-            }
-            SelectableMessageText(
-                messageId = message.id,
-                onQuote = { text -> onQuote(message.id, text) },
-                onSpeak = { text -> ReadAloud.speak(context.applicationContext, text) },
-            ) {
-                ChatMarkdown(answer, onFileClick = onOpenFile, live = message.streaming)
+        } else {
+            blocks.forEach { block ->
+                key(block.key) {
+                    when (block) {
+                        is TurnBlock.Activity -> ActivitySection(
+                            steps = block.steps,
+                            message = message,
+                            isLastActivity = block.key == lastActivityKey,
+                            autoCollapseProcess = autoCollapseProcess,
+                            processDetail = processDetail,
+                            onToggleStep = onToggleStep,
+                            onCopyOutput = onCopyOutput,
+                            onFileClick = onOpenFile,
+                        )
+
+                        is TurnBlock.Text -> ContentEntrance(block.key, animate = message.streaming) {
+                            AnswerText(
+                                message = message,
+                                text = block.step.text.trim(),
+                                onQuote = onQuote,
+                                onOpenFile = onOpenFile,
+                            )
+                        }
+
+                        is TurnBlock.CustomCard -> ContentEntrance(block.key, animate = message.streaming) {
+                            CustomCardBlock(messageId = message.id, step = block.step)
+                        }
+
+                        is TurnBlock.PluginCard -> ContentEntrance(block.key, animate = message.streaming) {
+                            PluginToolCardBlock(
+                                trace = block.trace,
+                                onToggleStep = onToggleStep,
+                                onCopyOutput = onCopyOutput,
+                                onFileClick = onOpenFile,
+                                processDetail = processDetail,
+                            )
+                        }
+
+                        is TurnBlock.Present -> ContentEntrance(block.key, animate = message.streaming) {
+                            PresentCard(
+                                items = block.items,
+                                attachmentRoot = attachmentRoot,
+                                onOpenFile = onOpenPresentFile,
+                                onShareFile = onSharePresentFile,
+                                onOpenMiniapp = onOpenMiniapp,
+                            )
+                        }
+
+                        is TurnBlock.Miniapp -> ContentEntrance(block.key, animate = message.streaming) {
+                            MiniappChatCard(app = block.app, onOpen = onOpenMiniapp)
+                        }
+
+                        is TurnBlock.AnsweredQuestion -> ContentEntrance(block.key, animate = message.streaming) {
+                            AnsweredAskCard(record = block.record, toolCallId = block.toolCallId)
+                        }
+
+                        is TurnBlock.LiveQuestion -> ContentEntrance(block.key, animate = message.streaming) {
+                            AskQuestionCard(
+                                questions = block.question.questions,
+                                answers = null,
+                                submitted = false,
+                                onAnswer = { answers -> onAnswerQuestion(block.question, answers) },
+                            )
+                        }
+                    }
+                }
             }
         }
         if (!message.streaming && answer.isNotEmpty()) {
-            val time = rememberMessageTime(message.startedAt)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = DdSpacing.Sm),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
-            ) {
-                DdIconButton(
-                    icon = DdIcons.Copy,
-                    onClick = { onCopyOutput(answer) },
-                    contentDescription = stringResource(R.string.chat_message_copy),
-                    size = 28.dp,
-                    iconSize = 15.dp,
-                    tint = colors.inkTertiary,
-                )
-                DdIconButton(
-                    icon = DdIcons.Share,
-                    onClick = { sharePlainText(context, answer) },
-                    contentDescription = stringResource(R.string.chat_message_share),
-                    size = 28.dp,
-                    iconSize = 15.dp,
-                    tint = colors.inkTertiary,
-                )
-                if (time != null) {
-                    Text(
-                        text = time,
-                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
-                        color = colors.inkTertiary,
-                    )
-                }
-            }
-        }
-        if (presentedItems.isNotEmpty() && !message.streaming) {
-            Spacer(Modifier.height(DdSpacing.Md))
-            PresentCard(
-                items = presentedItems,
-                attachmentRoot = attachmentRoot,
-                onOpenFile = onOpenPresentFile,
-                onShareFile = onSharePresentFile,
-                onOpenMiniapp = onOpenMiniapp,
+            MessageFooter(
+                message = message,
+                answer = answer,
+                onCopyOutput = onCopyOutput,
             )
         }
-        if (miniappApps.isNotEmpty()) {
-            Spacer(Modifier.height(DdSpacing.Md))
-            Column(verticalArrangement = Arrangement.spacedBy(DdSpacing.Sm)) {
-                miniappApps.forEach { app ->
-                    MiniappChatCard(app = app, onOpen = onOpenMiniapp)
-                }
-            }
-        }
         when (message.status) {
-            MessageStatus.STOPPED -> if (!hasVisibleProcess) {
+            MessageStatus.STOPPED -> if (!hasActivity) {
                 StatusMark(
                     text = stringResource(R.string.assistant_stopped),
                     color = colors.inkTertiary,
@@ -650,6 +629,135 @@ private fun AssistantTurn(
             MessageStatus.FAILED -> FailedMark(message = message, retryAttempt = retryAttempt)
 
             else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun ContentEntrance(
+    key: Any,
+    animate: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (!animate) {
+        content()
+        return
+    }
+    var shown by remember(key) { mutableStateOf(false) }
+    LaunchedEffect(key) { shown = true }
+    val offset = with(LocalDensity.current) { 8.dp.roundToPx() }
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(tween(DdMotion.BASE, easing = DdMotion.EaseOut)) +
+            slideInVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)) { offset },
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun AnswerText(
+    message: AssistantMessage,
+    text: String,
+    onQuote: (Long, String) -> Unit,
+    onOpenFile: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    SelectableMessageText(
+        messageId = message.id,
+        onQuote = { quoted -> onQuote(message.id, quoted) },
+        onSpeak = { spoken -> ReadAloud.speak(context.applicationContext, spoken) },
+    ) {
+        ChatMarkdown(text, onFileClick = onOpenFile, live = message.streaming)
+    }
+}
+
+@Composable
+private fun CustomCardBlock(messageId: Long, step: AssistantStep.CustomCard) {
+    val payload = remember(step.payload) {
+        step.payload
+            .takeIf { it.isNotBlank() }
+            ?.let { raw -> runCatching { Json.parseToJsonElement(raw).jsonObject }.getOrNull() }
+            ?: JsonObject(emptyMap())
+    }
+    PluginCustomMessageSlot(
+        messageId = "$messageId:${step.id}",
+        customType = step.customType,
+        payload = payload,
+        fallback = {
+            if (step.text.isNotBlank()) {
+                Text(
+                    text = step.text,
+                    style = DdType.body,
+                    color = deepDeepColors().ink,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun PluginToolCardBlock(
+    trace: ToolTrace,
+    onToggleStep: (Long) -> Unit,
+    onCopyOutput: (String) -> Unit,
+    onFileClick: (String) -> Unit,
+    processDetail: ProcessDetail,
+) {
+    PluginToolCardSlot(
+        toolName = trace.name,
+        callId = trace.toolCallId,
+        args = remember(trace.rawArguments, trace.arguments) {
+            toolArgumentsJson(trace.rawArguments, trace.arguments)
+        },
+        result = trace.pluginSlotResult(),
+    ) {
+        ToolCard(
+            tool = trace,
+            onToggle = { onToggleStep(trace.id) },
+            onCopyOutput = onCopyOutput,
+            onFileClick = onFileClick,
+            compact = processDetail == ProcessDetail.COMPACT,
+        )
+    }
+}
+
+@Composable
+private fun MessageFooter(
+    message: AssistantMessage,
+    answer: String,
+    onCopyOutput: (String) -> Unit,
+) {
+    val colors = deepDeepColors()
+    val context = LocalContext.current
+    val time = rememberMessageTime(message.startedAt)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
+    ) {
+        DdIconButton(
+            icon = DdIcons.Copy,
+            onClick = { onCopyOutput(answer) },
+            contentDescription = stringResource(R.string.chat_message_copy),
+            size = 28.dp,
+            iconSize = 15.dp,
+            tint = colors.inkTertiary,
+        )
+        DdIconButton(
+            icon = DdIcons.Share,
+            onClick = { sharePlainText(context, answer) },
+            contentDescription = stringResource(R.string.chat_message_share),
+            size = 28.dp,
+            iconSize = 15.dp,
+            tint = colors.inkTertiary,
+        )
+        if (time != null) {
+            Text(
+                text = time,
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                color = colors.inkTertiary,
+            )
         }
     }
 }

@@ -25,6 +25,6 @@
 - 共享组件改动要同时看系统助手浮层与悬浮窗：输入卡（`ChatComposer`/`ChatInputField`/`ComposerMetrics`）、`ChatTurn`、`rememberChatScrollController`、`attach`/`normalizeImages` 等由 `ui/common/chat` 提供，浮层与悬浮窗直接复用。
 - 流式渲染：Markdown 经 `MarkdownStreamPlanner` 按稳定前缀分块缓存，只有新增内容才重新解析；改解析/分块要保住流式性能与代码块未闭合时的容错。
 - 布局：输入卡与底部面板是消息区 Box 上 `align(BottomCenter)` 的浮层，列表按 `overlayHeightPx` 留底部 contentPadding；IME/面板变化靠根 Column 的 bottom inset 与 `ChatScrollController` 贴底；改成根 Column 布局兄弟会破坏浮层视觉（见 d2729d0d 回退）。
-- todo 面板：`todo_write` 的 custom message 只在输入卡上方的 `TodoPanel` 展示（折叠摘要/进度/展开列表），聊天流里过滤掉这类消息，不再内联渲染。
+- todo 面板：`todo_write` 卡片进入回合 steps 但不渲染，payload 取最新 `CustomCard(todo_write)`（独立消息兜底），只在输入卡上方的 `TodoPanel` 展示（折叠摘要/进度/展开列表）；历史遗留的独立 todo 消息仍从消息流过滤。
 - 历史折叠：超过 20 条消息只渲染最新窗口（初始 3 条，每次 +20），折叠窗口是 `rememberSaveable(conversationId)` 的界面状态，不写回会话；顶部「加载更早」与到顶下拉都走 `loadEarlier`，跳转用 `ChatScrollController.jumpToItem`；用户消息超过 5 条时右侧显示导航条：每条用户消息一个 tick、窗口一次显示 5 条，窗口随聊天滚动逐条滑动跟随（当前消息 accent 高亮），也可在导航条上上下滑动浏览全部 tick，单击 tick 直达对应消息并自动展开折叠窗口。
 - 文案与视觉：用户可见字符串在 `res/values*/strings_*.xml`（`ConversationStrings` 只是运行时载体），只使用 `:design` 的 Dd* 组件与 `deepDeepColors`。

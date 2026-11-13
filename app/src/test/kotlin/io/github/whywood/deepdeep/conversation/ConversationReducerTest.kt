@@ -40,7 +40,7 @@ class ConversationReducerTest {
     }
 
     @Test
-    fun textDeltaStreamsAndRunFinishedConsumesFinalText() {
+    fun textDeltaStreamsAndRunFinishedKeepsAnswerStep() {
         var state = ConversationState(
             messages = listOf(AssistantMessage(1, AssistantRole.ASSISTANT, "", streaming = true, runId = "run-1")),
         )
@@ -53,7 +53,7 @@ class ConversationReducerTest {
         assertEquals("hello", message.text)
         assertEquals(MessageStatus.DONE, message.status)
         assertFalse(message.streaming)
-        assertTrue(message.steps.isEmpty())
+        assertEquals("hello", (message.steps.single() as AssistantStep.Text).text)
         assertFalse(state.sending)
         assertNull(state.activity)
     }
@@ -371,10 +371,25 @@ class ConversationReducerTest {
     }
 
     @Test
-    fun consumeFinalTextDropsTrailingStreamStep() {
-        val steps = listOf(AssistantStep.Text(id = 0, text = "hello"))
-        assertTrue(consumeFinalText(steps, "hello").isEmpty())
-        assertTrue(consumeFinalText(steps, "other").isNotEmpty())
+    fun finishKeepsTrailingStreamStep() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-1",
+                    steps = listOf(AssistantStep.Text(id = 0, text = "hello")),
+                ),
+            ),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFinished("run-1", "hello", RunStatus.DONE, 1000L), strings)
+        val message = reduced.messages.single()
+        assertEquals("hello", message.text)
+        assertEquals("hello", (message.steps.single() as AssistantStep.Text).text)
     }
 
     @Test
@@ -757,11 +772,25 @@ class ConversationReducerTest {
     }
 
     @Test
-    fun consumeFinalTextDropsSuffixAndIgnoresBlankFinal() {
-        val steps = listOf(AssistantStep.Text(id = 0, text = "answer"))
-        assertTrue(consumeFinalText(steps, "prefix answer").isEmpty())
-        assertEquals(steps, consumeFinalText(steps, "   "))
-        assertTrue(consumeFinalText(emptyList(), "answer").isEmpty())
+    fun finishKeepsStreamStepWhenFinalTextIsBlank() {
+        val state = ConversationState(
+            messages = listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    streaming = true,
+                    status = MessageStatus.RUNNING,
+                    runId = "run-1",
+                    steps = listOf(AssistantStep.Text(id = 0, text = "answer")),
+                ),
+            ),
+            sending = true,
+        )
+        val reduced = reduce(state, RuntimeEvent.RunFinished("run-1", "   ", RunStatus.DONE, 1000L), strings)
+        val message = reduced.messages.single()
+        assertEquals("", message.text)
+        assertEquals("answer", (message.steps.single() as AssistantStep.Text).text)
     }
 
     @Test

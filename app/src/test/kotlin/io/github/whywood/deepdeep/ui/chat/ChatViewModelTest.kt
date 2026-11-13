@@ -268,7 +268,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun keepsTextWithToolsInProcessAndFinalTextAsAnswer() = runTest(dispatcher) {
+    fun keepsToolTextAndTrailingAnswerSteps() = runTest(dispatcher) {
         val runtime = FakeAgentRuntime()
         val viewModel = viewModel(runtime)
         settle()
@@ -304,10 +304,11 @@ class ChatViewModelTest {
 
         val message = viewModel.state.value.messages.last()
         assertEquals("done", message.text)
-        assertEquals(2, message.steps.size)
+        assertEquals(3, message.steps.size)
         assertTrue(message.steps[0] is AssistantStep.Text)
         assertEquals("starting", (message.steps[0] as AssistantStep.Text).text)
         assertTrue(message.steps[1] is AssistantStep.Tool)
+        assertEquals("done", (message.steps[2] as AssistantStep.Text).text)
     }
 
     @Test

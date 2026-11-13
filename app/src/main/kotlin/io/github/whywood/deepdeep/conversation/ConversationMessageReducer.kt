@@ -112,10 +112,28 @@ internal fun ConversationState.onToolFinished(event: RuntimeEvent.ToolFinished):
 
 internal fun ConversationState.appendCustomMessage(event: RuntimeEvent.PluginCustomMessage): ConversationState {
     if (!event.display) return this
-    val nextId = (messages.maxOfOrNull { it.id } ?: 0L) + 1
+    val index = if (event.runId.isBlank()) {
+        -1
+    } else {
+        messages.indexOfLast { it.runId == event.runId && it.streaming }
+    }
+    if (index >= 0) {
+        val target = messages[index]
+        val step = AssistantStep.CustomCard(
+            id = nextStepId(target.steps),
+            customType = event.customType,
+            payload = event.payload,
+            text = event.text,
+        )
+        return copy(
+            messages = messages.toMutableList().also {
+                it[index] = target.copy(steps = target.steps + step)
+            },
+        )
+    }
     return copy(
         messages = messages + AssistantMessage(
-            id = nextId,
+            id = nextMessageId(messages),
             role = AssistantRole.ASSISTANT,
             text = event.text,
             status = MessageStatus.DONE,

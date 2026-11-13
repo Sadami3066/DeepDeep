@@ -55,7 +55,7 @@ internal fun ConversationState.finishWithStatus(
         },
         finishedAt = finishedAt,
         retrying = false,
-        steps = consumeFinalText(failRunningTools(message.steps), finalText),
+        steps = failRunningTools(message.steps),
     )
     return copy(
         messages = replaceAndSettle(index, finalized),

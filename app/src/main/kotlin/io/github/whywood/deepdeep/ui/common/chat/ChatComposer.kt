@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -84,6 +85,7 @@ import io.github.whywood.deepdeep.runtime.ModelOption
 import io.github.whywood.deepdeep.runtime.ProviderSummary
 import io.github.whywood.deepdeep.runtime.QueuedInput
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.ui.common.ComposerVoice
 import io.github.whywood.deepdeep.ui.common.VoiceRecordingBar
 import io.github.whywood.deepdeep.ui.common.VoiceTranscriptPreview
@@ -733,6 +735,7 @@ private fun ComposerSendButton(
     onStop: () -> Unit = {},
 ) {
     val colors = deepDeepColors()
+    val haptic = rememberHapticFeedback()
     val enabled = canSend || stops
     Box(
         modifier = modifier
@@ -748,7 +751,10 @@ private fun ComposerSendButton(
             .clickable(
                 enabled = enabled,
                 role = Role.Button,
-                onClick = { if (stops) onStop() else onClick() },
+                onClick = {
+                    haptic(HapticFeedbackType.Confirm)
+                    if (stops) onStop() else onClick()
+                },
             )
             .semantics { this.contentDescription = contentDescription }
             .testTag("assistant_send"),

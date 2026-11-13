@@ -90,18 +90,6 @@ internal fun nextMessageId(messages: List<AssistantMessage>): Long =
 internal fun nextStepId(steps: List<AssistantStep>): Long =
     (steps.maxOfOrNull { it.id } ?: -1L) + 1
 
-internal fun consumeFinalText(steps: List<AssistantStep>, finalText: String): List<AssistantStep> {
-    val final = finalText.trim()
-    if (final.isEmpty()) return steps
-    val last = steps.lastOrNull() as? AssistantStep.Text ?: return steps
-    val candidate = last.text.trim()
-    return if (candidate.isNotEmpty() && (final == candidate || final.endsWith(candidate))) {
-        steps.dropLast(1)
-    } else {
-        steps
-    }
-}
-
 internal fun reminderDisplayText(text: String): String {
     val trimmed = text.trimStart()
     if (!trimmed.startsWith(REMINDER_HEADER)) return text

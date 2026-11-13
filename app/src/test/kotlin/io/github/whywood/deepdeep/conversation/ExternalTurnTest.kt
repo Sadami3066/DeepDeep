@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantRole
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
@@ -130,7 +131,7 @@ class ExternalTurnTest {
         assertEquals("answer", answer.text)
         assertEquals(MessageStatus.DONE, answer.status)
         assertFalse(answer.streaming)
-        assertTrue(answer.steps.isEmpty())
+        assertEquals("answer", (answer.steps.single() as AssistantStep.Text).text)
         assertFalse(state.sending)
     }
 

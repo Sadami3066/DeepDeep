@@ -20,17 +20,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,8 +41,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.ProcessDetail
@@ -61,38 +57,48 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
+import io.github.whywood.deepdeep.runtime.MessageStatus
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.TurnNotice
-import io.github.whywood.deepdeep.ui.common.chat.AnsweredAskCard
-import io.github.whywood.deepdeep.ui.common.chat.parseQuestionRecord
 import java.util.Locale
 
 @Composable
-internal fun ProcessSection(
+internal fun ActivitySection(
+    steps: List<AssistantStep>,
     message: AssistantMessage,
+    isLastActivity: Boolean,
+    autoCollapseProcess: Boolean,
+    processDetail: ProcessDetail,
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
     onFileClick: (String) -> Unit,
-    autoCollapseProcess: Boolean = true,
-    excludedStepId: Long? = null,
-    processDetail: ProcessDetail = ProcessDetail.DETAILED,
 ) {
     val colors = deepDeepColors()
-    var expansionOverride by rememberSaveable(message.id) { mutableIntStateOf(-1) }
+    val firstStepId = steps.firstOrNull()?.id
+    var expansionOverride by rememberSaveable(message.id, firstStepId) { mutableIntStateOf(-1) }
     val expanded = when {
         expansionOverride >= 0 -> expansionOverride == 1
-        autoCollapseProcess -> message.streaming
-        else -> true
+        !autoCollapseProcess -> true
+        message.streaming && isLastActivity -> true
+        else -> false
     }
+    val running = message.streaming && (
+        isLastActivity ||
+            steps.any { it is AssistantStep.Tool && it.trace.status == ToolActivityStatus.RUNNING }
+        )
     val rotation = animateFloatAsState(
         targetValue = if (expanded) 90f else 0f,
         animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-        label = "process-chevron",
+        label = "activity-chevron",
     )
     val state = stringResource(
         if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
-    val semanticStatus = processStatus(message.streaming, message.status)
+    val semanticStatus = if (running) {
+        ProcessStatus.Running
+    } else {
+        processStatus(streaming = false, status = if (isLastActivity) message.status else MessageStatus.DONE)
+    }
     val statusLabel = when (semanticStatus) {
         ProcessStatus.Running -> stringResource(R.string.assistant_ux_process_running)
         ProcessStatus.Done -> stringResource(R.string.assistant_ux_process_done)
@@ -104,10 +110,10 @@ internal fun ProcessSection(
         ProcessStatus.Failed -> colors.danger
         else -> colors.inkTertiary
     }
-    val reasoningCount = message.steps.count { it is AssistantStep.Reasoning }
-    val toolCount = message.steps.count { it is AssistantStep.Tool }
+    val reasoningCount = steps.count { it is AssistantStep.Reasoning }
+    val toolCount = steps.count { it is AssistantStep.Tool }
     val finishedAt = message.finishedAt
-    val duration = if (!message.streaming && finishedAt != null && message.startedAt > 0 &&
+    val duration = if (isLastActivity && !message.streaming && finishedAt != null && message.startedAt > 0 &&
         finishedAt > message.startedAt
     ) {
         finishedAt - message.startedAt
@@ -132,9 +138,9 @@ internal fun ProcessSection(
             stringResource(R.string.assistant_elapsed_seconds),
         )
     }
-    val activity = processActivity(message.steps, message.streaming)
-    val textAlpha = if (semanticStatus == ProcessStatus.Running) {
-        val pulse = rememberInfiniteTransition(label = "process_text_pulse")
+    val activity = if (running) processActivity(message.steps, streaming = true) else null
+    val textAlpha = if (running) {
+        val pulse = rememberInfiniteTransition(label = "activity_text_pulse")
         pulse.animateFloat(
             initialValue = 0.45f,
             targetValue = 1f,
@@ -142,7 +148,7 @@ internal fun ProcessSection(
                 animation = tween(durationMillis = 1000, easing = DdMotion.EaseInOut),
                 repeatMode = RepeatMode.Reverse,
             ),
-            label = "process_text_alpha",
+            label = "activity_text_alpha",
         ).value
     } else {
         1f
@@ -153,24 +159,19 @@ internal fun ProcessSection(
         ProcessActivity.Replying -> stringResource(R.string.assistant_process_replying)
         null -> null
     }
-    val summary = if (semanticStatus == ProcessStatus.Running) {
-        activityLabel ?: statusLabel
-    } else {
-        (listOf(statusLabel) + listOfNotNull(reasoningLabel, toolLabel, durationText))
-            .joinToString(" · ")
-    }
-    val activeReasoningId = if (message.streaming) {
-        message.steps.lastOrNull()?.takeIf { it is AssistantStep.Reasoning }?.id
+    val summary = activityLabel ?: (
+        listOf(statusLabel) + listOfNotNull(reasoningLabel, toolLabel, durationText)
+        ).joinToString(" · ")
+    val activeReasoningId = if (running) {
+        steps.lastOrNull()?.takeIf { it is AssistantStep.Reasoning }?.id
     } else {
         null
     }
-    val lastReasoningId = message.steps.lastOrNull { it is AssistantStep.Reasoning }?.id
+    val lastReasoningId = steps.lastOrNull { it is AssistantStep.Reasoning }?.id
     val terminatedStatus = semanticStatus.takeIf {
-        !message.streaming && (it == ProcessStatus.Stopped || it == ProcessStatus.Failed)
+        !running && (it == ProcessStatus.Stopped || it == ProcessStatus.Failed)
     }
-    val processNodes = remember(message.steps, excludedStepId) {
-        groupProcessSteps(message.steps.filter { step -> step.id != excludedStepId })
-    }
+    val processNodes = groupProcessSteps(steps)
     Column(Modifier.fillMaxWidth()) {
         DdPressable(
             onClick = { expansionOverride = if (expanded) 0 else 1 },
@@ -178,7 +179,7 @@ internal fun ProcessSection(
                 .fillMaxWidth()
                 .heightIn(min = 30.dp)
                 .semantics { stateDescription = state }
-                .testTag("process_toggle_${message.id}"),
+                .testTag("process_toggle_${message.id}_${firstStepId ?: "live"}"),
             shape = DdShapes.Small,
             contentDescription = summary,
         ) {
@@ -186,7 +187,7 @@ internal fun ProcessSection(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (message.streaming) {
+                if (running) {
                     ActivityGifIcon()
                     Spacer(Modifier.width(6.dp))
                 }
@@ -247,6 +248,8 @@ internal fun ProcessSection(
                             )
 
                             is AssistantStep.Notice -> NoticeStep(step)
+
+                            is AssistantStep.CustomCard -> Unit
                         }
 
                         is ProcessNode.ToolRun -> ToolRunGroup(
@@ -260,12 +263,6 @@ internal fun ProcessSection(
                     }
                 }
             }
-        }
-        if (!expanded) {
-            CollapsedPluginResults(
-                steps = message.steps,
-                excludedStepId = excludedStepId,
-            )
         }
     }
 }
@@ -451,52 +448,6 @@ private fun ProcessToolStep(
         onFileClick = onFileClick,
         compact = processDetail == ProcessDetail.COMPACT,
     )
-    val record = if (trace.status == ToolActivityStatus.DONE) {
-        remember(trace) { parseQuestionRecord(trace) }
-    } else {
-        null
-    }
-    if (record != null) {
-        key(trace.toolCallId) {
-            AnsweredAskCard(
-                record = record,
-                toolCallId = trace.toolCallId,
-            )
-        }
-    }
-}
-
-@Composable
-private fun CollapsedPluginResults(steps: List<AssistantStep>, excludedStepId: Long?) {
-    val results = steps
-        .filterIsInstance<AssistantStep.Tool>()
-        .map { it.trace }
-        .filter { trace -> trace.id != excludedStepId && trace.pluginSlotResult()?.blocks?.isNotEmpty() == true }
-    if (results.isEmpty()) return
-    Column(
-        Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs, bottom = DdSpacing.Xxs),
-        verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
-    ) {
-        results.forEach { trace ->
-            key(trace.id) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 240.dp)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    PluginToolCardSlot(
-                        toolName = trace.name,
-                        callId = trace.toolCallId,
-                        args = remember(trace.rawArguments, trace.arguments) {
-                            toolArgumentsJson(trace.rawArguments, trace.arguments)
-                        },
-                        result = trace.pluginSlotResult(),
-                    ) {}
-                }
-            }
-        }
-    }
 }
 
 @Composable

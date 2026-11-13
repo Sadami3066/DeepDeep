@@ -19,7 +19,7 @@
 | `VoiceRecordingBar.kt` | 录音条：波形历史与取消/停止/发送 |
 | `VoiceTranscriptPreview.kt` | 语音转写预览：已提交与临时文本、自动滚底 |
 | `scan/` | 扫码策略 5 个文件：匹配规则、JSON、持久化、按策略拉起 App |
-| `chat/` | 聊天/浮层/悬浮窗共用的渲染组件：消息回合、Markdown（渲染在 `:design` 的 `DdMarkdown`，`ChatMarkdown.kt` 只注入文案/复制反馈/图片加载）、工具卡与工具图标/简洁标题（`ToolPresentation.kt`）、交付卡、提问卡、插件槽位、todo 面板、输入卡与附件、相机扫码、`QrScan.kt`（扫码状态机与结果 sheet）、文件预览、滚动控制；`state/` 放草稿与附件导入 |
+| `chat/` | 聊天/浮层/悬浮窗共用的渲染组件：消息回合（`ChatTurn` 线性内容流 + 可折叠活动段，`TurnBlocks.kt` 用纯函数把步骤分成内容块与活动段）、Markdown（渲染在 `:design` 的 `DdMarkdown`，`ChatMarkdown.kt` 只注入文案/复制反馈/图片加载）、工具卡与工具图标/简洁标题（`ToolPresentation.kt`）、交付卡、提问卡、插件槽位、todo 面板、输入卡与附件、相机扫码、`QrScan.kt`（扫码状态机与结果 sheet）、文件预览、滚动控制；`state/` 放草稿与附件导入 |
 
 ## 要点
 
