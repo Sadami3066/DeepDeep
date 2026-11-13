@@ -15,23 +15,16 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -448,7 +441,6 @@ fun DdPrimaryButton(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DdSheet(
     onDismiss: () -> Unit,
@@ -456,44 +448,12 @@ fun DdSheet(
     containerColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = deepDeepColors()
-    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = state,
-        containerColor = containerColor ?: if (fullBleed) Color.Black else colors.raised,
-        contentColor = if (fullBleed) Color.White else colors.ink,
-        tonalElevation = 0.dp,
-        scrimColor = colors.scrim,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = if (fullBleed) {
-            null
-        } else {
-            {
-                Box(
-                    Modifier
-                        .padding(top = 10.dp, bottom = 8.dp)
-                        .size(width = 32.dp, height = 4.dp)
-                        .clip(CircleShape)
-                        .background(colors.hairline),
-                )
-            }
-        },
-        contentWindowInsets = if (fullBleed) {
-            { WindowInsets(0, 0, 0, 0) }
-        } else {
-            { BottomSheetDefaults.windowInsets }
-        },
-    ) {
-        Column(
-            modifier = if (fullBleed) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
-            },
-            content = content,
-        )
-    }
+    DdSheetContent(
+        onDismiss = onDismiss,
+        fullBleed = fullBleed,
+        containerColor = containerColor,
+        content = content,
+    )
 }
 
 @Composable

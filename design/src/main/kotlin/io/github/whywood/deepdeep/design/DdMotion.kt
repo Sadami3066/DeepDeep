@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.staticCompositionLocalOf
 
 object DdMotion {
     const val PRESS = 140
@@ -26,6 +27,8 @@ object DdMotion {
 
     val SwitchSpring = spring<Float>(dampingRatio = 0.72f, stiffness = 700f)
     val SegmentedSpring = spring<Float>(dampingRatio = 0.78f, stiffness = 620f)
+    val SheetSpring = spring<Float>(dampingRatio = 0.86f, stiffness = 420f)
+    val RevealSpring = spring<Float>(dampingRatio = 0.74f, stiffness = 540f)
 
     fun <T> spec(duration: Int = BASE, delayMillis: Int = 0, easing: Easing = EaseOut): TweenSpec<T> =
         tween(durationMillis = duration, delayMillis = delayMillis, easing = easing)
@@ -39,3 +42,5 @@ object DdMotion {
     fun <T> effects(duration: Int = EFFECTS, delayMillis: Int = 0): TweenSpec<T> =
         tween(durationMillis = duration, delayMillis = delayMillis, easing = EaseOut)
 }
+
+val LocalDdMotionEnabled = staticCompositionLocalOf { true }

@@ -45,7 +45,7 @@ fun DdHtmlText(
     )
 }
 
-private class DdHtmlWriter(
+internal class DdHtmlWriter(
     private val colors: DeepDeepColors,
     private val onLink: LinkInteractionListener?,
     private val linkColor: Color,
@@ -410,7 +410,7 @@ private fun stripHtmlNoise(html: String): String =
         .replace(DdHtmlStyleRegex, " ")
         .replace(DdHtmlDoctypeRegex, " ")
 
-private fun decodeEntities(text: String): String = DdHtmlEntityRegex.replace(text) { match ->
+internal fun decodeEntities(text: String): String = DdHtmlEntityRegex.replace(text) { match ->
     val token = match.groupValues[1]
     if (token.startsWith("#")) {
         runCatching {
@@ -426,7 +426,7 @@ private fun decodeEntities(text: String): String = DdHtmlEntityRegex.replace(tex
     }
 }
 
-private fun attribute(attributes: String, name: String): String? {
+internal fun attribute(attributes: String, name: String): String? {
     val match = Regex("(?i)\\b$name\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))").find(attributes) ?: return null
     return match.groupValues.subList(2, 5).firstOrNull { it.isNotEmpty() }
 }

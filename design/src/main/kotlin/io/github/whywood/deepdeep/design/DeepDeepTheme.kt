@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.design
 
+import android.animation.ValueAnimator
 import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -334,7 +335,11 @@ fun DeepDeepTheme(
     DdFonts.apply(fontStyle)
     val typography = remember(fontStyle) { deepDeepTypography() }
     val colorScheme = remember(colors) { colors.materialScheme() }
-    CompositionLocalProvider(LocalDeepDeepColors provides colors) {
+    val motionEnabled = ValueAnimator.areAnimatorsEnabled()
+    CompositionLocalProvider(
+        LocalDeepDeepColors provides colors,
+        LocalDdMotionEnabled provides motionEnabled,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = typography,

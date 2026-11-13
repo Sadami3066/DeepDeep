@@ -127,8 +127,15 @@ public final class io.github.whywood.deepdeep.design.DdDatePickerKt$EntriesMappi
 }
 public final class io.github.whywood.deepdeep.design.DdDialogKt {
   public static final void DdDialog(kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, java.lang.String, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final void access$DdDialog$lambda$2(androidx.compose.runtime.MutableState, boolean);
 }
-final class io.github.whywood.deepdeep.design.DdDialogKt$DdDialog$1$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+final class io.github.whywood.deepdeep.design.DdDialogKt$DdDialog$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdDialogKt$DdDialog$2$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
   public final java.lang.Object invokeSuspend(java.lang.Object);
   public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
   public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
@@ -202,16 +209,84 @@ public final class io.github.whywood.deepdeep.design.DdGroupCardKt {
   public static final void DdGroupCard(androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
   public static final void DdGroupCard(kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
+public final class io.github.whywood.deepdeep.design.DdHtmlBlocksKt {
+  public static final java.util.List<io.github.whywood.deepdeep.design.DdHtmlSegment> htmlSegments(java.lang.String);
+  public static final void DdHtmlBlocks-0nD-MI0(java.lang.String, androidx.compose.ui.Modifier, io.github.whywood.deepdeep.design.DdHtmlImageLoader, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.text.TextStyle, long, long, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlBlocksKt$DdHtmlBlocks$listener$1$1$1 implements androidx.compose.ui.text.LinkInteractionListener {
+  public void onClick(androidx.compose.ui.text.LinkAnnotation);
+}
+final class io.github.whywood.deepdeep.design.DdHtmlBlocksKt$HtmlImageBlock$state$2$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<androidx.compose.runtime.ProduceStateScope<io.github.whywood.deepdeep.design.DdHtmlImageState>, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(androidx.compose.runtime.ProduceStateScope<io.github.whywood.deepdeep.design.DdHtmlImageState>, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+public interface io.github.whywood.deepdeep.design.DdHtmlImageLoader {
+  public abstract java.lang.Object load(java.lang.String, kotlin.coroutines.Continuation<? super androidx.compose.ui.graphics.ImageBitmap>);
+}
+interface io.github.whywood.deepdeep.design.DdHtmlImageState {
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlImageState$Failed implements io.github.whywood.deepdeep.design.DdHtmlImageState {
+  public static final io.github.whywood.deepdeep.design.DdHtmlImageState$Failed INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlImageState$Loading implements io.github.whywood.deepdeep.design.DdHtmlImageState {
+  public static final io.github.whywood.deepdeep.design.DdHtmlImageState$Loading INSTANCE;
+  public static final int $stable;
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlImageState$Ready implements io.github.whywood.deepdeep.design.DdHtmlImageState {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdHtmlImageState$Ready(androidx.compose.ui.graphics.ImageBitmap);
+  public final androidx.compose.ui.graphics.ImageBitmap getBitmap();
+  public final androidx.compose.ui.graphics.ImageBitmap component1();
+  public final io.github.whywood.deepdeep.design.DdHtmlImageState$Ready copy(androidx.compose.ui.graphics.ImageBitmap);
+  public static io.github.whywood.deepdeep.design.DdHtmlImageState$Ready copy$default(io.github.whywood.deepdeep.design.DdHtmlImageState$Ready, androidx.compose.ui.graphics.ImageBitmap, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public interface io.github.whywood.deepdeep.design.DdHtmlSegment {
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlSegment$Image implements io.github.whywood.deepdeep.design.DdHtmlSegment {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdHtmlSegment$Image(java.lang.String);
+  public final java.lang.String getSource();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.DdHtmlSegment$Image copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.DdHtmlSegment$Image copy$default(io.github.whywood.deepdeep.design.DdHtmlSegment$Image, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdHtmlSegment$Text implements io.github.whywood.deepdeep.design.DdHtmlSegment {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.design.DdHtmlSegment$Text(java.lang.String);
+  public final java.lang.String getHtml();
+  public final java.lang.String component1();
+  public final io.github.whywood.deepdeep.design.DdHtmlSegment$Text copy(java.lang.String);
+  public static io.github.whywood.deepdeep.design.DdHtmlSegment$Text copy$default(io.github.whywood.deepdeep.design.DdHtmlSegment$Text, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
 public final class io.github.whywood.deepdeep.design.DdHtmlTextKt {
   public static final void DdHtmlText-WMdw5o4(java.lang.String, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.text.TextStyle, long, long, androidx.compose.runtime.Composer, int, int);
+  public static final java.lang.String decodeEntities(java.lang.String);
+  public static final java.lang.String attribute(java.lang.String, java.lang.String);
   public static final java.lang.String access$stripHtmlNoise(java.lang.String);
-  public static final java.lang.String access$decodeEntities(java.lang.String);
-  public static final java.lang.String access$attribute(java.lang.String, java.lang.String);
 }
 public final class io.github.whywood.deepdeep.design.DdHtmlTextKt$DdHtmlText$text$1$listener$1$1 implements androidx.compose.ui.text.LinkInteractionListener {
   public void onClick(androidx.compose.ui.text.LinkAnnotation);
 }
-final class io.github.whywood.deepdeep.design.DdHtmlWriter {
+public final class io.github.whywood.deepdeep.design.DdHtmlWriter {
+  public static final int $stable;
   public final androidx.compose.ui.text.AnnotatedString write(java.lang.String);
   public io.github.whywood.deepdeep.design.DdHtmlWriter(io.github.whywood.deepdeep.design.DeepDeepColors, androidx.compose.ui.text.LinkInteractionListener, long, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
 }
@@ -422,6 +497,34 @@ final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewerDialo
 final class io.github.whywood.deepdeep.design.DdImageViewerKt$DdImageViewerDialog$1$3$1 implements androidx.compose.ui.input.pointer.PointerInputEventHandler {
   public final java.lang.Object invoke(androidx.compose.ui.input.pointer.PointerInputScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
 }
+public final class io.github.whywood.deepdeep.design.DdInfoTooltipKt {
+  public static final void DdInfoTooltip(java.lang.String, androidx.compose.ui.Modifier, java.lang.String, io.github.whywood.deepdeep.design.DdIcon, androidx.compose.runtime.Composer, int, int);
+}
+final class io.github.whywood.deepdeep.design.DdInfoTooltipKt$DdInfoTooltip$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdInfoTooltipKt$DdInfoTooltip$1$1$2<T> implements kotlinx.coroutines.flow.FlowCollector {
+  public final java.lang.Object emit(boolean, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object emit(java.lang.Object, kotlin.coroutines.Continuation);
+}
+final class io.github.whywood.deepdeep.design.DdInfoTooltipKt$DdInfoTooltip$1$1$2$emit$1 extends kotlin.coroutines.jvm.internal.ContinuationImpl {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdInfoTooltipKt$DdInfoTooltip$3$1$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdInfoTooltipKt$DdInfoTooltip$3$2$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
 public final class io.github.whywood.deepdeep.design.DdLoadingBlockKt {
   public static final void DdLoadingBlock(androidx.compose.ui.Modifier, java.lang.String, androidx.compose.runtime.Composer, int, int);
 }
@@ -517,12 +620,17 @@ public final class io.github.whywood.deepdeep.design.DdMotion {
   public final androidx.compose.animation.core.CubicBezierEasing getEaseInOut();
   public final androidx.compose.animation.core.SpringSpec<java.lang.Float> getSwitchSpring();
   public final androidx.compose.animation.core.SpringSpec<java.lang.Float> getSegmentedSpring();
+  public final androidx.compose.animation.core.SpringSpec<java.lang.Float> getSheetSpring();
+  public final androidx.compose.animation.core.SpringSpec<java.lang.Float> getRevealSpring();
   public final <T> androidx.compose.animation.core.TweenSpec<T> spec(int, int, androidx.compose.animation.core.Easing);
   public static androidx.compose.animation.core.TweenSpec spec$default(io.github.whywood.deepdeep.design.DdMotion, int, int, androidx.compose.animation.core.Easing, int, java.lang.Object);
   public final <T> androidx.compose.animation.core.TweenSpec<T> spatial(int, int);
   public static androidx.compose.animation.core.TweenSpec spatial$default(io.github.whywood.deepdeep.design.DdMotion, int, int, int, java.lang.Object);
   public final <T> androidx.compose.animation.core.TweenSpec<T> effects(int, int);
   public static androidx.compose.animation.core.TweenSpec effects$default(io.github.whywood.deepdeep.design.DdMotion, int, int, int, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdMotionKt {
+  public static final androidx.compose.runtime.ProvidableCompositionLocal<java.lang.Boolean> getLocalDdMotionEnabled();
 }
 public final class io.github.whywood.deepdeep.design.DdPageScaffoldKt {
   public static final void DdPageScaffold(kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
@@ -581,6 +689,56 @@ public final class io.github.whywood.deepdeep.design.DdShapes {
   public final androidx.compose.ui.graphics.Shape getSheet();
   public final androidx.compose.ui.graphics.Shape getSheetTop();
 }
+public final class io.github.whywood.deepdeep.design.DdSheetKt {
+  public static final float sheetDragOffset(float, float, float);
+  public static final float sheetDismissTarget(float, float, float, float);
+  public static final void DdSheetContent-drOMvmE(kotlin.jvm.functions.Function0<kotlin.Unit>, boolean, androidx.compose.ui.graphics.Color, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.ColumnScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final int access$DdSheetContent_drOMvmE$lambda$4(androidx.compose.runtime.MutableIntState);
+  public static final float access$DdSheetContent_drOMvmE$lambda$1(androidx.compose.runtime.MutableFloatState);
+  public static final kotlinx.coroutines.Job access$DdSheetContent_drOMvmE$lambda$10(androidx.compose.runtime.MutableState);
+  public static final void access$DdSheetContent_drOMvmE$lambda$2(androidx.compose.runtime.MutableFloatState, float);
+  public static final void access$DdSheetContent_drOMvmE$settle(androidx.compose.ui.unit.Density, boolean, kotlinx.coroutines.CoroutineScope, androidx.compose.runtime.MutableState, androidx.compose.runtime.MutableFloatState, androidx.compose.runtime.MutableIntState, kotlin.jvm.functions.Function0, androidx.compose.runtime.MutableState, float);
+}
+final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$3$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$3$2$1$1$6$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function3<kotlinx.coroutines.CoroutineScope, androidx.compose.ui.geometry.Offset, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final java.lang.Object invoke-d-4ec7I(kotlinx.coroutines.CoroutineScope, long, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$3$2$1$1$7$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function3<kotlinx.coroutines.CoroutineScope, java.lang.Float, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, float, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$animateOffset$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$nestedScroll$1$1 implements androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+  public long onPreScroll-OzD1aCk(long, int);
+  public long onPostScroll-DzOQY0M(long, long, int);
+  public java.lang.Object onPostFling-RZ2iAVY(long, long, kotlin.coroutines.Continuation<? super androidx.compose.ui.unit.Velocity>);
+  public java.lang.Object onPreFling-QWom1Mo(long, kotlin.coroutines.Continuation<? super androidx.compose.ui.unit.Velocity>);
+}
+final class io.github.whywood.deepdeep.design.DdSheetKt$DdSheetContent$settle$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
 public final class io.github.whywood.deepdeep.design.DdSnackbarHostKt {
   public static final void DdSnackbarHost(io.github.whywood.deepdeep.design.DdSnackbarHostState, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
 }
@@ -613,6 +771,63 @@ public final class io.github.whywood.deepdeep.design.DdSpacing {
 }
 public final class io.github.whywood.deepdeep.design.DdSpinnerKt {
   public static final void DdSpinner-oMI9zvI(androidx.compose.ui.Modifier, long, float, float, androidx.compose.runtime.Composer, int, int);
+}
+public final class io.github.whywood.deepdeep.design.DdSwipeAction {
+  public static final int $stable;
+  public final io.github.whywood.deepdeep.design.DdIcon getIcon();
+  public final java.lang.String getLabel();
+  public final long getTint-0d7_KjU();
+  public final long getBackground-0d7_KjU();
+  public final kotlin.jvm.functions.Function0<kotlin.Unit> getOnClick();
+  public final io.github.whywood.deepdeep.design.DdIcon component1();
+  public final java.lang.String component2();
+  public final long component3-0d7_KjU();
+  public final long component4-0d7_KjU();
+  public final kotlin.jvm.functions.Function0<kotlin.Unit> component5();
+  public final io.github.whywood.deepdeep.design.DdSwipeAction copy-OoHUuok(io.github.whywood.deepdeep.design.DdIcon, java.lang.String, long, long, kotlin.jvm.functions.Function0<kotlin.Unit>);
+  public static io.github.whywood.deepdeep.design.DdSwipeAction copy-OoHUuok$default(io.github.whywood.deepdeep.design.DdSwipeAction, io.github.whywood.deepdeep.design.DdIcon, java.lang.String, long, long, kotlin.jvm.functions.Function0, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+  public io.github.whywood.deepdeep.design.DdSwipeAction(io.github.whywood.deepdeep.design.DdIcon, java.lang.String, long, long, kotlin.jvm.functions.Function0, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public final class io.github.whywood.deepdeep.design.DdSwipeRowKt {
+  public static final androidx.compose.runtime.ProvidableCompositionLocal<java.lang.Boolean> getLocalDdHapticsEnabled();
+  public static final void DdSwipeRow(java.lang.Object, java.util.List<io.github.whywood.deepdeep.design.DdSwipeAction>, java.lang.Object, kotlin.jvm.functions.Function1<java.lang.Object, kotlin.Unit>, androidx.compose.ui.Modifier, boolean, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
+  public static final boolean access$DdSwipeRow$lambda$7(androidx.compose.runtime.MutableState);
+  public static final void access$DdSwipeRow$lambda$8(androidx.compose.runtime.MutableState, boolean);
+}
+final class io.github.whywood.deepdeep.design.DdSwipeRowKt$DdSwipeRow$2$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdSwipeRowKt$DdSwipeRow$3$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.design.DdSwipeRowKt$DdSwipeRow$3$1$2<T> implements kotlinx.coroutines.flow.FlowCollector {
+  public final java.lang.Object emit(float, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object emit(java.lang.Object, kotlin.coroutines.Continuation);
+}
+final class io.github.whywood.deepdeep.design.DdSwipeRowKt$DdSwipeRow$close$1$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+  public final kotlin.coroutines.Continuation<kotlin.Unit> create(java.lang.Object, kotlin.coroutines.Continuation<?>);
+  public final java.lang.Object invoke(kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public java.lang.Object invoke(java.lang.Object, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.design.DdSwipeRowKt$WhenMappings {
+  public static final int[] $EnumSwitchMapping$0;
+}
+final class io.github.whywood.deepdeep.design.DdSwipeValue extends java.lang.Enum<io.github.whywood.deepdeep.design.DdSwipeValue> {
+  public static final io.github.whywood.deepdeep.design.DdSwipeValue Closed;
+  public static final io.github.whywood.deepdeep.design.DdSwipeValue Open;
+  public static io.github.whywood.deepdeep.design.DdSwipeValue[] values();
+  public static io.github.whywood.deepdeep.design.DdSwipeValue valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<io.github.whywood.deepdeep.design.DdSwipeValue> getEntries();
 }
 public final class io.github.whywood.deepdeep.design.DdTextFieldKt {
   public static final void DdTextField(java.lang.String, kotlin.jvm.functions.Function1<? super java.lang.String, kotlin.Unit>, java.lang.String, androidx.compose.ui.Modifier, androidx.compose.ui.focus.FocusRequester, boolean, androidx.compose.foundation.text.KeyboardOptions, androidx.compose.ui.text.input.VisualTransformation, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, androidx.compose.runtime.Composer, int, int);

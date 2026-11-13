@@ -1,1 +1,6 @@
 # design ABI 的显式放行清单。
+# DdHtml 内部实现由 private 放宽为 internal（DdHtmlBlocks 复用）：编译器合成的 access$ 桥与匿名类消失，类可见性变宽，外部调用方不受影响。
+final class io.github.whywood.deepdeep.design.DdDialogKt$DdDialog$1$1$1 extends kotlin.coroutines.jvm.internal.SuspendLambda implements kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<? super kotlin.Unit>, java.lang.Object> {
+final class io.github.whywood.deepdeep.design.DdHtmlWriter {
+  public static final java.lang.String access$attribute(java.lang.String, java.lang.String);
+  public static final java.lang.String access$decodeEntities(java.lang.String);
