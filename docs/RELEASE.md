@@ -51,6 +51,7 @@ release 的 R8 会裁剪、改名类与成员；这类问题只在混淆包出�
 
 - **插件 ABI**：插件在运行期直接复用宿主里的 Kotlin、协程、Compose、`plugin-api`、`design`。保留规则写在 `plugin-api/consumer-rules.pro`（随 SDK AAR 下发，任何依赖它的混淆构建都会自动应用），`app/proguard-rules.pro` 保留同样一份兜底。插件 UI 常用的 `androidx.lifecycle` / `androidx.activity` / `androidx.savedstate` 也在 keep 范围内。
 - **反射 / 动态加载入口**：`app_process` 启动的 `ShellDaemon`、虚拟屏幕 helper、BouncyCastle、MLKit barcode 等。
+- **Room / WorkManager**：WorkManager 自带的 Room 数据库实现由 Room 反射创建，`app/proguard-rules.pro` 用 `-keep class * extends androidx.room.RoomDatabase { <init>(); }` 保住无参构造器；删掉这条会让 release 包在启动阶段崩溃（1.0.6 曾因此返工）。
 
 改动约束：新增反射入口、给 `plugin-api` 加 `api()` 依赖、或让插件 UI 使用新的宿主库时，必须同步补 keep 规则；否则 release 构建成功但运行到该路径才崩。keep 只保 ABI 名字，不承诺宿主与插件的版本兼容，插件仍需随 SDK 版本重编译。
 
