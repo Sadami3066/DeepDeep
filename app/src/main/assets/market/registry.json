@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-11-12T08:36:59Z",
+  "generatedAt": "2026-11-13T06:17:21Z",
   "keyId": "ec256:db63256431bd66db",
   "entries": [
     {
@@ -18,7 +18,7 @@
         "zh": "通过官方 lark-cli 读写飞书消息、日历、云文档、云空间、邮箱与任务。\n在插件页面安装 CLI、连接账号并管理应用权限。",
         "en": "Read and send Feishu messages, manage calendar events, cloud docs, drive files, mail, and tasks through the official lark-cli.\nInstall the CLI and connect your account on the plugin page."
       },
-      "icon": "icons/feishu.png",
+      "icon": "icons/feishu.png?v=5645d553953a",
       "tags": {
         "zh": [
           "飞书",
@@ -48,6 +48,49 @@
     },
     {
       "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.mail",
+      "name": {
+        "zh": "邮箱",
+        "en": "Mail"
+      },
+      "summary": {
+        "zh": "接入 IMAP/SMTP 邮箱，读信、找信、起草回复",
+        "en": "Read, search, and draft replies in your IMAP/SMTP mailbox"
+      },
+      "description": {
+        "zh": "用授权码或应用专用密码接入 QQ、163、126、腾讯企业邮、阿里云邮箱、Gmail、iCloud、Fastmail、Yahoo、Zoho 与自定义 IMAP/SMTP 邮箱。\n插件提供邮件列表、会话阅读、写信、账户管理与新邮件通知，并让 Agent 搜索、阅读、归档邮件和起草回复；发送前由你确认。",
+        "en": "Connect QQ, 163, 126, Tencent Exmail, Alibaba Mail, Gmail, iCloud, Fastmail, Yahoo, Zoho or any custom IMAP/SMTP mailbox with an authorization code or app password.\nThe plugin provides a message list, conversation reading, composing, account management and new mail notifications, and lets the agent search, read, archive and draft replies; you confirm before anything is sent."
+      },
+      "icon": "icons/mail.png?v=e0094a7740c7",
+      "tags": {
+        "zh": [
+          "邮箱",
+          "邮件",
+          "办公"
+        ],
+        "en": [
+          "Mail",
+          "Email",
+          "Productivity"
+        ]
+      },
+      "version": "1.0.0",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261113/mail-1.0.0.ddp",
+        "sha256": "ac58352aa3f7d5eca8de4b1da6ed216bdb54931d092a8cfa70646ab49e214279",
+        "size": 1601741
+      },
+      "plugin": {
+        "apiLevel": 6,
+        "minHostVersion": "1.0.5",
+        "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "version": "1.0.0"
+      }
+    },
+    {
+      "type": "plugin",
       "id": "io.github.whywood.deepdeep.plugin.micloud",
       "name": {
         "zh": "小米云服务",
@@ -61,7 +104,7 @@
         "zh": "连接小米账号后读取小米云服务中的笔记、待办、短信、联系人、相册与录音。\n首次使用需在插件页面完成小米账号登录。",
         "en": "Connect a Xiaomi account to read notes, tasks, SMS, contacts, photos, and recordings from Mi Cloud.\nSign in to your Xiaomi account on the plugin page first."
       },
-      "icon": "icons/micloud.png",
+      "icon": "icons/micloud.png?v=d62762f65594",
       "tags": {
         "zh": [
           "小米云",
@@ -91,6 +134,51 @@
     },
     {
       "type": "plugin",
+      "id": "io.github.whywood.deepdeep.plugin.purge",
+      "name": {
+        "zh": "网络攻防",
+        "en": "NetSec"
+      },
+      "summary": {
+        "zh": "安全作业口径、红队 runbook 与交付纪律",
+        "en": "Security-ops rules, red-team runbooks and delivery discipline"
+      },
+      "description": {
+        "zh": "在会话中注入安全作业口径与红队 runbook，覆盖侦察、漏洞验证、凭据测试、隧道与内网横向。命中安全类请求时附带对应 runbook 原文；模型拒答时补一条可直接执行的内容。仅用于自有或受托资产的授权测试。",
+        "en": "Inject security-ops rules and red-team runbooks into the session, covering recon, vulnerability verification, credential testing, tunnels and lateral movement. Matched requests carry the original runbook; when the model refuses, a directly usable fallback is posted. For authorized testing of owned or entrusted assets only."
+      },
+      "icon": "icons/netsec.png?v=08c512fc15f0",
+      "tags": {
+        "zh": [
+          "网络攻防",
+          "安全",
+          "红队",
+          "渗透测试"
+        ],
+        "en": [
+          "NetSec",
+          "Security",
+          "Red team",
+          "Pentest"
+        ]
+      },
+      "version": "1.0.1",
+      "artifact": {
+        "url": "https://github.com/Sadami3066/DeepDeep-Purge/releases/download/plugins-20261112/purge-1.0.1.ddp",
+        "sha256": "4070fbea6d93f8ee55f36e04e4f6d7d0442e2294a1d80d7af47cfb6db8e999d4",
+        "size": 994737
+      },
+      "plugin": {
+        "apiLevel": 6,
+        "minHostVersion": "1.0.4",
+        "publisherKeyId": "ed25519:898b5a12922251d5b291141142bb2b44dd2c1609016fc0c11050fc5f2d863b19",
+        "publisherName": "milous",
+        "requiredAccess": "normal",
+        "version": "1.0.1"
+      }
+    },
+    {
+      "type": "plugin",
       "id": "io.github.whywood.deepdeep.plugin.sysu",
       "name": {
         "zh": "中山大学 CLI",
@@ -104,7 +192,7 @@
         "zh": "使用 Node.js sysu CLI 查询课表、成绩、考试、公告、在线教学、场馆预约、网费与统一认证换票；账号密码只在插件页使用",
         "en": "Query timetable, grades, exams, notices, online courses, gym bookings, campus network, and SSO tickets with the Node.js sysu CLI inside the Linux runtime.\nSign-in and credentials are handled on the plugin page, and the CLI installs automatically on first use."
       },
-      "icon": "icons/sysu.png",
+      "icon": "icons/sysu.png?v=3aff2406ede0",
       "tags": {
         "zh": [
           "中山大学",
@@ -140,8 +228,8 @@
       "type": "plugin",
       "id": "io.github.whywood.deepdeep.plugin.wechat",
       "name": {
-        "zh": "微信导出",
-        "en": "WeChat Export"
+        "zh": "微信聊天记录",
+        "en": "WeChat Chat History"
       },
       "summary": {
         "zh": "按日期范围导出完整微信记录",
@@ -151,7 +239,7 @@
         "zh": "在 Linux 运行环境里同步、解密微信本地数据库，按日期范围导出完整聊天记录。CLI 只做数据清洗和导出，不做筛选或摘要；需要把系统访问切到 Root。",
         "en": "Sync and decrypt the local WeChat database inside the Linux runtime, then export complete chat records for a date range. The CLI only formats and exports; set system access to Root."
       },
-      "icon": "icons/wechat.png",
+      "icon": "icons/wechat.png?v=885720bd6786",
       "tags": {
         "zh": [
           "微信",
@@ -194,7 +282,7 @@
         "zh": "安装官方 wecom-cli 后扫码授权，操作企业微信的消息、邮件、文档、日程与待办。\n账号授权与 CLI 安装都在插件页面完成。",
         "en": "Scan the QR code to authorize the official wecom-cli, then work with WeCom messages, mail, docs, schedules, and tasks.\nCLI install and account authorization both happen on the plugin page."
       },
-      "icon": "icons/wecom.png",
+      "icon": "icons/wecom.png?v=ac51e1d35aa8",
       "tags": {
         "zh": [
           "企业微信",
@@ -237,7 +325,7 @@
         "zh": "在开始写代码或做任何创作前，用对话把需求、约束与可选方案梳理清楚。\n产出经过确认的设计，再进入实现。\n适合新功能、组件、行为改动或任何从零开始的计划。",
         "en": "Use a guided conversation to clarify requirements, constraints, and options before any creative work.\nConfirm a direction first, then move into implementation.\nGreat for new features, components, behavior changes, or any plan from scratch."
       },
-      "icon": "icons/superpowers.png",
+      "icon": "icons/superpowers.png?v=8db6e3128452",
       "tags": {
         "zh": [
           "规划",
@@ -382,7 +470,7 @@
         "zh": "遇到 bug、测试失败或意外行为时，先建立可复现证据，再沿调用链追到根因。\n强调先改测试复现、再做最小修复，避免拍脑袋改代码。",
         "en": "When a bug, failing test, or unexpected behavior shows up, reproduce it first, then trace the call chain to the root cause.\nEmphasizes a failing test followed by the smallest fix instead of guessing."
       },
-      "icon": "icons/superpowers.png",
+      "icon": "icons/superpowers.png?v=8db6e3128452",
       "tags": {
         "zh": [
           "调试",
@@ -419,7 +507,7 @@
         "zh": "在写实现代码前先写会失败的测试，用红-绿-重构推进功能与修复。\n包含如何写出好的测试与常见反模式。\n适合任何新功能或 bug 修复。",
         "en": "Write a failing test first, then implement, using red-green-refactor for features and fixes.\nCovers how to write good tests and common anti-patterns.\nWorks for any new feature or bug fix."
       },
-      "icon": "icons/superpowers.png",
+      "icon": "icons/superpowers.png?v=8db6e3128452",
       "tags": {
         "zh": [
           "测试",
@@ -456,7 +544,7 @@
         "zh": "在说「做完了/修好了/测试通过」之前，先运行验证命令并核对输出。\n要求用证据代替断言，避免未经验证的完成声明。",
         "en": "Before saying done, fixed, or passing, run the verification commands and check the output.\nEvidence before assertions: never claim success without running it."
       },
-      "icon": "icons/superpowers.png",
+      "icon": "icons/superpowers.png?v=8db6e3128452",
       "tags": {
         "zh": [
           "测试",
@@ -493,7 +581,7 @@
         "zh": "当需求已明确但改动跨多个步骤时，先写出分阶段、可验证的实施计划。\n计划包含任务拆分、顺序与每步的验证方式，再开始动代码。",
         "en": "When requirements are clear but the change spans multiple steps, write a staged, verifiable plan first.\nPlans cover task breakdown, ordering, and how to verify each step before code changes."
       },
-      "icon": "icons/superpowers.png",
+      "icon": "icons/superpowers.png?v=8db6e3128452",
       "tags": {
         "zh": [
           "规划",
@@ -530,7 +618,7 @@
         "zh": "连接 Airtable 作为数据库与操作层，查询、创建和更新记录。\n适合把表格数据接入对话流程。",
         "en": "Use Airtable as a database and operations layer: query, create, and update records.\nGood for bringing table data into the conversation."
       },
-      "icon": "icons/airtable.png",
+      "icon": "icons/airtable.png?v=568f4546d90d",
       "tags": {
         "zh": [
           "数据库",
@@ -572,7 +660,7 @@
         "zh": "从 Apify Store 调用现成的爬虫、抓取器与自动化工具提取网站数据。\n连接时需要 Apify API Token。",
         "en": "Call ready-made scrapers, crawlers, and automation tools from Apify Store to extract website data.\nRequires an Apify API token."
       },
-      "icon": "icons/apify.png",
+      "icon": "icons/apify.png?v=8329716b6f34",
       "tags": {
         "zh": [
           "网页抓取",
@@ -621,7 +709,7 @@
         "zh": "通过 Atlassian Rovo MCP 搜索、创建和管理 Jira、Confluence、Loom 等工作内容。\n首次连接需使用 Atlassian 账号完成 OAuth 授权。",
         "en": "Search, create, and manage Jira issues, Confluence pages, Loom videos, and more via Atlassian Rovo MCP.\nSign in with your Atlassian account to authorize on first connect."
       },
-      "icon": "icons/atlassian.png",
+      "icon": "icons/atlassian.png?v=1fac5c64be7a",
       "tags": {
         "zh": [
           "协作",
@@ -663,7 +751,7 @@
         "zh": "在 Canva 中创建、搜索、编辑设计，并导出设计资源。\n适合生成海报、社媒图与演示文稿素材。",
         "en": "Create, search, and edit designs in Canva, then export the results.\nHandy for posters, social images, and presentation assets."
       },
-      "icon": "icons/canva.png",
+      "icon": "icons/canva.png?v=0fe2596ac85a",
       "tags": {
         "zh": [
           "设计",
@@ -703,7 +791,7 @@
         "zh": "提供 Cloudflare 官方文档检索工具，帮助查询产品说明与 API 用法。\n公开服务，无需账号即可连接。",
         "en": "Search the official Cloudflare documentation for product guides and API usage.\nPublic service: no account needed."
       },
-      "icon": "icons/cloudflare.png",
+      "icon": "icons/cloudflare.png?v=6bf2f1e99257",
       "tags": {
         "zh": [
           "云服务",
@@ -743,7 +831,7 @@
         "zh": "根据库名与版本检索最新文档，返回可直接使用的代码示例。\n公开服务，适合在写代码前确认 API 用法。",
         "en": "Look up current documentation by library and version, with examples you can use directly.\nPublic service, handy for confirming API usage before writing code."
       },
-      "icon": "icons/context7.png",
+      "icon": "icons/context7.png?v=1165942109f4",
       "tags": {
         "zh": [
           "文档",
@@ -783,7 +871,7 @@
         "zh": "读取 Figma 文件中的设计上下文，包括组件、样式与变量。\n适合在实现界面前获取准确的设计信息。",
         "en": "Read design context from Figma files, including components, styles, and variables.\nUseful for getting accurate design details before building UI."
       },
-      "icon": "icons/figma.png",
+      "icon": "icons/figma.png?v=2039db1c4f4c",
       "tags": {
         "zh": [
           "设计",
@@ -823,7 +911,7 @@
         "zh": "搜索网页、抓取页面内容并提取结构化数据。\n也可检索论文并抓取多页面站点；公开访问，可选填 Firecrawl API Key。",
         "en": "Search the web, scrape page content, and extract structured data.\nAlso supports paper search and multi-page crawling; public access with an optional Firecrawl API key."
       },
-      "icon": "icons/firecrawl.png",
+      "icon": "icons/firecrawl.png?v=8289a9810bbd",
       "tags": {
         "zh": [
           "网页抓取",
@@ -865,7 +953,7 @@
         "zh": "在 Linear 工作区中查找 issue、项目和文档，也能创建与更新条目。\n适合开发团队在对话里跟进任务进度。",
         "en": "Look up issues, projects, and documents in your Linear workspace, and create or update them.\nA good fit for development teams tracking work in the conversation."
       },
-      "icon": "icons/linear.png",
+      "icon": "icons/linear.png?v=2725434bd81d",
       "tags": {
         "zh": [
           "项目管理",
@@ -907,7 +995,7 @@
         "zh": "通过官方 MCP 管理 Neon 项目、分支与 Lakebase Postgres 数据库。\n可以创建分支、查看连接串并执行 SQL。",
         "en": "Manage Neon projects, branches, and Lakebase Postgres databases through the official MCP server.\nCreate branches, read connection strings, and run SQL."
       },
-      "icon": "icons/neon.png",
+      "icon": "icons/neon.png?v=70ee93ba59b1",
       "tags": {
         "zh": [
           "数据库",
@@ -949,7 +1037,7 @@
         "zh": "连接 Notion 工作区，搜索页面并按需创建或更新内容。\n适合把会议记录、知识库与项目资料接入对话。",
         "en": "Connect your Notion workspace to search pages and create or update content on demand.\nUseful for bringing meeting notes, knowledge bases, and project docs into the conversation."
       },
-      "icon": "icons/notion.png",
+      "icon": "icons/notion.png?v=1efed32e5d5e",
       "tags": {
         "zh": [
           "笔记",
@@ -991,7 +1079,7 @@
         "zh": "通过 Perplexity API 做实时网页搜索、推理与研究，返回带来源的答案。\n连接时需要 Perplexity API Key。",
         "en": "Run real-time web search, reasoning, and research through the Perplexity API, with answers that cite sources.\nRequires a Perplexity API key."
       },
-      "icon": "icons/perplexity.png",
+      "icon": "icons/perplexity.png?v=65ff4bf2ace7",
       "tags": {
         "zh": [
           "搜索",
@@ -1040,7 +1128,7 @@
         "zh": "查询 PostHog 的产品分析、功能开关、实验与错误数据。\n连接时需要 PostHog API Token。",
         "en": "Query PostHog product analytics, feature flags, experiments, and error data.\nRequires a PostHog API token."
       },
-      "icon": "icons/posthog.png",
+      "icon": "icons/posthog.png?v=155e59b21f88",
       "tags": {
         "zh": [
           "分析",
@@ -1089,7 +1177,7 @@
         "zh": "通过 Stripe 官方 MCP 管理客户、商品、支付与发票等数据。\n连接时需要提供 Stripe API Key，请按服务提示授权。",
         "en": "Manage customers, products, payments, and invoices through Stripe's official MCP server.\nYou'll need a Stripe API key; follow the prompt to authorize the connection."
       },
-      "icon": "icons/stripe.png",
+      "icon": "icons/stripe.png?v=a3f4e4de5f78",
       "tags": {
         "zh": [
           "支付",
@@ -1138,7 +1226,7 @@
         "zh": "通过 Zapier 把助手连接到 9,000 多个应用，执行 40,000 多种自动化动作。\n首次连接需在浏览器登录 Zapier 并完成授权。",
         "en": "Connect the assistant to 9,000+ apps and run 40,000+ actions through Zapier.\nSign in to Zapier in the browser and authorize on first connect."
       },
-      "icon": "icons/zapier.png",
+      "icon": "icons/zapier.png?v=f01bf6fb9ad7",
       "tags": {
         "zh": [
           "自动化",
