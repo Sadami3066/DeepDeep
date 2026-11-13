@@ -197,6 +197,7 @@ private fun createDdWebView(
         }
 
         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+            if (!request.isForMainFrame) return
             onError(
                 DdWebViewError(
                     kind = DdWebViewErrorKind.NETWORK,
@@ -211,6 +212,7 @@ private fun createDdWebView(
             request: WebResourceRequest,
             errorResponse: WebResourceResponse,
         ) {
+            if (!request.isForMainFrame) return
             onError(
                 DdWebViewError(
                     kind = DdWebViewErrorKind.HTTP,

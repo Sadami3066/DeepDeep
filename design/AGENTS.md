@@ -54,7 +54,7 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 | `DdTheme.kt` | 主题配色：`DdTheme.lightDeepDeep()`（默认浅色）、`lightSantorini()`（浅色）与 `darkOceanic()`（深色） |
 | `DdTimePicker.kt` | 时间选择 sheet：时/分双列滚动，文案由调用方传入 |
 | `DdTypingDots.kt` | 三点错峰呼吸的正在输入指示 |
-| `DdWebView.kt` | 通用 WebView 容器：url/html、JS/domStorage/文件访问开关、深色适配、页面与错误回调、可释放 state |
+| `DdWebView.kt` | 通用 WebView 容器：url/html、JS/domStorage/文件访问开关、深色适配、页面与错误回调、可释放 state；错误回调只报主文档，图片/脚本等子资源失败不触发页面错误 |
 | `DdAlpha.kt` | 透明度 token（disabled/hairline/muted/press/ripple 等） |
 | `icons/` | 图标单源目录：`catalog.json`、生成脚本与分类预览页（运行时资源由它生成） |
 
