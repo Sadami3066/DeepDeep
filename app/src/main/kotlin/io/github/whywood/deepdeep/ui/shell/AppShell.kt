@@ -38,7 +38,6 @@ import io.github.whywood.deepdeep.data.UiPreferences
 import io.github.whywood.deepdeep.data.exportShareIntent
 import io.github.whywood.deepdeep.data.update.hasUpdate
 import io.github.whywood.deepdeep.design.DdFontStyle
-import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -91,7 +90,6 @@ internal fun AppShell(
     graph: AppDependencies,
     chatViewModel: ChatViewModel,
     state: ChatUiState,
-    themePreset: ThemePreset,
     fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
@@ -102,9 +100,9 @@ internal fun AppShell(
     pendingPluginImportUri: String? = null,
     onPluginImportConsumed: () -> Unit = {},
     onFontStyleChange: (DdFontStyle) -> Unit = {},
-    onThemePresetChange: (ThemePreset) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val themeState by graph.themeController.state.collectAsStateWithLifecycle()
     val overlays = rememberSaveable(saver = AppOverlaysState.Saver) { AppOverlaysState() }
     var pluginImportUri by remember { mutableStateOf<String?>(null) }
     val reloadDoneMessage = stringResource(R.string.chat_reload_done)
@@ -187,10 +185,21 @@ internal fun AppShell(
         )
         PluginUiBridge.consumePage(request)
     }
+    val pendingPluginSheet by PluginUiBridge.pendingSheet.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingPluginSheet) {
+        val request = pendingPluginSheet ?: return@LaunchedEffect
+        drawerOpen = false
+        overlays.pluginPage = request
+        PluginUiBridge.consumeSheet(request)
+    }
     val pendingPluginPageClose by PluginUiBridge.pendingClosePage.collectAsStateWithLifecycle()
     LaunchedEffect(pendingPluginPageClose) {
         if (!pendingPluginPageClose) return@LaunchedEffect
-        if (navigator.current is AppDestination.PluginPage) navigator.pop()
+        if (overlays.pluginPage != null) {
+            overlays.pluginPage = null
+        } else if (navigator.current is AppDestination.PluginPage) {
+            navigator.pop()
+        }
         PluginUiBridge.consumeClosePage()
     }
     val uiPreferences by graph.appPreferences.preferences.collectAsStateWithLifecycle(initialValue = UiPreferences())
@@ -610,8 +619,7 @@ internal fun AppShell(
                         archivedCount = state.archivedCount,
                     ),
                     ui = ShellRouteUi(
-                        themePreset = themePreset,
-                        onThemePresetChange = onThemePresetChange,
+                        themeLabel = themeState.label,
                         fontStyle = fontStyle,
                         onFontStyleChange = onFontStyleChange,
                         nickname = nickname,

@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.plugin.manager
 
 import android.util.Log
 import io.github.whywood.deepdeep.plugin.api.DeepDeepPlugin
+import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginAvailability
 import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.api.PluginExperimentalApi
@@ -14,6 +15,8 @@ import io.github.whywood.deepdeep.plugin.api.pluginSkillFile
 import io.github.whywood.deepdeep.plugin.api.unavailable
 import io.github.whywood.deepdeep.plugin.host.PluginContributions
 import io.github.whywood.deepdeep.plugin.host.PluginDescriptor
+import io.github.whywood.deepdeep.theme.PluginThemeSource
+import io.github.whywood.deepdeep.theme.ThemePackCodec
 import java.io.File
 import kotlinx.coroutines.CancellationException
 
@@ -22,16 +25,19 @@ internal data class MaterializedPlugin(
     val availability: PluginAvailabilityUi,
     val skills: List<PluginSkill>,
     val failure: String?,
+    val themeSource: PluginThemeSource? = null,
 )
 
 internal class PluginContributionMaterializer(
     private val gate: PluginRuntimeRegistry,
+    private val resolveText: (LocalizedText) -> String = { it.values["default"].orEmpty() },
 ) {
     suspend fun refreshAll(): List<PluginDescriptor> = gate.views().mapNotNull { view ->
         gate.applyMaterialized(view.id, materialize(view))
     }
 
     suspend fun materialize(view: PluginRuntimeView): MaterializedPlugin {
+        val themeSource = materializeThemeSource(view)
         val plugin = view.plugin
             ?: return MaterializedPlugin(
                 contributions = PluginContributions.Empty,
@@ -41,6 +47,7 @@ internal class PluginContributionMaterializer(
                     ?: PluginAvailabilityUi.Available,
                 skills = emptyList(),
                 failure = null,
+                themeSource = themeSource,
             )
         var failure: String? = null
         fun record(error: Throwable) {
@@ -87,6 +94,20 @@ internal class PluginContributionMaterializer(
             availability = availability.toUi(),
             skills = skills,
             failure = failure,
+            themeSource = themeSource,
+        )
+    }
+
+    private fun materializeThemeSource(view: PluginRuntimeView): PluginThemeSource? {
+        if (!view.enabled || !view.installed) return null
+        if (view.manifest.provides.themes.isEmpty()) return null
+        val assetsDir = view.host.assetsDir
+        if (!File(assetsDir, ThemePackCodec.FILE_NAME).isFile) return null
+        return PluginThemeSource(
+            pluginId = view.id,
+            pluginName = resolveText(view.manifest.name),
+            version = view.manifest.version,
+            assetsDir = assetsDir,
         )
     }
 

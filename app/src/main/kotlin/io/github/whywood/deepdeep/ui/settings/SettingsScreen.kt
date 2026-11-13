@@ -67,7 +67,6 @@ import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
-import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.common.AvatarBadge
 import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
@@ -89,11 +88,11 @@ fun SettingsScreen(
     providerName: String?,
     modelName: String?,
     configured: Boolean,
-    themePreset: ThemePreset,
+    themeLabel: String,
     versionName: String,
     fontLabel: String,
     onBack: () -> Unit,
-    onThemePresetChange: (ThemePreset) -> Unit,
+    onOpenTheme: () -> Unit,
     onOpenChatSettings: () -> Unit,
     overlayEntryMode: OverlayEntryMode = OverlayEntryMode.VOICE,
     onOpenUsageHabits: () -> Unit = {},
@@ -200,9 +199,13 @@ fun SettingsScreen(
 
             SettingsSectionLabel(stringResource(R.string.settings_group_appearance))
             DdGroupCard {
-                ThemePresetControl(
-                    preset = themePreset,
-                    onPresetChange = onThemePresetChange,
+                DdListRow(
+                    icon = DdIcons.Theme,
+                    title = stringResource(R.string.settings_theme),
+                    value = themeLabel,
+                    onClick = onOpenTheme,
+                    showChevron = true,
+                    modifier = Modifier.testTag("settings_theme"),
                 )
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
@@ -515,88 +518,6 @@ private fun NotificationRow() {
         modifier = Modifier.testTag("settings_notifications"),
     )
 }
-
-@Composable
-private fun ThemePresetControl(
-    preset: ThemePreset,
-    onPresetChange: (ThemePreset) -> Unit,
-) {
-    val colors = deepDeepColors()
-    var expanded by remember { mutableStateOf(false) }
-    var pending by remember { mutableStateOf<ThemePreset?>(null) }
-    LaunchedEffect(pending) {
-        val selected = pending ?: return@LaunchedEffect
-        withFrameNanos { }
-        onPresetChange(selected)
-        pending = null
-    }
-    DdDropdown(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        anchor = {
-            DdPressable(
-                onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth().testTag("settings_theme_preset"),
-                shape = RoundedCornerShape(20.dp),
-                contentDescription = stringResource(R.string.settings_theme_preset),
-            ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 60.dp)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DdIcon(icon = DdIcons.Theme, tint = colors.inkSecondary, size = 20.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Text(
-                        text = stringResource(R.string.settings_theme_preset),
-                        modifier = Modifier.weight(1f),
-                        style = DdType.body,
-                        color = colors.ink,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = presetLabel(preset),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                        maxLines = 1,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    DdIcon(icon = DdIcons.ChevronDown, tint = colors.inkTertiary, size = 16.dp)
-                }
-            }
-        },
-    ) {
-        ThemePreset.entries.forEach { option ->
-            DdMenuItem(
-                text = presetLabel(option),
-                onClick = {
-                    expanded = false
-                    if (option != preset) pending = option
-                },
-                selected = option == preset,
-                trailing = if (option == preset) {
-                    {
-                        DdIcon(icon = DdIcons.Check, tint = colors.accent, size = 18.dp)
-                    }
-                } else {
-                    null
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun presetLabel(preset: ThemePreset): String = stringResource(
-    when (preset) {
-        ThemePreset.SYSTEM -> R.string.settings_theme_preset_system
-        ThemePreset.DEEP_DEEP -> R.string.settings_theme_preset_deepdeep
-        ThemePreset.SANTORINI -> R.string.settings_theme_preset_santorini
-        ThemePreset.OCEANIC -> R.string.settings_theme_preset_oceanic
-    },
-)
 
 @Composable
 private fun LanguageRow(

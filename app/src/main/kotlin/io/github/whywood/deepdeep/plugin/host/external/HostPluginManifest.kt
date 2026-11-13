@@ -43,6 +43,7 @@ internal data class HostProvides(
     override val skills: List<String> = emptyList(),
     override val uiSlots: List<String> = emptyList(),
     override val pages: List<String> = emptyList(),
+    override val themes: List<String> = emptyList(),
 ) : Provides
 
 internal data class HostPluginManifest(

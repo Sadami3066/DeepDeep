@@ -95,6 +95,7 @@ internal class PluginRuntimeRegistry {
         runtime.contributions = PluginContributions.Empty
         runtime.skillIds = emptyList()
         runtime.materialized = false
+        runtime.themeSource = null
         viewLocked(pluginId)
     }
 
@@ -111,6 +112,7 @@ internal class PluginRuntimeRegistry {
             runtime.contributions = result.contributions
             runtime.availability = result.availability
             runtime.materializationFailure = result.failure
+            runtime.themeSource = result.themeSource
             if (runtime.plugin != null) {
                 runtime.materialized = result.failure == null
             }

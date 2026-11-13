@@ -34,13 +34,12 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdType
-import io.github.whywood.deepdeep.design.DeepDeepTheme
-import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionHost
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionOverlay
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.service.AppVisibility
+import io.github.whywood.deepdeep.theme.HostTheme
 import io.github.whywood.deepdeep.ui.common.ProvideHostFiles
 import io.github.whywood.deepdeep.ui.common.chat.LocalPluginManager
 import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
@@ -73,10 +72,7 @@ class PluginHostActivity : ComponentActivity() {
         }
         val initialFontStyle = graph.fontPreferences.read()
         setContent {
-            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(
-                initialValue = ThemePreset.SYSTEM,
-            )
-            DeepDeepTheme(preset = preset, fontStyle = initialFontStyle) {
+            HostTheme(controller = graph.themeController, fontStyle = initialFontStyle) {
                 ProvideHostFiles(graph.hostFiles) {
                     ProvidePluginManager(graph.pluginManager) {
                         Box(Modifier.fillMaxSize()) {

@@ -8,11 +8,11 @@
 |---|---|
 | `PluginPaths.kt` | 规范目录：`files/plugins` → `<id>` → `<version>/{bundle,assets,lib}`，插件运行数据固定在 `<id>/data` |
 | `PluginRecord.kt` | 用户意图记录 `PluginRecord`（enabled/installedVersion/pending\*/previous\*/lastError）与运行期事实 `PluginRuntimeFacts`；相位的唯一派生函数 `PluginPhase.derive(record, facts)` |
-| `PluginRegistry.kt` | 内存插件表：`PluginDescriptor`（manifest + 派生相位 + error + 物化贡献）、线程安全 `PluginRegistrySnapshot`（递增 version、tools/skills/promptSections/ui/hooks/bindings/pages/composerActions 聚合、重复 id 拒绝、跨插件冲突记录） |
+| `PluginRegistry.kt` | 内存插件表：`PluginDescriptor`（manifest + 派生相位 + error + 物化贡献 + 主题来源）、线程安全 `PluginRegistrySnapshot`（递增 version、tools/skills/promptSections/ui/hooks/bindings/pages/composerActions/themeSources 聚合、重复 id 拒绝、跨插件冲突记录） |
 | `PluginHostImpl.kt` | `PluginHost` 实现：服务访问器委托给 `PluginServices` 持有的实现，未提供抛 `PluginServiceUnavailable`；保留旧签名 `text` |
 | `PluginTextResolver.kt` | `LocalizedText` 解析：values 按语言标签取、缺省回退 `default`；`String.format` 参数（插件 API 已无资源 id） |
 | `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` 接口 → pi SDK `CodingTool`：元数据直传，`execute(call)` 经宿主 `PluginToolCall` 实现传入，sessionId 在 execute 时解析，Text/Rich 结果（`text/blocks`）映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
-| `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、DEX 装载（见目录内 AGENTS.md） |
+| `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、主题包安装校验、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主 |
 | `services/` | 基础宿主服务适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
@@ -32,7 +32,7 @@
 - 工具结果映射：`ImageBlock` 的字节按 base64 进 `ImageContent`；`FileRefBlock` 的 content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`（工具卡与历史消息据此渲染文件行），path 按插件给出的绝对路径原样输出，不读文件、不当附件投递；插件不要读写该保留键。
 - `partial` 更新经 unlimited channel 在 `execute` 内顺序转发，插件回调可在任意线程调用；`execute` 异常（取消/中断除外）转成 `isError` 结果。
 - 槽渲染没有崩溃隔离：插件 Compose 内容抛异常会带崩 App（与工具/回调异常一致）；插件作者需自测，宿主不会静默禁用绑定位。
-- 外部插件清单只解析一次（`PluginManifestCodec.parse`），严格校验（`decode/validate`）由安装流程负责。
+- 外部插件清单只解析一次（`PluginManifestCodec.parse`），严格校验（`decode/validate`）由安装流程负责；`provides.themes` 与 `assets/themes.json` 的校验也在安装候选阶段完成，运行期只聚合已安装且启用插件的主题来源。
 - manifest 契约（`PluginManifest`/`UiManifest`/`Provides`/`PublisherInfo`/`PluginComponentDeclaration`）是宿主实现的只读接口，内部实现与解析/校验在 `external/HostPluginManifest.kt` 与搬入的 `PluginManifestCodec/PluginValidation/PluginVersion`；1.1.0 起 manifest 还包含 `permissions` 与 `components`，安装期校验权限/组件与 capability 的一致性；事件同理由 `events/HostPluginEvents.kt` 实现。
 - 无会话系统事件（通知接收/动作、后台任务、分享、深链、应用前后台）由 `manager/PluginSystemEvents` 按 capability 与 `components` 门槛串行派发到各插件全局 hooks；会话内事件仍走 `PluginSessionHooks`。
 - 外部包安装/装载时 `apiLevel` 不在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` 会被拒绝；低于下限（level 5）由 manager 映射为「插件 API 5 已停用，请更新插件」。

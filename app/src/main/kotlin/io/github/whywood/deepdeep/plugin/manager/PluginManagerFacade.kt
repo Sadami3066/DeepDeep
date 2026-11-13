@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginPage
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
 import io.github.whywood.deepdeep.runtime.SessionBinding
+import io.github.whywood.deepdeep.theme.PluginThemeSource
 import java.io.File
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonObject
@@ -62,6 +63,8 @@ interface PluginManagerFacade {
     fun pagesOf(pluginId: String): List<PluginPage>
 
     fun composerActions(): List<PluginComposerActionUi>
+
+    fun installedThemes(): List<PluginThemeSource>
 
     fun resolveText(text: LocalizedText): String
 

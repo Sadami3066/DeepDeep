@@ -56,6 +56,7 @@ internal fun reduce(
     is RuntimeEvent.PluginCustomMessage -> state.appendCustomMessage(event)
     is RuntimeEvent.TurnInjected -> state.injectTurn(event, now)
     is RuntimeEvent.UserInputAdmitted -> state.admitUserInput(event.text, event.runId, now)
+    is RuntimeEvent.CapabilitiesChanged -> state.onCapabilitiesChanged(event, now)
     is RuntimeEvent.QueueChanged -> state.onQueueChanged(event)
     is RuntimeEvent.QueuedInputsDropped -> state.onQueuedInputsDropped()
     is NoticeEvent -> state.onNotice(event.notice, now)

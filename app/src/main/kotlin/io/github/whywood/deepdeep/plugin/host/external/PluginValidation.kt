@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.plugin.api.PluginPermission
 import io.github.whywood.deepdeep.plugin.api.PluginSkill
 import io.github.whywood.deepdeep.plugin.api.Provides
 import io.github.whywood.deepdeep.plugin.api.SlotIds
+import io.github.whywood.deepdeep.theme.ThemePackCodec
 
 internal object PluginValidation {
     enum class Severity {
@@ -195,6 +196,16 @@ internal object PluginValidation {
         validateIds(provides.tools, "provides.tools", TOOL_NAME)
         validateIds(provides.skills, "provides.skills", PROVIDES_ID)
         validateIds(provides.pages, "provides.pages", PAGE_ID)
+        val seenThemes = mutableSetOf<String>()
+        provides.themes.forEachIndexed { index, themeId ->
+            val field = "provides.themes[$index]"
+            when {
+                !ThemePackCodec.isValidThemeId(themeId) ->
+                    add(error(Code.INVALID_PROVIDES, field, "invalid theme id: $themeId"))
+                !seenThemes.add(themeId) ->
+                    add(error(Code.INVALID_PROVIDES, field, "duplicate theme id: $themeId"))
+            }
+        }
         provides.uiSlots.forEachIndexed { index, slot ->
             if (!SlotIds.matches(slot)) {
                 add(error(Code.INVALID_UI_SLOT, "provides.uiSlots[$index]", "unknown or incomplete slot id: $slot"))

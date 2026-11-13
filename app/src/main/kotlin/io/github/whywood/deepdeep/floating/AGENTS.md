@@ -6,7 +6,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `FloatingWindowController.kt` | 悬浮窗总控：建窗、拖动、feed 接线、主题与预览 |
+| `FloatingWindowController.kt` | 悬浮窗总控：建窗、拖动、feed 接线、全局主题根（`HostTheme`）与预览 |
 | `FloatingFeed.kt` | 收集 ConversationStore 事件、提问与运行状态，组装 feed 状态 |
 | `FloatingFeedReducer.kt` | feed 状态归约与卡片队列、鲸鱼情绪等派生逻辑 |
 | `FloatingPlacement.kt` | 气泡落位、卡片/面板/预览排布与尺寸计算 |

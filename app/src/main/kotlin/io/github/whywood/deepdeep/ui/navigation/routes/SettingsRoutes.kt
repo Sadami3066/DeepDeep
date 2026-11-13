@@ -30,6 +30,7 @@ import io.github.whywood.deepdeep.ui.settings.UsageHabitsScreen
 import io.github.whywood.deepdeep.ui.settings.ScanJsonScreen
 import io.github.whywood.deepdeep.ui.settings.ScanSettingsScreen
 import io.github.whywood.deepdeep.ui.settings.SoftwareUpdateScreen
+import io.github.whywood.deepdeep.ui.settings.ThemeScreen
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -61,7 +62,7 @@ internal fun SettingsRoute(
         providerName = ui.providerName,
         modelName = ui.modelLabel,
         configured = ui.modelConfig.providerId in ui.configuredProviderIds,
-        themePreset = ui.themePreset,
+        themeLabel = ui.themeLabel,
         versionName = BuildConfig.VERSION_NAME,
         fontLabel = if (ui.fontStyle == DdFontStyle.SYSTEM) {
             stringResource(R.string.settings_font_system)
@@ -69,7 +70,7 @@ internal fun SettingsRoute(
             ui.fontStyle.displayName
         },
         onBack = onBack,
-        onThemePresetChange = ui.onThemePresetChange,
+        onOpenTheme = { navigator.push(AppDestination.Theme) },
         onOpenChatSettings = { navigator.push(AppDestination.ChatSettings) },
         overlayEntryMode = overlayEntryMode,
         onOpenUsageHabits = { navigator.push(AppDestination.UsageHabits) },
@@ -84,7 +85,10 @@ internal fun SettingsRoute(
         onOpenPrivacy = { navigator.push(AppDestination.Privacy) },
         archivedCount = archivedCount,
         onOpenArchived = { navigator.push(AppDestination.Archived) },
-        onLanguageChange = { dependencies.pluginManager.refresh() },
+        onLanguageChange = {
+            dependencies.pluginManager.refresh()
+            dependencies.themeController.refresh()
+        },
         updateVersion = updateUi.phase.releaseOrNull?.versionName,
         onOpenUpdate = { navigator.push(AppDestination.Update) },
         crashLogs = dependencies.crashLogs,
@@ -143,6 +147,18 @@ internal fun UsageHabitsRoute(dependencies: AppDependencies, scope: CoroutineSco
         mode = mode,
         onBack = onBack,
         onModeChange = { value -> scope.launch { dependencies.overlayEntryPreferences.setMode(value) } },
+    )
+}
+
+@Composable
+internal fun ThemeRoute(dependencies: AppDependencies, onBack: () -> Unit) {
+    val state by dependencies.themeController.state.collectAsStateWithLifecycle()
+    ThemeScreen(
+        builtIn = dependencies.themeController.builtInOptions(),
+        fromPlugins = dependencies.themeController.pluginOptions(),
+        current = state.choice,
+        onBack = onBack,
+        onSelect = dependencies.themeController::setChoice,
     )
 }
 

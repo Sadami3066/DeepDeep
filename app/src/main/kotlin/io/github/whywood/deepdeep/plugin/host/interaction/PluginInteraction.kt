@@ -50,6 +50,10 @@ internal interface PluginInteraction {
 
     fun openPage(pageId: String, arguments: JsonObject, newTask: Boolean)
 
+    fun openPageSheet(pageId: String, arguments: JsonObject) {
+        openPage(pageId, arguments, newTask = false)
+    }
+
     fun closePage(result: JsonObject?)
 
     fun pageContext(): PluginPageContext?

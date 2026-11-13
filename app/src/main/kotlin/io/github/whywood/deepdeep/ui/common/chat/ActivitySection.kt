@@ -1,11 +1,15 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -54,6 +60,7 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.LocalDdMotionEnabled
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
@@ -74,6 +81,7 @@ internal fun ActivitySection(
     onFileClick: (String) -> Unit,
 ) {
     val colors = deepDeepColors()
+    val motionEnabled = LocalDdMotionEnabled.current
     val firstStepId = steps.firstOrNull()?.id
     var expansionOverride by rememberSaveable(message.id, firstStepId) { mutableIntStateOf(-1) }
     val expanded = when {
@@ -105,11 +113,18 @@ internal fun ActivitySection(
         ProcessStatus.Stopped -> stringResource(R.string.assistant_stopped)
         ProcessStatus.Failed -> stringResource(R.string.assistant_ux_process_failed)
     }
-    val statusColor = when (semanticStatus) {
-        ProcessStatus.Running -> colors.ink
-        ProcessStatus.Failed -> colors.danger
-        else -> colors.inkTertiary
-    }
+    fun <T> settleSpec(): AnimationSpec<T> =
+        if (motionEnabled) tween(DdMotion.BASE, easing = DdMotion.EaseOut) else snap()
+
+    val statusColor by animateColorAsState(
+        targetValue = when (semanticStatus) {
+            ProcessStatus.Running -> colors.ink
+            ProcessStatus.Failed -> colors.danger
+            else -> colors.inkTertiary
+        },
+        animationSpec = settleSpec(),
+        label = "activity_summary_color",
+    )
     val reasoningCount = steps.count { it is AssistantStep.Reasoning }
     val toolCount = steps.count { it is AssistantStep.Tool }
     val finishedAt = message.finishedAt
@@ -139,7 +154,7 @@ internal fun ActivitySection(
         )
     }
     val activity = if (running) processActivity(message.steps, streaming = true) else null
-    val textAlpha = if (running) {
+    val pulseAlpha = if (running && motionEnabled) {
         val pulse = rememberInfiniteTransition(label = "activity_text_pulse")
         pulse.animateFloat(
             initialValue = 0.45f,
@@ -153,6 +168,36 @@ internal fun ActivitySection(
     } else {
         1f
     }
+    val textAlpha by animateFloatAsState(
+        targetValue = pulseAlpha,
+        animationSpec = if (running && motionEnabled) snap() else settleSpec(),
+        label = "activity_text_alpha_settle",
+    )
+    val summaryFontSize by animateFloatAsState(
+        targetValue = if (running) ActivityRunningFontSize else ActivityDoneFontSize,
+        animationSpec = settleSpec(),
+        label = "activity_summary_font_size",
+    )
+    val summaryLineHeight by animateFloatAsState(
+        targetValue = if (running) ActivityRunningLineHeight else ActivityDoneLineHeight,
+        animationSpec = settleSpec(),
+        label = "activity_summary_line_height",
+    )
+    val chevronSize by animateDpAsState(
+        targetValue = if (running) ActivityRunningChevronSize else ActivityDoneChevronSize,
+        animationSpec = settleSpec(),
+        label = "activity_summary_chevron_size",
+    )
+    val activityIconAlpha by animateFloatAsState(
+        targetValue = if (running) 1f else 0f,
+        animationSpec = settleSpec(),
+        label = "activity_icon_alpha",
+    )
+    val activityIconWidth by animateDpAsState(
+        targetValue = if (running) ActivityIconRowWidth else 0.dp,
+        animationSpec = settleSpec(),
+        label = "activity_icon_width",
+    )
     val activityLabel = when (activity) {
         ProcessActivity.Thinking -> stringResource(R.string.assistant_process_thinking)
         ProcessActivity.CallingTool -> stringResource(R.string.assistant_process_calling_tool)
@@ -187,13 +232,25 @@ internal fun ActivitySection(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (running) {
-                    ActivityGifIcon()
-                    Spacer(Modifier.width(6.dp))
+                if (activityIconWidth > 0.dp) {
+                    Box(
+                        modifier = Modifier
+                            .width(activityIconWidth)
+                            .height(ActivityIconSize)
+                            .clipToBounds(),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Box(Modifier.graphicsLayer { alpha = activityIconAlpha }) {
+                            ActivityGifIcon(size = ActivityIconSize)
+                        }
+                    }
                 }
                 Text(
                     text = summary,
-                    style = DdType.body,
+                    style = DdType.body.copy(
+                        fontSize = summaryFontSize.sp,
+                        lineHeight = summaryLineHeight.sp,
+                    ),
                     color = statusColor.copy(alpha = textAlpha),
                 )
                 Spacer(Modifier.weight(1f))
@@ -202,7 +259,7 @@ internal fun ActivitySection(
                     icon = DdIcons.ChevronRight,
                     modifier = Modifier.graphicsLayer { rotationZ = rotation.value },
                     tint = colors.inkTertiary.copy(alpha = DdAlpha.Secondary),
-                    size = 13.dp,
+                    size = chevronSize,
                 )
                 Spacer(Modifier.width(DdSpacing.Xxs))
             }
@@ -268,6 +325,15 @@ internal fun ActivitySection(
 }
 
 private const val ToolGroupMinCount = 3
+
+private val ActivityIconSize = 15.dp
+private val ActivityIconRowWidth = 21.dp
+private val ActivityRunningChevronSize = 13.dp
+private val ActivityDoneChevronSize = 12.dp
+private const val ActivityRunningFontSize = 16f
+private const val ActivityRunningLineHeight = 26f
+private const val ActivityDoneFontSize = 13f
+private const val ActivityDoneLineHeight = 18f
 
 private sealed interface ProcessNode {
     data class Single(val step: AssistantStep) : ProcessNode

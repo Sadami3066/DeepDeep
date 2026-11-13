@@ -57,6 +57,7 @@ internal object SyntheticDdp {
         entryClass: String? = ENTRY_CLASS,
         publisherKeyId: String? = null,
         minHostVersion: String? = null,
+        themes: List<String> = emptyList(),
     ): String = buildString {
         append("{\n")
         append("  \"id\": \"").append(id).append("\",\n")
@@ -72,7 +73,13 @@ internal object SyntheticDdp {
         }
         append("  \"provides\": { \"tools\": [")
         append(tools.joinToString(", ") { "\"$it\"" })
-        append("] }\n")
+        append("]")
+        if (themes.isNotEmpty()) {
+            append(", \"themes\": [")
+            append(themes.joinToString(", ") { "\"$it\"" })
+            append("]")
+        }
+        append(" }\n")
         append("}")
     }
 

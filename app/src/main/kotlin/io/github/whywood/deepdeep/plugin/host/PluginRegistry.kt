@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.plugin.api.PromptOverride
 import io.github.whywood.deepdeep.plugin.api.PluginUiContributions
 import io.github.whywood.deepdeep.plugin.api.PromptSection
 import io.github.whywood.deepdeep.plugin.api.SlotBinding
+import io.github.whywood.deepdeep.theme.PluginThemeSource
 
 internal enum class PluginPhase {
     INSTALLED,
@@ -52,6 +53,7 @@ internal data class PluginDescriptor(
     val phase: PluginPhase = PluginPhase.INSTALLED,
     val error: String? = null,
     val contributions: PluginContributions = PluginContributions.Empty,
+    val themeSource: PluginThemeSource? = null,
 ) {
     val id: String get() = manifest.id
 }
@@ -111,6 +113,7 @@ internal class PluginRegistrySnapshot(
     val bindings: List<PluginBindingEntry>
     val pages: List<PluginPageEntry>
     val composerActions: List<PluginComposerActionEntry>
+    val themeSources: List<PluginThemeSource>
     val conflicts: List<PluginConflict>
 
     init {
@@ -157,6 +160,7 @@ internal class PluginRegistrySnapshot(
         composerActions = ui.flatMap { entry ->
             entry.contributions.composerActions.map { PluginComposerActionEntry(entry.pluginId, it) }
         }
+        themeSources = plugins.mapNotNull { it.themeSource }
         conflicts = buildList {
             collectConflicts(PluginConflictKind.TOOL, toolOwners, this)
             collectConflicts(PluginConflictKind.SKILL, skillOwners, this)

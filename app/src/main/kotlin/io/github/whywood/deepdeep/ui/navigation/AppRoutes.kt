@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.ui.navigation.routes.WebSearchRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.ChatSettingsRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FilesRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.FontsRoute
+import io.github.whywood.deepdeep.ui.navigation.routes.ThemeRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PersonalizationRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginPageRoute
 import io.github.whywood.deepdeep.ui.navigation.routes.PluginsRoute
@@ -124,6 +125,8 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
         AppDestination.Privacy -> AgreementScreen(onBack = onBack)
 
         AppDestination.AssistantSettings -> AssistantSettingsScreen(onBack = onBack)
+
+        AppDestination.Theme -> ThemeRoute(dependencies, onBack)
 
         AppDestination.Fonts -> FontsRoute(host.ui, onBack)
 

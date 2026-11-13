@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.plugin.host.PluginRecord
 import io.github.whywood.deepdeep.plugin.host.PluginRuntimeFacts
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecord
 import io.github.whywood.deepdeep.plugin.host.external.LoadedPluginHandle
+import io.github.whywood.deepdeep.theme.PluginThemeSource
 import kotlinx.coroutines.CoroutineScope
 
 internal class ManagedPlugin(
@@ -26,6 +27,7 @@ internal class ManagedPlugin(
     var failure: String? = null,
     var materializationFailure: String? = null,
     var materialized: Boolean = false,
+    var themeSource: PluginThemeSource? = null,
 ) {
     fun view(record: PluginRecord): PluginRuntimeView = PluginRuntimeView(
         record = record,
@@ -41,6 +43,7 @@ internal class ManagedPlugin(
         failure = failure,
         materializationFailure = materializationFailure,
         materialized = materialized,
+        themeSource = themeSource,
     )
 }
 
@@ -58,6 +61,7 @@ internal data class PluginRuntimeView(
     val failure: String?,
     val materializationFailure: String?,
     val materialized: Boolean,
+    val themeSource: PluginThemeSource?,
 ) {
     val id: String get() = record.id
 
@@ -80,4 +84,5 @@ internal fun PluginRuntimeView.toDescriptor(): PluginDescriptor = PluginDescript
     phase = phase,
     error = record.lastError,
     contributions = contributions,
+    themeSource = themeSource,
 )

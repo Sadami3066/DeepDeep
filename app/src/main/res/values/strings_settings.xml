@@ -40,7 +40,14 @@
     <string name="settings_provider">服务商</string>
     <string name="settings_access">系统访问</string>
     <string name="settings_android">安卓配置</string>
-    <string name="settings_theme_preset">主题风格</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_builtin">内置主题</string>
+    <string name="settings_theme_from_plugins">来自插件</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_theme_auto">自动</string>
+    <string name="settings_theme_current">当前</string>
+    <string name="settings_theme_empty">安装并启用带主题的插件后，主题会显示在这里。</string>
     <string name="settings_theme_preset_system">跟随系统</string>
     <string name="settings_theme_preset_deepdeep">DeepDeep</string>
     <string name="settings_theme_preset_santorini">Santorini</string>

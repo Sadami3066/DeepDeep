@@ -25,10 +25,9 @@ import io.github.whywood.deepdeep.core.resolveAttachmentRoot
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OverlayEntryMode
 import io.github.whywood.deepdeep.data.UiPreferences
-import io.github.whywood.deepdeep.design.DeepDeepTheme
-import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.service.AgentService
+import io.github.whywood.deepdeep.theme.HostTheme
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.ui.common.chat.AttachmentSource
@@ -89,9 +88,6 @@ class AssistantOverlayActivity : ComponentActivity() {
                 }
                 controller.start()
             }
-            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(
-                initialValue = ThemePreset.DEEP_DEEP,
-            )
             val autoSpeak by graph.voicePreferences.autoSpeak.collectAsStateWithLifecycle(
                 initialValue = false,
             )
@@ -148,7 +144,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                 }
             }
 
-            DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
+            HostTheme(controller = graph.themeController, fontStyle = fontStyle) {
                 ProvidePluginManager(graph.pluginManager) {
                     ProvideHostFiles(graph.hostFiles) {
                 AssistantOverlayScreen(

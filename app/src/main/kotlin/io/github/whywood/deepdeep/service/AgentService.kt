@@ -104,7 +104,7 @@ class AgentService : Service() {
             events = graph.conversationStore.events,
             questionCenter = graph.questionCenter,
             preferences = FloatingWindowPreferences(this),
-            themePreset = graph.themePreferences.preset,
+            themeController = graph.themeController,
             fontStyle = graph.fontPreferences.read(),
             virtualScreenProvider = { VirtualScreenRuntime.engine() },
             onOpenApp = { AppVisibility.bringToFront(this) },

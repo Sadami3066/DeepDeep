@@ -11,6 +11,7 @@ import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
+import io.github.whywood.deepdeep.theme.PluginThemeSource
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.JsonObject
@@ -55,6 +56,8 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
             val page = pages.firstOrNull { it.id == entry.action.id } ?: pages.firstOrNull() ?: return@mapNotNull null
             PluginComposerActionUi(entry.pluginId, entry.action, page.id)
         }
+
+    override fun installedThemes(): List<PluginThemeSource> = registrySnapshot.themeSources
 
     override fun resolveText(text: LocalizedText): String = textResolver.resolve(text)
 

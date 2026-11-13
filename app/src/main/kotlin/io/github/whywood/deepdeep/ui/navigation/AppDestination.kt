@@ -54,6 +54,11 @@ sealed interface AppDestination {
         override val depth: Int = 2
     }
 
+    data object Theme : AppDestination {
+        override val routeKey: String = "settings/theme"
+        override val depth: Int = 2
+    }
+
     data object Fonts : AppDestination {
         override val routeKey: String = "settings/fonts"
         override val depth: Int = 2
@@ -221,6 +226,7 @@ sealed interface AppDestination {
             routeKey == Archived.routeKey -> Archived
             routeKey == SystemAccess.routeKey -> SystemAccess
             routeKey == Personalization.routeKey -> Personalization
+            routeKey == Theme.routeKey -> Theme
             routeKey == Fonts.routeKey -> Fonts
             routeKey == ChatSettings.routeKey -> ChatSettings
             routeKey == UsageHabits.routeKey -> UsageHabits

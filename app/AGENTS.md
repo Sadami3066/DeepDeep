@@ -24,6 +24,7 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 | [ui/](src/main/kotlin/io/github/whywood/deepdeep/ui/AGENTS.md) | 全部 Compose 页面与组件、导航、抽屉 |
 | [conversation/](src/main/kotlin/io/github/whywood/deepdeep/conversation/AGENTS.md) | 会话状态投影：runtime 事件 → ConversationState 的纯函数与文案 |
 | [data/](src/main/kotlin/io/github/whywood/deepdeep/data/AGENTS.md) | 偏好、附件、技能、迁移等本地存储 |
+| [theme/](src/main/kotlin/io/github/whywood/deepdeep/theme/AGENTS.md) | 宿主主题：内置/插件主题包解析、选择与调色板缓存、全应用主题根 |
 | [plugin/](src/main/kotlin/io/github/whywood/deepdeep/plugin/AGENTS.md) | 外部 `.ddp` 插件系统（装载、启停、贡献、更新）；插件工程在上级 `plugins/` 仓库 |
 | [market/](src/main/kotlin/io/github/whywood/deepdeep/market/AGENTS.md) | 市场数据层：远程签名索引、插件/技能/连接器条目解析与安装流水线 |
 | [service/](src/main/kotlin/io/github/whywood/deepdeep/service/AGENTS.md) | 前台服务、通知中心、无障碍服务 |
@@ -42,4 +43,5 @@ Android 应用层：唯一 Activity + Compose 界面、全局依赖装配、系�
 - 新页面：`ui/navigation/` 加 `AppDestination` 与 `AppRouteContent` 分支，Screen 放 `ui/<feature>/`，状态放同目录 ViewModel/Holder；包级 import 受 `verifyPackageBoundaries` 约束（feature 之间不互引，`common`/`navigation` 例外，ui 不许 import AppGraph/DeepDeepApplication）。
 - 界面不直接调用 DeepDeep SDK，一切经 runtime 的 `AgentRuntimeHost` 与其事件流；插件工具、MCP 工具由 runtime 注册，UI 只渲染。
 - 用户可见文案一律进 `res/values*/strings_*.xml`（默认中文，`values-en` 同步）；插件文案走 `AndroidPluginStrings`，不在 Kotlin 里拼中文。
+- 主题只经 `ThemeController` 选择与刷新，界面根统一用 `HostTheme`；插件主题只读安装目录 `assets/themes.json`，不执行插件代码。
 - 测试在 `src/test/kotlin` 镜像包结构（JUnit4 + coroutines-test，替身优先）：状态与纯逻辑有单测，界面外观靠手机截图验收；`src/androidTest/` 是设备测试（工具契约、图片/头像、日历、网络策略、插件端到端与二进制回归），需连真机/模拟器跑，`.ddp` 设备夹具在 `src/androidTest/assets/plugin-fixtures/`（见该目录 README）。

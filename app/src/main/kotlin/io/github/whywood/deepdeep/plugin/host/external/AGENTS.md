@@ -18,7 +18,7 @@
 | `ExternalPluginRecordStore.kt` | `files/plugins/plugins.json` schemaVersion 4：非 v4/损坏时备份 `plugins.json.v2.bak` 后破坏式重建，原子写，`load/get/records/upsert/remove/setEnabled/mutate`；旧 v4 文件缺 previous\*/pending\*/*phase* 字段时按 null/忽略读取，不 bump schema |
 | `PluginInstaller.kt` | 安装编排：`inspect`（确认页数据）、`install`（新装/更新暂存、发布者确认、id/工具名冲突、版本冲突）、pending 提交/丢弃（commit 写 previous\* 并清理更旧版本目录）、启用、卸载、`markFailure`；装载前 sha256 复核在 `LoadedPluginHandle` |
 | `PluginInstallModels.kt` | 安装结果与状态 DTO：`InstallRejection`/`InspectionResult`/`InstallResult`/`BundleState`/`CommitResult` |
-| `PluginPackageStager.kt` | 候选读取（DdpPackage + 验签 + `PluginManifestCodec.decode`）、staging 解包到 `<version>/{bundle,assets,lib}`、bundle sha256 复核、版本目录清理 |
+| `PluginPackageStager.kt` | 候选读取（DdpPackage + 验签 + `PluginManifestCodec.decode`）、主题包校验（`assets/themes.json` 与 `provides.themes` 一致性，失败 `THEMES_INVALID`）、staging 解包到 `<version>/{bundle,assets,lib}`、bundle sha256 复核、版本目录清理 |
 | `ExternalPluginRecovery.kt` | 激活恢复原语：`<id>/activation.json` marker（版本/连续次数/时间）用于激活中断与启动崩溃判定；`rollbackToPrevious`（校验 previous bundle 后切回并删失败版本目录）；`pruneVersions` 只保留 active/pending/previous 与 data |
 | `LoadedPluginHandle.kt` | 外部插件装载句柄：校验 bundle sha256，`InMemoryDexClassLoader` 优先、只读 jar + `PathClassLoader` 兜底，实例化 `entryClass`；装载期任何 `Throwable` 归一为 `PluginLoadException`（`CancellationException` 重抛），旧 API level 抛 `PluginApiLevelRejectedException`，单插件链接错误不中断宿主启动；`close()` 调 `plugin.close()` 并释放引用/删除兜底 jar |
 | `JsonFiles.kt` | JSON 原子写（tmp + ATOMIC_MOVE，失败退 REPLACE_EXISTING）与备份工具 |
@@ -37,6 +37,7 @@
 - 安装暂存流程：解压到 `<id>/.staging-<version>-<ts>` → 复制并复核 bundle → 重命名到 `<id>/<version>`；新装写 `enabled=manifest.defaultEnabled`，更新只写 `pendingVersion`/`pendingBundleSha256`，由激活协议在下次启动 commit 后生效。
 - `commitPending()` 把旧 active（version/installPath/sha256）写入 `previous*` 并删除更早的 previous 版本目录；`rollbackToPrevious()` 反向切回并清理失败版本；`pruneVersions()` 统一清理未被引用的版本目录与 `.staging-*`。
 - 激活 marker `<id>/activation.json`：激活开始前写、任意终态清除；进程死在激活中会残留，宿主下次启动据此跳过自动激活并给出「上次激活中断」，`attempts` 用于连续启动崩溃自动禁用。
+- 主题包在候选读取阶段校验：`provides.themes` 非空时必须有 `assets/themes.json`，两边 id 集合完全一致；schema/token/颜色/对比度/体积/数量错误都以 `THEMES_INVALID` 拒绝安装，安装后主题由宿主直接读取，不执行插件代码。
 - `PluginInstaller` 的冲突检查叠加 `HostToolNames`（引擎/宿主/SDK 保留工具名）；工具名冲突只看 manifest `provides.tools`。
 - `plugins.json` 只由 v4 `ExternalPluginRecordStore` 读写；读到非 v4 或损坏文件时先备份 `.v2.bak` 再破坏式重建，不做数据迁移。
 - 签名规范变更会同时影响 plugins 仓库模板的 `signPlugin` 与 `docs/PLUGIN_DEV.md`；改格式前先同步 contract-owner，并升 `.ddp` 格式版本。

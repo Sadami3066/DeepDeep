@@ -122,6 +122,16 @@
     <string name="chat_notice_goal_blocked">目标已阻塞</string>
     <string name="chat_notice_interrupted_questions">上次有 %1$d 个提问未完成，已失效；可以让我继续</string>
     <string name="chat_notice_interrupted_run">上次有 %1$d 次运行被中断，结果未知；可以让我继续</string>
+    <string name="chat_notice_capabilities_changed">工具与技能已更新</string>
+    <string name="chat_notice_capabilities_tools_added">+%1$d 工具</string>
+    <string name="chat_notice_capabilities_tools_removed">−%1$d 工具</string>
+    <string name="chat_notice_capabilities_skills_added">+%1$d 技能</string>
+    <string name="chat_notice_capabilities_skills_removed">−%1$d 技能</string>
+    <string name="chat_notice_capabilities_added_tools">新增工具：%1$s</string>
+    <string name="chat_notice_capabilities_removed_tools">移除工具：%1$s</string>
+    <string name="chat_notice_capabilities_added_skills">新增技能：%1$s</string>
+    <string name="chat_notice_capabilities_removed_skills">移除技能：%1$s</string>
+    <string name="chat_notice_capabilities_separator">、</string>
     <string name="chat_cmd_compact">压缩上下文</string>
     <string name="chat_cmd_compact_desc">立即压缩较早的历史，释放上下文</string>
     <string name="chat_cmd_goal">目标</string>

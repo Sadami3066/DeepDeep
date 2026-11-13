@@ -37,7 +37,14 @@
     <string name="settings_provider">Provider</string>
     <string name="settings_access">System access</string>
     <string name="settings_android">Android settings</string>
-    <string name="settings_theme_preset">Theme</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_builtin">Built-in</string>
+    <string name="settings_theme_from_plugins">From plugins</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_auto">Automatic</string>
+    <string name="settings_theme_current">Current</string>
+    <string name="settings_theme_empty">Themes from installed and enabled plugins appear here.</string>
     <string name="settings_theme_preset_system">Follow system</string>
     <string name="settings_theme_preset_deepdeep">DeepDeep</string>
     <string name="settings_theme_preset_santorini">Santorini</string>

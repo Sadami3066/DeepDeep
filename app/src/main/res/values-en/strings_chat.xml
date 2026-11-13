@@ -122,6 +122,16 @@
     <string name="chat_notice_goal_blocked">Goal blocked</string>
     <string name="chat_notice_interrupted_questions">Questions interrupted from the last session: %1$d. They can no longer be answered; tell me to continue</string>
     <string name="chat_notice_interrupted_run">Runs interrupted from the last session: %1$d. Their result is unknown; tell me to continue</string>
+    <string name="chat_notice_capabilities_changed">Tools &amp; skills updated</string>
+    <string name="chat_notice_capabilities_tools_added">+%1$d tools</string>
+    <string name="chat_notice_capabilities_tools_removed">−%1$d tools</string>
+    <string name="chat_notice_capabilities_skills_added">+%1$d skills</string>
+    <string name="chat_notice_capabilities_skills_removed">−%1$d skills</string>
+    <string name="chat_notice_capabilities_added_tools">Added tools: %1$s</string>
+    <string name="chat_notice_capabilities_removed_tools">Removed tools: %1$s</string>
+    <string name="chat_notice_capabilities_added_skills">Added skills: %1$s</string>
+    <string name="chat_notice_capabilities_removed_skills">Removed skills: %1$s</string>
+    <string name="chat_notice_capabilities_separator">, </string>
     <string name="chat_cmd_compact">Compact context</string>
     <string name="chat_cmd_compact_desc">Condense older history now to free context</string>
     <string name="chat_cmd_goal">Goal</string>

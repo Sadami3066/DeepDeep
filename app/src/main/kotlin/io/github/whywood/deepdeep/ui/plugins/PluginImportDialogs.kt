@@ -188,5 +188,9 @@ private fun providedSummary(inspection: ExternalInspectionUi): String = buildStr
         if (isNotEmpty()) append(" · ")
         append(provides.pages.joinToString(", "))
     }
+    if (provides.themes.isNotEmpty()) {
+        if (isNotEmpty()) append(" · ")
+        append(provides.themes.joinToString(", "))
+    }
     if (isEmpty()) append("-")
 }

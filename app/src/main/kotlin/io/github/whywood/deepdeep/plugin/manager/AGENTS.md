@@ -11,13 +11,13 @@
 | `PluginManagerCommands.kt` | 用户/系统命令：enable/disable、卸载、重试激活、回滚、busy 互斥、错误状态 |
 | `PluginRuntimeRegistry.kt` | 唯一状态写入点（状态闸门）：`PluginRecord`（用户意图）+ `ManagedPlugin`（运行期事实）表，串行写、发布不可变 `PluginRuntimeView`、派生 descriptor |
 | `PluginHostModels.kt` | `ManagedPlugin` 运行期事实、`PluginRuntimeView` 不可变快照、`toDescriptor` |
-| `PluginContributionMaterializer.kt` | 一次物化：每次 refresh 每插件每方法最多调用一次，结果写入状态闸门；声明 `prompt` 且实现 `PromptOverridePlugin` 时收集 prompt override |
+| `PluginContributionMaterializer.kt` | 一次物化：每次 refresh 每插件每方法最多调用一次，结果写入状态闸门；声明 `prompt` 且实现 `PromptOverridePlugin` 时收集 prompt override；已安装且启用的插件按 manifest `provides.themes` 暴露 `PluginThemeSource`（只读安装目录，不执行插件代码） |
 | `PluginLifecycle.kt` | 每插件 `SupervisorJob` scope、`PluginHostFactory`、enable/disable/uninstall 收尾、技能同步 |
 | `PluginActivationProtocol.kt` | 激活协议 prepare→probe→commit→swap 与失败矩阵 |
 | `PluginSessionHooks.kt` | 会话 hooks 绑定（`SessionBinding`）、每 `SessionBinding` 一次 `contributionsFor`（工具与会话 hooks 共用）、per-session hook source、run 级冻结、运行期/SDK 事件派发 |
 | `PluginUiProjection.kt` | UI 状态投影：只读 record+runtime+descriptor，不调用插件 |
 | `PluginRecoveryPolicy.kt` | 崩溃恢复纯策略：激活中断（marker attempts）与同版本连续启动次数 → 继续/需手动重试/自动禁用 |
-| `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、启停/卸载、导入/更新、槽位、页面、composer 动作、恢复、无会话系统事件入口） |
+| `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、启停/卸载、导入/更新、槽位、页面、composer 动作、已安装主题来源、恢复、无会话系统事件入口） |
 | `PluginSystemEvents.kt` | 无会话系统事件派发：通知接收/动作、后台任务、分享、深链、应用前后台；按 capability 与 manifest `components` 过滤，串行队列 + 5s 超时，失败只记日志 |
 | `PluginUiModels.kt` | UI 状态模型：快照（含 pages）/相位/可用性/恢复结果 |
 | `PluginExternalUiModels.kt` | 外部包 UI 模型：导入检查/安装结果 |

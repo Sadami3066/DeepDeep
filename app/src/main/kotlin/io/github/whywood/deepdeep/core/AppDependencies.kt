@@ -44,6 +44,7 @@ import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootfsBootstrap
+import io.github.whywood.deepdeep.theme.ThemeController
 import java.io.File
 
 interface AppDependencies :
@@ -117,6 +118,8 @@ interface FeatureDependencies {
     val skillCatalog: SkillCatalog
 
     val pluginManager: PluginManagerFacade
+
+    val themeController: ThemeController
 
     val marketRepository: MarketRepository
 

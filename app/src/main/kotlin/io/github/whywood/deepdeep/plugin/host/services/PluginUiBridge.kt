@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.JsonObject
 
-internal data class PluginPageRequest(
+data class PluginPageRequest(
     val pluginId: String,
     val pageId: String,
     val arguments: JsonObject = JsonObject(emptyMap()),
@@ -21,9 +21,12 @@ internal data class PluginPageRequest(
 
 internal object PluginUiBridge {
     private val pageRequests = MutableStateFlow<PluginPageRequest?>(null)
+    private val sheetRequests = MutableStateFlow<PluginPageRequest?>(null)
     private val closeRequests = MutableStateFlow(false)
 
     val pendingPage: StateFlow<PluginPageRequest?> = pageRequests.asStateFlow()
+
+    val pendingSheet: StateFlow<PluginPageRequest?> = sheetRequests.asStateFlow()
 
     val pendingClosePage: StateFlow<Boolean> = closeRequests.asStateFlow()
 
@@ -39,6 +42,20 @@ internal object PluginUiBridge {
 
     fun consumePage(request: PluginPageRequest) {
         pageRequests.compareAndSet(request, null)
+    }
+
+    fun requestSheet(
+        pluginId: String,
+        pageId: String,
+        arguments: JsonObject = JsonObject(emptyMap()),
+    ) {
+        require(pluginId.isNotBlank()) { "plugin page sheet request requires a plugin id" }
+        require(pageId.isNotBlank()) { "plugin page sheet request requires a page id" }
+        sheetRequests.value = PluginPageRequest(pluginId, pageId, arguments)
+    }
+
+    fun consumeSheet(request: PluginPageRequest) {
+        sheetRequests.compareAndSet(request, null)
     }
 
     fun requestClosePage() {

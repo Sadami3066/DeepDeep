@@ -128,7 +128,7 @@ internal fun ChatTurn(
 ) {
     val notice = message.notice
     if (notice != null) {
-        NoticeRow(notice)
+        NoticeRow(notice, message.id)
         return
     }
     val summary = message.summary
@@ -265,9 +265,17 @@ private fun MessageSummaryCard(messageId: Long, summary: MessageSummary) {
 }
 
 @Composable
-private fun NoticeRow(notice: TurnNotice) {
+private fun NoticeRow(notice: TurnNotice, messageId: Long) {
     when (notice) {
         is TurnNotice.GoalRound -> GoalRoundNotice(notice)
+
+        is TurnNotice.CapabilitiesChanged -> CapabilitiesNotice(
+            messageId = messageId,
+            toolsAdded = notice.delta.toolsAdded,
+            toolsRemoved = notice.delta.toolsRemoved,
+            skillsAdded = notice.delta.skillsAdded,
+            skillsRemoved = notice.delta.skillsRemoved,
+        )
 
         is TurnNotice.JobFinished -> JobFinishedNotice(notice)
 

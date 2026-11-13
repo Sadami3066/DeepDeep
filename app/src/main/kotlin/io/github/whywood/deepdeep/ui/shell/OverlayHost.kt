@@ -9,6 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,9 +27,18 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSpacing
+import io.github.whywood.deepdeep.design.DdText
+import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.plugin.api.PluginPagePresentation
+import io.github.whywood.deepdeep.plugin.host.services.PluginPageRequest
+import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.plugins.PluginPageHost
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.JobSnapshot
@@ -56,6 +67,7 @@ sealed interface ShellOverlay {
 }
 
 data class ShellOverlayState(
+    val pluginPage: PluginPageRequest? = null,
     val workspaceCreate: ShellOverlay.WorkspaceCreate? = null,
     val workspaceRename: ShellOverlay.WorkspaceRename? = null,
     val workspaceDelete: ShellOverlay.WorkspaceDelete? = null,
@@ -65,6 +77,7 @@ data class ShellOverlayState(
 )
 
 data class ShellOverlayActions(
+    val onDismissPluginPage: () -> Unit,
     val onConfirmWorkspaceCreate: (String, String?) -> Unit, val onDismissWorkspaceCreate: () -> Unit,
     val onConfirmWorkspaceRename: (String) -> Unit, val onDismissWorkspaceRename: () -> Unit,
     val onConfirmWorkspaceDelete: () -> Unit, val onDismissWorkspaceDelete: () -> Unit,
@@ -107,7 +120,6 @@ fun resolveOverlays(state: ShellOverlayState): List<ShellOverlay> = buildList {
     state.usage?.let(::add)
     state.jobs?.let(::add)
 }
-
 fun resolveOverlay(state: ShellOverlayState): ShellOverlay? = resolveOverlays(state).lastOrNull()
 
 @Composable
@@ -159,6 +171,38 @@ internal fun OverlayHost(
                 )
 
             }
+        }
+    }
+    overlays.pluginPage?.let { request ->
+        key(request) {
+            PluginPageSheet(request, overlayActions.onDismissPluginPage)
+        }
+    }
+}
+
+@Composable
+private fun PluginPageSheet(request: PluginPageRequest, onDismiss: () -> Unit) {
+    val colors = deepDeepColors()
+    DdSheet(onDismiss = onDismiss) {
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            PluginPageHost(
+                pluginId = request.pluginId,
+                pageId = request.pageId,
+                arguments = request.arguments,
+                presentation = PluginPagePresentation.SHEET,
+                fallback = {
+                    Box(
+                        Modifier.fillMaxSize().padding(DdSpacing.Lg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DdText(
+                            text = stringResource(R.string.plugins_page_unavailable),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                    }
+                },
+            )
         }
     }
 }

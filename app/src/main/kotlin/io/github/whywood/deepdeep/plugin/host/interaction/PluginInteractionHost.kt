@@ -3,10 +3,10 @@ package io.github.whywood.deepdeep.plugin.host.interaction
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import io.github.whywood.deepdeep.plugin.api.PluginActivityResult
 import io.github.whywood.deepdeep.plugin.api.PluginPageContext
+import io.github.whywood.deepdeep.plugin.api.PluginPagePresentation
 import io.github.whywood.deepdeep.plugin.api.PluginPickedFile
 import io.github.whywood.deepdeep.plugin.api.UiChooseRequest
 import io.github.whywood.deepdeep.plugin.api.UiConfirmRequest
@@ -18,6 +18,7 @@ import io.github.whywood.deepdeep.plugin.api.UiTimePickRequest
 import io.github.whywood.deepdeep.plugin.host.components.PluginHostActivity
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
 import io.github.whywood.deepdeep.service.AppVisibility
+import io.github.whywood.deepdeep.theme.HostThemeRuntime
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
@@ -38,6 +39,7 @@ import kotlinx.serialization.json.JsonObject
 internal data class HostPluginPageContext(
     override val pageId: String,
     override val arguments: JsonObject,
+    override val presentation: PluginPagePresentation = PluginPagePresentation.PAGE,
 ) : PluginPageContext
 
 internal data class ActivePluginPage(
@@ -113,8 +115,7 @@ private class PluginInteractionImpl(
         get() = AppVisibility.foreground
 
     override val dark: Boolean
-        get() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-            Configuration.UI_MODE_NIGHT_YES
+        get() = HostThemeRuntime.dark
 
     override fun launchMainActivity() {
         PluginInteractionHost.launchMainActivity(context)
@@ -206,6 +207,11 @@ private class PluginInteractionImpl(
             PluginUiBridge.requestPage(pluginId, pageId, arguments)
             PluginInteractionHost.launchMainActivity(context)
         }
+    }
+
+    override fun openPageSheet(pageId: String, arguments: JsonObject) {
+        PluginUiBridge.requestSheet(pluginId, pageId, arguments)
+        PluginInteractionHost.launchMainActivity(context)
     }
 
     override fun closePage(result: JsonObject?) {

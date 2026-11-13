@@ -110,6 +110,7 @@ internal object PluginManifestCodec {
                 skills = json.stringList("skills"),
                 uiSlots = json.stringList("uiSlots"),
                 pages = json.stringList("pages"),
+                themes = json.stringList("themes"),
             )
 
             private fun parseIcon(raw: String?): IconRef? = raw

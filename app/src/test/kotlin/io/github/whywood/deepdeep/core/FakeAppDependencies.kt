@@ -44,6 +44,7 @@ import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.service.ProcessRuntime
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootfsBootstrap
+import io.github.whywood.deepdeep.theme.ThemeController
 import java.io.File
 
 internal class FakeAppDependencies(
@@ -109,6 +110,8 @@ internal class FakeAppDependencies(
     override val skillCatalog: SkillCatalog get() = unavailable("skillCatalog")
 
     override val pluginManager: PluginManagerFacade get() = unavailable("pluginManager")
+
+    override val themeController: ThemeController get() = unavailable("themeController")
 
     override val marketRepository: MarketRepository get() = unavailable("marketRepository")
 

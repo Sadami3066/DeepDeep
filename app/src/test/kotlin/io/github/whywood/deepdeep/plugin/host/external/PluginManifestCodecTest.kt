@@ -38,7 +38,8 @@ class PluginManifestCodecTest {
           "provides": {
             "tools": ["sample_echo"],
             "uiSlots": ["tool.card.content:sample_echo"],
-            "pages": ["home"]
+            "pages": ["home"],
+            "themes": ["aurora"]
           }
         }
         """.trimIndent(),
@@ -56,6 +57,7 @@ class PluginManifestCodecTest {
         assertEquals(listOf("sample_echo"), manifest.provides.tools)
         assertEquals(listOf("tool.card.content:sample_echo"), manifest.provides.uiSlots)
         assertEquals(listOf("home"), manifest.provides.pages)
+        assertEquals(listOf("aurora"), manifest.provides.themes)
         assertEquals(setOf(PluginCapability.APP, PluginCapability.FILES, PluginCapability.NOTIFICATIONS), manifest.capabilities)
         assertEquals(true, manifest.defaultEnabled)
         assertNull(manifest.ui)

@@ -41,13 +41,13 @@
 | `StorageMigration.kt` | 旧目录迁到 home/workspaces 并重写会话 JSONL 的 cwd |
 | `StorageMountStore.kt` | 公共存储挂载目录 `files/storage-mounts.json`：`StorageMount(id,name,description,path)`、最多 20 个、名称≤32/说明≤160、限定 `/storage/emulated/0/`、原子写 |
 | `WorkspaceToolPolicyStore.kt` | 工作区工具策略 `files/workspace-tool-policies.json`：按 canonical cwd 存 `WorkspaceToolPolicy(skills, plugins, mcpServers)`，记录该工作区不继承的全局技能名、插件 id 与 MCP 服务器名；Mutex + 原子写 |
-| `ThemePreferences.kt` | 深浅色主题 DataStore |
+| `ThemePreferences.kt` | 主题选择与已解析调色板缓存（SharedPreferences，冷启动首帧可读；插件主题失效时由 ThemeController 回退 system） |
 | [update/](update/AGENTS.md) | 应用内更新：GitHub 最新 Release 检查、下载校验与系统安装（详见子包文档） |
 | `VoicePreferences.kt` | 语音自动朗读开关 DataStore |
 
 ## 要点
 
-- 偏好默认 DataStore（一个 store 文件一个 `preferencesDataStore`），Flow 都 catch IOException 回退默认值；只有 Font/Language/Onboarding 仍是 SharedPreferences，新增偏好别再照抄。
+- 偏好默认 DataStore（一个 store 文件一个 `preferencesDataStore`），Flow 都 catch IOException 回退默认值；只有 Font/Language/Onboarding/Theme 用 SharedPreferences（Theme 需要冷启动同步读调色板缓存），新增偏好别再照抄。
 - 技能目录分三层：`files/skills` 是安装仓库、`agentDir/skills` 是全局启用副本、`home` 与各工作区 `.pi/skills` 是项目级；`.deepdeep-plugin` marker 表示目录归插件所有，SkillRepository 不会把它导入仓库。
 - 迁移只在启动时跑一次且幂等：StorageMigration 用 `.storage-migrated` 标记并重写会话 JSONL 头里的 cwd，LegacyWorkspaceMigration 仅在 WorkspaceStore 为空时补数据；目录名是 home/workspaces，不是旧 workspace/projects。
 - 附件进入会话时以工作区绝对路径为 ID：AttachmentStore 把 Uri 拷进工作区 `attachments/` 并校验大小/空间/像素；分享入口先暂存到 cache 再走同一导入，暂存文件不进会话，历史靠 `<attachments>` 块还原路径。共享存储内的文件只在「共享存储」开关开启时按绝对路径解析，关闭后不再接受外部路径。

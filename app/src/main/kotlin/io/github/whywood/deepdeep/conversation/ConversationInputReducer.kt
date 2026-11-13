@@ -93,6 +93,39 @@ internal fun ConversationState.injectTurn(
     )
 }
 
+internal fun ConversationState.onCapabilitiesChanged(
+    event: RuntimeEvent.CapabilitiesChanged,
+    now: Long = System.currentTimeMillis(),
+): ConversationState {
+    if (event.delta.isEmpty) return this
+    val notice = TurnNotice.CapabilitiesChanged(event.delta)
+    val lastUserIndex = messages.indexOfLast { it.role == AssistantRole.USER }
+    val turnAssistantIndex = messages.indexOfLast { message ->
+        message.role == AssistantRole.ASSISTANT &&
+            message.streaming &&
+            (event.runId.isBlank() || message.runId == event.runId)
+    }
+    val insertIndex = if (
+        turnAssistantIndex > lastUserIndex &&
+        messages[turnAssistantIndex].steps.isEmpty()
+    ) {
+        lastUserIndex
+    } else {
+        messages.size
+    }
+    if (insertIndex < 0) return appendNotice(notice, now)
+    val noticeMessage = AssistantMessage(
+        id = nextMessageId(messages),
+        role = AssistantRole.ASSISTANT,
+        text = "",
+        status = MessageStatus.DONE,
+        startedAt = now,
+        finishedAt = now,
+        notice = notice,
+    )
+    return copy(messages = messages.toMutableList().apply { add(insertIndex, noticeMessage) })
+}
+
 internal fun ConversationState.appendNotice(
     notice: TurnNotice,
     now: Long = System.currentTimeMillis(),

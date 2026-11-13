@@ -19,6 +19,7 @@ import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AttachmentExport
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.exportShareIntent
+import io.github.whywood.deepdeep.plugin.host.services.PluginPageRequest
 import io.github.whywood.deepdeep.runtime.JobSnapshot
 import io.github.whywood.deepdeep.runtime.JobStatus
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 internal class AppOverlaysState {
     var attachmentSheetOpen by mutableStateOf(false)
     var cameraSheetOpen by mutableStateOf(false)
+    var pluginPage by mutableStateOf<PluginPageRequest?>(null)
     var previewAttachment by mutableStateOf<AttachmentRef?>(null)
     var previewRoot by mutableStateOf<File?>(null)
     var usageSheetOpen by mutableStateOf(false)
@@ -103,6 +105,7 @@ internal fun AppOverlays(
     }
     OverlayHost(
         overlays = ShellOverlayState(
+            pluginPage = overlays.pluginPage,
             workspaceCreate = ShellOverlay.WorkspaceCreate(
                 state.workspaces.map { it.name },
                 privateWorkspacesDir,
@@ -126,6 +129,7 @@ internal fun AppOverlays(
             jobs = ShellOverlay.Jobs(activeJobs, overlays.selectedJobId, overlays.jobOutput).takeIf { overlays.jobsSheetOpen },
         ),
         overlayActions = ShellOverlayActions(
+            onDismissPluginPage = { overlays.pluginPage = null },
             onConfirmWorkspaceCreate = { name, directory ->
                 overlays.workspaceCreateOpen = false
                 chatViewModel.createWorkspace(name, directory)

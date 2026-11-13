@@ -1,7 +1,6 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
 import android.content.Context
-import android.content.res.Configuration
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.api.AppInfo
 import io.github.whywood.deepdeep.plugin.api.AppInfoService
@@ -21,6 +20,7 @@ import io.github.whywood.deepdeep.plugin.api.UiService
 import io.github.whywood.deepdeep.plugin.api.UiTimePickRequest
 import io.github.whywood.deepdeep.plugin.host.events.HostPluginBusEvent
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteraction
+import io.github.whywood.deepdeep.theme.HostThemeRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -72,6 +72,15 @@ internal class UiPluginService(
         }
     }
 
+    override fun openPageSheet(pageId: String, arguments: JsonObject) {
+        val active = interaction
+        if (active != null) {
+            active.openPageSheet(pageId, arguments)
+        } else {
+            openPageWithArguments(pageId, arguments)
+        }
+    }
+
     override fun closePage(result: JsonObject?) {
         interaction?.closePage(result)
     }
@@ -79,10 +88,7 @@ internal class UiPluginService(
     override fun pageContext(): PluginPageContext? = interaction?.pageContext()
 
     override val isDark: Boolean
-        get() = interaction?.dark ?: context?.let { target ->
-            (target.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
-        } ?: false
+        get() = interaction?.dark ?: HostThemeRuntime.dark
 
     override suspend fun confirm(request: UiConfirmRequest): Boolean = interaction?.confirm(request) ?: false
 

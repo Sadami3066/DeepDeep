@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.runtime.memory.MemoryRecap
 import io.github.whywood.deepdeep.runtime.memory.MemoryStore
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.conversation.nextMessageId
+import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.BundledSkills
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
@@ -75,15 +76,19 @@ import io.github.whywood.deepdeep.runtime.MiniappStore
 import io.github.whywood.deepdeep.service.Diagnostics
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.service.ProcessRuntime
+import io.github.whywood.deepdeep.service.ProcessState
 import io.github.whywood.deepdeep.shell.LinuxEnvironment
 import io.github.whywood.deepdeep.shell.RootfsBootstrap
 import io.github.whywood.deepdeep.shell.shouldAutoInstallLinux
+import io.github.whywood.deepdeep.theme.ThemeCatalog
+import io.github.whywood.deepdeep.theme.ThemeController
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -197,6 +202,25 @@ class AppGraph(context: Context) : AppDependencies {
 
     override val pluginManager: PluginHostManager get() = pluginGraph.manager
 
+    private val themeCatalog by lazy { ThemeCatalog() }
+
+    override val themeController: ThemeController by lazy {
+        ThemeController(
+            context = uiContext,
+            preferences = themePreferences,
+            catalog = themeCatalog,
+            pluginSources = { pluginManager.installedThemes() },
+            language = {
+                val preference = LanguagePreferences(appContext).read()
+                if (preference == AppLanguage.SYSTEM) {
+                    appContext.resources.configuration.locales[0].language
+                } else {
+                    preference.tag
+                }
+            },
+        )
+    }
+
     override val marketRepository: MarketRepository by lazy {
         MarketRepositoryImpl(
             context = appContext,
@@ -214,6 +238,15 @@ class AppGraph(context: Context) : AppDependencies {
             if (!shouldAutoInstallLinux(environment.isSupported, environment.state.value)) return@launch
             runCatching { environment.install() }.onFailure {
                 Diagnostics.log(appContext, "app: linux environment preparation failed", it)
+            }
+        }
+        scope.launch {
+            combine(processRuntime.state, pluginManager.state) { process, _ -> process }.collect { state ->
+                if (state == ProcessState.STARTED) {
+                    runCatching { themeController.refresh() }.onFailure {
+                        Diagnostics.log(appContext, "app: theme refresh failed", it)
+                    }
+                }
             }
         }
         scope.launch {

@@ -17,13 +17,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.assistant.AssistantOverlayActivity
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OnboardingPreferences
@@ -32,8 +30,6 @@ import io.github.whywood.deepdeep.data.MAX_SHARE_STREAMS
 import io.github.whywood.deepdeep.data.SharePayload
 import io.github.whywood.deepdeep.data.parseSharePayload
 import io.github.whywood.deepdeep.deeplink.DeepLink
-import io.github.whywood.deepdeep.design.DeepDeepTheme
-import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.plugin.api.PluginCapability
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionHost
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteractionOverlay
@@ -41,6 +37,7 @@ import io.github.whywood.deepdeep.plugin.manager.PluginSharedStream
 import io.github.whywood.deepdeep.service.AgentService
 import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
+import io.github.whywood.deepdeep.theme.HostTheme
 import io.github.whywood.deepdeep.ui.common.ProvideHostFiles
 import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
@@ -72,16 +69,13 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermission()
         val initialFontStyle = graph.fontPreferences.read()
         setContent {
-            val preset by graph.themePreferences.preset.collectAsStateWithLifecycle(initialValue = ThemePreset.SYSTEM)
             var fontStyle by remember { mutableStateOf(initialFontStyle) }
-            val scope = rememberCoroutineScope()
-            DeepDeepTheme(preset = preset, fontStyle = fontStyle) {
+            HostTheme(controller = graph.themeController, fontStyle = fontStyle) {
                 ProvideHostFiles(graph.hostFiles) {
                     ProvidePluginManager(graph.pluginManager) {
                         Box(Modifier.fillMaxSize()) {
                             DeepDeepApp(
                                 graph = graph,
-                                themePreset = preset,
                                 fontStyle = fontStyle,
                                 openSessionId = pendingSessionId.value,
                                 onOpenSessionConsumed = { pendingSessionId.value = null },
@@ -96,7 +90,6 @@ class MainActivity : ComponentActivity() {
                                     graph.fontPreferences.save(style)
                                     fontStyle = style
                                 },
-                                onThemePresetChange = { value -> scope.launch { graph.themePreferences.setPreset(value) } },
                             )
                             PluginInteractionOverlay()
                         }
