@@ -45,7 +45,14 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             scope = deps.scope,
             language = language,
             servicesFactory = { pluginId, dataDir, manifest, pluginScope ->
-                buildPluginServices(pluginServices(pluginId, dataDir, pluginScope))
+                buildPluginServices(
+                    pluginServices(
+                        pluginId = pluginId,
+                        dataDir = dataDir,
+                        pluginScope = pluginScope,
+                        firstPageId = manifest.provides.pages.firstOrNull(),
+                    ),
+                )
                     .declaredOnly(manifest.capabilities)
             },
             skillStore = PluginSkillStore(
@@ -74,11 +81,17 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
         }
     }
 
-    private fun pluginServices(pluginId: String, dataDir: File, pluginScope: CoroutineScope): PluginServiceDependencies =
+    private fun pluginServices(
+        pluginId: String,
+        dataDir: File,
+        pluginScope: CoroutineScope,
+        firstPageId: String?,
+    ): PluginServiceDependencies =
         PluginServiceDependencies(
             context = deps.uiContext,
             scope = pluginScope,
             pluginId = pluginId,
+            pluginFirstPageId = firstPageId,
             pluginDataDir = dataDir,
             workspaceDir = deps.homeDir,
             versionName = BuildConfig.VERSION_NAME,

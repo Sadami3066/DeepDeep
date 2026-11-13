@@ -5,12 +5,16 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel as AndroidNotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import io.github.whywood.deepdeep.MainActivity
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.plugin.api.NotificationService
 import io.github.whywood.deepdeep.plugin.api.PluginNotification
@@ -21,6 +25,7 @@ internal class NotificationPluginService(
     private val context: Context,
     private val pluginId: String,
     private val notificationsEnabled: () -> Boolean,
+    private val firstPageId: String? = null,
 ) : NotificationService {
     private val manager = NotificationManagerCompat.from(context)
     private val posted = ConcurrentHashMap<String, PostedNotification>()
@@ -66,6 +71,9 @@ internal class NotificationPluginService(
             .setStyle(NotificationCompat.BigTextStyle().bigText(notification.body))
             .setOngoing(notification.ongoing)
             .setOnlyAlertOnce(true)
+        contentIntent()?.let { intent ->
+            builder.setContentIntent(intent).setAutoCancel(true)
+        }
         notification.progress?.let { progress ->
             builder.setProgress(100, progress.coerceIn(0, 100), false)
         }
@@ -76,6 +84,22 @@ internal class NotificationPluginService(
     private fun post(notification: Notification, id: String) {
         if (!enabled) return
         runCatching { manager.notify(notificationId(id), notification) }
+    }
+
+    private fun contentIntent(): PendingIntent? {
+        val pageId = firstPageId?.takeIf { it.isNotBlank() } ?: return null
+        return runCatching {
+            val intent = Intent(context, MainActivity::class.java)
+                .setAction(Intent.ACTION_VIEW)
+                .setData(Uri.parse("deepdeep://plugins/$pluginId/${Uri.encode(pageId)}"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            PendingIntent.getActivity(
+                context,
+                notificationId(pluginId),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }.getOrNull()
     }
 
     private fun kindOf(notification: PluginNotification): ChannelKind = when (notification.channel) {
