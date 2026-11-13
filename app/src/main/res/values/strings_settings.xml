@@ -346,4 +346,12 @@
     <string name="settings_custom_provider_discover_missing">先填写接口地址与 API Key</string>
     <string name="settings_custom_provider_discover_empty">接口没有返回可用模型</string>
     <string name="settings_custom_provider_discover_failed">获取模型失败，请检查地址与 Key</string>
+    <string name="settings_crash_log">崩溃记录</string>
+    <string name="settings_crash_log_title">崩溃记录</string>
+    <string name="settings_crash_log_subtitle">最近一次崩溃 · %1$s</string>
+    <string name="settings_crash_log_hint">发送给开发者可以帮助定位问题。</string>
+    <string name="settings_crash_log_copy">复制</string>
+    <string name="settings_crash_log_share">分享</string>
+    <string name="settings_crash_log_clear">清除</string>
+    <string name="settings_crash_log_empty">无法读取崩溃记录。</string>
 </resources>

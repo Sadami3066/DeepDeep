@@ -87,6 +87,7 @@ internal fun SettingsRoute(
         onLanguageChange = { dependencies.pluginManager.refresh() },
         updateVersion = updateUi.phase.releaseOrNull?.versionName,
         onOpenUpdate = { navigator.push(AppDestination.Update) },
+        crashLogs = dependencies.crashLogs,
     )
 }
 

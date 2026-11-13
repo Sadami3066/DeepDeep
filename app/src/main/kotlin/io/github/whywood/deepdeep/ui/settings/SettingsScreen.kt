@@ -1,6 +1,8 @@
 package io.github.whywood.deepdeep.ui.settings
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -8,7 +10,9 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,11 +35,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -44,6 +50,7 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.OverlayEntryMode
+import io.github.whywood.deepdeep.data.crash.CrashLogStore
 import io.github.whywood.deepdeep.design.DdDropdown
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
@@ -58,10 +65,15 @@ import io.github.whywood.deepdeep.design.DdPressable
 import io.github.whywood.deepdeep.design.DdSegmentedControl
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSheetHeader
+import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.ThemePreset
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.ui.common.AvatarBadge
+import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
+import io.github.whywood.deepdeep.ui.common.shareChooser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val TABLER_ICONS_URL = "https://github.com/tabler/tabler-icons"
 private const val PROVIDER_LOGOS_URL = "https://github.com/lobehub/lobe-icons"
@@ -99,12 +111,16 @@ fun SettingsScreen(
     onLanguageChange: () -> Unit = {},
     updateVersion: String? = null,
     onOpenUpdate: () -> Unit = {},
+    crashLogs: CrashLogStore? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
     val languagePreferences = remember(context) { LanguagePreferences(context) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showCrashLog by remember { mutableStateOf(false) }
+    var crashRevision by remember { mutableStateOf(0) }
+    val crashEntry = remember(crashLogs, crashRevision) { crashLogs?.latest() }
     var language by remember { mutableStateOf(languagePreferences.read()) }
     val activeModel = listOfNotNull(
         providerName?.takeIf { it.isNotBlank() },
@@ -289,6 +305,17 @@ fun SettingsScreen(
                     showChevron = true,
                     modifier = Modifier.testTag("settings_update"),
                 )
+                if (crashEntry != null) {
+                    DdRowDivider(leadingInset = SettingsDividerInset)
+                    DdListRow(
+                        icon = DdIcons.Info,
+                        title = stringResource(R.string.settings_crash_log),
+                        value = rememberRelativeTime(crashEntry.recordedAt),
+                        onClick = { showCrashLog = true },
+                        showChevron = true,
+                        modifier = Modifier.testTag("settings_crash_log"),
+                    )
+                }
                 DdRowDivider(leadingInset = SettingsDividerInset)
                 DdListRow(
                     icon = DdIcons.License,
@@ -306,6 +333,101 @@ fun SettingsScreen(
         LicenseSheet(onClose = { showLicenses = false })
     }
 
+    if (showCrashLog && crashLogs != null && crashEntry != null) {
+        CrashLogSheet(
+            store = crashLogs,
+            entry = crashEntry,
+            onClose = { showCrashLog = false },
+            onCleared = {
+                showCrashLog = false
+                crashRevision += 1
+            },
+        )
+    }
+
+}
+
+@Composable
+private fun CrashLogSheet(
+    store: CrashLogStore,
+    entry: CrashLogStore.Entry,
+    onClose: () -> Unit,
+    onCleared: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    val context = LocalContext.current
+    val relativeTime = rememberRelativeTime(entry.recordedAt)
+    val shareLabel = stringResource(R.string.settings_crash_log_share)
+    var text by remember(entry) { mutableStateOf("") }
+    LaunchedEffect(entry) {
+        text = withContext(Dispatchers.IO) { store.read(entry) }
+    }
+    DdSheet(onDismiss = onClose) {
+        DdSheetHeader(stringResource(R.string.settings_crash_log_title), onClose)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+            Text(
+                text = stringResource(R.string.settings_crash_log_subtitle, relativeTime),
+                style = DdType.bodySmall,
+                color = colors.inkTertiary,
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 340.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(colors.raised)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            ) {
+                Text(
+                    text = text.ifBlank { stringResource(R.string.settings_crash_log_empty) },
+                    style = DdType.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    color = colors.inkSecondary,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.settings_crash_log_hint),
+                style = DdType.micro,
+                color = colors.inkTertiary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+            ) {
+                DdTextAction(
+                    text = stringResource(R.string.settings_crash_log_copy),
+                    enabled = text.isNotBlank(),
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        clipboard?.setPrimaryClip(ClipData.newPlainText("DeepDeep crash", text))
+                    },
+                )
+                DdTextAction(
+                    text = shareLabel,
+                    enabled = text.isNotBlank(),
+                    onClick = {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, text)
+                        }
+                        context.startActivity(shareChooser(context, send, shareLabel))
+                    },
+                )
+                Spacer(Modifier.weight(1f))
+                DdTextAction(
+                    text = stringResource(R.string.settings_crash_log_clear),
+                    color = colors.danger,
+                    onClick = {
+                        store.clear()
+                        onCleared()
+                    },
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
 }
 
 private val SettingsDividerInset = 50.dp

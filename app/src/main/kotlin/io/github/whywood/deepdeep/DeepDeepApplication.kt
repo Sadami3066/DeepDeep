@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep
 
 import android.app.Application
+import io.github.whywood.deepdeep.data.crash.CrashReporter
 import io.github.whywood.deepdeep.design.DdFonts
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ class DeepDeepApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
         runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
         graph = AppGraph(this)
         graph.processRuntime.startAsync()

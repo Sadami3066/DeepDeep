@@ -7,6 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `AgentDocStore.kt` | 项目 AGENTS.md 读写（override 优先、限 64 KB、原子写） |
+| `crash/` | 崩溃日志：`CrashLogStore` 把未捕获异常的线程/堆栈/版本/设备写到 `files/crash/crash-<时间戳>.txt`（最多 5 份，读取与清除）；`CrashReporter` 在 Application 启动时包装默认 uncaught handler，写完仍交给系统处理 |
 | `BundledSkills.kt` | 随包技能：`assets/skills/**` 按内容同步到技能仓库与全局启用目录，可传入门控谓词并删除被排除的自有技能；跳过插件标记/用户自有目录 |
 | `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、过程详细度、自动重试、后台唤醒、置顶、字号 |

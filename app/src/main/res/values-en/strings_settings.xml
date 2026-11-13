@@ -340,4 +340,12 @@
     <string name="settings_custom_provider_discover_missing">Fill in the base URL and API key first</string>
     <string name="settings_custom_provider_discover_empty">The endpoint returned no models</string>
     <string name="settings_custom_provider_discover_failed">Could not fetch models; check the URL and key</string>
+    <string name="settings_crash_log">Crash log</string>
+    <string name="settings_crash_log_title">Crash log</string>
+    <string name="settings_crash_log_subtitle">Last crash · %1$s</string>
+    <string name="settings_crash_log_hint">Send this to the developer to help diagnose the problem.</string>
+    <string name="settings_crash_log_copy">Copy</string>
+    <string name="settings_crash_log_share">Share</string>
+    <string name="settings_crash_log_clear">Clear</string>
+    <string name="settings_crash_log_empty">Couldn\'t read the crash log.</string>
 </resources>

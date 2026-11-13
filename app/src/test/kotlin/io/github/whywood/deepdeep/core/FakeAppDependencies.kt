@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.CustomProviderStore
+import io.github.whywood.deepdeep.data.crash.CrashLogStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
@@ -48,6 +49,8 @@ import java.io.File
 internal class FakeAppDependencies(
     override val homeDir: File = File("fake-home"),
 ) : AppDependencies {
+    override val crashLogs: CrashLogStore = CrashLogStore(File(homeDir, "crash"))
+
     override val host: AgentRuntimeHost get() = unavailable("host")
 
     override val conversationStore: ConversationStore get() = unavailable("conversationStore")

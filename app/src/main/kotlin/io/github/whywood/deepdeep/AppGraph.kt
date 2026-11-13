@@ -20,6 +20,7 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.LegacyWorkspaceMigration
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
+import io.github.whywood.deepdeep.data.crash.CrashLogStore
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.LocalizedContext
 import io.github.whywood.deepdeep.data.OverlayEntryPreferences
@@ -115,6 +116,8 @@ class AppGraph(context: Context) : AppDependencies {
     val agentDir: File get() = dataGraph.agentDir
 
     fun linuxBinds(): () -> List<Pair<File, String>> = platformGraph.linuxBinds()
+
+    override val crashLogs: CrashLogStore = CrashLogStore(File(appContext.filesDir, "crash"))
 
     override val attachmentStore: AttachmentStore get() = dataGraph.attachmentStore
     override val hostFiles: HostFiles get() = dataGraph.hostFiles
