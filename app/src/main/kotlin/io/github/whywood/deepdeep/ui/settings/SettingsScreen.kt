@@ -387,11 +387,6 @@ private fun CrashLogSheet(
                 )
             }
             Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.settings_crash_log_hint),
-                style = DdType.micro,
-                color = colors.inkTertiary,
-            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),

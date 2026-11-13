@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.design.DdDatePicker
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdHairline
@@ -198,6 +200,7 @@ internal fun TimerEditor(
         validationError = null
         showConversationPicker = false
     }) { showConversationPicker = false }
+    val haptic = rememberHapticFeedback()
     if (showDeleteConfirm) DdDialog(
         onDismissRequest = { showDeleteConfirm = false },
         title = stringResource(R.string.timers_delete_title),
@@ -217,7 +220,11 @@ internal fun TimerEditor(
         )
         DdTextAction(
             stringResource(R.string.timers_delete_confirm),
-            { showDeleteConfirm = false; onDelete(draft) },
+            {
+                haptic(HapticFeedbackType.Reject)
+                showDeleteConfirm = false
+                onDelete(draft)
+            },
             Modifier.testTag("timer_delete_confirm"),
             colors.danger,
         )

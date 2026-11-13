@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.data.mountDisplayPath
 import io.github.whywood.deepdeep.design.DdDialog
@@ -279,6 +281,7 @@ fun DeleteWorkspaceDialog(
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
+    val haptic = rememberHapticFeedback()
     DdDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("workspace_delete_dialog"),
@@ -302,7 +305,10 @@ fun DeleteWorkspaceDialog(
             )
             DdTextAction(
                 text = stringResource(R.string.workspace_delete_confirm),
-                onClick = onConfirm,
+                onClick = {
+                    haptic(HapticFeedbackType.Reject)
+                    onConfirm()
+                },
                 modifier = Modifier.testTag("workspace_delete_confirm"),
                 color = colors.danger,
             )

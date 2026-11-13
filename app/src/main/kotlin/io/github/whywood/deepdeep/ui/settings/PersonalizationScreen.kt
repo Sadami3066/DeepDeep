@@ -283,12 +283,6 @@ fun PersonalizationScreen(
                         },
                         testTag = "personalization_nickname",
                     )
-                    Spacer(Modifier.height(DdSpacing.Sm))
-                    Text(
-                        text = stringResource(R.string.personalization_nickname_description),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
                 }
             }
 
@@ -358,12 +352,7 @@ fun PersonalizationScreen(
                     )
                     Spacer(Modifier.height(DdSpacing.Sm))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.personalization_preset_hint),
-                            modifier = Modifier.weight(1f),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
-                        )
+                        Spacer(Modifier.weight(1f))
                         Text(
                             text = stringResource(
                                 R.string.personalization_instruction_counter,

@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,6 +30,7 @@ import io.github.whywood.deepdeep.design.DdChip
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdInfoTooltip
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
@@ -107,23 +110,21 @@ fun CustomProviderModelScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = DdSpacing.ScreenHorizontal),
         ) {
-            Text(
-                text = stringResource(
-                    if (model == null) {
-                        R.string.settings_custom_provider_model_new
-                    } else {
-                        R.string.settings_custom_provider_model_edit
-                    },
-                ),
-                style = DdType.pageTitle,
-                color = colors.ink,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.settings_custom_provider_model_hint),
-                style = DdType.bodySmall,
-                color = colors.inkTertiary,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(
+                        if (model == null) {
+                            R.string.settings_custom_provider_model_new
+                        } else {
+                            R.string.settings_custom_provider_model_edit
+                        },
+                    ),
+                    modifier = Modifier.weight(1f),
+                    style = DdType.pageTitle,
+                    color = colors.ink,
+                )
+                DdInfoTooltip(text = stringResource(R.string.settings_custom_provider_model_hint))
+            }
             Spacer(Modifier.height(DdSpacing.Lg))
             FormField(
                 label = stringResource(R.string.settings_custom_provider_model_id),

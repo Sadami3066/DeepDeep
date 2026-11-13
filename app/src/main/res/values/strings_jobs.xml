@@ -1,7 +1,6 @@
 <resources>
     <string name="jobs_title">后台任务</string>
     <string name="jobs_empty_title">暂无后台任务</string>
-    <string name="jobs_empty_hint">DeepDeep 在后台运行的命令会显示在这里。</string>
     <string name="jobs_status_running">运行中</string>
     <string name="jobs_status_done">已完成</string>
     <string name="jobs_status_failed">失败</string>

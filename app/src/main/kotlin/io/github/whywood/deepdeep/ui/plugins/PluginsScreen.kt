@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -49,7 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.design.DdDialog
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -80,6 +83,7 @@ import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketState
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.DelayedLoadingBlock
 import io.github.whywood.deepdeep.ui.common.market.MarketAccessTag
 import io.github.whywood.deepdeep.ui.common.market.MarketRefreshButton
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
@@ -102,6 +106,7 @@ internal fun PluginsScreen(
     onPendingImportHandled: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
+    val haptic = rememberHapticFeedback()
     val context = LocalContext.current
     val resolvedPluginsRoot = pluginsRoot ?: remember(context) { File(context.filesDir, "plugins") }
     val holder = remember(manager) { PluginsStateHolder(manager, scope) }
@@ -206,12 +211,16 @@ internal fun PluginsScreen(
                     importBusy = false
                     when {
                         result.success -> {
+                            haptic(HapticFeedbackType.Confirm)
                             inspection = null
                             importResult = result.restartRequired
                         }
 
                         result.requiresConfirmation -> trustPublisher = true
-                        else -> importError = result.error ?: result.toString()
+                        else -> {
+                            haptic(HapticFeedbackType.Reject)
+                            importError = result.error ?: result.toString()
+                        }
                     }
                 }
             },
@@ -243,6 +252,7 @@ internal fun PluginsScreen(
                 DdTextAction(
                     text = stringResource(R.string.plugins_delete_confirm),
                     onClick = {
+                        haptic(HapticFeedbackType.Reject)
                         uninstallTarget = null
                         holder.uninstall(target.id)
                     },
@@ -279,6 +289,7 @@ private fun PluginsContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val haptic = rememberHapticFeedback()
     val marketState by marketRepository.state.collectAsStateWithLifecycle()
     val requiredAccessById = remember(marketState) {
         (marketState as? MarketState.Ready)?.registry?.entries.orEmpty()
@@ -334,7 +345,10 @@ private fun PluginsContent(
                 stringResource(R.string.market_tab_mine),
             ),
             selectedIndex = tab,
-            onSelect = onTabSelect,
+            onSelect = { index ->
+                haptic(HapticFeedbackType.SegmentTick)
+                onTabSelect(index)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Xs),
@@ -365,32 +379,36 @@ private fun PluginsContent(
                 contentPadding = PaddingValues(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Sm, bottom = DdSpacing.Huge),
             ) {
                 when {
-                    state.loading && state.plugins.isEmpty() -> Unit
+                    state.loading && state.plugins.isEmpty() -> item {
+                        DelayedLoadingBlock(
+                            loading = true,
+                            modifier = Modifier.padding(top = 96.dp),
+                        )
+                    }
 
                     visible.isEmpty() -> {
                         if (state.plugins.isEmpty()) {
-                            item { EmptyPlugins() }
+                            if (state.error == null) {
+                                item {
+                                    EmptyPlugins(onOpenMarket = { onTabSelect(MARKET_TAB_MARKET) })
+                                }
+                            }
                         } else {
                             item {
-                                Box(
+                                DdEmptyState(
+                                    text = stringResource(R.string.search_no_match),
+                                    icon = DdIcons.Search,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 48.dp)
+                                        .padding(top = 48.dp)
                                         .testTag("plugins_search_empty"),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.search_no_match),
-                                        style = DdType.bodySmall,
-                                        color = colors.inkTertiary,
-                                    )
-                                }
+                                )
                             }
                         }
                     }
 
                     else -> itemsIndexed(visible, key = { _, snapshot -> snapshot.id }) { index, snapshot ->
-                        Column {
+                        Column(Modifier.animateItem()) {
                             if (index > 0) DdHairline()
                             PluginRow(
                                 snapshot = snapshot,
@@ -438,30 +456,19 @@ private fun PluginsContent(
 }
 
 @Composable
-private fun EmptyPlugins() {
-    val colors = deepDeepColors()
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 96.dp)
-            .testTag("plugins_empty"),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        DdIcon(icon = DdIcons.Puzzle, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(DdSpacing.Lg))
-        Text(
-            text = stringResource(R.string.plugins_empty),
-            style = DdType.label,
-            color = colors.ink,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.plugins_empty_hint),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-            textAlign = TextAlign.Center,
-        )
-    }
+private fun EmptyPlugins(onOpenMarket: () -> Unit) {
+    DdEmptyState(
+        text = stringResource(R.string.plugins_empty),
+        icon = DdIcons.Puzzle,
+        modifier = Modifier.fillMaxWidth().padding(top = 72.dp).testTag("plugins_empty"),
+        action = {
+            DdTextAction(
+                text = stringResource(R.string.plugins_empty_action),
+                onClick = onOpenMarket,
+                modifier = Modifier.testTag("plugins_empty_market"),
+            )
+        },
+    )
 }
 
 @Composable
@@ -771,12 +778,6 @@ private fun PluginDetailSheet(
                             text = stringResource(R.string.plugins_pending_update_title, pendingVersion),
                             style = DdType.bodySmall,
                             color = colors.ink,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = stringResource(R.string.plugins_pending_update_hint),
-                            style = DdType.micro,
-                            color = colors.inkTertiary,
                         )
                         Spacer(Modifier.height(14.dp))
                         DdPrimaryButton(

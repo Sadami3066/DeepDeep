@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -73,6 +74,8 @@ import io.github.whywood.deepdeep.market.MarketRequiredAccess
 import io.github.whywood.deepdeep.market.MarketSource
 import io.github.whywood.deepdeep.market.MarketState
 import io.github.whywood.deepdeep.runtime.host.HostAccess
+import io.github.whywood.deepdeep.ui.common.DelayedLoadingBlock
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -107,6 +110,7 @@ internal fun MarketTab(
     var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
     var tokenId by rememberSaveable { mutableStateOf<String?>(null) }
     var retrying by rememberSaveable { mutableStateOf(false) }
+    val haptic = rememberHapticFeedback()
 
     val current = state
     val entries = if (current is MarketState.Ready) repository.entries(type) else emptyList()
@@ -118,6 +122,7 @@ internal fun MarketTab(
     fun install(entry: MarketEntry, apiKey: String? = null) {
         marketInstallScope.launch {
             repository.install(entry, apiKey).onSuccess {
+                haptic(HapticFeedbackType.Confirm)
                 onInstalled()
                 when {
                     apiKey != null -> tokenId = null
@@ -137,6 +142,8 @@ internal fun MarketTab(
                         onAuthorizeMcp(entry.id)
                     }
                 }
+            }.onFailure {
+                haptic(HapticFeedbackType.Reject)
             }
         }
     }
@@ -147,7 +154,8 @@ internal fun MarketTab(
     ) {
         when (current) {
             MarketState.Loading -> item {
-                DdLoadingBlock(
+                DelayedLoadingBlock(
+                    loading = true,
                     modifier = Modifier.padding(top = DdSpacing.Huge + DdSpacing.Sm),
                     text = stringResource(R.string.market_loading),
                 )
@@ -209,6 +217,24 @@ internal fun MarketTab(
                             text = stringResource(R.string.market_empty),
                             icon = marketPlaceholderIcon(type),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Lg),
+                            action = {
+                                DdTextAction(
+                                    text = stringResource(R.string.market_retry),
+                                    onClick = {
+                                        if (!retrying) {
+                                            retrying = true
+                                            scope.launch {
+                                                try {
+                                                    repository.refresh(force = true)
+                                                } finally {
+                                                    retrying = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("${testTagPrefix}_market_empty_retry"),
+                                )
+                            },
                         )
                     }
 
@@ -221,7 +247,7 @@ internal fun MarketTab(
                     }
 
                     else -> itemsIndexed(visible, key = { _, entry -> entry.id }) { index, entry ->
-                        Column(Modifier.padding(horizontal = DdSpacing.Lg)) {
+                        Column(Modifier.animateItem().padding(horizontal = DdSpacing.Lg)) {
                             if (index > 0) DdHairline(Modifier.padding(start = DdSpacing.Xl))
                             val installState = installStates[entry.id]
                             MarketRow(

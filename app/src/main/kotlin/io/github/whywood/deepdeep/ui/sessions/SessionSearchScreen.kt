@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSearchField
@@ -168,11 +169,10 @@ fun SessionSearchScreen(
             ) {
                 if (ordered.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
+                        DdEmptyState(
                             text = stringResource(R.string.search_empty),
+                            icon = DdIcons.Search,
                             modifier = Modifier.testTag("search_empty"),
-                            style = DdType.bodySmall,
-                            color = colors.inkTertiary,
                         )
                     }
                 } else {
@@ -188,13 +188,15 @@ fun SessionSearchScreen(
                                 )
                             }
                             items(hits, key = { hit -> hit.conversation.id }) { hit ->
-                                SearchSessionRow(
-                                    hit = hit,
-                                    onClick = {
-                                        keyboard?.hide()
-                                        onOpen(hit.conversation.id)
-                                    },
-                                )
+                                Box(Modifier.animateItem()) {
+                                    SearchSessionRow(
+                                        hit = hit,
+                                        onClick = {
+                                            keyboard?.hide()
+                                            onOpen(hit.conversation.id)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

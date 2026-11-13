@@ -3,7 +3,7 @@
     <string name="plugins_back">Back</string>
     <string name="plugins_search_placeholder">Search plugins</string>
     <string name="plugins_empty">No plugins installed yet</string>
-    <string name="plugins_empty_hint">Tap + in the top right to import a .ddp package</string>
+    <string name="plugins_empty_action">Browse market</string>
     <string name="plugins_enable">Enabled</string>
     <string name="plugins_disable">Disabled</string>
     <string name="plugins_close">Close</string>
@@ -99,7 +99,6 @@
     <string name="plugins_recovery_rollback">Roll back to %1$s</string>
     <string name="plugins_api_level_retired">Plugin API %1$d is no longer supported. Update the plugin.</string>
     <string name="plugins_pending_update_title">Update %1$s is ready</string>
-    <string name="plugins_pending_update_hint">Updates are not applied automatically. Tap the button to apply it.</string>
     <string name="plugins_pending_update_notice">Update ready to apply</string>
     <string name="plugins_apply_update">Update now</string>
     <string name="plugins_updating_update">Updating…</string>

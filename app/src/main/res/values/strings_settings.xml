@@ -93,7 +93,7 @@
     <string name="settings_oauth_sign_out">退出登录</string>
     <string name="settings_oauth_open_browser">打开浏览器</string>
     <string name="settings_oauth_cancel">取消</string>
-    <string name="settings_oauth_waiting_browser">在浏览器中完成授权后会自动回到 DeepDeep；如果没有自动返回，可在下方粘贴授权码或回调链接。</string>
+    <string name="settings_oauth_waiting_browser">完成授权后自动返回；未返回时在下方粘贴授权码或回调链接。</string>
     <string name="settings_oauth_confirm">确认</string>
     <string name="settings_oauth_waiting">正在登录…</string>
     <string name="settings_oauth_login_failed">登录失败</string>
@@ -112,7 +112,6 @@
 
     <string name="personalization_nickname_title">称呼</string>
     <string name="personalization_nickname_hint">你的名字</string>
-    <string name="personalization_nickname_description">DeepDeep 会这样称呼你</string>
     <string name="personalization_interaction_title">交互体验</string>
     <string name="personalization_interaction_quiet">安静</string>
     <string name="personalization_interaction_balanced">默认</string>
@@ -126,7 +125,6 @@
     <string name="personalization_tone_calm">冷静</string>
     <string name="personalization_tone_custom">自定义</string>
     <string name="personalization_instruction_hint">写下你希望 DeepDeep 长期遵守的偏好…</string>
-    <string name="personalization_preset_hint">预设会填入输入框，可自由修改</string>
     <string name="personalization_instruction_counter">%1$d 字</string>
     <string name="personalization_preset_warm">用热情、有感染力的语气回应；适度表达情绪和支持，但不要夸张、不要谄媚。</string>
     <string name="personalization_preset_cute">用可爱、轻松的语气回应；可以使用少量语气词和颜文字，但保持信息准确、不卖萌过度。</string>
@@ -236,7 +234,6 @@
 
     <string name="settings_linux_mount_add_title">添加共享目录</string>
     <string name="settings_linux_mount_edit_title">编辑共享目录</string>
-    <string name="settings_linux_mount_subtitle">选好目录，让 DeepDeep 知道如何使用。</string>
     <string name="settings_linux_mount_section">共享目录</string>
     <string name="settings_linux_mount_name_label">目录名称</string>
     <string name="settings_linux_mount_description_label">使用说明</string>
@@ -349,7 +346,6 @@
     <string name="settings_crash_log">崩溃记录</string>
     <string name="settings_crash_log_title">崩溃记录</string>
     <string name="settings_crash_log_subtitle">最近一次崩溃 · %1$s</string>
-    <string name="settings_crash_log_hint">发送给开发者可以帮助定位问题。</string>
     <string name="settings_crash_log_copy">复制</string>
     <string name="settings_crash_log_share">分享</string>
     <string name="settings_crash_log_clear">清除</string>

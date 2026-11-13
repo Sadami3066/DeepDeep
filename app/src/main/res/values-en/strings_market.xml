@@ -3,7 +3,6 @@
     <string name="market_tab_market">Market</string>
     <string name="market_tab_mine">Mine</string>
     <string name="market_install">Install</string>
-    <string name="market_notice">The market is opening soon. Installation is not available yet.</string>
     <string name="market_refresh">Refresh market</string>
     <string name="market_skill_polish_name">Writing polish</string>
     <string name="market_skill_polish_summary">Trim wordiness and repetition so the point reads clearly.</string>

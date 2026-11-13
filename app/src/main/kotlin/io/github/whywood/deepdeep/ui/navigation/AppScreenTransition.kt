@@ -27,6 +27,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.whywood.deepdeep.design.DdMotion
+import io.github.whywood.deepdeep.design.deepDeepColors
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,6 +37,10 @@ private const val UNFREEZE_GRACE_MILLIS = 160L
 
 object AppScreenTransition {
     const val SHARED_AXIS_FRACTION = 0.25f
+
+    const val OUTGOING_PARALLAX_FRACTION = 0.12f
+
+    const val OUTGOING_DIM_ALPHA = 0.16f
 
     fun direction(initial: AppDestination, target: AppDestination): Int = when {
         target.depth > initial.depth -> 1
@@ -246,14 +251,32 @@ private fun ScreenPage(
     content: @Composable (AppDestination) -> Unit,
 ) {
     SideEffect { visited.add(destination.routeKey) }
+    val scrim = deepDeepColors().scrim
     Box(
         Modifier
             .fillMaxSize()
             .graphicsLayer {
                 val settled = fraction()
+                val travel = if (incoming) {
+                    AppScreenTransition.SHARED_AXIS_FRACTION
+                } else {
+                    AppScreenTransition.OUTGOING_PARALLAX_FRACTION
+                }
                 translationX = AppScreenTransition.translationFraction(settled, incoming, direction) *
-                    AppScreenTransition.SHARED_AXIS_FRACTION * directionSign * size.width
+                    travel * directionSign * size.width
                 alpha = AppScreenTransition.alpha(settled, incoming)
+            }
+            .drawWithContent {
+                drawContent()
+                if (!incoming) {
+                    drawRect(
+                        color = scrim,
+                        alpha = (fraction() * AppScreenTransition.OUTGOING_DIM_ALPHA).coerceIn(
+                            0f,
+                            AppScreenTransition.OUTGOING_DIM_ALPHA,
+                        ),
+                    )
+                }
             }
             .pointerInput(Unit) {
                 awaitPointerEventScope {

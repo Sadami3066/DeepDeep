@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -38,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
@@ -60,6 +63,7 @@ import io.github.whywood.deepdeep.market.MarketEntry
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.market.MarketState
+import io.github.whywood.deepdeep.ui.common.DelayedLoadingBlock
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MINE
 import io.github.whywood.deepdeep.ui.common.market.MarketEntryIcon
@@ -195,6 +199,7 @@ private fun McpScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val haptic = rememberHapticFeedback()
     val error = state.error
     val visibleServers = state.visibleServers
     val showMarket = tab == MARKET_TAB_MARKET
@@ -260,7 +265,10 @@ private fun McpScreenContent(
                 stringResource(R.string.market_tab_mine),
             ),
             selectedIndex = tab,
-            onSelect = onTabSelect,
+            onSelect = { index ->
+                haptic(HapticFeedbackType.SegmentTick)
+                onTabSelect(index)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Xs),
@@ -301,7 +309,12 @@ private fun McpScreenContent(
                     }
                 }
                 when {
-                    state.loading && state.servers.isEmpty() -> Unit
+                    state.loading && state.servers.isEmpty() -> item {
+                        DelayedLoadingBlock(
+                            loading = true,
+                            modifier = Modifier.padding(top = 72.dp),
+                        )
+                    }
 
                     state.servers.isEmpty() && error != null -> item {
                         Box(
@@ -312,19 +325,14 @@ private fun McpScreenContent(
                         }
                     }
 
-                    state.servers.isEmpty() -> item { EmptyMcp() }
+                    state.servers.isEmpty() -> item { EmptyMcp(onAdd = onAdd) }
 
                     visibleServers.isEmpty() -> item {
-                        Box(
-                            Modifier.fillMaxWidth().padding(top = 72.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.search_no_match),
-                                style = DdType.bodySmall,
-                                color = colors.inkTertiary,
-                            )
-                        }
+                        DdEmptyState(
+                            text = stringResource(R.string.search_no_match),
+                            icon = DdIcons.Search,
+                            modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+                        )
                     }
 
                     else -> {
@@ -338,7 +346,7 @@ private fun McpScreenContent(
                             }
                         }
                         itemsIndexed(visibleServers, key = { _, entry -> entry.name }) { index, entry ->
-                            Column {
+                            Column(Modifier.animateItem()) {
                                 if (index > 0) DdHairline()
                                 McpServerRow(
                                     entry = entry,
@@ -389,20 +397,19 @@ private fun McpErrorRow(
 }
 
 @Composable
-private fun EmptyMcp() {
-    val colors = deepDeepColors()
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 96.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        DdIcon(icon = DdIcons.Plug, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(DdSpacing.Lg))
-        Text(
-            text = stringResource(R.string.mcp_empty_title),
-            style = DdType.label,
-            color = colors.ink,
-        )
-    }
+private fun EmptyMcp(onAdd: () -> Unit) {
+    DdEmptyState(
+        text = stringResource(R.string.mcp_empty_title),
+        icon = DdIcons.Plug,
+        modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+        action = {
+            DdTextAction(
+                text = stringResource(R.string.mcp_add),
+                onClick = onAdd,
+                modifier = Modifier.testTag("mcp_empty_add"),
+            )
+        },
+    )
 }
 
 @Composable

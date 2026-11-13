@@ -87,7 +87,7 @@
     <string name="settings_oauth_sign_out">Sign out</string>
     <string name="settings_oauth_open_browser">Open browser</string>
     <string name="settings_oauth_cancel">Cancel</string>
-    <string name="settings_oauth_waiting_browser">Finish signing in your browser and DeepDeep will be brought back automatically. If it does not return, paste the authorization code or redirect URL below.</string>
+    <string name="settings_oauth_waiting_browser">Sign in and you will be returned automatically; if not, paste the authorization code or redirect URL below.</string>
     <string name="settings_oauth_confirm">Confirm</string>
     <string name="settings_oauth_waiting">Signing in…</string>
     <string name="settings_oauth_login_failed">Sign-in failed</string>
@@ -106,7 +106,6 @@
 
     <string name="personalization_nickname_title">Name</string>
     <string name="personalization_nickname_hint">Your name</string>
-    <string name="personalization_nickname_description">DeepDeep will address you this way</string>
     <string name="personalization_interaction_title">Interaction</string>
     <string name="personalization_interaction_quiet">Quiet</string>
     <string name="personalization_interaction_balanced">Balanced</string>
@@ -120,7 +119,6 @@
     <string name="personalization_tone_calm">Calm</string>
     <string name="personalization_tone_custom">Custom</string>
     <string name="personalization_instruction_hint">Write the preferences DeepDeep should follow long-term…</string>
-    <string name="personalization_preset_hint">Presets fill the box; edit freely</string>
     <string name="personalization_instruction_counter">%1$d chars</string>
     <string name="personalization_preset_warm">Respond with warmth and energy; show appropriate emotion and support without exaggeration or flattery.</string>
     <string name="personalization_preset_cute">Respond in a playful, light tone; a few particles or emoticons are fine, but keep the information accurate and avoid overdoing it.</string>
@@ -230,7 +228,6 @@
 
     <string name="settings_linux_mount_add_title">Add shared folder</string>
     <string name="settings_linux_mount_edit_title">Edit shared folder</string>
-    <string name="settings_linux_mount_subtitle">Pick a folder and tell DeepDeep how to use it.</string>
     <string name="settings_linux_mount_section">Shared folder</string>
     <string name="settings_linux_mount_name_label">Folder name</string>
     <string name="settings_linux_mount_description_label">Usage notes</string>
@@ -343,7 +340,6 @@
     <string name="settings_crash_log">Crash log</string>
     <string name="settings_crash_log_title">Crash log</string>
     <string name="settings_crash_log_subtitle">Last crash · %1$s</string>
-    <string name="settings_crash_log_hint">Send this to the developer to help diagnose the problem.</string>
     <string name="settings_crash_log_copy">Copy</string>
     <string name="settings_crash_log_share">Share</string>
     <string name="settings_crash_log_clear">Clear</string>

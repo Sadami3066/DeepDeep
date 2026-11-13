@@ -9,9 +9,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
@@ -63,6 +65,7 @@ fun DeleteSessionDialog(
     onConfirm: () -> Unit,
 ) {
     val colors = deepDeepColors()
+    val haptic = rememberHapticFeedback()
     DdDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.drawer_delete_title),
@@ -81,7 +84,10 @@ fun DeleteSessionDialog(
             )
             DdTextAction(
                 text = stringResource(R.string.drawer_delete_confirm),
-                onClick = onConfirm,
+                onClick = {
+                    haptic(HapticFeedbackType.Reject)
+                    onConfirm()
+                },
                 color = colors.danger,
             )
         },

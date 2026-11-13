@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdIconButton
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdMotion
 import io.github.whywood.deepdeep.design.DdSearchField
@@ -114,11 +115,10 @@ fun ArchivedSessionsScreen(
             }
         }
         if (ordered.isEmpty()) {
-            Text(
+            DdEmptyState(
                 text = stringResource(R.string.drawer_archived_empty),
-                modifier = Modifier.padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Xxxl),
-                style = DdType.body,
-                color = colors.inkTertiary,
+                icon = DdIcons.Archive,
+                modifier = Modifier.padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Xxl),
             )
         } else {
             DdSearchField(
@@ -133,11 +133,10 @@ fun ArchivedSessionsScreen(
                 clearTestTag = "archived_search_clear",
             )
             if (filtered.isEmpty()) {
-                Text(
+                DdEmptyState(
                     text = stringResource(R.string.drawer_search_empty),
+                    icon = DdIcons.Search,
                     modifier = Modifier.padding(horizontal = DdSpacing.Xxl, vertical = DdSpacing.Xxl),
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
                 )
             } else {
                 LazyColumn(
@@ -145,6 +144,7 @@ fun ArchivedSessionsScreen(
                     contentPadding = PaddingValues(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
                 ) {
                     items(filtered, key = { it.id }) { session ->
+                        Box(Modifier.animateItem()) {
                         ArchivedSessionRow(
                             session = session,
                             menuExpanded = menuTarget?.id == session.id,
@@ -165,6 +165,7 @@ fun ArchivedSessionsScreen(
                             },
                             testTag = "archived_${session.id}",
                         )
+                        }
                     }
                 }
             }

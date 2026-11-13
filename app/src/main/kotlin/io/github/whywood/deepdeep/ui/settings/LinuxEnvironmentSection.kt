@@ -331,14 +331,8 @@ internal fun LinuxEnvironmentSection(
                     color = colors.ink,
                 )
                 Text(
-                    text = stringResource(R.string.settings_linux_mount_subtitle),
-                    modifier = Modifier.padding(top = DdSpacing.Xs, bottom = DdSpacing.Xl),
-                    style = DdType.bodySmall,
-                    color = colors.inkSecondary,
-                )
-                Text(
                     text = stringResource(R.string.settings_linux_mount_section),
-                    modifier = Modifier.padding(bottom = DdSpacing.Sm),
+                    modifier = Modifier.padding(top = DdSpacing.Xl, bottom = DdSpacing.Sm),
                     style = DdType.label,
                     color = colors.ink,
                 )

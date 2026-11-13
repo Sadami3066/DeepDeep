@@ -31,7 +31,6 @@
     <string name="onboarding_language_english">English</string>
 
     <string name="onboarding_provider_title">连接你的模型</string>
-    <string name="onboarding_provider_subtitle">选择一家服务商，就可以开始聊天了。</string>
     <string name="onboarding_provider_section">服务商</string>
     <string name="onboarding_provider_recommended">推荐</string>
     <string name="onboarding_provider_deepseek_body">速度较快，价格实惠</string>
@@ -57,7 +56,6 @@
     <string name="onboarding_provider_sheet_title">选择服务商</string>
 
     <string name="onboarding_permissions_title">通知与权限</string>
-    <string name="onboarding_permissions_subtitle">按需开启，之后可随时调整。</string>
     <string name="onboarding_permission_notification">通知</string>
     <string name="onboarding_permission_notification_hint">任务完成和提醒</string>
     <string name="onboarding_permission_overlay">悬浮窗</string>
@@ -80,11 +78,9 @@
     <string name="onboarding_permission_missing">未开启</string>
 
     <string name="onboarding_environment_title">选择工作环境</string>
-    <string name="onboarding_environment_subtitle">挑几个常用的组合，之后也可以再添加。</string>
     <string name="onboarding_environment_install_label">工作环境</string>
 
     <string name="onboarding_access_title">系统访问</string>
-    <string name="onboarding_access_subtitle">决定 bash、文件与系统命令以什么身份运行；普通档即可满足日常使用。</string>
     <string name="onboarding_access_note">之后可以在设置 → 系统访问 调整。</string>
     <string name="onboarding_access_local">普通</string>
     <string name="onboarding_access_local_body">无需额外授权，bash 在 App 内的 Linux 环境里运行。</string>

@@ -31,7 +31,6 @@
     <string name="onboarding_language_english">English</string>
 
     <string name="onboarding_provider_title">Connect your model</string>
-    <string name="onboarding_provider_subtitle">Choose a provider to start chatting.</string>
     <string name="onboarding_provider_section">Provider</string>
     <string name="onboarding_provider_recommended">Recommended</string>
     <string name="onboarding_provider_deepseek_body">Fast and affordable</string>
@@ -57,7 +56,6 @@
     <string name="onboarding_provider_sheet_title">Choose a provider</string>
 
     <string name="onboarding_permissions_title">Notifications &amp; permissions</string>
-    <string name="onboarding_permissions_subtitle">Turn on what you need; adjust anytime.</string>
     <string name="onboarding_permission_notification">Notifications</string>
     <string name="onboarding_permission_notification_hint">Task updates and reminders</string>
     <string name="onboarding_permission_overlay">Floating window</string>
@@ -80,11 +78,9 @@
     <string name="onboarding_permission_missing">Off</string>
 
     <string name="onboarding_environment_title">Choose your environment</string>
-    <string name="onboarding_environment_subtitle">Pick the tool bundles you\'ll use. You can add more later.</string>
     <string name="onboarding_environment_install_label">Work environment</string>
 
     <string name="onboarding_access_title">System access</string>
-    <string name="onboarding_access_subtitle">Sets how bash, files, and system commands run. Standard is enough for everyday use.</string>
     <string name="onboarding_access_note">You can change this later in Settings → System access.</string>
     <string name="onboarding_access_local">Standard</string>
     <string name="onboarding_access_local_body">No extra permission needed; bash runs in the app\'s Linux environment.</string>

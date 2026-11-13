@@ -5,14 +5,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
@@ -90,75 +94,61 @@ fun JobsSheet(
             title = stringResource(R.string.jobs_title),
             onClose = onDismiss,
         )
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = DdSpacing.Xxl),
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+            contentPadding = PaddingValues(horizontal = DdSpacing.Xxl),
         ) {
-            Spacer(Modifier.height(DdSpacing.Sm))
+            item(key = "jobs_top_spacer") { Spacer(Modifier.height(DdSpacing.Sm)) }
             if (ordered.isEmpty()) {
-                EmptyJobs()
+                item(key = "jobs_empty") { EmptyJobs() }
             } else {
-                ordered.forEachIndexed { index, job ->
-                    if (index > 0) DdHairline()
-                    JobRow(
-                        job = job,
-                        selected = job.id == selectedJobId,
-                        now = now,
-                        confirmingKill = confirmingKillId == job.id,
-                        onOpen = { onSelect(job.id) },
-                        onKill = {
-                            if (confirmingKillId == job.id) {
-                                confirmingKillId = null
-                                onKill(job.id)
-                            } else {
-                                confirmingKillId = job.id
-                            }
-                        },
-                    )
-                    if (job.id == selectedJobId) {
-                        JobOutput(output = output, onCloseOutput = onCloseOutput)
+                itemsIndexed(ordered, key = { _, job -> job.id }) { index, job ->
+                    Column(Modifier.animateItem()) {
+                        if (index > 0) DdHairline()
+                        JobRow(
+                            job = job,
+                            selected = job.id == selectedJobId,
+                            now = now,
+                            confirmingKill = confirmingKillId == job.id,
+                            onOpen = { onSelect(job.id) },
+                            onKill = {
+                                if (confirmingKillId == job.id) {
+                                    confirmingKillId = null
+                                    onKill(job.id)
+                                } else {
+                                    confirmingKillId = job.id
+                                }
+                            },
+                        )
+                        if (job.id == selectedJobId) {
+                            JobOutput(output = output, onCloseOutput = onCloseOutput)
+                        }
                     }
                 }
                 if (settled.isNotEmpty()) {
-                    Spacer(Modifier.height(DdSpacing.Md))
-                    DdTextAction(
-                        text = stringResource(R.string.jobs_clear_settled),
-                        onClick = onClearSettled,
-                        modifier = Modifier.testTag("jobs_clear_settled"),
-                        color = deepDeepColors().inkTertiary,
-                    )
+                    item(key = "jobs_clear_settled_item") {
+                        Spacer(Modifier.height(DdSpacing.Md))
+                        DdTextAction(
+                            text = stringResource(R.string.jobs_clear_settled),
+                            onClick = onClearSettled,
+                            modifier = Modifier.testTag("jobs_clear_settled"),
+                            color = deepDeepColors().inkTertiary,
+                        )
+                    }
                 }
             }
-            Spacer(Modifier.height(28.dp))
+            item(key = "jobs_bottom_spacer") { Spacer(Modifier.height(28.dp)) }
         }
     }
 }
 
 @Composable
 private fun EmptyJobs() {
-    val colors = deepDeepColors()
-    Column(
-        Modifier.fillMaxWidth().padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        DdIcon(icon = DdIcons.Terminal, tint = colors.inkTertiary, size = 22.dp)
-        Spacer(Modifier.height(DdSpacing.Md))
-        Text(
-            text = stringResource(R.string.jobs_empty_title),
-            style = DdType.body,
-            color = colors.inkSecondary,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(DdSpacing.Xs))
-        Text(
-            text = stringResource(R.string.jobs_empty_hint),
-            style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 18.sp),
-            color = colors.inkTertiary,
-            textAlign = TextAlign.Center,
-        )
-    }
+    DdEmptyState(
+        text = stringResource(R.string.jobs_empty_title),
+        icon = DdIcons.Terminal,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+    )
 }
 
 @Composable

@@ -74,6 +74,7 @@ import io.github.whywood.deepdeep.data.TonePreset
 import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
+import io.github.whywood.deepdeep.design.DdInfoTooltip
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdMotion
@@ -283,10 +284,7 @@ internal fun ProviderStep(
             .testTag("onboarding_step_provider"),
     ) {
         Spacer(Modifier.height(DdSpacing.Sm))
-        StepHeading(
-            title = stringResource(R.string.onboarding_provider_title),
-            subtitle = stringResource(R.string.onboarding_provider_subtitle),
-        )
+        StepHeading(title = stringResource(R.string.onboarding_provider_title))
         Spacer(Modifier.height(DdSpacing.Xxl))
         FieldLabel(text = stringResource(R.string.onboarding_provider_section))
         Spacer(Modifier.height(DdSpacing.Sm))
@@ -496,10 +494,7 @@ internal fun PermissionsStep(
             .testTag("onboarding_step_permissions"),
     ) {
         Spacer(Modifier.height(DdSpacing.Sm))
-        StepHeading(
-            title = stringResource(R.string.onboarding_permissions_title),
-            subtitle = stringResource(R.string.onboarding_permissions_subtitle),
-        )
+        StepHeading(title = stringResource(R.string.onboarding_permissions_title))
         Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
             PermissionRow(
@@ -622,10 +617,7 @@ internal fun EnvironmentStep(
             .testTag("onboarding_step_environment"),
     ) {
         Spacer(Modifier.height(DdSpacing.Sm))
-        StepHeading(
-            title = stringResource(R.string.onboarding_environment_title),
-            subtitle = stringResource(R.string.onboarding_environment_subtitle),
-        )
+        StepHeading(title = stringResource(R.string.onboarding_environment_title))
         Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
             bundles.forEachIndexed { index, bundle ->
@@ -740,10 +732,7 @@ internal fun AccessStep(
             .testTag("onboarding_step_access"),
     ) {
         Spacer(Modifier.height(DdSpacing.Sm))
-        StepHeading(
-            title = stringResource(R.string.onboarding_access_title),
-            subtitle = stringResource(R.string.onboarding_access_subtitle),
-        )
+        StepHeading(title = stringResource(R.string.onboarding_access_title))
         Spacer(Modifier.height(DdSpacing.Xxl))
         OnboardingCard {
             AccessRow(
@@ -933,12 +922,15 @@ private fun PermissionRow(
     DdListRow(
         icon = icon,
         title = title,
-        subtitle = subtitle,
-        subtitleMaxLines = 1,
         onClick = onClick,
         showChevron = true,
         modifier = Modifier.testTag(testTag),
-        trailing = { GrantStatus(granted = granted) },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DdInfoTooltip(text = subtitle, contentDescription = title)
+                GrantStatus(granted = granted)
+            }
+        },
     )
 }
 

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -38,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -50,14 +52,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.data.InstalledSkill
 import io.github.whywood.deepdeep.data.SkillArchiveResult
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.design.DdDialog
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
+import io.github.whywood.deepdeep.design.DdRadius
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
@@ -73,6 +78,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.market.MarketEntryType
 import io.github.whywood.deepdeep.market.MarketRepository
 import io.github.whywood.deepdeep.ui.common.market.MARKET_TAB_MARKET
+import io.github.whywood.deepdeep.ui.common.DelayedLoadingBlock
 import io.github.whywood.deepdeep.ui.common.market.MarketRefreshButton
 import io.github.whywood.deepdeep.ui.common.market.MarketTab
 import java.io.ByteArrayOutputStream
@@ -96,6 +102,7 @@ fun SkillsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val haptic = rememberHapticFeedback()
     val installSuccessTemplate = stringResource(R.string.skills_install_success)
     val holder = remember(repository) { SkillsStateHolder(repository, scope) }
     val state by holder.state.collectAsStateWithLifecycle()
@@ -114,14 +121,18 @@ fun SkillsScreen(
         if (uri != null) {
             scope.launch {
                 when (val read = readArchive(context, uri)) {
-                    is ArchiveRead.Failure -> holder.reportInstallError(
-                        R.string.skills_install_failed_title,
-                        read.messageRes,
-                    )
+                    is ArchiveRead.Failure -> {
+                        haptic(HapticFeedbackType.Reject)
+                        holder.reportInstallError(
+                            R.string.skills_install_failed_title,
+                            read.messageRes,
+                        )
+                    }
 
                     is ArchiveRead.Success -> {
                         val result = holder.install(read.bytes, read.fallbackName)
                         if (result is SkillArchiveResult.Success) {
+                            haptic(HapticFeedbackType.Confirm)
                             Toast.makeText(
                                 context,
                                 String.format(installSuccessTemplate, result.skill.name),
@@ -174,6 +185,7 @@ private fun SkillsContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
+    val haptic = rememberHapticFeedback()
     var selected by remember { mutableStateOf<InstalledSkill?>(null) }
     var deleteTarget by remember { mutableStateOf<InstalledSkill?>(null) }
     val showMarket = tab == MARKET_TAB_MARKET
@@ -229,7 +241,10 @@ private fun SkillsContent(
                 stringResource(R.string.market_tab_mine),
             ),
             selectedIndex = tab,
-            onSelect = onTabSelect,
+            onSelect = { index ->
+                haptic(HapticFeedbackType.SegmentTick)
+                onTabSelect(index)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = DdSpacing.Lg, end = DdSpacing.Lg, top = DdSpacing.Xs),
@@ -260,7 +275,12 @@ private fun SkillsContent(
                 contentPadding = PaddingValues(start = DdSpacing.Lg, end = DdSpacing.Lg, bottom = DdSpacing.Xxxl),
             ) {
                 when {
-                    state.loading && state.items.isEmpty() -> Unit
+                    state.loading && state.items.isEmpty() -> item {
+                        DelayedLoadingBlock(
+                            loading = true,
+                            modifier = Modifier.padding(top = 72.dp),
+                        )
+                    }
 
                     state.items.isEmpty() && state.error != null -> item {
                         Box(
@@ -274,16 +294,11 @@ private fun SkillsContent(
                     state.items.isEmpty() -> item { EmptySkills(onInstall = onInstall) }
 
                     state.visibleItems.isEmpty() -> item {
-                        Box(
-                            Modifier.fillMaxWidth().padding(top = 72.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.search_no_match),
-                                style = DdType.bodySmall,
-                                color = colors.inkTertiary,
-                            )
-                        }
+                        DdEmptyState(
+                            text = stringResource(R.string.search_no_match),
+                            icon = DdIcons.Search,
+                            modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+                        )
                     }
 
                     else -> {
@@ -297,12 +312,15 @@ private fun SkillsContent(
                             }
                         }
                         item { Spacer(Modifier.height(DdSpacing.Sm)) }
-                        item {
-                            SkillsGroup(
-                                skills = state.visibleItems,
+                        itemsIndexed(state.visibleItems, key = { _, skill -> skill.id }) { index, skill ->
+                            SkillCardRow(
+                                skill = skill,
+                                first = index == 0,
+                                last = index == state.visibleItems.lastIndex,
                                 togglingIds = state.togglingIds,
-                                onOpen = { selected = it },
-                                onToggle = onToggle,
+                                onOpen = { selected = skill },
+                                onToggle = { enabled -> onToggle(skill, enabled) },
+                                modifier = Modifier.animateItem(),
                             )
                         }
                         item { Spacer(Modifier.height(DdSpacing.Lg)) }
@@ -343,6 +361,7 @@ private fun SkillsContent(
                 DdTextAction(
                     text = stringResource(R.string.skills_delete_confirm),
                     onClick = {
+                        haptic(HapticFeedbackType.Reject)
                         deleteTarget = null
                         if (selected?.id == skill.id) selected = null
                         onDelete(skill)
@@ -406,75 +425,67 @@ private fun SkillsErrorRow(
 
 @Composable
 private fun EmptySkills(onInstall: () -> Unit) {
-    val colors = deepDeepColors()
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 96.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        DdIcon(icon = DdIcons.Sparkles, tint = colors.inkTertiary, size = 28.dp)
-        Spacer(Modifier.height(DdSpacing.Lg))
-        Text(
-            text = stringResource(R.string.skills_empty_title),
-            style = DdType.label,
-            color = colors.ink,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.skills_empty_hint),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-        )
-        Spacer(Modifier.height(DdSpacing.Sm))
-        DdTextAction(
-            text = stringResource(R.string.skills_install_hint),
-            onClick = onInstall,
-            modifier = Modifier.testTag("skills_empty_install"),
-            color = colors.accent,
-        )
-    }
+    DdEmptyState(
+        text = stringResource(R.string.skills_empty_title),
+        icon = DdIcons.Sparkles,
+        modifier = Modifier.fillMaxWidth().padding(top = 72.dp),
+        action = {
+            DdTextAction(
+                text = stringResource(R.string.skills_install),
+                onClick = onInstall,
+                modifier = Modifier.testTag("skills_empty_install"),
+            )
+        },
+    )
 }
 
 @Composable
-private fun SkillsGroup(
-    skills: List<InstalledSkill>,
+private fun SkillCardRow(
+    skill: InstalledSkill,
+    first: Boolean,
+    last: Boolean,
     togglingIds: Set<String>,
-    onOpen: (InstalledSkill) -> Unit,
-    onToggle: (InstalledSkill, Boolean) -> Unit,
+    onOpen: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    CompositionLocalProvider(LocalDdRowHorizontalPadding provides 16.dp) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(DdShapes.Row)
-                .background(colors.surface)
-                .padding(vertical = DdSpacing.Xs),
-        ) {
-            skills.forEachIndexed { index, skill ->
-                if (index > 0) DdHairline()
-                DdListRow(
-                    title = skill.name,
-                    subtitle = skill.description.takeIf { it.isNotBlank() },
-                    subtitleMaxLines = 1,
-                    onClick = { onOpen(skill) },
-                    modifier = Modifier.heightIn(min = 64.dp).testTag("skill_${skill.id}"),
-                    trailing = {
-                        DdSwitch(
-                            checked = skill.globalEnabled,
-                            onCheckedChange = { onToggle(skill, it) },
-                            enabled = skill.id !in togglingIds,
-                            stateDescription = stringResource(
-                                if (skill.globalEnabled) {
-                                    R.string.skills_global_enabled
-                                } else {
-                                    R.string.skills_global_disabled
-                                },
-                            ),
-                            modifier = Modifier.testTag("skill_global_${skill.id}"),
-                        )
-                    },
-                )
-            }
+    val shape = when {
+        first && last -> DdShapes.Row
+        first -> RoundedCornerShape(topStart = DdRadius.Row, topEnd = DdRadius.Row)
+        last -> RoundedCornerShape(bottomStart = DdRadius.Row, bottomEnd = DdRadius.Row)
+        else -> RoundedCornerShape(0.dp)
+    }
+    Column(modifier) {
+        if (!first) DdHairline()
+        CompositionLocalProvider(LocalDdRowHorizontalPadding provides 16.dp) {
+            DdListRow(
+                title = skill.name,
+                subtitle = skill.description.takeIf { it.isNotBlank() },
+                subtitleMaxLines = 1,
+                onClick = onOpen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(colors.surface)
+                    .heightIn(min = 64.dp)
+                    .testTag("skill_${skill.id}"),
+                trailing = {
+                    DdSwitch(
+                        checked = skill.globalEnabled,
+                        onCheckedChange = onToggle,
+                        enabled = skill.id !in togglingIds,
+                        stateDescription = stringResource(
+                            if (skill.globalEnabled) {
+                                R.string.skills_global_enabled
+                            } else {
+                                R.string.skills_global_disabled
+                            },
+                        ),
+                        modifier = Modifier.testTag("skill_global_${skill.id}"),
+                    )
+                },
+            )
         }
     }
 }

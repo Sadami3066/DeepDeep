@@ -3,8 +3,6 @@
     <string name="skills_back">Back</string>
     <string name="skills_install">Install skill</string>
     <string name="skills_empty_title">No skills yet</string>
-    <string name="skills_empty_hint">Install a skill pack to teach DeepDeep new workflows</string>
-    <string name="skills_install_hint">Choose a .zip skill pack</string>
     <string name="skills_global_enabled">Enabled globally</string>
     <string name="skills_global_disabled">Not enabled globally</string>
     <string name="skills_manual">Manual</string>

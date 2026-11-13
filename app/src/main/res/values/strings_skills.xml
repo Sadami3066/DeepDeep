@@ -3,8 +3,6 @@
     <string name="skills_back">返回</string>
     <string name="skills_install">安装技能</string>
     <string name="skills_empty_title">还没有技能</string>
-    <string name="skills_empty_hint">安装技能包，让 DeepDeep 学会新的做法</string>
-    <string name="skills_install_hint">选择 .zip 技能包</string>
     <string name="skills_global_enabled">全局启用</string>
     <string name="skills_global_disabled">全局未启用</string>
     <string name="skills_manual">手动</string>

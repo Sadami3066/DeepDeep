@@ -30,6 +30,8 @@ import io.github.whywood.deepdeep.data.InstalledSkill
 import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdEmptyState
+import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdPrimaryButton
 import io.github.whywood.deepdeep.design.DdSheet
@@ -316,28 +318,15 @@ private fun ProjectSkillsEmpty(
     modifier: Modifier,
     onOpenSkills: () -> Unit,
 ) {
-    val colors = deepDeepColors()
-    Column(
-        modifier.padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = stringResource(R.string.project_skills_empty_title),
-            style = DdType.body,
-            color = colors.ink,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.project_skills_empty_hint),
-            style = DdType.bodySmall,
-            color = colors.inkTertiary,
-        )
-        Spacer(Modifier.height(20.dp))
-        DdPrimaryButton(
-            text = stringResource(R.string.project_skills_empty_action),
-            onClick = onOpenSkills,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    DdEmptyState(
+        text = stringResource(R.string.project_skills_empty_title),
+        icon = DdIcons.Sparkles,
+        modifier = modifier.padding(horizontal = 24.dp),
+        action = {
+            DdPrimaryButton(
+                text = stringResource(R.string.project_skills_empty_action),
+                onClick = onOpenSkills,
+            )
+        },
+    )
 }

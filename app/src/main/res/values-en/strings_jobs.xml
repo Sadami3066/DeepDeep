@@ -1,7 +1,6 @@
 <resources>
     <string name="jobs_title">Background jobs</string>
     <string name="jobs_empty_title">No background jobs</string>
-    <string name="jobs_empty_hint">Commands run in the background show up here.</string>
     <string name="jobs_status_running">Running</string>
     <string name="jobs_status_done">Done</string>
     <string name="jobs_status_failed">Failed</string>

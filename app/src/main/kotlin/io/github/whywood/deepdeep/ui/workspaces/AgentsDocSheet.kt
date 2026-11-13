@@ -21,10 +21,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.data.AGENT_DOC_MAX_BYTES
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.design.DdDialog
@@ -265,6 +267,7 @@ fun AgentsDocSheet(
         )
     }
 
+    val haptic = rememberHapticFeedback()
     if (confirmDelete) {
         DdDialog(
             onDismissRequest = { confirmDelete = false },
@@ -286,6 +289,7 @@ fun AgentsDocSheet(
                 DdTextAction(
                     text = stringResource(R.string.agents_doc_delete_confirm),
                     onClick = {
+                        haptic(HapticFeedbackType.Reject)
                         confirmDelete = false
                         delete()
                     },

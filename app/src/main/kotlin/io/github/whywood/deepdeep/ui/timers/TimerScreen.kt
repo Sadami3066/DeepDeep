@@ -2,6 +2,7 @@ package io.github.whywood.deepdeep.ui.timers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,9 +13,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdHairline
+import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdPressable
@@ -43,6 +45,7 @@ import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationQueries
+import io.github.whywood.deepdeep.ui.common.DelayedLoadingBlock
 import io.github.whywood.deepdeep.runtime.CronSummary
 import io.github.whywood.deepdeep.runtime.Timer
 import io.github.whywood.deepdeep.runtime.TimerError
@@ -165,35 +168,52 @@ internal fun TimersContent(
             }
         }
         when {
-            state.loading && state.items.isEmpty() -> Unit
-
-            state.items.isEmpty() -> EmptyTimers(Modifier.weight(1f))
-
-            state.filtered.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.search_no_match), style = DdType.bodySmall, color = colors.inkTertiary)
+            state.loading && state.items.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth()) {
+                DelayedLoadingBlock(loading = true)
             }
 
-            else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = DdSpacing.Xxl)) {
+            state.items.isEmpty() -> if (state.errorRes == null) {
+                EmptyTimers(Modifier.weight(1f), onNew)
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+
+            state.filtered.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                DdEmptyState(
+                    text = stringResource(R.string.search_no_match),
+                    icon = DdIcons.Search,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            else -> LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = DdSpacing.Xxl),
+            ) {
                 if (state.active.isNotEmpty()) {
-                    TimerGroup(
-                        stringResource(R.string.timers_group_active),
-                        state.active,
-                        state.titles,
-                        onOpen,
-                        onToggle,
-                    )
+                    item(key = "timers_active_label") {
+                        TimerGroupLabel(stringResource(R.string.timers_group_active))
+                    }
+                    itemsIndexed(state.active, key = { _, timer -> timer.id }) { index, timer ->
+                        Column(Modifier.animateItem()) {
+                            TimerRowItem(timer, state.titles, onOpen, onToggle)
+                            if (index != state.active.lastIndex) DdHairline()
+                        }
+                    }
                 }
                 if (state.inactive.isNotEmpty()) {
-                    Spacer(Modifier.height(DdSpacing.Lg))
-                    TimerGroup(
-                        stringResource(R.string.timers_group_inactive),
-                        state.inactive,
-                        state.titles,
-                        onOpen,
-                        onToggle,
-                    )
+                    item(key = "timers_inactive_spacer") { Spacer(Modifier.height(DdSpacing.Lg)) }
+                    item(key = "timers_inactive_label") {
+                        TimerGroupLabel(stringResource(R.string.timers_group_inactive))
+                    }
+                    itemsIndexed(state.inactive, key = { _, timer -> timer.id }) { index, timer ->
+                        Column(Modifier.animateItem()) {
+                            TimerRowItem(timer, state.titles, onOpen, onToggle)
+                            if (index != state.inactive.lastIndex) DdHairline()
+                        }
+                    }
                 }
-                Spacer(Modifier.height(DdSpacing.Huge))
+                item(key = "timers_bottom_spacer") { Spacer(Modifier.height(DdSpacing.Huge)) }
             }
         }
     }
@@ -216,23 +236,28 @@ internal fun TimersContent(
 }
 
 @Composable
-private fun TimerGroup(
-    label: String,
-    timers: List<Timer>,
+private fun TimerGroupLabel(label: String) {
+    Text(
+        label,
+        Modifier.padding(top = DdSpacing.Xxl, bottom = DdSpacing.Xs),
+        style = DdType.micro,
+        color = deepDeepColors().inkTertiary,
+    )
+}
+
+@Composable
+private fun TimerRowItem(
+    timer: Timer,
     titles: Map<String, String?>,
     onOpen: (Timer) -> Unit,
     onToggle: (Timer, Boolean) -> Unit,
 ) {
-    Text(label, Modifier.padding(top = DdSpacing.Xxl, bottom = DdSpacing.Xs), style = DdType.micro, color = deepDeepColors().inkTertiary)
-    timers.forEachIndexed { index, timer ->
-        val conversationText = when {
-            timer.sessionId.isBlank() -> null
-            titles.containsKey(timer.sessionId) -> titles[timer.sessionId] ?: stringResource(R.string.timers_conversation_deleted)
-            else -> null
-        }
-        TimerRow(timer, conversationText, { onOpen(timer) }, { onToggle(timer, it) })
-        if (index != timers.lastIndex) DdHairline()
+    val conversationText = when {
+        timer.sessionId.isBlank() -> null
+        titles.containsKey(timer.sessionId) -> titles[timer.sessionId] ?: stringResource(R.string.timers_conversation_deleted)
+        else -> null
     }
+    TimerRow(timer, conversationText, { onOpen(timer) }, { onToggle(timer, it) })
 }
 
 @Composable
@@ -264,9 +289,20 @@ private fun TimerRow(timer: Timer, conversationText: String?, onOpen: () -> Unit
 }
 
 @Composable
-private fun EmptyTimers(modifier: Modifier = Modifier) {
+private fun EmptyTimers(modifier: Modifier = Modifier, onNew: () -> Unit) {
     Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Text(stringResource(R.string.timers_empty_title), style = DdType.body, color = deepDeepColors().ink)
+        DdEmptyState(
+            text = stringResource(R.string.timers_empty_title),
+            icon = DdIcons.Clock,
+            modifier = Modifier.fillMaxWidth(),
+            action = {
+                DdTextAction(
+                    text = stringResource(R.string.timers_new),
+                    onClick = onNew,
+                    modifier = Modifier.testTag("timers_empty_new"),
+                )
+            },
+        )
     }
 }
 

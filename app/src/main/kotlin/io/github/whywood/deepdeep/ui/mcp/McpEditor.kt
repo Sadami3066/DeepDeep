@@ -31,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -56,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServer
 import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdGroupCard
 import io.github.whywood.deepdeep.design.DdHairline
@@ -318,6 +320,7 @@ internal fun McpEditorSheet(
         }
     }
 
+    val haptic = rememberHapticFeedback()
     if (showDelete) {
         DdDialog(
             onDismissRequest = { showDelete = false },
@@ -339,7 +342,11 @@ internal fun McpEditorSheet(
                 )
                 DdTextAction(
                     text = stringResource(R.string.mcp_delete_confirm),
-                    onClick = { showDelete = false; delete() },
+                    onClick = {
+                        haptic(HapticFeedbackType.Reject)
+                        showDelete = false
+                        delete()
+                    },
                     modifier = Modifier.testTag("mcp_delete_confirm"),
                     color = colors.danger,
                 )
