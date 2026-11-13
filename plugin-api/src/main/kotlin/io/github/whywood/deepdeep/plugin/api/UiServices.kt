@@ -165,7 +165,22 @@ internal data class UiImagePickRequestImpl(
     override val frontCamera: Boolean,
 ) : UiImagePickRequest
 
+@JvmInline
+public value class PluginPagePresentation private constructor(public val wire: String) {
+    public companion object {
+        public val PAGE: PluginPagePresentation = PluginPagePresentation("page")
+        public val SHEET: PluginPagePresentation = PluginPagePresentation("sheet")
+        public val ALL: List<PluginPagePresentation> = listOf(PAGE, SHEET)
+
+        public fun fromWire(value: String): PluginPagePresentation? = ALL.firstOrNull { it.wire == value }
+    }
+
+    override fun toString(): String = wire
+}
+
 public interface PluginPageContext {
     public val pageId: String
     public val arguments: JsonObject
+    public val presentation: PluginPagePresentation
+        get() = PluginPagePresentation.PAGE
 }

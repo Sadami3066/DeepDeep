@@ -2473,6 +2473,34 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginPage {
 public interface io.github.whywood.deepdeep.plugin.api.PluginPageContext {
   public abstract java.lang.String getPageId();
   public abstract kotlinx.serialization.json.JsonObject getArguments();
+  public default java.lang.String getPresentation-OyXn79E();
+  public static java.lang.String access$getPresentation-OyXn79E$jd(io.github.whywood.deepdeep.plugin.api.PluginPageContext);
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginPageContext$DefaultImpls {
+  public static java.lang.String getPresentation-OyXn79E(io.github.whywood.deepdeep.plugin.api.PluginPageContext);
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginPagePresentation {
+  public static final io.github.whywood.deepdeep.plugin.api.PluginPagePresentation$Companion Companion;
+  public final java.lang.String getWire();
+  public static java.lang.String toString-impl(java.lang.String);
+  public java.lang.String toString();
+  public static int hashCode-impl(java.lang.String);
+  public int hashCode();
+  public static boolean equals-impl(java.lang.String, java.lang.Object);
+  public boolean equals(java.lang.Object);
+  public static final io.github.whywood.deepdeep.plugin.api.PluginPagePresentation box-impl(java.lang.String);
+  public final java.lang.String unbox-impl();
+  public static final boolean equals-impl0(java.lang.String, java.lang.String);
+  public static final java.lang.String access$getPAGE$cp();
+  public static final java.lang.String access$getSHEET$cp();
+  public static final java.util.List access$getALL$cp();
+}
+public final class io.github.whywood.deepdeep.plugin.api.PluginPagePresentation$Companion {
+  public final java.lang.String getPAGE-OyXn79E();
+  public final java.lang.String getSHEET-OyXn79E();
+  public final java.util.List<io.github.whywood.deepdeep.plugin.api.PluginPagePresentation> getALL();
+  public final java.lang.String fromWire-VmdHit0(java.lang.String);
+  public io.github.whywood.deepdeep.plugin.api.PluginPagePresentation$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginPermission {
   public static final io.github.whywood.deepdeep.plugin.api.PluginPermission INSTANCE;
@@ -2975,10 +3003,13 @@ public interface io.github.whywood.deepdeep.plugin.api.Provides {
   public abstract java.util.List<java.lang.String> getSkills();
   public abstract java.util.List<java.lang.String> getUiSlots();
   public abstract java.util.List<java.lang.String> getPages();
+  public default java.util.List<java.lang.String> getThemes();
   public default boolean isEmpty();
+  public static java.util.List access$getThemes$jd(io.github.whywood.deepdeep.plugin.api.Provides);
   public static boolean access$isEmpty$jd(io.github.whywood.deepdeep.plugin.api.Provides);
 }
 public final class io.github.whywood.deepdeep.plugin.api.Provides$DefaultImpls {
+  public static java.util.List<java.lang.String> getThemes(io.github.whywood.deepdeep.plugin.api.Provides);
   public static boolean isEmpty(io.github.whywood.deepdeep.plugin.api.Provides);
 }
 public interface io.github.whywood.deepdeep.plugin.api.PublisherInfo {
@@ -3892,6 +3923,8 @@ public interface io.github.whywood.deepdeep.plugin.api.UiService {
   public abstract void openPage(java.lang.String);
   public abstract void openPageWithArguments(java.lang.String, kotlinx.serialization.json.JsonObject, boolean);
   public static void openPageWithArguments$default(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, kotlinx.serialization.json.JsonObject, boolean, int, java.lang.Object);
+  public default void openPageSheet(java.lang.String, kotlinx.serialization.json.JsonObject);
+  public static void openPageSheet$default(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
   public abstract void closePage(kotlinx.serialization.json.JsonObject);
   public static void closePage$default(io.github.whywood.deepdeep.plugin.api.UiService, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
   public abstract io.github.whywood.deepdeep.plugin.api.PluginPageContext pageContext();
@@ -3911,10 +3944,13 @@ public interface io.github.whywood.deepdeep.plugin.api.UiService {
   public abstract java.lang.Object pickDirectory(kotlin.coroutines.Continuation<? super java.lang.String>);
   public abstract void snackbar(java.lang.String, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>);
   public static void snackbar$default(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, java.lang.String, kotlin.jvm.functions.Function0, int, java.lang.Object);
+  public static void access$openPageSheet$jd(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, kotlinx.serialization.json.JsonObject);
 }
 public final class io.github.whywood.deepdeep.plugin.api.UiService$DefaultImpls {
   public static void shareFiles$default(io.github.whywood.deepdeep.plugin.api.UiService, java.util.List, java.lang.String, int, java.lang.Object);
   public static void openPageWithArguments$default(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, kotlinx.serialization.json.JsonObject, boolean, int, java.lang.Object);
+  public static void openPageSheet(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, kotlinx.serialization.json.JsonObject);
+  public static void openPageSheet$default(io.github.whywood.deepdeep.plugin.api.UiService, java.lang.String, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
   public static void closePage$default(io.github.whywood.deepdeep.plugin.api.UiService, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
   public static java.lang.Object pickDate$default(io.github.whywood.deepdeep.plugin.api.UiService, io.github.whywood.deepdeep.plugin.api.UiDatePickRequest, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static java.lang.Object pickTime$default(io.github.whywood.deepdeep.plugin.api.UiService, io.github.whywood.deepdeep.plugin.api.UiTimePickRequest, kotlin.coroutines.Continuation, int, java.lang.Object);

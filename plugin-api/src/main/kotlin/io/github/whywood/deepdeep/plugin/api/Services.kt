@@ -259,6 +259,10 @@ public interface UiService {
 
     public fun openPageWithArguments(pageId: String, arguments: JsonObject, newTask: Boolean = false)
 
+    public fun openPageSheet(pageId: String, arguments: JsonObject = JsonObject(emptyMap())) {
+        openPageWithArguments(pageId, arguments)
+    }
+
     public fun closePage(result: JsonObject? = null)
 
     public fun pageContext(): PluginPageContext?

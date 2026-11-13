@@ -1,5 +1,13 @@
 # Plugin API changelog
 
+## 1.2.0 / API level 6
+
+加法版本，`PLUGIN_API_LEVEL` 仍为 6：接口只增不改，已发布插件无需重新编译即可在宿主 1.0.8+ 继续运行；使用本版本新能力的插件需 `minHostVersion >= 1.0.8`。
+
+- manifest：`Provides` 新增 `themes: List<String>`（默认空列表，声明插件可提供的主题）；`Provides.isEmpty` 一并计入 themes。
+- 页面：`UiService.openPageSheet(pageId, arguments)`（默认实现退回 `openPageWithArguments`）；新增 `PluginPagePresentation`（`PAGE`/`SHEET`，含 `fromWire`）与 `PluginPageContext.presentation`（默认 `PAGE`）。
+- 兼容性：`design` 需 0.9.0+（`DeepDeepTheme(colors, fontStyle)` 重载、`DdTheme.lightDeepDeep()`、`DdStatusRow`/`DdNoticeBar`/`DdProgressBar`）；新增 API 均有宿主实现或明确的不可用降级。
+
 ## 1.1.0 / API level 6
 
 加法版本，`PLUGIN_API_LEVEL` 仍为 6：接口只增不改，已发布插件无需重新编译即可在宿主 1.0.6+ 继续运行；使用本版本新能力的插件需 `minHostVersion >= 1.0.6`。

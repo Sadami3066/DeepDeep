@@ -16,9 +16,11 @@ public interface Provides {
     public val skills: List<String>
     public val uiSlots: List<String>
     public val pages: List<String>
+    public val themes: List<String>
+        get() = emptyList()
 
     public val isEmpty: Boolean
-        get() = tools.isEmpty() && skills.isEmpty() && uiSlots.isEmpty() && pages.isEmpty()
+        get() = tools.isEmpty() && skills.isEmpty() && uiSlots.isEmpty() && pages.isEmpty() && themes.isEmpty()
 }
 
 public interface PluginComponentDeclaration {
