@@ -39,23 +39,36 @@ object HistoryMapper {
             current = null
         }
 
-        for (entry in entries) {
+        for ((entryIndex, entry) in entries.withIndex()) {
             when (entry) {
                 is CustomMessageEntry -> {
                     if (!entry.display) continue
-                    flush()
                     val text = when (val content = entry.content) {
                         is PlainTextContent -> content.text
                         is BlockContent -> content.asText()
                     }
-                    result += AssistantMessage(
-                        id = messageId++,
-                        role = AssistantRole.ASSISTANT,
-                        text = text,
-                        status = MessageStatus.DONE,
+                    val payload = entry.details?.toString().orEmpty()
+                    val card = AssistantStep.CustomCard(
+                        id = stepId++,
                         customType = entry.customType,
-                        customPayload = entry.details?.toString(),
+                        payload = payload,
+                        text = text,
                     )
+                    val belongsToTurn = customMessageBelongsToTurn(entries, entryIndex) ?: (current != null)
+                    if (belongsToTurn) {
+                        val base = current ?: emptyAssistant(messageId++, 0L)
+                        current = base.copy(steps = base.steps + card)
+                    } else {
+                        flush()
+                        result += AssistantMessage(
+                            id = messageId++,
+                            role = AssistantRole.ASSISTANT,
+                            text = text,
+                            status = MessageStatus.DONE,
+                            customType = entry.customType,
+                            customPayload = payload,
+                        )
+                    }
                 }
 
                 is SessionMessageEntry -> when (val message = entry.message) {
@@ -86,7 +99,6 @@ object HistoryMapper {
                             startedAt = message.timestamp,
                         )
                         val newSteps = mutableListOf<AssistantStep>()
-                        var lastToolIndex = -1
                         for (content in message.content) {
                             when (content) {
                                 is ThinkingContent -> {
@@ -111,25 +123,16 @@ object HistoryMapper {
                                     )
                                     traces[content.id] = trace
                                     newSteps += AssistantStep.Tool(trace)
-                                    lastToolIndex = newSteps.lastIndex
                                 }
 
                                 else -> Unit
                             }
                         }
-                        val finalText = if (lastToolIndex >= 0) {
-                            newSteps.drop(lastToolIndex + 1).filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
-                        } else {
-                            newSteps.filterIsInstance<AssistantStep.Text>().joinToString("") { it.text }
-                        }
-                        val processSteps = if (lastToolIndex >= 0) {
-                            newSteps.filterIndexed { index, step -> !(step is AssistantStep.Text && index > lastToolIndex) }
-                        } else {
-                            newSteps.filterNot { it is AssistantStep.Text }
-                        }
+                        val steps = base.steps + newSteps
+                        val finalText = trailingText(steps)
                         current = base.copy(
                             text = finalText.ifBlank { base.text },
-                            steps = base.steps + processSteps,
+                            steps = steps,
                             startedAt = base.startedAt.takeIf { it > 0 } ?: message.timestamp,
                             finishedAt = message.timestamp,
                             status = turnStatus(base.status, message.stopReason),
@@ -227,6 +230,21 @@ object HistoryMapper {
         status = MessageStatus.DONE,
         startedAt = timestamp,
     )
+
+    private fun customMessageBelongsToTurn(entries: List<SessionEntry>, index: Int): Boolean? {
+        for (next in index + 1 until entries.size) {
+            when (val entry = entries[next]) {
+                is CustomMessageEntry -> Unit
+                is SessionMessageEntry -> return entry.message !is UserMessage
+                is CompactionEntry, is BranchSummaryEntry -> return false
+                else -> Unit
+            }
+        }
+        return null
+    }
+
+    private fun trailingText(steps: List<AssistantStep>): String =
+        steps.takeLastWhile { it is AssistantStep.Text }.joinToString("") { (it as AssistantStep.Text).text }
 
     private fun AssistantMessage.hasToolCall(toolCallId: String): Boolean =
         steps.any { step -> step is AssistantStep.Tool && step.trace.toolCallId == toolCallId }

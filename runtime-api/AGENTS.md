@@ -21,3 +21,4 @@
 - 与 `:runtime` 同包名 `io.github.whywood.deepdeep.runtime`，import 上看不出模块边界；改契约要同时改 `:runtime` 实现和 `:app` 消费方。
 - 只依赖 kotlinx-coroutines 与 kotlinx-serialization-json，不引 Android；不要在这里放 Context、IO 或平台实现。
 - `RuntimeEvent` 接口在 `RuntimeTypes.kt`，`Notices.kt` 的三个事件也扩展它，新增事件别另起体系。
+- `AssistantStep` 是回合内按序步骤（Reasoning/Tool/Text/Notice/CustomCard）；插件自定义消息卡进入 `CustomCard`，历史与实时同一形态。

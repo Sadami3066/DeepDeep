@@ -194,11 +194,12 @@ class HistoryMapperTest {
         val answer = messages[1]
         assertEquals(AssistantRole.ASSISTANT, answer.role)
         assertEquals("All done", answer.text)
-        assertEquals(2, answer.steps.size)
-        assertTrue(answer.steps[0] is AssistantStep.Text)
+        assertEquals(3, answer.steps.size)
+        assertEquals("Let me check", (answer.steps[0] as AssistantStep.Text).text)
         val tool = answer.steps[1] as AssistantStep.Tool
         assertEquals(ToolActivityStatus.DONE, tool.trace.status)
         assertEquals("ok", tool.trace.output)
+        assertEquals("All done", (answer.steps[2] as AssistantStep.Text).text)
         assertEquals(MessageStatus.DONE, answer.status)
     }
 
@@ -217,15 +218,47 @@ class HistoryMapperTest {
             ),
         )
 
-        assertEquals(3, messages.size)
+        assertEquals(2, messages.size)
         assertEquals(AssistantRole.USER, messages[0].role)
-        val toolMessage = messages[1]
-        assertEquals(AssistantRole.ASSISTANT, toolMessage.role)
-        assertEquals(1, toolMessage.steps.size)
-        val trace = (toolMessage.steps.single() as AssistantStep.Tool).trace
+        val turn = messages[1]
+        assertEquals(AssistantRole.ASSISTANT, turn.role)
+        assertEquals(2, turn.steps.size)
+        val trace = (turn.steps[0] as AssistantStep.Tool).trace
         assertEquals(ToolActivityStatus.DONE, trace.status)
         assertEquals("ok", trace.output)
-        assertEquals("卡片内容", messages[2].text)
+        val card = turn.steps[1] as AssistantStep.CustomCard
+        assertEquals("plugin.card", card.customType)
+        assertEquals("卡片内容", card.text)
+        assertEquals("", turn.text)
+    }
+
+    @Test
+    fun customCardStaysInlineInTurnAndKeepsFinalText() {
+        val messages = HistoryMapper.mapEntries(
+            listOf(
+                user("check", 1L),
+                assistant(
+                    content = listOf(TextContent("先查一下"), toolCall("call-1", "mail_search")),
+                    stopReason = StopReason.ToolUse,
+                    timestamp = 2L,
+                ),
+                customCard("mail.search", "卡片内容", timestamp = 3L),
+                toolResult("call-1", "ok", timestamp = 4L),
+                assistant(content = listOf(TextContent("完成了")), timestamp = 5L),
+            ),
+        )
+
+        assertEquals(2, messages.size)
+        val turn = messages[1]
+        assertEquals("完成了", turn.text)
+        assertEquals(4, turn.steps.size)
+        assertEquals("先查一下", (turn.steps[0] as AssistantStep.Text).text)
+        val trace = (turn.steps[1] as AssistantStep.Tool).trace
+        assertEquals(ToolActivityStatus.DONE, trace.status)
+        val card = turn.steps[2] as AssistantStep.CustomCard
+        assertEquals("mail.search", card.customType)
+        assertEquals("卡片内容", card.text)
+        assertEquals("完成了", (turn.steps[3] as AssistantStep.Text).text)
     }
 
     @Test

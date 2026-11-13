@@ -146,6 +146,15 @@ sealed interface AssistantStep {
     ) : AssistantStep {
         override val expanded: Boolean = false
     }
+
+    data class CustomCard(
+        override val id: Long,
+        val customType: String,
+        val payload: String,
+        val text: String,
+    ) : AssistantStep {
+        override val expanded: Boolean = false
+    }
 }
 
 enum class ToolActivityStatus {

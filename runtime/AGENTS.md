@@ -27,7 +27,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `SessionIndex.kt` | 扫 JSONL 建索引，按大小与时间戳增量缓存 |
 | `SessionCatalog.kt` | 会话列表：合并 JSONL 与置顶/归档/重命名 |
 | `SessionMetaStore.kt` | 会话元数据（置顶/归档/重命名）存 DataStore |
-| `HistoryMapper.kt` | JSONL 条目转消息与工具轨迹（含 rawArguments/结构化 resultPayload），识别定时提醒；工具结果按 toolCallId 回填旧记录，FileRef 从 ToolResultMessage.details 的保留键还原 |
+| `HistoryMapper.kt` | JSONL 条目转消息与工具轨迹（含 rawArguments/结构化 resultPayload），识别定时提醒；回合内 CustomMessageEntry 追加为 `CustomCard` step、回合结束/空闲期投递的仍为独立消息，保留全部 Text step 并把末尾文本写入 message.text 作复制兜底；工具结果按 toolCallId 回填旧记录，FileRef 从 ToolResultMessage.details 的保留键还原 |
 | `RunLedger.kt` | 落盘未完成运行，重启后提示被中断 |
 | `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
 | `SessionCloseReason.kt` | 句柄关闭原因（Idle/Reload/Reconfigure/Deleted/Closed）与 `SessionClosure` 事件模型 |
