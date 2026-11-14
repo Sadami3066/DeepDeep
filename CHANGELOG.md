@@ -5,6 +5,7 @@
 - feat: plugin-api 1.3.0 新增工具结果渲染器：插件可按 `source` / MCP `server` / `tool`（精确或前缀）为 MCP 与插件工具结果提供 Compose 卡片，支持优先级、匹配具体度与插件顺序；插件禁用或 UI 不兼容时自动回退默认工具卡 [插件] [界面]
 - feat: 插件自己调用 MCP 时可使用 `host.mcp().callStructured(...)`，同时拿到文本块与 `structuredContent`；旧 `call(...)` 保持兼容 [插件]
 - feat: MCP 工具结果的结构化 `structuredContent` 会随工具详情持久化并在重开会话后继续渲染；Agent 通过 `tool_search` + `tool_execute` 调用 MCP 时，宿主自动还原内部工具身份与参数，渲染器无需关心包装层 [插件] [运行时]
+- feat: 新增官方打车插件 0.1.1：滴滴车型预估、发单链接、订单与司机位置 [插件]
 - feat: 新增官方酒店插件 0.2.1：管理 RollingGo `rgh` CLI 与 OAuth 登录，对话内搜索/比价/预订酒店 [插件]
 - feat: 新增官方火车票插件 0.2.1：12306 车次/时刻/余票查询，插件页与车次卡片 [插件]
 - feat: 新增官方天气插件 1.0.0：Open-Meteo 实时天气与 1–7 天预报，插件页可查询，聊天中显示天气卡片 [插件]
