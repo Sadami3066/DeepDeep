@@ -538,17 +538,32 @@ private fun PluginRow(
                     }
                 }
                 Spacer(Modifier.height(5.dp))
-                Text(
-                    text = failure ?: accessHint ?: description,
-                    style = DdType.bodySmall,
-                    color = when {
-                        failure != null -> colors.danger
-                        accessHint != null -> colors.warning
-                        else -> colors.inkTertiary
-                    },
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (failure != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = failure,
+                            modifier = Modifier.weight(1f),
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        DdTextAction(
+                            text = stringResource(R.string.plugins_recovery_retry),
+                            onClick = onRetryActivation,
+                            modifier = Modifier.testTag("plugin_retry_${snapshot.id}"),
+                            enabled = interactive,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = accessHint ?: description,
+                        style = DdType.bodySmall,
+                        color = if (accessHint != null) colors.warning else colors.inkTertiary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Spacer(Modifier.width(DdSpacing.Sm))
             DdSwitch(
