@@ -8,16 +8,16 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 ## 快速开始
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.2.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0`/`0.9.0` 单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
+`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.3.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0`/`0.9.0` 单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
 
-`plugin-api 1.2.0` 是 level 6 内的纯加法：已发布、只用 1.0.x/1.1.x 能力的插件不需要重新编译；使用 1.2.0 新能力的插件要写 `minHostVersion: "1.0.8"`（宿主 1.0.8+）。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
+`plugin-api 1.3.0` 是 level 6 内的纯加法：已发布、只用 1.0.x/1.1.x/1.2.x 能力的插件不需要重新编译；使用 1.3.0 新能力（工具结果渲染器）的插件要写 `minHostVersion: "1.1.0"`（宿主 1.1.0+）。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
 
 插件工程从 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) 的 `template/` 起步：独立 Gradle Android 工程，包含一个示例工具、一个示例技能、一段提示词与完整的 `.ddp` 打包/签名/验签实现，复制或改名即起点。官方插件实现见 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)。
 
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.2.0` / `design 0.9.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.3.0` / `design 0.9.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
@@ -88,7 +88,7 @@ cp -R template my-plugin && cd my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 6） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 6..6）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（6）处理；宿主 1.0.4 起 level 5 插件会被拒绝 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"`；使用 design 0.9.0 组件或 plugin-api 1.2.0 新能力的插件写 `"1.0.8"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"`；使用 design 0.9.0 组件或 plugin-api 1.2.0 新能力的插件写 `"1.0.8"`；使用工具结果渲染器等 1.3.0 新能力的插件写 `"1.1.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -116,7 +116,7 @@ cp -R template my-plugin && cd my-plugin
 | `pages` | 插件页面 id 列表 |
 | `themes` | 主题 id 列表；与 `assets/themes.json` 中的 `id` 一一对应，见「主题包」 |
 
-`capabilities` 声明插件实际使用的宿主服务与能力；安装确认页与插件详情会展示，宿主只注入声明过的服务。**未声明的服务访问器在运行时抛 `PluginServiceUnavailable`**（不是返回 null）。1.2.0 共 38 项，分四组；标「实验」的访问器需要 `@OptIn(PluginExperimentalApi::class)`。
+`capabilities` 声明插件实际使用的宿主服务与能力；安装确认页与插件详情会展示，宿主只注入声明过的服务。**未声明的服务访问器在运行时抛 `PluginServiceUnavailable`**（不是返回 null）。1.3.0 共 38 项，分四组；标「实验」的访问器需要 `@OptIn(PluginExperimentalApi::class)`。
 
 **基础能力（1.0 起）**
 
@@ -719,6 +719,59 @@ SlotIds.chatMessage("card")                  // "chat.message:card"
 SlotIds.matches(slotId)                      // 校验完整槽位 id
 ```
 
+### 工具结果渲染器（1.3.0）
+
+槽位是“按精确工具名注册”，适合插件自己的工具。想让插件卡片渲染 **MCP 工具**或一批不同名字的工具时，用工具结果渲染器：
+
+```kotlin
+class TravelPlugin : DeepDeepPlugin {
+    override fun ui(host: PluginHost): PluginUiContributions =
+        object : PluginUiContributions, ToolResultRendererContributor {
+            override val bindings = emptyList<SlotBinding>()
+
+            override val toolResultRenderers = listOf(
+                toolResultRenderer(
+                    id = "amap-route",
+                    match = toolResultMatch(
+                        source = ToolResultSource.MCP,
+                        server = "amap",
+                        toolPrefix = "route_",
+                    ),
+                ) { state ->
+                    val data = state.structuredContent as? JsonObject
+                    DdGroupCard {
+                        DdText("路线", style = DdType.heading)
+                        DdText(data?.get("summary")?.jsonPrimitive?.content ?: state.result?.text.orEmpty())
+                    }
+                },
+            )
+        }
+}
+```
+
+匹配规则：
+
+- `source`：`ToolResultSource.PLUGIN` / `MCP` / `BUILTIN`，为空表示不限；
+- `server`：MCP 服务器名，必须与用户在 MCP 设置里的名字一致；
+- `tool`：工具名精确匹配；`toolPrefix`：工具名前缀；两者可同时使用；
+- 同一工具只渲染一个：`priority` 大者优先，其次匹配条件更具体者，最后按插件注册顺序；
+- 插件禁用、UI 不兼容或渲染器不匹配时，自动回退到默认工具卡；渲染器里不要 `require`。
+
+`ToolResultState` 提供：
+
+| 字段 | 说明 |
+|---|---|
+| `callId` / `toolName` | 调用 id 与内部工具名；`tool_execute` 调用的 MCP 工具会自动还原为真实 MCP 工具名 |
+| `source` / `server` | 工具来源与 MCP 服务器名 |
+| `arguments` | 工具参数；`tool_execute` 包装会还原内部参数 |
+| `result` | 同工具卡槽位的 `PluginToolResult`（文本/图片/文件/错误） |
+| `structuredContent` | 工具返回的 `structuredContent`；MCP 结果会在宿主持久化（上限 256 KiB），重开会话仍可用于渲染；没有时为 null |
+
+- MCP 工具默认通过 `tool_search` + `tool_execute` 调用，渲染器不需要关心这层包装。
+- 结构化内容只用于 UI，不进入模型上下文；不要把图片/大 JSON 塞进 `details` 期望宿主渲染，优先用 `structuredContent`。
+- 渲染器内容同样受插件 UI 兼容性约束（`ui.apiLevel` / `kotlin` / `compose`），版本升级后自动重试；Compose 异常与槽位一样没有崩溃隔离，需自测。
+- 工具结果渲染器需要 `plugin-api 1.3.0+` 与宿主 `1.1.0+`；只使用旧能力的插件不受影响。
+
 页面与输入区动作是贡献，不是槽位：`PluginUiContributions.pages`（用 `pluginPage(id, title, icon?, content)` 构造）声明插件页面并内联页面内容，`PluginUiContributions.composerActions`（用 `composerAction(id, label, icon?)` 构造）声明输入区动作。`PluginUiContributions` 是只读接口，`pages` / `composerActions` 有默认空实现，插件只实现 `bindings`（以及需要的成员）。插件页列表里有 `pages` 的行点整行进入第一个页面；输入区动作 chip 在聊天输入区显示，点击打开该插件页面（动作 id 与页面 id 相同时打开对应页面，否则打开第一个页面）。
 
 ### 页面与参数
@@ -922,7 +975,7 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`。
+日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`；使用工具结果渲染器要写 `"1.1.0"` 并依赖 `plugin-api 1.3.0`。
 
 约定：
 
@@ -1030,7 +1083,7 @@ if (linux == null || !linux.available) {
 | `timers()` | `schedule(TimerRequest)`（用 `timerRequest(...)` + `timerOnce`/`timerCron` 构造）、`list()`、`cancel(id)` | 参数非法/宿主未提供时返回 null 或抛异常 |
 | `goals()` | `observe()`、`get/create/edit/pause/resume/complete/clear` | 目标状态非法时返回 null |
 | `miniapp()` | 小程序：`scan/load/create/edit/delete/run` | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `mcp()` | `servers()`、`probe(name)`、`tools(server)`、`call(server,tool,arguments)` | 服务器不存在时返回错误结果或异常 |
+| `mcp()` | `servers()`、`probe(name)`、`tools(server)`、`call(server,tool,arguments)`、`callStructured(server,tool,arguments)` | 服务器不存在时返回错误结果或异常；`callStructured` 同时给出文本 blocks 与结构化结果 |
 | `ui()` | 打开 URL/分享/Toast、页面与参数、交互选择器、Snackbar、`isDark`（见「UI 扩展」） | 单项未接线时抛 `PluginServiceUnavailable("ui.xxx")`；`openPage` 只接受本插件的页面 id，不是 `deepdeep://` 深链 |
 | `app()` | `info: AppInfo`（versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId） | 始终可用 |
 | `bus()` | 插件总线：`publish(event)`（用 `pluginBusEvent(...)` 构造）、`subscribe(topic?)` → `Flow<PluginBusEvent>` | 宿主未提供时抛 `PluginServiceUnavailable` |
@@ -1451,6 +1504,10 @@ if (host.accessibility().enabled) {
 - `network().get`/`post`、`PluginAvailability.isReady` 是扩展函数；显式 import 风格下要分别 import `get`/`post`/`isReady`（或整包 `io.github.whywood.deepdeep.plugin.api.*`）。
 
 ## 兼容与迁移
+
+### 1.2.x → 1.3.0（纯加法）
+
+`plugin-api 1.3.0` 不升 apiLevel：现有插件不需要改代码或重新编译。需要在 MCP/插件工具结果上出卡片时：依赖升到 `plugin-api 1.3.0`，清单写 `minHostVersion: "1.1.0"`；在 `ui()` 返回对象上同时实现 `ToolResultRendererContributor`，用 `toolResultMatch(source/server/tool/toolPrefix)` 匹配、`toolResultRenderer` 构造。MCP 工具由 Agent 通过 `tool_execute` 调用时，宿主会自动还原内部工具身份，渲染器直接按真实 MCP server/tool 匹配。
 
 ### 1.1.x → 1.2.0（纯加法）
 

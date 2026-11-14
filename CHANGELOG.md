@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- feat: plugin-api 1.3.0 新增工具结果渲染器：插件可按 `source` / MCP `server` / `tool`（精确或前缀）为 MCP 与插件工具结果提供 Compose 卡片，支持优先级、匹配具体度与插件顺序；插件禁用或 UI 不兼容时自动回退默认工具卡 [插件] [界面]
+- feat: 插件自己调用 MCP 时可使用 `host.mcp().callStructured(...)`，同时拿到文本块与 `structuredContent`；旧 `call(...)` 保持兼容 [插件]
+- feat: MCP 工具结果的结构化 `structuredContent` 会随工具详情持久化并在重开会话后继续渲染；Agent 通过 `tool_search` + `tool_execute` 调用 MCP 时，宿主自动还原内部工具身份与参数，渲染器无需关心包装层 [插件] [运行时]
+- feat: 新增 `mcpui-demo` 开发示例：用一张天气卡渲染 mock MCP 的 `weather` 工具结果；附最小 streamable-HTTP mock server，不进入市场 [插件]
+- feat: 宿主版本升到 1.1.0 / versionCode 10100；plugin-api 升到 1.3.0（API level 6 纯加法，旧插件无需重新编译）[构建]
+
 ## 1.0.8
 
 - feat: 新增主题包能力：插件可通过 `assets/themes.json` 提供固定浅色/深色配色，安装时校验格式与对比度；设置 → 主题可在内置与插件主题间切换，主界面、插件页、系统助手浮层与悬浮窗统一生效，状态栏与插件深浅色判断跟随主题 [界面] [插件]
