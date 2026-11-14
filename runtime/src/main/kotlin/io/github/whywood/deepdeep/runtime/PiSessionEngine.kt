@@ -195,7 +195,15 @@ class PiSessionEngine(
             ),
         )
         created = session
-        session.agent.installToolExecutionHooks(hooks.toolHooks)
+        val toolHooks = hooks.toolHooks
+        if (toolHooks == null) {
+            session.agent.afterToolCall = bridgeAfterToolCall(
+                StructuredToolResultHooks(null),
+                session.agent.afterToolCall,
+            )
+        } else {
+            session.agent.installToolExecutionHooks(toolHooks.withStructuredDetails())
+        }
         binding.attach(session)
         sessionBindings[session.sessionId] = binding
         hooks.onSessionBound?.invoke(binding)

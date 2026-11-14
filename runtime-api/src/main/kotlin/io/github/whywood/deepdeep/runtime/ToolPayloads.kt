@@ -44,6 +44,16 @@ fun fileRefDisplayText(path: String, mimeType: String?): String =
 object ToolResultDetails {
     const val FILE_REFS_KEY = "deepdeep.fileRefs"
 
+    const val DEEPDEEP_KEY = "deepdeep"
+    const val STRUCTURED_CONTENT_KEY = "structuredContent"
+    const val STRUCTURED_CONTENT_OMITTED_KEY = "structuredContentOmitted"
+
+    fun structuredContent(details: JsonObject?): JsonElement? {
+        val deep = details?.get(DEEPDEEP_KEY) as? JsonObject ?: return null
+        if (deep[STRUCTURED_CONTENT_OMITTED_KEY] == JsonPrimitive(true)) return null
+        return deep[STRUCTURED_CONTENT_KEY]
+    }
+
     fun encodeFileRefs(fileRefs: List<ToolResultPayload.Block.FileRef>): JsonArray = buildJsonArray {
         fileRefs.forEach { fileRef ->
             add(
