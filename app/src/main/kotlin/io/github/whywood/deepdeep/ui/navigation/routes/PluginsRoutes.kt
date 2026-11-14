@@ -101,20 +101,22 @@ internal fun PluginPageRoute(
                 maxLines = 1,
             )
         }
-        PluginPageHost(
-            pluginId = destination.pluginId,
-            pageId = destination.pageId,
-            arguments = destination.arguments,
-            fallback = {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.plugins_page_unavailable),
-                        modifier = Modifier.padding(horizontal = 32.dp),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
-                }
-            },
-        )
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            PluginPageHost(
+                pluginId = destination.pluginId,
+                pageId = destination.pageId,
+                arguments = destination.arguments,
+                fallback = {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.plugins_page_unavailable),
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                    }
+                },
+            )
+        }
     }
 }
