@@ -77,6 +77,21 @@ class TurnBlocksTest {
     }
 
     @Test
+    fun toolExecuteCardStaysInActivityBeforeInlineCard() {
+        val blocks = turnBlocks(
+            assistant(
+                tool(1, "tool_search", callId = "call-1"),
+                tool(2, "tool_execute", callId = "call-2"),
+            ),
+            pluginCardKeys = setOf("call-2"),
+        )
+
+        assertEquals(2, blocks.size)
+        assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
+        assertEquals("tool_execute", (blocks[1] as TurnBlock.PluginCard).trace.name)
+    }
+
+    @Test
     fun presentToolBecomesVisibleCardAfterActivity() {
         val presented = """{"items":[{"type":"file","path":"/tmp/a.pdf","name":"a.pdf"}]}"""
         val blocks = turnBlocks(
