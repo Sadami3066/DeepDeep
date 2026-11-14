@@ -5,6 +5,7 @@ import android.os.Build
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
+import io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult
 import io.github.whywood.deepdeep.plugin.api.McpTool
 import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginLogLevel
@@ -66,7 +67,7 @@ internal data class PluginServiceDependencies(
     val mcpConfig: McpConfigStore? = null,
     val mcpProbe: McpServerProbe? = null,
     val mcpTools: (suspend (String) -> List<McpTool>)? = null,
-    val mcpCall: (suspend (String, String, JsonObject) -> McpCallResult)? = null,
+    val mcpCall: (suspend (String, String, JsonObject) -> McpStructuredCallResult)? = null,
     val screen: ScreenController? = null,
     val mainScreen: ScreenController? = null,
     val virtualScreen: VirtualScreenFeature? = null,

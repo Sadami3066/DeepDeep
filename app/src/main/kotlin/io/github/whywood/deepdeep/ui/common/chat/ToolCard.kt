@@ -216,6 +216,7 @@ internal fun ToolCard(
                 callId = tool.toolCallId,
                 args = remember(rawArguments, tool.arguments) { toolArgumentsJson(rawArguments, tool.arguments) },
                 result = tool.pluginSlotResult(),
+                trace = tool,
             ) {
                 ToolCardDefaultBody(
                     tool = tool,

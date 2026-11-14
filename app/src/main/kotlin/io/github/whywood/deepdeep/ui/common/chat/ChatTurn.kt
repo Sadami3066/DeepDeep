@@ -533,12 +533,12 @@ private fun AssistantTurn(
     retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
-    val toolNames = remember(message.steps) {
-        message.steps.filterIsInstance<AssistantStep.Tool>().map { it.trace.name }.distinct()
+    val toolTraces = remember(message.steps) {
+        message.steps.filterIsInstance<AssistantStep.Tool>().map { it.trace }
     }
-    val pluginToolNames = rememberPluginToolCardNames(toolNames)
-    val blocks = remember(message.steps, pluginToolNames, pendingQuestions) {
-        turnBlocks(message, pluginToolNames, pendingQuestions)
+    val pluginCardKeys = rememberPluginCardTraceKeys(toolTraces)
+    val blocks = remember(message.steps, pluginCardKeys, pendingQuestions) {
+        turnBlocks(message, pluginCardKeys, pendingQuestions)
     }
     val answer = remember(message.text, blocks) { answerText(message, blocks) }
     val lastActivityKey = blocks.lastOrNull { it is TurnBlock.Activity }?.key
@@ -719,6 +719,7 @@ private fun PluginToolCardBlock(
             toolArgumentsJson(trace.rawArguments, trace.arguments)
         },
         result = trace.pluginSlotResult(),
+        trace = trace,
     ) {
         ToolCard(
             tool = trace,

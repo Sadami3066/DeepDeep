@@ -55,7 +55,7 @@ internal sealed interface TurnBlock {
 
 internal fun turnBlocks(
     message: AssistantMessage,
-    pluginToolNames: Set<String> = emptySet(),
+    pluginCardKeys: Set<String> = emptySet(),
     pendingQuestions: List<PendingQuestion> = emptyList(),
 ): List<TurnBlock> {
     val blocks = mutableListOf<TurnBlock>()
@@ -80,7 +80,7 @@ internal fun turnBlocks(
                 blocks += TurnBlock.CustomCard(step)
             }
 
-            step is AssistantStep.Tool && step.trace.isPluginCard(pluginToolNames) -> {
+            step is AssistantStep.Tool && step.trace.isPluginCard(pluginCardKeys) -> {
                 flushActivity()
                 blocks += TurnBlock.PluginCard(step.trace)
             }
@@ -138,8 +138,10 @@ private fun toolBlock(step: AssistantStep): TurnBlock? {
     return null
 }
 
-private fun ToolTrace.isPluginCard(pluginToolNames: Set<String>): Boolean =
-    name !in HostCardTools && name in pluginToolNames
+private fun ToolTrace.isPluginCard(pluginCardKeys: Set<String>): Boolean =
+    name !in HostCardTools && cardKey() in pluginCardKeys
+
+internal fun ToolTrace.cardKey(): String = toolCallId.ifBlank { id.toString() }
 
 private fun liveQuestion(
     message: AssistantMessage,

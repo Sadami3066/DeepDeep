@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginServices
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
+import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererRegistry
 import io.github.whywood.deepdeep.runtime.PluginPromptContribution
 import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
 import io.github.whywood.deepdeep.runtime.PluginPromptSection
@@ -108,6 +109,8 @@ class PluginHostManager internal constructor(
     override val appScope: CoroutineScope get() = scope
 
     override val slotRegistry: SlotRegistry by lazy { SlotRegistry({ registrySnapshot }, pluginsRoot) }
+
+    override val toolRendererRegistry: ToolRendererRegistry by lazy { ToolRendererRegistry({ registrySnapshot }, pluginsRoot) }
 
     override val registrySnapshot: PluginRegistrySnapshot get() = registry.snapshot()
 

@@ -20,5 +20,5 @@
 - 插件访问 App 能力只通过 `PluginHost` 的宿主服务（1.1.0 起 35 个访问器，设备/数据能力实现位于 `host/extensions/`）；JVM 标准库（网络、加解密等）可直接使用，但须遵守清单 `capabilities` 与 TLS 校验；无法使用 Android 资源/组件（字符串/图标走 manifest + assets），需要独立窗口/前台服务/广播接收时用宿主的代理组件与动态广播。
 - prompt override 是 experimental 能力：插件声明 `prompt` capability 并实现 `PromptOverridePlugin`，manager 物化后由 runtime 合并进系统提示词；preamble/rules 可覆盖、sections 按 priority 追加，单插件 32KiB/总量 64KiB。
 - 无会话系统事件（通知接收/动作、后台任务、分享、深链、应用前后台）由 `manager/PluginSystemEvents` 按 capability 与 manifest `components` 门槛派发；`components()`/`credentials()`/`accessibility()` 是实验 API。
-- 插件贡献 = tools / skills / promptSections / ui 槽位（tool.card/chat.message）/ pages（`PluginPage.content` 内联）/ composerActions / hooks；每轮 refresh 每插件只物化一次，由 `PluginRegistry` 聚合成不可变快照，工具/提示词/技能/槽位/UI 都消费这份快照。
+- 插件贡献 = tools / skills / promptSections / ui 槽位（tool.card/chat.message）/ 工具结果渲染器（1.3.0，按 source/server/tool 匹配 MCP 或插件工具）/ pages（`PluginPage.content` 内联）/ composerActions / hooks；每轮 refresh 每插件只物化一次，由 `PluginRegistry` 聚合成不可变快照，工具/提示词/技能/槽位/UI/渲染器都消费这份快照。
 - 插件自己的 CLI 下载与登录由插件页面或工具自行完成，宿主不再提供安装/连接流程。

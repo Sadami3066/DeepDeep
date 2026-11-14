@@ -94,6 +94,11 @@ internal data class PluginHooksEntry(val pluginId: String, val hooks: PluginHook
 
 internal data class PluginBindingEntry(val pluginId: String, val binding: SlotBinding)
 
+internal data class PluginToolRendererEntry(
+    val pluginId: String,
+    val renderer: io.github.whywood.deepdeep.plugin.api.ToolResultRenderer,
+)
+
 internal data class PluginPageEntry(val pluginId: String, val page: PluginPage)
 
 internal data class PluginComposerActionEntry(val pluginId: String, val action: ComposerAction)
@@ -111,6 +116,7 @@ internal class PluginRegistrySnapshot(
     val ui: List<PluginUiEntry>
     val hooks: List<PluginHooksEntry>
     val bindings: List<PluginBindingEntry>
+    val toolResultRenderers: List<PluginToolRendererEntry>
     val pages: List<PluginPageEntry>
     val composerActions: List<PluginComposerActionEntry>
     val themeSources: List<PluginThemeSource>
@@ -156,6 +162,12 @@ internal class PluginRegistrySnapshot(
         ui = contributing.map { PluginUiEntry(it.id, it.contributions.ui) }
         hooks = contributing.map { PluginHooksEntry(it.id, it.contributions.hooks) }
         bindings = ui.flatMap { entry -> entry.contributions.bindings.map { PluginBindingEntry(entry.pluginId, it) } }
+        toolResultRenderers = ui.flatMap { entry ->
+            (entry.contributions as? io.github.whywood.deepdeep.plugin.api.ToolResultRendererContributor)
+                ?.toolResultRenderers
+                ?.map { PluginToolRendererEntry(entry.pluginId, it) }
+                .orEmpty()
+        }
         pages = ui.flatMap { entry -> entry.contributions.pages.map { PluginPageEntry(entry.pluginId, it) } }
         composerActions = ui.flatMap { entry ->
             entry.contributions.composerActions.map { PluginComposerActionEntry(entry.pluginId, it) }

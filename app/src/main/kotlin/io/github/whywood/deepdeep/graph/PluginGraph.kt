@@ -8,6 +8,7 @@ import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.PluginSkillStore
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
+import io.github.whywood.deepdeep.plugin.api.mcpStructuredCallResult
 import io.github.whywood.deepdeep.plugin.api.textBlock
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
 import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
@@ -188,11 +189,12 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             },
             mcpCall = call@{ server, tool, arguments ->
                 val config = deps.mcpConfigStore.loadServers()[server]
-                    ?: return@call McpCallResult(
+                    ?: return@call mcpStructuredCallResult(
                         blocks = listOf(textBlock("unknown MCP server: $server")),
+                        structuredContent = null,
                         isError = true,
                     )
-                McpModelMapping.result(deps.mcpPluginBridge().callTool(server, config, tool, arguments))
+                McpModelMapping.structuredResult(deps.mcpPluginBridge().callTool(server, config, tool, arguments))
             },
             virtualScreen = deps.virtualScreenFeature(),
             screenshotDir = File(deps.appContext.filesDir, "gui/screenshots"),

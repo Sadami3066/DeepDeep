@@ -68,7 +68,7 @@ class TurnBlocksTest {
                 tool(2, "sysu_materials_search"),
                 tool(3, "bash"),
             ),
-            pluginToolNames = setOf("sysu_materials_search"),
+            pluginCardKeys = setOf("call-2"),
         )
         assertEquals(3, blocks.size)
         assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })

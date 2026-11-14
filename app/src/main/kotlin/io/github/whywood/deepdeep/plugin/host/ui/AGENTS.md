@@ -9,11 +9,13 @@
 | `SlotRegistry.kt` | 从 `PluginRegistrySnapshot` 解析槽位绑定：`bindings(slotId)` 精确取槽、`entriesOf(pluginId)` 取插件全部绑定；保留可贡献相位、按 priority 降序 + 插件注册顺序排序；Compose 兼容性判定给出 `SlotDisabledReason` |
 | `HostSlotStates.kt` | `SlotState` 宿主实现（`HostToolCardSlotState`/`HostCustomMessageSlotState`），供聊天渲染构造槽位状态 |
 | `PluginSlotHost.kt` | 槽位渲染入口：取第一个可渲染绑定直接 `render(state)`；无绑定/不兼容时走 fallback；渲染异常由 Compose 直接抛出（无进程级隔离） |
+| `ToolRendererRegistry.kt` | 工具结果渲染器注册表：从快照聚合 `ToolResultRendererContributor` 的渲染器，按 source/server/tool 匹配，priority → 匹配具体度 → 插件顺序取唯一可渲染项；忽略非贡献相位与不兼容 UI |
 | `ComposeVersionDetector.kt` | 宿主 Compose runtime 版本探测：优先读 APK 内 `META-INF/androidx.compose.runtime_runtime.version`；读不到时反射 `ComposeVersion.version`（int 兼容编号或字符串版本） |
 
 ## 要点
 
 - 槽位渲染只认第一个可渲染绑定（priority 大者优先、同优先按插件注册顺序），不是叠加渲染；宿主默认视图用 `fallback` 表达。
+- 工具结果渲染器（1.3.0）是槽位的补充：插件只在自己的工具名之外想按 MCP server/tool 匹配时使用；MCP 的 `tool_execute` 包装由聊天侧还原内部身份，注册表本身只接收 source/server/tool。
 - Compose 兼容条件只看清单 `ui` 块：`ui.apiLevel <= HOST_UI_API_LEVEL`、`ui.kotlin` 填了则主次版本一致、`ui.compose` 填了则与宿主 Compose runtime 版本精确一致；不兼容时 `SlotRenderEntry.disabledReason` 带具体原因（`SlotDisabledReason`）。
 - `ui.compose` 比较用宿主 runtime 的 maven 版本（如 `1.10.5`，来自 APK 版本文件），不是 Compose BOM 版本；`ComposeVersion.version` 是编译器兼容编号（int）而非版本号，只能作为探测失败时的诊断信息，不能拿来当版本比较。
 - 槽内容统一是 `SlotContent` 接口的 `render(state)`，宿主不再区分声明式子类型；插件页面用 `PluginPage.content()`。

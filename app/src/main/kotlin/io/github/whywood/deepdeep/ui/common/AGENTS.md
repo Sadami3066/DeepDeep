@@ -30,3 +30,5 @@
 - Markdown 解析与渲染只有 `:design` 一套（`DdMarkdown`/`markdownToPlainText`/`codeLabel`/`copyCodeLabel`/`onCopyCode`/`onImage` 由调用方注入）；聊天侧 `ChatMarkdown.kt` 只做文案、复制反馈与图片加载注入，不要在 `ui/` 再放解析器或第二套块渲染。
 - Markdown 内联图片：本地源先经 `readableMarkdownLocalFile`（`HostFiles.isFile` + 可读性，不可读则 `HostFiles.stage` 到 cache）再交给解码器；GIF/WebP 等动画按文件名判定后走 `AnimatedImage`，暂存副本沿用 `HostFiles` 的 1 小时清理，别在 UI 里用裸 `File.isFile` 判断。
 - `ProviderIcon` 是静态映射，新增厂商要同时补 `res/drawable-nodpi/provider_*`（含 `-night`）与映射表，否则回退首字母。
+
+- 工具卡渲染顺序：精确 `tool.card.content:<name>` 槽位 → 插件工具结果渲染器（`ToolResultRendererContributor`，MCP/插件工具按 source/server/tool 匹配）→ 宿主默认工具卡；`ToolResultIdentity` 负责把 `mcp__server__tool` 与 `tool_execute` 包装还原成真实 MCP 工具身份。
