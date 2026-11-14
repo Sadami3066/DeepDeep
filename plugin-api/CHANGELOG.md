@@ -1,5 +1,17 @@
 # Plugin API changelog
 
+## 1.3.0 / API level 6
+
+加法版本，`PLUGIN_API_LEVEL` 仍为 6：接口只增不改，已发布插件无需重新编译；使用本版本新能力的插件需 `minHostVersion >= 1.1.0`。
+
+- 工具结果渲染器：新增 `ToolResultSource`（value class：`PLUGIN`/`MCP`/`BUILTIN`）、`ToolResultMatch` + `toolResultMatch(...)`、`ToolResultRenderer` + `toolResultRenderer(...)`、`ToolResultState`，以及可选的 `ToolResultRendererContributor`。
+- `PluginUiContributions` 不变；插件在 `ui()` 返回的对象上额外实现 `ToolResultRendererContributor` 即可贡献渲染器，旧插件二进件不受影响。
+- 插件可以给任意工具结果（包括 Agent 通过 `tool_execute` 调用的 MCP 工具）提供 Compose 渲染，不再只限插件自己的工具名；`ToolResultState` 提供参数、`result`、`structuredContent` 与工具来源。
+- 匹配维度：`source`、MCP `server`、`tool`、`toolPrefix`；优先级、匹配具体度和插件注册顺序决定唯一渲染器；禁用/不兼容的插件自动回退到默认工具卡。
+- `McpService.callStructured(...)`：新增 `McpStructuredCallResult`，插件自己调用 MCP 时也能拿到 `blocks` 与 `structuredContent`；未实现该能力时默认退回 `call(...)` 且 structured 为 null。
+- 结构化结果：宿主把 MCP `structuredContent` 持久化到工具详情（上限 256 KiB），MCP 结果的 `tool_execute` 包装会自动还原内部工具身份；没有结构化结果时渲染器仍可只依赖文本/参数。
+- 兼容性：`design` 仍为 0.9.0；MCP 工具结果渲染依赖宿主 1.1.0+。
+
 ## 1.2.0 / API level 6
 
 加法版本，`PLUGIN_API_LEVEL` 仍为 6：接口只增不改，已发布插件无需重新编译即可在宿主 1.0.8+ 继续运行；使用本版本新能力的插件需 `minHostVersion >= 1.0.8`。

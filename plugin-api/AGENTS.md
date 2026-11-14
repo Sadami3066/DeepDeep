@@ -1,6 +1,6 @@
 # plugin-api · 插件契约 SDK
 
-外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放契约类型与顶层工厂，不含宿主实现；manifest 解析/校验/版本比较已移到 `:app` 的 `plugin/host/external/`。`PLUGIN_API_LEVEL = 6`，`HOST_UI_API_LEVEL = 2`，当前 SDK 版本 `1.2.0`（level 6 内加法，宿主 1.0.8+）。
+外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放契约类型与顶层工厂，不含宿主实现；manifest 解析/校验/版本比较已移到 `:app` 的 `plugin/host/external/`。`PLUGIN_API_LEVEL = 6`，`HOST_UI_API_LEVEL = 2`，当前 SDK 版本 `1.3.0`（level 6 内加法，宿主 1.1.0+）。
 
 ## 文件
 
@@ -15,8 +15,10 @@
 | `Contributions.kt` | `Contributions`、`PluginTool`、`PluginToolCall`、`PluginRunSignal`、`PluginToolResult`、`ToolBlock` 与工厂 |
 | `Hooks.kt` | `PluginEvent` 标记接口、观察事件（含通知/后台/分享/深链/应用生命周期）、5 个变换/闸门请求与决策、`PluginHooks`（默认空实现） |
 | `Ui.kt` | `SlotIds`、`SlotBinding`、`SlotContent`、`PluginPage`、`ComposerAction`、`PluginUiContributions` 与工厂 |
+| `ToolResultRenderers.kt` | 工具结果渲染器契约：`ToolResultSource`、`ToolResultMatch` + `toolResultMatch`、`ToolResultRenderer` + `toolResultRenderer`、`ToolResultState`、`ToolResultRendererContributor` |
 | `SlotStates.kt` | `SlotState` 标记接口与 `ToolCardSlotState` / `CustomMessageSlotState` 只读接口 |
-| `Services.kt` | 现有宿主服务接口（含 UI/通知/会话/聊天方法，1.2.0 新增 `UiService.openPageSheet`）、`PluginServiceUnavailable`、聊天 DTO 与工厂 |
+| `Services.kt` | 现有宿主服务接口（含 UI/通知/会话/聊天方法，1.2.0 新增 `UiService.openPageSheet`，1.3.0 新增 `McpService.callStructured`）、`PluginServiceUnavailable`、聊天 DTO 与工厂 |
+| `McpStructuredCallResult.kt` | 1.3.0 新增：插件直接调用 MCP 时的 `blocks` + `structuredContent` 结果接口与工厂 |
 | `DeviceServices.kt` | 设备/剪贴板/权限/包管理/Root·ADB/Intent/独立窗口/后台任务服务与模型 |
 | `DataServices.kt` | 设置存储/定位/联系人/短信/日历/媒体/语音/网页/凭据/无障碍/通知记录与模型 |
 | `UiServices.kt` | 交互请求模型（确认/输入/选择/日期时间/文件图片/相机）、`PluginPickedFile`、`PluginPageContext`、`PluginPagePresentation` |
