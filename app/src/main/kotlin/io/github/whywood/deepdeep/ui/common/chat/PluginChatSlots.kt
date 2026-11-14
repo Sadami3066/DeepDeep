@@ -34,6 +34,7 @@ internal fun PluginToolCardSlot(
     args: JsonObject,
     result: PluginToolResult? = null,
     trace: ToolTrace? = null,
+    allowRenderers: Boolean = true,
     fallback: @Composable () -> Unit,
 ) {
     val manager = LocalPluginManager.current ?: run { fallback(); return }
@@ -47,7 +48,7 @@ internal fun PluginToolCardSlot(
         )
         return
     }
-    val renderer = if (trace != null) {
+    val renderer = if (allowRenderers && trace != null) {
         remember(uiState, trace) { trace.toolRenderer(manager) }
     } else {
         null
