@@ -201,7 +201,10 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
         clipboard = deps.deviceServices?.clipboard,
         permissions = deps.deviceServices?.permissions,
         packages = deps.deviceServices?.packages,
-        privilege = deps.deviceServices?.privilege,
+        privilege = deps.deviceServices?.privilege?.let { privilege ->
+            if (deps.pluginId == GUI_ACT_PLUGIN_ID) GuiActPrivilegeService(privilege, deps.mainScreen, deps.screen)
+            else privilege
+        },
         intents = deps.deviceServices?.intents,
         components = deps.deviceServices?.components,
         background = deps.deviceServices?.background,

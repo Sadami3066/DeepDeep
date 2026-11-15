@@ -9,6 +9,7 @@ import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
 import io.github.whywood.deepdeep.sdk.agent.AgentToolUpdateCallback
 import io.github.whywood.deepdeep.sdk.agent.JsonArgs
 import io.github.whywood.deepdeep.sdk.agent.StreamFn
+import io.github.whywood.deepdeep.sdk.agent.asAssistantMessage
 import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
 import io.github.whywood.deepdeep.sdk.ai.Content
 import io.github.whywood.deepdeep.sdk.ai.DoneEvent
@@ -24,6 +25,8 @@ import io.github.whywood.deepdeep.sdk.ai.createAssistantMessageEventStream
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
@@ -83,6 +86,52 @@ class AgentToolExecutionHooksTest {
 
     private fun singleToolEnd(events: List<AgentEvent>): AgentEvent.ToolExecutionEnd =
         events.filterIsInstance<AgentEvent.ToolExecutionEnd>().single()
+
+    @Test
+    fun guiExitRequestsReadbackBeforeSavingFinalSources() = runTest {
+        var streamCall = 0
+        var reviewCount = 0
+        var result: JsonObject? = null
+        val empties = buildJsonObject { }
+        val streamFn: StreamFn = { _, context, _ ->
+            val pending = when (streamCall++) {
+                0 -> toolCallAssistant("tap", "screen_tap", empties)
+                1 -> textAssistant("The button was clicked.")
+                2 -> {
+                    assertTrue(context.messages.last().toString().contains("The result of the last action has not been read yet."))
+                    toolCallAssistant("observe", "screen_observe", empties)
+                }
+                3 -> textAssistant("The confirmation code is A123456.")
+                else -> error("the exit review should request readback once")
+            }
+            doneStream(pending)
+        }
+        val agent = Agent(AgentOptions(initialState = AgentInitialState(model = model()), streamFn = streamFn))
+        agent.state.tools.add(agentTool("screen_tap") { _, _, _, _ ->
+            AgentToolResult(content = listOf(TextContent("""{"ok":true,"changed":true}""")))
+        })
+        agent.state.tools.add(agentTool("screen_observe") { _, _, _, _ ->
+            AgentToolResult(content = listOf(TextContent(
+                """{"package":"test.app","nodes":[{"text":"The confirmation code is A123456."}]}""",
+            )))
+        })
+        val events = mutableListOf<AgentEvent>()
+        agent.subscribe { event, _ -> events.add(event) }
+        installPhongentAnswerReview(agent) { _, report ->
+            reviewCount++
+            result = report
+        }
+
+        agent.prompt("Find the confirmation code.")
+
+        assertEquals(4, streamCall)
+        assertEquals(1, reviewCount)
+        assertEquals("false", result!!["unreadChange"]!!.jsonPrimitive.content)
+        assertEquals("true", result!!["resultReadNudged"]!!.jsonPrimitive.content)
+        assertEquals("test.app", result!!["sources"]!!.jsonArray.single().jsonObject["place"]!!.jsonPrimitive.content)
+        val final = events.filterIsInstance<AgentEvent.AgentEnd>().single().messages.last().asAssistantMessage()
+        assertEquals("The confirmation code is A123456.", final!!.content.filterIsInstance<TextContent>().single().text)
+    }
 
     @Test
     fun dynamicToolAddedAfterHookInstallRunsThroughBeforeAndAfter() = runTest {

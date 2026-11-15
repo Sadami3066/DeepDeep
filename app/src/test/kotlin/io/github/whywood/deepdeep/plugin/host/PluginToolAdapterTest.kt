@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.plugin.host
 
+import com.wangzan101.mika.core.tool.Verb
+import io.github.whywood.deepdeep.plugin.host.services.GUI_ACT_PLUGIN_ID
+import io.github.whywood.deepdeep.plugin.host.services.PluginScreenEvidence
 import io.github.whywood.deepdeep.sdk.ai.ImageContent
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.ai.RunSignal
@@ -10,10 +13,14 @@ import io.github.whywood.deepdeep.plugin.api.ToolBlock
 import io.github.whywood.deepdeep.runtime.ToolResultDetails
 import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import java.util.Base64
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
@@ -184,6 +191,31 @@ class PluginToolAdapterTest {
         }
         assertEquals(listOf("half", "almost"), updates)
         assertEquals("done", (result.content.single() as TextContent).text)
+    }
+
+    @Test
+    fun attachesInputAndAssertionReadbackToOriginalGuiActSteps() = runTest {
+        val tool = testTool("screen_act") { call ->
+            fun begin(index: Int) = call.partial(textResult("", details = buildJsonObject { put("gui_act_step_begin", index) }))
+            val evidence = checkNotNull(currentCoroutineContext()[PluginScreenEvidence])
+            begin(0)
+            evidence.record(Verb.Tap, true)
+            evidence.record(Verb.TypeText, true)
+            begin(1)
+            evidence.observe(setOf("Saved draft"))
+            call.partial(textResult("progress"))
+            textResult("""{"results":[{"step":0,"op":"type","ok":true},{"step":1,"op":"assert","ok":true}]}""")
+        }
+        val args = Json.parseToJsonElement("""{"steps":[{"op":"type"},{"op":"assert","present":"saved"}]}""").jsonObject
+        val seen = mutableListOf<String>()
+        val result = PluginToolAdapter.toCodingTool(tool, GUI_ACT_PLUGIN_ID).execute("action", args, null) {
+            seen += (it.content.single() as TextContent).text
+        }
+        val payload = Json.parseToJsonElement((result.content.single() as TextContent).text).jsonObject
+        val steps = payload.getValue("results").jsonArray
+        assertEquals("[0,1]", steps[0].jsonObject.getValue("host_verification").jsonObject.getValue("actions").toString())
+        assertEquals("true", steps[1].jsonObject.getValue("host_verification").jsonObject.getValue("matched").toString())
+        assertEquals(listOf("progress"), seen)
     }
 
     @Test

@@ -43,9 +43,9 @@ internal class PluginSessionHooks(
 
     fun tools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<CodingTool> {
         val sessionId = { binding.current()?.sessionId.orEmpty() }
-        return sessionContributions(binding).filterKeys { it !in excludedPlugins }.values
-            .flatMap { contribution ->
-                PluginToolAdapter.toCodingTools(contribution.tools.filter { it.exposure == PluginToolExposure.DIRECT }, sessionId)
+        return sessionContributions(binding).filterKeys { it !in excludedPlugins }.entries
+            .flatMap { (pluginId, contribution) ->
+                PluginToolAdapter.toCodingTools(contribution.tools.filter { it.exposure == PluginToolExposure.DIRECT }, pluginId, sessionId)
             }
             .distinctBy { it.name }
     }

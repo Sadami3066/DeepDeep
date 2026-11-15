@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
 import io.github.whywood.deepdeep.sdk.agent.AgentMessage
+import io.github.whywood.deepdeep.sdk.agent.AgentEvent
 import io.github.whywood.deepdeep.sdk.ai.Model
 import io.github.whywood.deepdeep.sdk.ai.Provider
 import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
@@ -66,6 +67,7 @@ class PiSessionEngine(
     val agentDirectory: Path = agentDir.absolutePath.toPath()
     val paths = AgentPaths(cwd, agentDirectory)
     private val sessionBindings = ConcurrentHashMap<String, SessionBinding>()
+    private val progressGuards = ConcurrentHashMap<String, ToolProgressGuard>()
 
     suspend fun createSession(
         file: Path?,
@@ -195,7 +197,14 @@ class PiSessionEngine(
             ),
         )
         created = session
+        val progressGuard = ToolProgressGuard()
+        progressGuards[session.sessionId] = progressGuard
+        session.agent.installToolExecutionHooks(progressGuard)
+        session.subscribe { event ->
+            if (event is SessionEvent.AgentEventReceived && event.event is AgentEvent.AgentStart) progressGuard.beginRun()
+        }
         session.agent.installToolExecutionHooks(hooks.toolHooks)
+        installPhongentAnswerReview(session)
         binding.attach(session)
         sessionBindings[session.sessionId] = binding
         hooks.onSessionBound?.invoke(binding)
@@ -231,7 +240,12 @@ class PiSessionEngine(
     }
 
     internal fun releaseSession(sessionId: String) {
+        progressGuards.remove(sessionId)
         sessionBindings.remove(sessionId)
+    }
+
+    internal fun checkScreenRunCompleted(sessionId: String) {
+        progressGuards[sessionId]?.checkRunCompleted()
     }
 
     internal fun captureMemory(sessionId: String, sessionFile: String?, entries: List<io.github.whywood.deepdeep.sdk.coding.session.SessionEntry>?) {
@@ -389,7 +403,10 @@ internal class PiSessionHandle(
         behavior: QueueBehavior?,
     ) {
         when (val prepared = engine.prepareInput(text, images.orEmpty())) {
-            is PreparedPrompt.Ready -> session.prompt(prepared.text, prepared.images.toImageContents(), behavior)
+            is PreparedPrompt.Ready -> {
+                session.prompt(prepared.text, prepared.images.toImageContents(), behavior)
+                if (behavior == null) engine.checkScreenRunCompleted(sessionId)
+            }
             PreparedPrompt.Handled -> Unit
         }
     }
@@ -426,6 +443,7 @@ internal class PiSessionHandle(
 
     override suspend fun retryLastAssistant() {
         session.retryLastAssistant()
+        engine.checkScreenRunCompleted(sessionId)
     }
 
     override fun lastAssistantText(): String? = session.getLastAssistantText()

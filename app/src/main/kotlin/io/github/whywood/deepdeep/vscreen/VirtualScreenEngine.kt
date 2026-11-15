@@ -723,17 +723,48 @@ class VirtualScreenEngine(
         lastFailure = VirtualScreenFailureInfo(category = category, message = message, recoverable = recoverable, reason = reason?.code)
     }
 
-    private suspend fun executeCommand(command: String, params: JsonObject): VirtualScreenResult =
-        withContext(Dispatchers.IO) {
-            if (!isOnline()) return@withContext VirtualScreenResult(false, "Virtual screen is not running")
-            try {
-                val response = request(command, params)
-                VirtualScreenResult(true, response.stringField("message").orEmpty())
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                VirtualScreenResult(false, t.readableMessage())
+    private suspend fun executeCommand(command: String, params: JsonObject): VirtualScreenResult {
+        val expected = _state.value as? VirtualScreenState.Online
+            ?: return VirtualScreenResult(false, "Virtual screen is not running")
+        return withContext(Dispatchers.IO) {
+            lifecycleMutex.withLock {
+                commandMutex.withLock {
+                    val client = socket
+                    try {
+                        check(expected.displayId > 0 && client != null && !client.isClosed &&
+                            sameVirtualInputDisplay(expected, _state.value)) {
+                            "Virtual screen changed before dispatch. Observe it again."
+                        }
+                        val response = try {
+                            requestLocked(command, params)
+                        } catch (rejection: VirtualCommandRejected) {
+                            val fallback = virtualInputFallback(expected, _state.value, command, params, rejection.code)
+                                ?: throw rejection
+                            check(socket === client && !client.isClosed) {
+                                "The virtual screen transport closed before fallback. Observe it again."
+                            }
+                            applyVirtualFallbackInput(
+                                send = { launcher.sendFallbackInput(fallback) },
+                                acknowledge = {
+                                    Log.i(TAG, VirtualScreenTransportLog.event("input_fallback", "command" to command, "displayId" to expected.displayId))
+                                    requestLocked(VirtualScreenCommands.INPUT_APPLIED, buildJsonObject { put("displayId", expected.displayId) })
+                                },
+                            )
+                            buildJsonObject { put("message", "Input sent to virtual screen ${expected.displayId} through the active system input port") }
+                        }
+                        check(sameVirtualInputDisplay(expected, _state.value) && socket === client && !client.isClosed) {
+                            "Virtual screen changed during input. The action may have executed. Observe it again."
+                        }
+                        VirtualScreenResult(true, response.stringField("message").orEmpty())
+                    } catch (t: CancellationException) {
+                        throw t
+                    } catch (t: Exception) {
+                        VirtualScreenResult(false, t.message ?: t.readableMessage())
+                    }
+                }
             }
         }
+    }
 
     private suspend fun request(command: String, params: JsonObject): JsonObject =
         commandMutex.withLock { requestLocked(command, params) }
@@ -759,7 +790,7 @@ class VirtualScreenEngine(
         }
         if (response == null) throw IOException("Command timed out: $command")
         if (response.booleanField("ok") != true) {
-            throw IllegalStateException(response.stringField("error") ?: "Command failed: $command")
+            throw VirtualCommandRejected(response.stringField("error") ?: "Command failed: $command", response.stringField("errorCode"))
         }
         return response
     }

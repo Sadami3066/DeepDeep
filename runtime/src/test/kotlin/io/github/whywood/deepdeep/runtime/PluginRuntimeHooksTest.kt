@@ -25,6 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -329,7 +330,7 @@ class PluginRuntimeHooksTest {
     }
 
     @Test
-    fun engineWithoutHooksLeavesAgentHooksUntouchedAndPassesInputThrough() = runTest {
+    fun engineWithoutPluginHooksKeepsBuiltInProgressGuardAndPassesInputThrough() = runTest {
         val root = Files.createTempDirectory("deepdeep-plugin-no-hooks").toFile()
         val workspace = File(root, "workspace").apply { mkdirs() }
         val agentDir = File(root, "agent").apply { mkdirs() }
@@ -353,7 +354,7 @@ class PluginRuntimeHooksTest {
             try {
                 val prepared = engine.prepareInput("hello", listOf(image))
                 assertEquals(PreparedPrompt.Ready("hello", listOf(image)), prepared)
-                assertNull(session.agent.beforeToolCall)
+                assertNotNull(session.agent.beforeToolCall)
             } finally {
                 session.close()
             }

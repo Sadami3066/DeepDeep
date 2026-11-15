@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
+import com.wangzan101.mika.core.tool.Verb
+
 import io.github.whywood.deepdeep.plugin.api.ScreenApp
 import io.github.whywood.deepdeep.plugin.api.ScreenBounds
 import io.github.whywood.deepdeep.plugin.api.ScreenCapability
@@ -16,9 +18,11 @@ import io.github.whywood.deepdeep.screen.GuiSelector
 import io.github.whywood.deepdeep.screen.GuiSnapshot
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.screen.ScreenController
+import io.github.whywood.deepdeep.screen.withScreenExecution
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -63,8 +67,15 @@ internal class ScreenPluginService(
         refreshStatus()
     }
 
-    override suspend fun observe(target: ScreenTarget, packageName: String?): ScreenObservation =
-        controllerFor(target).observe(GUI_MAX_DEPTH, GUI_MAX_NODES, packageName).snapshot.toPluginObservation()
+    override suspend fun observe(target: ScreenTarget, packageName: String?): ScreenObservation {
+        val controller = controllerFor(target)
+        return controller.withScreenExecution {
+            val snapshot = controller.observe(GUI_MAX_DEPTH, GUI_MAX_NODES, packageName).snapshot
+            coroutineContext[PluginScreenEvidence]?.takeIf { it.target == target }
+                ?.observe(snapshot.nodes.filterNot { it.secret }.mapNotNull { it.text }.toSet())
+            snapshot.toPluginObservation()
+        }
+    }
 
     override suspend fun screenshot(target: ScreenTarget): ScreenScreenshot {
         val capture = controllerFor(target).screenshot()
@@ -84,16 +95,24 @@ internal class ScreenPluginService(
         ScreenApp(packageName = app.packageName, label = app.label)
     }
 
-    override suspend fun launch(packageName: String, target: ScreenTarget): Boolean =
-        controllerFor(target).launch(packageName).ok
+    override suspend fun launch(packageName: String, target: ScreenTarget): Boolean {
+        val controller = controllerFor(target)
+        return controller.verifyPluginScreenAction(Verb.LaunchApp, succeeded = { it.ok }) {
+            controller.launch(packageName)
+        }.ok
+    }
 
     override suspend fun tap(x: Int, y: Int, target: ScreenTarget): Boolean {
-        controllerFor(target).tap(GuiSelector.Point(x, y), TAP_DURATION_MS)
+        val controller = controllerFor(target)
+        val selector = GuiSelector.Point(x, y)
+        controller.verifyPluginScreenAction(Verb.Tap, selector) { controller.tap(selector, TAP_DURATION_MS) }
         return true
     }
 
     override suspend fun tapNode(ref: String, target: ScreenTarget): Boolean {
-        controllerFor(target).tap(GuiSelector.Ref(ref), TAP_DURATION_MS)
+        val controller = controllerFor(target)
+        val selector = GuiSelector.Ref(ref)
+        controller.verifyPluginScreenAction(Verb.Tap, selector) { controller.tap(selector, TAP_DURATION_MS) }
         return true
     }
 
@@ -105,29 +124,38 @@ internal class ScreenPluginService(
         durationMs: Int,
         target: ScreenTarget,
     ): Boolean {
-        controllerFor(target).swipe(fromX, fromY, toX, toY, durationMs.toLong())
+        val controller = controllerFor(target)
+        controller.verifyPluginScreenAction(Verb.Swipe) { controller.swipe(fromX, fromY, toX, toY, durationMs.toLong()) }
         return true
     }
 
     override suspend fun scroll(deltaY: Int, target: ScreenTarget): Boolean {
         val direction = if (deltaY >= 0) GuiScrollDirection.DOWN else GuiScrollDirection.UP
         val amount = (abs(deltaY) / SCROLL_PIXELS_PER_STEP).coerceIn(1, MAX_SCROLL_STEPS)
-        controllerFor(target).scroll(direction, amount, null)
+        val controller = controllerFor(target)
+        controller.verifyPluginScreenAction(Verb.Scroll) { controller.scroll(direction, amount, null) }
         return true
     }
 
     override suspend fun type(text: String, target: ScreenTarget): Boolean {
-        controllerFor(target).typeText(null, text)
+        val controller = controllerFor(target)
+        controller.verifyPluginScreenAction(Verb.TypeText, typed = text) { controller.typeText(null, text) }
         return true
     }
 
     override suspend fun key(keyCode: String, target: ScreenTarget): Boolean {
-        controllerFor(target).key(keyCode)
+        val controller = controllerFor(target)
+        val verb = if (keyCode == "back") Verb.Back else Verb.PressKey
+        controller.verifyPluginScreenAction(verb) { controller.key(keyCode) }
         return true
     }
 
-    override suspend fun waitFor(text: String, timeoutMs: Long, target: ScreenTarget): Boolean =
-        controllerFor(target).waitFor(null, text, null, timeoutMs).matched
+    override suspend fun waitFor(text: String, timeoutMs: Long, target: ScreenTarget): Boolean {
+        val controller = controllerFor(target)
+        return controller.verifyPluginScreenAction(Verb.WaitFor, succeeded = { it.matched }) {
+            controller.waitFor(null, text, null, timeoutMs)
+        }.matched
+    }
 
     private fun controllerFor(target: ScreenTarget): ScreenController = when (target) {
         ScreenTarget.VIRTUAL -> virtual ?: throw IllegalStateException("screen control is not available")
@@ -180,8 +208,8 @@ internal class ScreenPluginService(
             ScreenNode(
                 ref = node.ref,
                 className = node.className,
-                text = node.text,
-                contentDescription = node.desc,
+                text = node.text.takeUnless { node.secret },
+                contentDescription = node.desc.takeUnless { node.secret },
                 bounds = ScreenBounds(
                     left = node.bounds.left,
                     top = node.bounds.top,

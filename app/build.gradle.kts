@@ -102,6 +102,8 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.compose)
     implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.text.recognition.chinese)
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime.ktx)
     implementation(libs.coroutines.android)

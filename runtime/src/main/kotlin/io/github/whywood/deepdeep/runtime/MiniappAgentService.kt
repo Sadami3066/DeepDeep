@@ -201,6 +201,7 @@ class MiniappAgentService(
                 }
             }
             awaitSettled()
+            engine.checkScreenRunCompleted(created.sessionId)
             sessionError.get()?.let { message -> throw IllegalStateException(message) }
             val last = created.messages.lastOrNull()?.asAssistantMessage()
             if (last?.stopReason == StopReason.Error) throw IllegalStateException(last.errorMessage ?: "agent model request failed")

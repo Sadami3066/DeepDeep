@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.screen
 
+import android.graphics.Bitmap
+import com.wangzan101.mika.core.visual.FrameGrid
+
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
 import io.github.whywood.deepdeep.vscreen.VirtualScreenResult
 import io.github.whywood.deepdeep.vscreen.VirtualScreenState
@@ -29,6 +32,7 @@ data class ScreenDisplayInfo(
     val backend: String,
     val nodeBackend: String = backend,
     val inputBackend: String = backend,
+    val instanceId: String? = null,
 )
 
 data class ScreenStatusSnapshot(
@@ -51,6 +55,7 @@ data class ScreenObserveResult(
     val backend: String,
     val snapshot: GuiSnapshot,
     val filteredNodes: Int = 0,
+    val scope: String? = null,
 )
 
 data class ScreenFindResult(
@@ -63,6 +68,7 @@ data class ScreenTextResult(
     val backend: String,
     val text: String,
     val verified: Boolean,
+    val secret: Boolean = false,
 )
 
 data class ScreenWaitOutcome(
@@ -97,6 +103,10 @@ data class ScreenApp(
 interface ScreenAccessibilityBackend {
     val connected: Boolean
 
+    suspend fun settleForEffect(displayId: Int, timeoutMs: Long): Boolean? = null
+
+    suspend fun awaitScreenChange(displayId: Int, timeoutMs: Long): Boolean? = null
+
     suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int, expectedPackage: String? = null): GuiSnapshot
 
     suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int)
@@ -119,6 +129,9 @@ interface ScreenAccessibilityBackend {
 
 interface ScreenVirtualBackend {
     suspend fun state(): VirtualScreenState
+
+    fun effectFrameGrid(): FrameGrid? = null
+    fun previewForEffect(display: ScreenDisplayInfo): Bitmap? = null
 
     suspend fun tap(x: Int, y: Int, durationMs: Int = 60): VirtualScreenResult
 
@@ -153,6 +166,17 @@ interface ScreenAppCatalog {
 
 interface ScreenController {
     suspend fun status(): ScreenStatusSnapshot
+
+    suspend fun effectDisplayInfo(): ScreenDisplayInfo? = null
+
+    suspend fun effectFrameGrid(): FrameGrid? = null
+    fun previewForEffect(display: ScreenDisplayInfo): Bitmap? = null
+
+    suspend fun screenshotForEffect(display: ScreenDisplayInfo): ScreenCapture? = null
+
+    suspend fun settleForEffect(timeoutMs: Long): Boolean? = null
+
+    suspend fun awaitScreenChange(timeoutMs: Long): Boolean? = null
 
     suspend fun observe(
         maxDepth: Int,

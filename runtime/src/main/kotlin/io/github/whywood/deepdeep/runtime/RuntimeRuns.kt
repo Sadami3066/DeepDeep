@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
+import com.wangzan101.mika.core.run.SteerSignal
+
 import io.github.whywood.deepdeep.sdk.agent.AgentMessage
 import io.github.whywood.deepdeep.sdk.agent.asAssistantMessage
 import io.github.whywood.deepdeep.sdk.agent.asLlmMessage
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
 
 internal class RuntimeRuns(
     private val mutex: Mutex,
@@ -86,7 +89,7 @@ internal class RuntimeRuns(
             emit(handle, RuntimeEvent.RunStarted(start.runId, System.currentTimeMillis()))
             emitActivity(handle, start.runId, RuntimeActivity.Thinking)
             logInfo(TAG, "retry session=${handle.session.sessionId} run=${start.runId}")
-            handle.session.retryLastAssistant()
+            withContext(SteerSignal(handle.pending.steeringPending)) { handle.session.retryLastAssistant() }
             if (!handle.state.stopRequested) {
                 val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, start.runId)
                 maybeContinueGoal(handle, status)
@@ -370,7 +373,7 @@ internal class RuntimeRuns(
             emit(handle, RuntimeEvent.RunStarted(runId, System.currentTimeMillis(), prompt))
             emitActivity(handle, runId, RuntimeActivity.Thinking)
             logInfo(TAG, "run session=${handle.session.sessionId} run=$runId chars=${text.length}")
-            handle.session.prompt(text, images)
+            withContext(SteerSignal(handle.pending.steeringPending)) { handle.session.prompt(text, images) }
             if (!handle.state.stopRequested) {
                 val status = if (handle.state.terminalEmitted) RunStatus.FAILED else finishRun(handle, runId)
                 maybeContinueGoal(handle, status)

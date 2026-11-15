@@ -1,5 +1,8 @@
 package io.github.whywood.deepdeep.screen
 
+import com.wangzan101.mika.core.tool.Verb
+import io.github.whywood.deepdeep.runtime.PHONGENT_VISIBLE_READS
+
 import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.ai.TextContent
@@ -9,6 +12,8 @@ import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
@@ -67,10 +72,25 @@ fun screenTools(
     screenshotDir: File,
     mainController: ScreenController? = null,
     onVirtualActivity: () -> Unit = {},
+): List<CodingTool> = screenTools(controller, screenshotDir, mainController, onVirtualActivity, true, ScreenReferences())
+
+internal class ScreenReferences {
+    val virtual = PhongentScreenReferences()
+    val main = PhongentScreenReferences()
+}
+
+internal fun screenTools(
+    controller: ScreenController,
+    screenshotDir: File,
+    mainController: ScreenController?,
+    onVirtualActivity: () -> Unit,
+    inlineReadback: Boolean,
+    references: ScreenReferences,
 ): List<CodingTool> {
     val mainTools = mainController?.let { toolsForScreen(it, screenshotDir).associateBy { tool -> tool.name } }
     return toolsForScreen(controller, screenshotDir).map { virtualTool ->
         val properties = virtualTool.parameters.getValue("properties").jsonObject
+        val acceptsStableRef = virtualTool.name in setOf("screen_tap", "screen_scroll", "screen_type")
         CodingTool(
             name = virtualTool.name,
             label = virtualTool.label,
@@ -79,7 +99,10 @@ fun screenTools(
                 put("type", "string")
                 put("enum", buildJsonArray { add(JsonPrimitive("virtual")); add(JsonPrimitive("main")) })
                 put("default", "virtual")
-            })))),
+            }) + if (acceptsStableRef) mapOf("snapshotId" to buildJsonObject {
+                put("type", "string")
+                put("description", "Required with a stable @e ref from a screen interface update.")
+            }) else emptyMap()))),
             promptGuidelines = screenGuidelines(virtualTool.name),
             execute = { id, args, signal, update ->
                 signal?.throwIfAborted()
@@ -95,7 +118,38 @@ fun screenTools(
                         ?: error("Main screen tools are not available; no other screen was operated") else virtualTool
                     val selected = if (virtualTool.name == "screen_status") mainTools?.get(virtualTool.name) ?: delegate else delegate
                     val result = coroutineScope {
-                        val execution = async { selected.execute(id, JsonObject(args - "target"), signal, update) }
+                        val execution = async {
+                            val activeController = if (target == "main") requireNotNull(mainController) else controller
+                            val refs = if (target == "main") references.main else references.virtual
+                            activeController.withScreenExecution {
+                                signal?.throwIfAborted()
+                                if (selected.name == "screen_observe" && args["interface"] == JsonPrimitive(true)) {
+                                    val (maxDepth, maxNodes) = observeLimitsOf(args)
+                                    val observed = activeController.observe(maxDepth, maxNodes, null)
+                                    val diff = refs.update(observed, args.stringOrNull("baseSnapshotId"),
+                                        observeLimitOf(args) ?: GUI_MAX_NODES, maxDepth to maxNodes, activeController.effectDisplayInfo())
+                                    val complete = !observed.snapshot.truncated && diff["truncated"] != JsonPrimitive(true)
+                                    textResult(JsonObject(diff + ("complete" to JsonPrimitive(complete))).toString())
+                                } else {
+                                    val input = (args - "target" - "snapshotId" - PHONGENT_VISIBLE_READS).toMutableMap()
+                                    val ref = args.stringOrNull("ref")
+                                    if (acceptsStableRef && ref?.startsWith("@e") == true) {
+                                        val snapshotId = requireNotNull(args.stringOrNull("snapshotId")) {
+                                            "A stable @e ref requires the snapshotId from screen_observe(interface=true)"
+                                        }
+                                        input["ref"] = JsonPrimitive(refs.resolve(activeController, ref, snapshotId))
+                                    }
+                                    if (inlineReadback && selected.name in SCREEN_WRITES) {
+                                        val visible = (args[PHONGENT_VISIBLE_READS] as? JsonArray)
+                                            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.toSet()
+                                        val context = PhongentActionReadback(refs, visible, args.stringOrNull("snapshotId"), target == "virtual")
+                                        withContext(context) { selected.execute(id, JsonObject(input), signal, update) }
+                                    } else {
+                                        selected.execute(id, JsonObject(input), signal, update)
+                                    }
+                                }
+                            }
+                        }
                         val unsubscribe = signal?.onAbort { execution.cancel() }
                         try {
                             execution.await().also { signal?.throwIfAborted() }
@@ -114,14 +168,18 @@ fun screenTools(
     }
 }
 
+private val SCREEN_WRITES = setOf("screen_tap", "screen_swipe", "screen_scroll", "screen_type", "screen_key", "screen_launch")
+
 internal const val SCREEN_TARGET_GUIDELINE =
-    "Screen tools default to the virtual screen; pass target=main explicitly for the phone display, and never switch screens after a failure."
+    "Use the virtual screen for GUI tasks unless the user explicitly requests the main or physical screen. " +
+        "If the virtual screen is offline, call virtual_screen with action=start. If it cannot be used, report the blocker. " +
+        "Use target=main only for a user-requested main-screen task. Do not use shell or coordinates to switch screens."
 internal const val SCREEN_CANCEL_GUIDELINE =
     "After a cancellation or timeout, observe the selected screen before retrying an action."
 internal const val SCREEN_OBSERVE_GUIDELINE =
-    "Observe the screen before node operations and verify the result afterward; refs keep resolving by node identity across ordinary operations, and only a restarted screen invalidates them."
+    "Use the latest returned screen or observe before node operations. Use interface=true for stable refs; pass snapshotId with an @e ref. For changes since the last interface update, pass its snapshotId as baseSnapshotId. OCR visibleText uses normalized 0–999 bounds, not tap pixels."
 internal const val SCREEN_LAUNCH_GUIDELINE =
-    "After screen_launch, observe the target screen before interacting."
+    "Use the returned screen after a successful action. If no screen was returned, observe before interacting."
 
 private fun screenGuidelines(name: String): List<String> = buildList {
     add(SCREEN_TARGET_GUIDELINE)
@@ -153,25 +211,24 @@ internal fun parseScreenTapSelector(args: JsonObject): GuiSelector {
     val x = args.intOrNull("x")
     val y = args.intOrNull("y")
     val named = listOfNotNull(ref, text, desc, resourceId, className)
-    if (x != null || y != null) {
-        if (x == null || y == null) throw IllegalArgumentException("Point selection requires both x and y")
-        if (named.isNotEmpty()) {
-            throw IllegalArgumentException("ref, text, desc, resourceId and class cannot be combined with x and y")
-        }
-        if (x < 0 || y < 0) throw IllegalArgumentException("Coordinates x and y must not be negative")
-        return GuiSelector.Point(x, y)
-    }
     if (named.size > 1) {
         throw IllegalArgumentException("Provide only one of ref, text, desc, resourceId or class")
     }
-    return when {
+    val namedSelector = when {
         ref != null -> GuiSelector.Ref(ref)
         text != null -> GuiSelector.Text(text)
         desc != null -> GuiSelector.Desc(desc)
         resourceId != null -> GuiSelector.ResourceId(resourceId)
         className != null -> GuiSelector.ClassName(className)
-        else -> throw IllegalArgumentException("Provide one of ref, text, desc, resourceId, class or x and y as the target")
+        else -> null
     }
+    if (namedSelector != null) return namedSelector
+    if (x != null || y != null) {
+        if (x == null || y == null) throw IllegalArgumentException("Point selection requires both x and y")
+        if (x < 0 || y < 0) throw IllegalArgumentException("Coordinates x and y must not be negative")
+        return GuiSelector.Point(x, y)
+    }
+    throw IllegalArgumentException("Provide one of ref, text, desc, resourceId, class or x and y as the target")
 }
 
 internal fun parseObserveFilters(args: JsonObject): List<GuiSelector> {
@@ -265,10 +322,7 @@ internal fun waitTimeoutOf(args: JsonObject): Long {
 
 internal fun observeLimitOf(args: JsonObject): Int? {
     val limit = args.intOrNull("limit") ?: return null
-    if (limit !in 1..50) {
-        throw IllegalArgumentException("limit must be in 1..50")
-    }
-    return limit
+    return limit.coerceIn(1, 50)
 }
 
 internal fun observeLimitsOf(args: JsonObject): Pair<Int, Int> {
@@ -291,6 +345,14 @@ private val statusParameters: JsonObject = buildJsonObject {
 private val observeParameters: JsonObject = buildJsonObject {
     put("type", "object")
     putJsonObject("properties") {
+        putJsonObject("interface") {
+            put("type", "boolean")
+            put("description", "Read the active interface with stable refs and a snapshotId. This mode accepts scan limits and ignores selectors and packageName.")
+        }
+        putJsonObject("baseSnapshotId") {
+            put("type", "string")
+            put("description", "With interface=true, the latest snapshot visible to you. Receives an increment when safe, a full interface otherwise.")
+        }
         putJsonObject("maxDepth") {
             put("type", "integer")
             put(
@@ -568,7 +630,7 @@ private fun screenshotTool(
 
 private fun tapTool(controller: ScreenController): CodingTool = CodingTool(
     name = "screen_tap",
-    description = "Tap or long-press a node or a point on a screen. Use it to activate, open or long-press a visible control; provide exactly one of ref, text, desc, resourceId, class, or both x and y.",
+    description = "Tap or long-press a visible control or point. A non-empty ref, text, desc, resourceId or class takes precedence over x and y.",
     parameters = tapParameters,
     label = "screen_tap",
     execute = { _, args, signal, _ ->
@@ -576,7 +638,10 @@ private fun tapTool(controller: ScreenController): CodingTool = CodingTool(
         screenTool(args) {
             val selector = parseScreenTapSelector(args)
             val durationMs = tapDurationOf(args)
-            textResult(controller.tap(selector, durationMs))
+            val (result, effect) = runPhongentEffect(controller, Verb.Tap, selector) {
+                retryNodeActionOnce(controller, selector) { controller.tap(selector, durationMs) }
+            }
+            textResult(actionResultJson("tap", result, effect).toString())
         }
     },
 )
@@ -595,7 +660,10 @@ private fun swipeTool(controller: ScreenController): CodingTool = CodingTool(
             val y2 = args.requiredInt("y2")
             if (listOf(x1, y1, x2, y2).any { it < 0 }) throw IllegalArgumentException("Coordinates must not be negative")
             val durationMs = swipeDurationOf(args)
-            textResult(controller.swipe(x1, y1, x2, y2, durationMs))
+            val (result, effect) = runPhongentEffect(controller, Verb.Swipe) {
+                controller.swipe(x1, y1, x2, y2, durationMs)
+            }
+            textResult(actionResultJson("swipe", result, effect).toString())
         }
     },
 )
@@ -611,7 +679,11 @@ private fun scrollTool(controller: ScreenController): CodingTool = CodingTool(
             val direction = parseScrollDirection(args)
             val amount = scrollAmountOf(args)
             val ref = args.stringOrNull("ref")?.trim()?.takeIf { it.isNotEmpty() }
-            textResult(controller.scroll(direction, amount, ref?.let { GuiSelector.Ref(it) }))
+            val selector = ref?.let { GuiSelector.Ref(it) }
+            val (result, effect) = runPhongentEffect(controller, Verb.Scroll, selector) {
+                retryNodeActionOnce(controller, selector) { controller.scroll(direction, amount, selector) }
+            }
+            textResult(actionResultJson("scroll", result, effect).toString())
         }
     },
 )
@@ -626,13 +698,19 @@ private fun typeTool(controller: ScreenController): CodingTool = CodingTool(
         screenTool(args) {
             val text = parseScreenTypeText(args)
             val selector = parseScreenTextSelector(args)
-            val outcome = controller.typeText(selector, text)
+            val (outcome, effect) = runPhongentEffect(controller, Verb.TypeText, selector, text) {
+                retryNodeActionOnce(controller, selector) { controller.typeText(selector, text) }
+            }
+            val effectFields = effect.fields()
             textResult(
                 buildJsonObject {
                     put("ok", true)
                     put("verified", outcome.verified)
-                    put("text", outcome.text)
-                    if (!outcome.verified) {
+                    put("verification", if (outcome.verified) "match" else "unknown")
+                    if (!effect.secret && !outcome.secret) put("text", outcome.text)
+                    if (effect.secret || outcome.secret) put("secret", true)
+                    effectFields.forEach { (key, value) -> put(key, value) }
+                    if (!outcome.verified && effectFields["hint"] == null) {
                         put("hint", "Write not verified: call screen_observe again to check the field content")
                     }
                 }.toString(),
@@ -650,7 +728,9 @@ private fun keyTool(controller: ScreenController): CodingTool = CodingTool(
         signal?.throwIfAborted()
         screenTool(args) {
             val key = parseScreenKey(args)
-            textResult(controller.key(key))
+            val verb = if (key == "back") Verb.Back else Verb.PressKey
+            val (result, effect) = runPhongentEffect(controller, verb) { controller.key(key) }
+            textResult(actionResultJson("key", result, effect).toString())
         }
     },
 )
@@ -725,13 +805,18 @@ private fun launchTool(controller: ScreenController): CodingTool = CodingTool(
         signal?.throwIfAborted()
         screenTool(args) {
             require(args.keys.all { it == "packageName" }) { "screen_launch only accepts packageName" }
-            val report = controller.launch(parseScreenLaunchPackage(args))
+            val packageName = parseScreenLaunchPackage(args)
+            val (report, effect) = runPhongentEffect(controller, Verb.LaunchApp) { controller.launch(packageName) }
             textResult(buildJsonObject {
                 put("ok", report.ok)
                 put("package", report.packageName)
                 put("message", report.message)
                 put("onExpectedScreen", report.landedOnExpectedDisplay)
-                if (!report.ok || !report.landedOnExpectedDisplay) put("hint", "Check screen_status with the same target and the actual screen; call virtual_screen(action=start) only when target=virtual is offline, then decide whether to relaunch the app")
+                if (report.ok && report.landedOnExpectedDisplay) {
+                    effect.fields().forEach { (key, value) -> put(key, value) }
+                } else {
+                    put("hint", "Check screen_status with the same target and the actual screen; call virtual_screen(action=start) only when target=virtual is offline, then decide whether to relaunch the app")
+                }
             }.toString(), isError = !report.ok || !report.landedOnExpectedDisplay)
         }
     },
@@ -775,7 +860,7 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
     putJsonObject("virtual") {
         put("state", status.virtualState)
         if (virtualOnline) {
-            val info = virtualInfo!!
+            val info = requireNotNull(virtualInfo)
             put("width", info.width)
             put("height", info.height)
             put("readNodes", connected)
@@ -877,6 +962,37 @@ private suspend fun screenTool(args: JsonObject, block: suspend () -> AgentToolR
     throw error
 } catch (error: Exception) {
     textResult(error.message ?: "Screen operation failed", isError = true)
+}
+
+private suspend fun <T> retryNodeActionOnce(
+    controller: ScreenController,
+    selector: GuiSelector?,
+    action: suspend () -> T,
+): T {
+    try {
+        return action()
+    } catch (error: Exception) {
+        if (selector == null || selector is GuiSelector.Point || !error.isRefreshableNodeFailure()) throw error
+        controller.observe(SCREEN_DEFAULT_MAX_DEPTH, GUI_MAX_NODES, null)
+        return action()
+    }
+}
+
+private fun actionResultJson(action: String, result: String, effect: ScreenEffectEvidence): JsonObject =
+    buildJsonObject {
+        put("ok", true)
+        put("action", action)
+        put("result", result)
+        effect.fields().forEach { (key, value) -> put(key, value) }
+    }
+
+private fun Exception.isRefreshableNodeFailure(): Boolean {
+    val detail = message.orEmpty().lowercase()
+    return detail.contains("stale") ||
+        detail.contains("no longer on this screen") ||
+        detail.contains("call screen_observe") ||
+        detail.contains("no node matches") ||
+        detail.contains("target node is not visible")
 }
 
 private fun JsonObject.stringOrNull(name: String): String? = (this[name] as? JsonPrimitive)?.contentOrNull

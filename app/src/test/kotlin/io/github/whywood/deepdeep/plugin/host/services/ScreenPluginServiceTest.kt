@@ -1,5 +1,9 @@
 package io.github.whywood.deepdeep.plugin.host.services
 
+import io.github.whywood.deepdeep.plugin.api.ScreenTarget
+import io.github.whywood.deepdeep.screen.GuiBounds
+import io.github.whywood.deepdeep.screen.GuiNode
+import io.github.whywood.deepdeep.screen.GuiNodeTree
 import io.github.whywood.deepdeep.screen.GuiScrollDirection
 import io.github.whywood.deepdeep.screen.GuiSelector
 import io.github.whywood.deepdeep.screen.GuiSnapshot
@@ -14,6 +18,7 @@ import io.github.whywood.deepdeep.screen.ScreenWaitOutcome
 import io.github.whywood.deepdeep.screen.ScreenApp as ScreenAppEntry
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -21,9 +26,28 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScreenPluginServiceTest {
+    @Test
+    fun installedGuiActServiceRecordsEachPrimitiveIncludingUnchangedInput() = runTest {
+        val controller = FakeScreenController(onlineSnapshot())
+        val service = ScreenPluginService(controller, null, null, null, backgroundScope)
+        val evidence = PluginScreenEvidence(ScreenTarget.VIRTUAL)
+
+        withContext(evidence) {
+            assertTrue(service.tapNode("0", ScreenTarget.VIRTUAL))
+            assertTrue(service.key("back", ScreenTarget.VIRTUAL))
+        }
+
+        val actions = evidence.actions()
+        assertEquals(listOf("Tap", "Back"), actions.map { it.getValue("verb").jsonPrimitive.content })
+        assertEquals(listOf("place_changed", "no_effect"),
+            actions.map { it.getValue("effect").jsonObject.getValue("kind").jsonPrimitive.content })
+    }
+
     @Test
     fun statusFollowsBackendChangesWithoutServiceCalls() = runTest {
         val controller = FakeScreenController(offlineSnapshot())
@@ -71,6 +95,7 @@ class ScreenPluginServiceTest {
         var snapshot: ScreenStatusSnapshot,
     ) : ScreenController {
         val statusCalls = AtomicInteger()
+        var app = "com.example.old"
 
         override suspend fun status(): ScreenStatusSnapshot {
             statusCalls.incrementAndGet()
@@ -78,11 +103,16 @@ class ScreenPluginServiceTest {
         }
 
         override suspend fun observe(maxDepth: Int, maxNodes: Int, expectedPackage: String?): ScreenObserveResult =
-            error("unused")
+            ScreenObserveResult("fake", GuiNodeTree.buildSnapshot(
+                GuiNode("Button", GuiBounds(0, 0, 100, 40), text = "Continue", clickable = true), app,
+            ))
 
         override suspend fun find(selectors: List<GuiSelector>, limit: Int): ScreenFindResult = error("unused")
 
-        override suspend fun tap(selector: GuiSelector, durationMs: Int): String = error("unused")
+        override suspend fun tap(selector: GuiSelector, durationMs: Int): String {
+            app = "com.example.new"
+            return "tapped"
+        }
 
         override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): String = error("unused")
 
@@ -91,7 +121,7 @@ class ScreenPluginServiceTest {
 
         override suspend fun typeText(selector: GuiSelector?, text: String): ScreenTextResult = error("unused")
 
-        override suspend fun key(name: String): String = error("unused")
+        override suspend fun key(name: String): String = "sent"
 
         override suspend fun waitFor(
             packageName: String?,

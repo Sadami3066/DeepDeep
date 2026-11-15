@@ -9,6 +9,7 @@
 | `VirtualScreenEngine.kt` | 客户端引擎：连接、命令、心跳、恢复、截图 |
 | `VirtualScreenFeature.kt` | 虚拟屏工具面：`virtual_screen` 工具（start/stop/status）、启停入口与在线状态，供 App 工具装配与插件宿主服务共用 |
 | `VirtualScreenHelperMain.kt` | 特权 helper 入口：建虚拟屏、注入输入、启动应用、推帧 |
+| `VirtualInputFallback.kt` | Mika 动作回退向宿主的接线：只在第一输入事件明确遭系统权限拒绝时，按同一虚拟屏实例生成受限的系统输入命令 |
 | `VirtualScreenContracts.kt` | 状态、结果与控制器接口契约 |
 | `VirtualScreenProtocol.kt` | helper 与 App 的帧协议编解码与大小上限 |
 | `VirtualScreenFrames.kt` | 帧透明像素判定、截图等待策略与失败文案 |
@@ -24,3 +25,4 @@
 - helper 是独立进程（ADB uid 2000 或 root）；无线调试关闭、App 进程结束或 15 分钟没有 `screen_*` 操作都会导致它退出并释放虚拟屏。
 - 只有用户主动要求在线（desiredOnline）时才自动重连；失败分 transport/backend/start 三类，供 screen 工具给可执行提示。
 - 虚拟屏始终竖屏，分辨率取真实屏幕短边×长边；在线态带 instanceId，重建后旧 ref 与坐标系作废。
+- 输入受理前遭明确权限拒绝可经当前授权的 ADB 或 Root 通道在同一虚拟屏回退。首次输入成功后只按源链补发 UP，返回超时、失联或部分执行时不整笔重放。
