@@ -116,8 +116,9 @@ class HostEnvironmentsTest {
         assertSame(rootFiles, environment.files)
         assertSame(rootShell, environment.system)
         assertSame(rootShell, environment.bash("/"))
-        assertEquals(7, environment.promptLines.size)
+        assertEquals(8, environment.promptLines.size)
         assertTrue(environment.promptLines.any { it.contains("/data (rw)") })
+        assertTrue(environment.promptLines.any { it.contains("/data/user/0/<package>") })
         assertTrue(environment.promptLines.any { it.contains("root shell capability") })
     }
 

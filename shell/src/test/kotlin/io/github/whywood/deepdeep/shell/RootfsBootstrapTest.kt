@@ -47,6 +47,7 @@ class RootfsBootstrapTest {
         assertTrue(script.contains("mount --make-rprivate /"))
         assertTrue(script.contains("mount -t proc proc"))
         assertTrue(script.contains("mount --rbind /data"))
+        assertTrue(script.contains("mount --bind /data/user/0 \"\$ROOT/data/user/0\""))
         assertTrue(script.contains("mount --rbind /dev/binderfs"))
         assertTrue(script.contains("mount --bind \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data/adb/deepdeep\""))
         assertTrue(script.contains("ln -s /storage/emulated/0"))

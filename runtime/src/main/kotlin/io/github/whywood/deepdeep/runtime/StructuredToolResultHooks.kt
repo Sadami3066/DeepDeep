@@ -12,6 +12,9 @@ internal const val DEEPDEEP_STRUCTURED_CONTENT_MAX_BYTES = 256 * 1024
 internal class StructuredToolResultHooks(
     private val chained: ToolExecutionHooks?,
 ) : ToolExecutionHooks {
+    override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
+        chained?.beforeToolCall(context) ?: ToolCallDecision.Continue
+
     override suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision {
         val decision = chained?.afterToolResult(context) ?: ToolResultDecision.Keep
         val effective = when (decision) {

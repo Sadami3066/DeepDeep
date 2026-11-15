@@ -64,6 +64,24 @@ class StructuredToolResultHooksTest {
     }
 
     @Test
+    fun beforeToolCallDelegatesToChainedHook() = runBlocking {
+        val chained = object : ToolExecutionHooks {
+            override suspend fun beforeToolCall(context: ToolCallContext): ToolCallDecision =
+                ToolCallDecision.Block("blocked by plugin")
+        }
+
+        val decision = StructuredToolResultHooks(chained).beforeToolCall(
+            ToolCallContext(
+                toolName = "bash",
+                callId = "call-1",
+                args = JsonObject(emptyMap()),
+            ),
+        )
+
+        assertEquals(ToolCallDecision.Block("blocked by plugin"), decision)
+    }
+
+    @Test
     fun chainedHookRunsBeforeEnrichmentAndKeepsItsDetails() = runBlocking {
         val chained = object : ToolExecutionHooks {
             override suspend fun afterToolResult(context: ToolResultContext): ToolResultDecision =

@@ -116,6 +116,9 @@ internal fun ActivitySection(
     fun <T> settleSpec(): AnimationSpec<T> =
         if (motionEnabled) tween(DdMotion.BASE, easing = DdMotion.EaseOut) else snap()
 
+    fun <T> layoutSpec(): AnimationSpec<T> =
+        if (message.streaming || !motionEnabled) snap() else tween(DdMotion.BASE, easing = DdMotion.EaseOut)
+
     val statusColor by animateColorAsState(
         targetValue = when (semanticStatus) {
             ProcessStatus.Running -> colors.ink
@@ -175,17 +178,17 @@ internal fun ActivitySection(
     )
     val summaryFontSize by animateFloatAsState(
         targetValue = if (running) ActivityRunningFontSize else ActivityDoneFontSize,
-        animationSpec = settleSpec(),
+        animationSpec = layoutSpec(),
         label = "activity_summary_font_size",
     )
     val summaryLineHeight by animateFloatAsState(
         targetValue = if (running) ActivityRunningLineHeight else ActivityDoneLineHeight,
-        animationSpec = settleSpec(),
+        animationSpec = layoutSpec(),
         label = "activity_summary_line_height",
     )
     val chevronSize by animateDpAsState(
         targetValue = if (running) ActivityRunningChevronSize else ActivityDoneChevronSize,
-        animationSpec = settleSpec(),
+        animationSpec = layoutSpec(),
         label = "activity_summary_chevron_size",
     )
     val activityIconAlpha by animateFloatAsState(
@@ -195,7 +198,7 @@ internal fun ActivitySection(
     )
     val activityIconWidth by animateDpAsState(
         targetValue = if (running) ActivityIconRowWidth else 0.dp,
-        animationSpec = settleSpec(),
+        animationSpec = layoutSpec(),
         label = "activity_icon_width",
     )
     val activityLabel = when (activity) {
