@@ -48,6 +48,39 @@ class PluginToolAdapterTest {
     }
 
     @Test
+    fun cardToolAddsModelHintOnlyOnSuccess() = runTest {
+        val tool = pluginTool(
+            name = "card_tool",
+            description = "card",
+            parameters = emptyArgs,
+            execute = { textResult("facts") },
+        )
+
+        val result = PluginToolAdapter.toCodingTool(tool, showCard = true)
+            .execute("call-1", emptyArgs, null, null)
+
+        assertEquals("facts", (result.content.first() as TextContent).text)
+        assertTrue((result.content.last() as TextContent).text.contains("卡片展示"))
+        assertNull(result.isError)
+    }
+
+    @Test
+    fun errorCardToolDoesNotAddModelHint() = runTest {
+        val tool = pluginTool(
+            name = "card_tool",
+            description = "card",
+            parameters = emptyArgs,
+            execute = { throw IllegalStateException("failed") },
+        )
+
+        val result = PluginToolAdapter.toCodingTool(tool, showCard = true)
+            .execute("call-1", emptyArgs, null, null)
+
+        assertEquals(1, result.content.size)
+        assertEquals(true, result.isError)
+    }
+
+    @Test
     fun mapsToolMetadata() {
         val parameters = buildJsonObject {
             put("type", "object")

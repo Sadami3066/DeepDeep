@@ -6,12 +6,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.whywood.deepdeep.plugin.api.CustomMessageSlotState
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
+import io.github.whywood.deepdeep.plugin.api.ToolCardSlotState
 import io.github.whywood.deepdeep.plugin.api.SlotIds
 import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.plugin.api.ToolResultState
-import io.github.whywood.deepdeep.plugin.host.ui.HostCustomMessageSlotState
-import io.github.whywood.deepdeep.plugin.host.ui.HostToolCardSlotState
+import io.github.whywood.deepdeep.plugin.host.ui.ToolInvocation
+import io.github.whywood.deepdeep.plugin.host.ui.ToolResultIdentity
+import io.github.whywood.deepdeep.plugin.host.ui.toolInvocation
+import io.github.whywood.deepdeep.plugin.host.ui.toolResultArguments
+import io.github.whywood.deepdeep.plugin.host.ui.toolResultIdentity
+import io.github.whywood.deepdeep.plugin.host.ui.structuredContent
 import io.github.whywood.deepdeep.plugin.host.ui.PluginSlotHost
 import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererEntry
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
@@ -28,6 +34,20 @@ internal fun ProvidePluginManager(manager: PluginManagerFacade, content: @Compos
 }
 
 @Composable
+private fun PluginAnswerCardSlot(
+    slotId: String,
+    state: io.github.whywood.deepdeep.plugin.api.SlotState,
+    fallback: @Composable () -> Unit,
+): Boolean {
+    val manager = LocalPluginManager.current ?: run { fallback(); return false }
+    val uiState by manager.state.collectAsStateWithLifecycle()
+    val entries = remember(uiState, slotId) { manager.slotEntries(slotId) }
+    if (entries.none { it.composeCompatible }) return false
+    PluginSlotHost(entries = entries, state = state, fallback = fallback)
+    return true
+}
+
+@Composable
 internal fun PluginToolCardSlot(
     toolName: String,
     callId: String,
@@ -37,17 +57,25 @@ internal fun PluginToolCardSlot(
     allowRenderers: Boolean = true,
     fallback: @Composable () -> Unit,
 ) {
-    val manager = LocalPluginManager.current ?: run { fallback(); return }
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    val entries = remember(uiState, toolName) { manager.slotEntries(SlotIds.toolCard(toolName)) }
-    if (entries.any { it.composeCompatible }) {
-        PluginSlotHost(
-            entries = entries,
-            state = HostToolCardSlotState(callId = callId, toolName = toolName, args = args, result = result),
+    if (
+        PluginAnswerCardSlot(
+            slotId = SlotIds.toolCard(toolName),
+            state = HostAnswerCardSlotState(
+                callId = callId,
+                toolName = toolName,
+                args = args,
+                result = result,
+                messageId = "",
+                customType = "",
+                payload = JsonObject(emptyMap()),
+            ),
             fallback = fallback,
         )
+    ) {
         return
     }
+    val manager = LocalPluginManager.current ?: run { fallback(); return }
+    val uiState by manager.state.collectAsStateWithLifecycle()
     val renderer = if (allowRenderers && trace != null) {
         remember(uiState, trace) { trace.toolRenderer(manager) }
     } else {
@@ -57,16 +85,16 @@ internal fun PluginToolCardSlot(
         fallback()
         return
     }
-    val identity = remember(uiState, trace) { trace.toolResultIdentity(manager::isPluginTool) }
-    val state = remember(trace, result) {
+    val invocation = remember(uiState, trace) { trace.toolInvocation(manager::isPluginTool) }
+    val state = remember(trace, result, invocation) {
         HostToolResultState(
             callId = callId,
-            toolName = identity.tool,
-            source = identity.source,
-            server = identity.server,
-            arguments = trace.toolResultArguments(),
+            toolName = invocation.identity.tool,
+            source = invocation.identity.source,
+            server = invocation.identity.server,
+            arguments = invocation.arguments,
             result = result,
-            structuredContent = ToolResultDetails.structuredContent(trace.resultDetails),
+            structuredContent = invocation.structuredContent,
         )
     }
     PluginToolResultRendererHost(renderer, state, fallback)
@@ -88,9 +116,19 @@ private fun PluginToolResultRendererHost(
 }
 
 private fun ToolTrace.toolRenderer(manager: PluginManagerFacade): ToolRendererEntry? {
-    val identity = toolResultIdentity(manager::isPluginTool)
+    val identity = toolInvocation(manager::isPluginTool).identity
     return manager.toolRenderer(identity.source, identity.server, identity.tool)
 }
+
+internal data class HostAnswerCardSlotState(
+    override val callId: String,
+    override val toolName: String,
+    override val args: JsonObject,
+    override val result: PluginToolResult?,
+    override val messageId: String,
+    override val customType: String,
+    override val payload: JsonObject,
+) : ToolCardSlotState, CustomMessageSlotState
 
 internal data class HostToolResultState(
     override val callId: String,
@@ -104,35 +142,23 @@ internal data class HostToolResultState(
 
 
 @Composable
-internal fun rememberPluginCardTraceKeys(traces: List<ToolTrace>): Set<String> {
-    val manager = LocalPluginManager.current ?: return emptySet()
-    if (traces.isEmpty()) return emptySet()
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    return remember(uiState, traces) {
-        traces.filterTo(mutableSetOf()) { trace ->
-            trace.name in HostCardToolNames && return@filterTo false
-            if (manager.slotEntries(SlotIds.toolCard(trace.name)).isNotEmpty()) return@filterTo true
-            val identity = trace.toolResultIdentity(manager::isPluginTool)
-            manager.toolRenderer(identity.source, identity.server, identity.tool) != null
-        }.mapTo(mutableSetOf()) { it.cardKey() }
-    }
-}
-
-internal val HostCardToolNames = setOf("present", "miniapp_load", "miniapp_register", "ask_user_question")
-
-@Composable
 internal fun PluginCustomMessageSlot(
     messageId: String,
     customType: String,
     payload: JsonObject,
     fallback: @Composable () -> Unit,
 ) {
-    val manager = LocalPluginManager.current ?: run { fallback(); return }
-    val uiState by manager.state.collectAsStateWithLifecycle()
-    val entries = remember(uiState, customType) { manager.slotEntries(SlotIds.chatMessage(customType)) }
-    PluginSlotHost(
-        entries = entries,
-        state = HostCustomMessageSlotState(messageId = messageId, customType = customType, payload = payload),
+    PluginAnswerCardSlot(
+        slotId = SlotIds.chatMessage(customType),
+        state = HostAnswerCardSlotState(
+            callId = "",
+            toolName = "",
+            args = JsonObject(emptyMap()),
+            result = null,
+            messageId = messageId,
+            customType = customType,
+            payload = payload,
+        ),
         fallback = fallback,
     )
 }

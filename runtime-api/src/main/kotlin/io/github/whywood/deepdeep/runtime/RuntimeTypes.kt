@@ -177,7 +177,11 @@ data class ToolTrace(
     val rawArguments: JsonObject? = null,
     val resultPayload: ToolResultPayload? = null,
     val resultDetails: JsonObject? = null,
+    val answerCard: Boolean = false,
 )
+
+val ToolTrace.invocationKey: String
+    get() = toolCallId.ifBlank { "trace:$id" }
 
 enum class MessageSummaryKind {
     COMPACTION,

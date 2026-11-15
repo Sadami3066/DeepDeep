@@ -5,6 +5,7 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolTrace
+import io.github.whywood.deepdeep.runtime.invocationKey
 
 internal const val TodoWriteCustomType = "todo_write"
 
@@ -14,6 +15,16 @@ internal sealed interface AnswerCardSource {
     data class Custom(val step: AssistantStep.CustomCard) : AnswerCardSource
 
     data class Tool(val trace: ToolTrace) : AnswerCardSource
+
+    data class Host(val card: HostAnswerCard) : AnswerCardSource
+}
+
+internal sealed interface HostAnswerCard {
+    data class Present(val traceId: Long, val items: List<PresentedItem>) : HostAnswerCard
+
+    data class Miniapp(val traceId: Long, val app: MiniappCardApp) : HostAnswerCard
+
+    data class AnsweredQuestion(val toolCallId: String, val record: QuestionRecord) : HostAnswerCard
 }
 
 internal sealed interface TurnBlock {
@@ -29,22 +40,15 @@ internal sealed interface TurnBlock {
 
     data class Card(val source: AnswerCardSource) : TurnBlock {
         override val key: String
-            get() = when (source) {
+            get() = when (val source = source) {
                 is AnswerCardSource.Custom -> "card-${source.step.id}"
-                is AnswerCardSource.Tool -> "card-${source.trace.cardKey()}"
+                is AnswerCardSource.Tool -> "card-${source.trace.invocationKey}"
+                is AnswerCardSource.Host -> when (val card = source.card) {
+                    is HostAnswerCard.Present -> "present-${card.traceId}"
+                    is HostAnswerCard.Miniapp -> "miniapp-${card.traceId}"
+                    is HostAnswerCard.AnsweredQuestion -> "answered-${card.toolCallId}"
+                }
             }
-    }
-
-    data class Present(val traceId: Long, val items: List<PresentedItem>) : TurnBlock {
-        override val key: String get() = "present-$traceId"
-    }
-
-    data class Miniapp(val traceId: Long, val app: MiniappCardApp) : TurnBlock {
-        override val key: String get() = "miniapp-$traceId"
-    }
-
-    data class AnsweredQuestion(val toolCallId: String, val record: QuestionRecord) : TurnBlock {
-        override val key: String get() = "answered-$toolCallId"
     }
 
     data class LiveQuestion(val question: PendingQuestion) : TurnBlock {
@@ -54,7 +58,6 @@ internal sealed interface TurnBlock {
 
 internal fun turnBlocks(
     message: AssistantMessage,
-    pluginCardKeys: Set<String> = emptySet(),
     pendingQuestions: List<PendingQuestion> = emptyList(),
 ): List<TurnBlock> {
     val blocks = mutableListOf<TurnBlock>()
@@ -84,7 +87,7 @@ internal fun turnBlocks(
                 blocks += TurnBlock.Card(AnswerCardSource.Custom(step))
             }
 
-            step is AssistantStep.Tool && step.trace.isPluginCard(pluginCardKeys) -> {
+            step is AssistantStep.Tool && step.trace.answerCard -> {
                 addContent(step, TurnBlock.Card(AnswerCardSource.Tool(step.trace)))
             }
 
@@ -135,23 +138,18 @@ private fun toolBlock(step: AssistantStep): TurnBlock? {
     val trace = (step as? AssistantStep.Tool)?.trace ?: return null
     if (trace.name == "present") {
         val items = parsePresentedItems(trace) ?: return null
-        return TurnBlock.Present(trace.id, items)
+        return TurnBlock.Card(AnswerCardSource.Host(HostAnswerCard.Present(trace.id, items)))
     }
     if (trace.name == "miniapp_load" || trace.name == "miniapp_register") {
         val app = parseRegisteredMiniapp(trace) ?: return null
-        return TurnBlock.Miniapp(trace.id, app)
+        return TurnBlock.Card(AnswerCardSource.Host(HostAnswerCard.Miniapp(trace.id, app)))
     }
     if (trace.name == "ask_user_question" && trace.status == ToolActivityStatus.DONE) {
         val record = parseQuestionRecord(trace) ?: return null
-        return TurnBlock.AnsweredQuestion(trace.toolCallId, record)
+        return TurnBlock.Card(AnswerCardSource.Host(HostAnswerCard.AnsweredQuestion(trace.toolCallId, record)))
     }
     return null
 }
-
-private fun ToolTrace.isPluginCard(pluginCardKeys: Set<String>): Boolean =
-    name !in HostCardToolNames && cardKey() in pluginCardKeys
-
-internal fun ToolTrace.cardKey(): String = toolCallId.ifBlank { id.toString() }
 
 private fun liveQuestion(
     message: AssistantMessage,

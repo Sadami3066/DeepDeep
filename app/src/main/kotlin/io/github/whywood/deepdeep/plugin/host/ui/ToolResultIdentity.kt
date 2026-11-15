@@ -1,4 +1,4 @@
-package io.github.whywood.deepdeep.ui.common.chat
+package io.github.whywood.deepdeep.plugin.host.ui
 
 import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.runtime.ToolResultDetails

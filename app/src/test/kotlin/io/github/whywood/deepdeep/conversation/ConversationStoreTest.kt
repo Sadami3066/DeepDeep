@@ -2,12 +2,14 @@ package io.github.whywood.deepdeep.conversation
 
 import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionModelSnapshot
 import io.github.whywood.deepdeep.runtime.ThinkingLevel
+import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.ui.chat.testing.FakeAgentRuntime
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -48,6 +50,36 @@ class ConversationStoreTest {
         assertEquals("hi", state.messages.single().text)
         assertEquals(ConversationStrings.fallback().runError("401"), state.messages.single().error)
         assertEquals("m", state.sessionModel?.modelId)
+    }
+
+    @Test
+    fun historyMarksRecognizedToolCards() = runTest {
+        val runtime = FakeAgentRuntime()
+        runtime.histories = mapOf(
+            "s" to listOf(
+                AssistantMessage(
+                    id = 1,
+                    role = AssistantRole.ASSISTANT,
+                    text = "",
+                    steps = listOf(
+                        AssistantStep.Tool(
+                            ToolTrace(
+                                id = 2,
+                                name = "hotel_search",
+                                arguments = emptyMap(),
+                                toolCallId = "call-1",
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val store = newStore(runtime) { trace -> trace.name == "hotel_search" }
+
+        val state = store.open("s")
+
+        val trace = ((state.messages.single().steps.single() as AssistantStep.Tool).trace)
+        assertTrue(trace.answerCard)
     }
 
     @Test
@@ -229,12 +261,14 @@ class ConversationStoreTest {
     private fun TestScope.newStore(
         runtime: FakeAgentRuntime,
         maxSessions: Int = 8,
+        rendersToolCard: (ToolTrace) -> Boolean = { false },
     ): ConversationStore {
         val store = ConversationStore(
             runtime = runtime,
             scope = backgroundScope,
             ioDispatcher = StandardTestDispatcher(testScheduler),
             maxSessions = maxSessions,
+            rendersToolCard = rendersToolCard,
         )
         store.start()
         runCurrent()

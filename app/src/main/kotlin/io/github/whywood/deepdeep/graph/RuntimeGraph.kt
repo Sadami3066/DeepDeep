@@ -254,6 +254,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             runtime = host,
             scope = deps.scope,
             decorate = deps.decorateInterrupted,
+            rendersToolCard = { trace -> deps.pluginManager().rendersToolCard(trace) },
         ).also { it.start() }
     }
 }

@@ -1,6 +1,5 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -12,10 +11,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -223,6 +218,10 @@ internal fun ActivitySection(
     }
     val processNodes = groupProcessSteps(steps)
     Column(Modifier.fillMaxWidth()) {
+        ProcessDisclosure(
+            expanded = expanded,
+            streaming = message.streaming,
+            header = {
         DdPressable(
             onClick = { expansionOverride = if (expanded) 0 else 1 },
             modifier = Modifier
@@ -269,17 +268,8 @@ internal fun ActivitySection(
                 Spacer(Modifier.width(DdSpacing.Xxs))
             }
         }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(
-                animationSpec = layoutSpec<IntSize>(),
-                expandFrom = Alignment.Top,
-            ) + fadeIn(layoutSpec<Float>()),
-            exit = shrinkVertically(
-                animationSpec = layoutSpec<IntSize>(),
-                shrinkTowards = Alignment.Top,
-            ) + fadeOut(layoutSpec<Float>()),
-        ) {
+            },
+            content = {
             Column(
                 Modifier.fillMaxWidth().padding(top = DdSpacing.Xs, bottom = DdSpacing.Sm),
                 verticalArrangement = Arrangement.spacedBy(DdSpacing.Xs),
@@ -317,6 +307,7 @@ internal fun ActivitySection(
                         is ProcessNode.ToolRun -> ToolRunGroup(
                             tools = node.tools,
                             messageId = message.id,
+                            streaming = message.streaming,
                             onToggleStep = onToggleStep,
                             onCopyOutput = onCopyOutput,
                             onFileClick = onFileClick,
@@ -325,7 +316,8 @@ internal fun ActivitySection(
                     }
                 }
             }
-        }
+            },
+        )
     }
 }
 
@@ -372,6 +364,7 @@ private fun groupProcessSteps(steps: List<AssistantStep>): List<ProcessNode> {
 private fun ToolRunGroup(
     tools: List<AssistantStep.Tool>,
     messageId: Long,
+    streaming: Boolean,
     onToggleStep: (Long) -> Unit,
     onCopyOutput: (String) -> Unit,
     onFileClick: (String) -> Unit,
@@ -396,7 +389,10 @@ private fun ToolRunGroup(
         if (expanded) R.string.assistant_step_expanded else R.string.assistant_step_collapsed,
     )
     val title = stringResource(R.string.assistant_process_tool_group, tools.size)
-    Column(Modifier.fillMaxWidth()) {
+    ProcessDisclosure(
+        expanded = expanded,
+        streaming = streaming,
+        header = {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -433,17 +429,8 @@ private fun ToolRunGroup(
             )
             Spacer(Modifier.width(DdSpacing.Xxs))
         }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                expandFrom = Alignment.Top,
-            ) + fadeIn(tween(DdMotion.FAST)),
-            exit = shrinkVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
-                shrinkTowards = Alignment.Top,
-            ) + fadeOut(tween(DdMotion.FAST)),
-        ) {
+        },
+        content = {
             Column(
                 Modifier.fillMaxWidth().padding(top = DdSpacing.Xxs),
                 verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
@@ -458,8 +445,8 @@ private fun ToolRunGroup(
                     )
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable

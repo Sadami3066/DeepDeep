@@ -531,12 +531,8 @@ private fun AssistantTurn(
     retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
-    val toolTraces = remember(message.steps) {
-        message.steps.filterIsInstance<AssistantStep.Tool>().map { it.trace }
-    }
-    val pluginCardKeys = rememberPluginCardTraceKeys(toolTraces)
-    val blocks = remember(message.steps, pluginCardKeys, pendingQuestions) {
-        turnBlocks(message, pluginCardKeys, pendingQuestions)
+    val blocks = remember(message.steps, pendingQuestions) {
+        turnBlocks(message, pendingQuestions)
     }
     val answer = remember(message.text, blocks) { answerText(message, blocks) }
     val lastActivityKey = blocks.lastOrNull { it is TurnBlock.Activity }?.key
@@ -581,25 +577,11 @@ private fun AssistantTurn(
                                 onCopyOutput = onCopyOutput,
                                 onOpenFile = onOpenFile,
                                 processDetail = processDetail,
-                            )
-                        }
-
-                        is TurnBlock.Present -> ContentEntrance(block.key, animate = message.streaming) {
-                            PresentCard(
-                                items = block.items,
                                 attachmentRoot = attachmentRoot,
-                                onOpenFile = onOpenPresentFile,
-                                onShareFile = onSharePresentFile,
+                                onOpenPresentFile = onOpenPresentFile,
+                                onSharePresentFile = onSharePresentFile,
                                 onOpenMiniapp = onOpenMiniapp,
                             )
-                        }
-
-                        is TurnBlock.Miniapp -> ContentEntrance(block.key, animate = message.streaming) {
-                            MiniappChatCard(app = block.app, onOpen = onOpenMiniapp)
-                        }
-
-                        is TurnBlock.AnsweredQuestion -> ContentEntrance(block.key, animate = message.streaming) {
-                            AnsweredAskCard(record = block.record, toolCallId = block.toolCallId)
                         }
 
                         is TurnBlock.LiveQuestion -> ContentEntrance(block.key, animate = message.streaming) {
@@ -681,6 +663,10 @@ private fun AnswerCardBlock(
     onCopyOutput: (String) -> Unit,
     onOpenFile: (String) -> Unit,
     processDetail: ProcessDetail,
+    attachmentRoot: File,
+    onOpenPresentFile: (String) -> Unit,
+    onSharePresentFile: (String) -> Unit,
+    onOpenMiniapp: (String) -> Unit,
 ) {
     when (source) {
         is AnswerCardSource.Custom -> CustomCardBlock(messageId = message.id, step = source.step)
@@ -691,6 +677,23 @@ private fun AnswerCardBlock(
             onFileClick = onOpenFile,
             processDetail = processDetail,
         )
+
+        is AnswerCardSource.Host -> when (val card = source.card) {
+            is HostAnswerCard.Present -> PresentCard(
+                items = card.items,
+                attachmentRoot = attachmentRoot,
+                onOpenFile = onOpenPresentFile,
+                onShareFile = onSharePresentFile,
+                onOpenMiniapp = onOpenMiniapp,
+            )
+
+            is HostAnswerCard.Miniapp -> MiniappChatCard(app = card.app, onOpen = onOpenMiniapp)
+
+            is HostAnswerCard.AnsweredQuestion -> AnsweredAskCard(
+                record = card.record,
+                toolCallId = card.toolCallId,
+            )
+        }
     }
 }
 

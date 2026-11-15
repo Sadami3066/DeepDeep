@@ -66,10 +66,9 @@ class TurnBlocksTest {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "bash"),
-                tool(2, "sysu_materials_search"),
+                tool(2, "sysu_materials_search", answerCard = true),
                 tool(3, "bash"),
             ),
-            pluginCardKeys = setOf("call-2"),
         )
         assertEquals(3, blocks.size)
         assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
@@ -83,9 +82,8 @@ class TurnBlocksTest {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "tool_search", callId = "call-1"),
-                tool(2, "tool_execute", callId = "call-2"),
+                tool(2, "tool_execute", callId = "call-2", answerCard = true),
             ),
-            pluginCardKeys = setOf("call-2"),
         )
 
         assertEquals(2, blocks.size)
@@ -97,10 +95,9 @@ class TurnBlocksTest {
     fun pluginCardFollowsActivityBeforeTrailingAnswer() {
         val blocks = turnBlocks(
             assistant(
-                tool(1, "hotel_search", callId = "call-1"),
+                tool(1, "hotel_search", callId = "call-1", answerCard = true),
                 AssistantStep.Text(2, "找到 6 家酒店"),
             ),
-            pluginCardKeys = setOf("call-1"),
         )
 
         assertEquals(3, blocks.size)
@@ -120,8 +117,8 @@ class TurnBlocksTest {
         )
         assertEquals(3, blocks.size)
         assertTrue(blocks[0] is TurnBlock.Activity)
-        val present = blocks[1] as TurnBlock.Present
-        assertEquals("a.pdf", present.items.single().name)
+        val present = ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Host).card
+        assertEquals("a.pdf", (present as HostAnswerCard.Present).items.single().name)
         assertEquals("已发送", (blocks[2] as TurnBlock.Text).step.text)
     }
 
@@ -142,7 +139,8 @@ class TurnBlocksTest {
         )
         assertEquals(2, blocks.size)
         assertTrue(blocks[0] is TurnBlock.Activity)
-        val answered = blocks[1] as TurnBlock.AnsweredQuestion
+        val answered = ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Host).card
+            as HostAnswerCard.AnsweredQuestion
         assertEquals("ask-1", answered.toolCallId)
         assertEquals("选哪个", answered.record.questions.single().question)
     }
@@ -224,6 +222,7 @@ class TurnBlocksTest {
         callId: String = "call-$id",
         arguments: Map<String, String> = emptyMap(),
         output: String? = null,
+        answerCard: Boolean = false,
     ): AssistantStep.Tool = AssistantStep.Tool(
         ToolTrace(
             id = id,
@@ -232,6 +231,7 @@ class TurnBlocksTest {
             status = status,
             output = output,
             toolCallId = callId,
+            answerCard = answerCard,
         ),
     )
 }

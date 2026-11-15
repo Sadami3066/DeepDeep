@@ -18,7 +18,11 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
 internal object PluginToolAdapter {
-    fun toCodingTool(tool: PluginTool, sessionId: () -> String = { "" }): CodingTool = CodingTool(
+    fun toCodingTool(
+        tool: PluginTool,
+        showCard: Boolean = false,
+        sessionId: () -> String = { "" },
+    ): CodingTool = CodingTool(
         name = tool.name,
         description = tool.description,
         parameters = tool.parameters,
@@ -26,12 +30,15 @@ internal object PluginToolAdapter {
         promptSnippet = tool.promptSnippet,
         promptGuidelines = tool.promptGuidelines.takeIf { it.isNotEmpty() },
         execute = { callId, args, signal, onUpdate ->
-            execute(tool, callId, args, signal, onUpdate, sessionId)
+            execute(tool, callId, args, signal, onUpdate, sessionId, showCard)
         },
     )
 
-    fun toCodingTools(tools: List<PluginTool>, sessionId: () -> String = { "" }): List<CodingTool> =
-        tools.map { toCodingTool(it, sessionId) }
+    fun toCodingTools(
+        tools: List<PluginTool>,
+        sessionId: () -> String = { "" },
+        showCard: (String) -> Boolean = { false },
+    ): List<CodingTool> = tools.map { tool -> toCodingTool(tool, showCard(tool.name), sessionId) }
 
     fun toDeferredTool(tool: PluginTool, source: String, sessionId: () -> String = { "" }): DeferredTool =
         DeferredTool(
@@ -40,7 +47,7 @@ internal object PluginToolAdapter {
             parameters = tool.parameters,
             source = source,
         ) { callId, args, signal, onUpdate ->
-            execute(tool, callId, args, signal, onUpdate, sessionId)
+            execute(tool, callId, args, signal, onUpdate, sessionId, false)
         }
 
     private suspend fun execute(
@@ -50,18 +57,19 @@ internal object PluginToolAdapter {
         signal: RunSignal?,
         onUpdate: AgentToolUpdateCallback?,
         sessionId: () -> String,
+        showCard: Boolean,
     ): AgentToolResult = coroutineScope {
         signal?.throwIfAborted()
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
         val resolvedSessionId = sessionId()
         if (onUpdate == null) {
-            runTool { tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null)) }
+            runTool(showCard) { tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null)) }
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
                 for (partial in updates) onUpdate(partial.toAgentToolResult())
             }
-            val result = runTool {
+            val result = runTool(showCard) {
                 tool.execute(
                     HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId) { partial ->
                         updates.trySend(partial)
@@ -96,8 +104,8 @@ internal object PluginToolAdapter {
         override fun onCancel(listener: () -> Unit): () -> Unit = signal.onAbort(listener)
     }
 
-    private suspend fun runTool(block: suspend () -> PluginToolResult): AgentToolResult = try {
-        block().toAgentToolResult()
+    private suspend fun runTool(showCard: Boolean, block: suspend () -> PluginToolResult): AgentToolResult = try {
+        block().toAgentToolResult().withCardHint(showCard)
     } catch (error: RequestAbortedException) {
         throw error
     } catch (error: CancellationException) {
@@ -108,4 +116,12 @@ internal object PluginToolAdapter {
 
     private fun toolError(message: String): AgentToolResult =
         AgentToolResult(content = listOf(io.github.whywood.deepdeep.sdk.ai.TextContent(message)), isError = true)
+
+    private fun AgentToolResult.withCardHint(showCard: Boolean): AgentToolResult {
+        if (!showCard || isError == true) return this
+        content = content + io.github.whywood.deepdeep.sdk.ai.TextContent(
+            "以上结果已同时以卡片展示；回答可直接给结论、比较或下一步建议。",
+        )
+        return this
+    }
 }

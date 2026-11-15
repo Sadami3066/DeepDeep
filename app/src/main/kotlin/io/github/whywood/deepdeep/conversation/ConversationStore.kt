@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.conversation
 import io.github.whywood.deepdeep.runtime.ActiveRunSnapshot
 import io.github.whywood.deepdeep.runtime.AgentRuntime
 import io.github.whywood.deepdeep.runtime.AssistantMessage
+import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ImagePart
 import io.github.whywood.deepdeep.runtime.InputQueueKind
 import io.github.whywood.deepdeep.runtime.MessageStatus
@@ -10,6 +11,7 @@ import io.github.whywood.deepdeep.runtime.RunStatus
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.runtime.RuntimeEvent
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
+import io.github.whywood.deepdeep.runtime.ToolTrace
 import java.util.LinkedHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -65,6 +67,7 @@ class ConversationStore(
     private val maxSessions: Int = MAX_SESSIONS,
     private val deltaDelayMs: Long = DELTA_DELAY_MS,
     private val reconcileDelayMs: Long = RECONCILE_DELAY_MS,
+    private val rendersToolCard: (ToolTrace) -> Boolean = { false },
 ) {
     @Volatile
     private var stringsProvider: () -> ConversationStrings = strings
@@ -215,7 +218,7 @@ class ConversationStore(
             val queued = runtime.queuedInputs(sessionId)
             val localized = history.map { message -> message.withLocalizedError() }
             var seededState = ConversationState(
-                messages = localized,
+                messages = markAnswerCards(localized),
                 title = title.orEmpty(),
                 loaded = true,
                 usage = usage,
@@ -425,7 +428,7 @@ class ConversationStore(
         if (retryGate(sessionId)) return
         val history = withContext(ioDispatcher) { runtime.history(sessionId) }
         val model = withContext(ioDispatcher) { runtime.sessionModel(sessionId) }
-        val settled = history.map { message ->
+        val settled = markAnswerCards(history.map { message ->
             val localized = message.withLocalizedError()
             if (!localized.streaming && !localized.retrying) {
                 localized
@@ -440,7 +443,7 @@ class ConversationStore(
                     },
                 )
             }
-        }
+        })
         mutate(sessionId) { state ->
             state.copy(
                 messages = settled,
@@ -567,8 +570,37 @@ class ConversationStore(
     }
 
     private fun applyEvent(sessionId: String, event: RuntimeEvent) {
-        mutate(sessionId) { state -> reduce(state, event, stringsProvider()) }
+        mutate(sessionId) { state ->
+            val reduced = reduce(state, event, stringsProvider())
+            if (event is RuntimeEvent.ToolStarted || event is RuntimeEvent.ToolFinished) {
+                reduced.markAnswerCards()
+            } else {
+                reduced
+            }
+        }
     }
+
+    private fun ConversationState.markAnswerCards(): ConversationState =
+        copy(messages = markAnswerCards(messages))
+
+    private fun markAnswerCards(messages: List<AssistantMessage>): List<AssistantMessage> =
+        messages.map { message ->
+            var changed = false
+            val steps = message.steps.map { step ->
+                if (step is AssistantStep.Tool) {
+                    val answerCard = rendersToolCard(step.trace)
+                    if (answerCard != step.trace.answerCard) {
+                        changed = true
+                        AssistantStep.Tool(step.trace.copy(answerCard = answerCard))
+                    } else {
+                        step
+                    }
+                } else {
+                    step
+                }
+            }
+            if (changed) message.copy(steps = steps) else message
+        }
 
     private fun enqueueDelta(sessionId: String, event: RuntimeEvent) {
         synchronized(lock) {

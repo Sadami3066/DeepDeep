@@ -1,5 +1,9 @@
 package io.github.whywood.deepdeep.ui.common.chat
 
+import io.github.whywood.deepdeep.plugin.host.ui.structuredContent
+import io.github.whywood.deepdeep.plugin.host.ui.toolResultIdentity
+import io.github.whywood.deepdeep.plugin.host.ui.ToolResultIdentity
+
 import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import kotlinx.serialization.json.buildJsonObject

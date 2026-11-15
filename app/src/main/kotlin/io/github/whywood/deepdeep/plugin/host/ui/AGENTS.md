@@ -1,3 +1,6 @@
+- 卡片入口：`ToolInvocation` 统一 trace key、工具身份、参数与结构化结果；聊天侧的 `HostAnswerCardSlotState` 同时实现 tool/custom 两种 slot state，由 `PluginAnswerCardSlot` 单一入口解析。
+
+
 # plugin/host/ui · 插件 UI 宿主（图标渲染由 `ui/plugins/PluginUiSupport.kt` 的 `PluginIcon` 负责）
 
 插件 UI 贡献的宿主侧：槽位注册与解析、Compose 槽宿主、宿主版本探测。插件只提供 `plugin-api` 数据（`PluginUiContributions`、`SlotContent`、`SlotState`）；本目录不持有插件实例，也不做业务装配。
@@ -7,7 +10,8 @@
 | 文件 | 职责 |
 |---|---|
 | `SlotRegistry.kt` | 从 `PluginRegistrySnapshot` 解析槽位绑定：`bindings(slotId)` 精确取槽、`entriesOf(pluginId)` 取插件全部绑定；保留可贡献相位、按 priority 降序 + 插件注册顺序排序；Compose 兼容性判定给出 `SlotDisabledReason` |
-| `HostSlotStates.kt` | `SlotState` 宿主实现（`HostToolCardSlotState`/`HostCustomMessageSlotState`），供聊天渲染构造槽位状态 |
+| `HostSlotStates.kt` | `SlotState` 宿主实现（`HostToolCardSlotState`/`HostCustomMessageSlotState`），供旧槽位/测试使用；聊天渲染统一走 `HostAnswerCardSlotState` |
+| `ToolResultIdentity.kt` / `ToolInvocation.kt` | 工具身份还原（MCP/插件/包装工具）与统一调用键、参数、结构化结果 |
 | `PluginSlotHost.kt` | 槽位渲染入口：取第一个可渲染绑定直接 `render(state)`；无绑定/不兼容时走 fallback；渲染异常由 Compose 直接抛出（无进程级隔离） |
 | `ToolRendererRegistry.kt` | 工具结果渲染器注册表：从快照聚合 `ToolResultRendererContributor` 的渲染器，按 source/server/tool 匹配，priority → 匹配具体度 → 插件顺序取唯一可渲染项；忽略非贡献相位与不兼容 UI |
 | `ComposeVersionDetector.kt` | 宿主 Compose runtime 版本探测：优先读 APK 内 `META-INF/androidx.compose.runtime_runtime.version`；读不到时反射 `ComposeVersion.version`（int 兼容编号或字符串版本） |

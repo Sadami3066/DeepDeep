@@ -8,10 +8,12 @@ import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
+import io.github.whywood.deepdeep.plugin.host.ui.HostCardToolNames
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererEntry
 import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererRegistry
+import io.github.whywood.deepdeep.plugin.host.ui.toolInvocation
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.theme.PluginThemeSource
@@ -52,6 +54,15 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     override fun isPluginTool(toolName: String): Boolean =
         registrySnapshot.tools.any { it.tool.name == toolName }
+
+    override fun rendersToolCard(trace: io.github.whywood.deepdeep.runtime.ToolTrace): Boolean {
+        if (trace.name in HostCardToolNames) return false
+        if (slotRegistry.bindings(io.github.whywood.deepdeep.plugin.api.SlotIds.toolCard(trace.name)).isNotEmpty()) {
+            return true
+        }
+        val identity = trace.toolInvocation(::isPluginTool).identity
+        return toolRendererRegistry.resolve(identity.source, identity.server, identity.tool) != null
+    }
 
     override fun pagesOf(pluginId: String): List<PluginPage> =
         if (!slotRegistry.uiCompatible(pluginId)) {

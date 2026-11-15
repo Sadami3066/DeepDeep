@@ -10,6 +10,7 @@ import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
 import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererEntry
 import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
+import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.theme.PluginThemeSource
 import java.io.File
@@ -65,6 +66,8 @@ interface PluginManagerFacade {
     fun toolRenderer(source: ToolResultSource, server: String?, tool: String): ToolRendererEntry?
 
     fun isPluginTool(toolName: String): Boolean
+
+    fun rendersToolCard(trace: ToolTrace): Boolean
 
     fun pagesOf(pluginId: String): List<PluginPage>
 
