@@ -62,7 +62,6 @@ import io.github.whywood.deepdeep.runtime.ToolActivityStatus
 import io.github.whywood.deepdeep.runtime.ToolResultPayload
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.text
-import io.github.whywood.deepdeep.ui.common.chat.PluginToolCardSlot
 import java.util.Base64
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -211,21 +210,12 @@ internal fun ToolCard(
                 shrinkTowards = Alignment.Top,
             ) + fadeOut(tween(DdMotion.FAST)),
         ) {
-            PluginToolCardSlot(
-                toolName = tool.name,
-                callId = tool.toolCallId,
-                args = remember(rawArguments, tool.arguments) { toolArgumentsJson(rawArguments, tool.arguments) },
-                result = tool.pluginSlotResult(),
-                trace = tool,
-                allowRenderers = false,
-            ) {
-                ToolCardDefaultBody(
-                    tool = tool,
-                    output = output,
-                    onCopyOutput = onCopyOutput,
-                    onFileClick = onFileClick,
-                )
-            }
+            ToolCardDefaultBody(
+                tool = tool,
+                output = output,
+                onCopyOutput = onCopyOutput,
+                onFileClick = onFileClick,
+            )
         }
     }
 }

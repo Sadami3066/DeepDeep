@@ -61,7 +61,7 @@ class TurnBlocksTest {
     }
 
     @Test
-    fun pluginToolStepBecomesContentBlock() {
+    fun pluginToolStepStaysInProcessAndAddsContentCard() {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "bash"),
@@ -70,14 +70,13 @@ class TurnBlocksTest {
             ),
             pluginCardKeys = setOf("call-2"),
         )
-        assertEquals(3, blocks.size)
-        assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
+        assertEquals(2, blocks.size)
+        assertEquals(listOf(1L, 2L, 3L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
         assertEquals("sysu_materials_search", (blocks[1] as TurnBlock.PluginCard).trace.name)
-        assertEquals(listOf(3L), (blocks[2] as TurnBlock.Activity).steps.map { it.id })
     }
 
     @Test
-    fun toolExecuteCardStaysInActivityBeforeInlineCard() {
+    fun toolExecuteStaysInActivityBeforeInlineCard() {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "tool_search", callId = "call-1"),
@@ -89,6 +88,22 @@ class TurnBlocksTest {
         assertEquals(2, blocks.size)
         assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
         assertEquals("tool_execute", (blocks[1] as TurnBlock.PluginCard).trace.name)
+    }
+
+    @Test
+    fun pluginCardFollowsActivityBeforeTrailingAnswer() {
+        val blocks = turnBlocks(
+            assistant(
+                tool(1, "hotel_search", callId = "call-1"),
+                AssistantStep.Text(2, "找到 6 家酒店"),
+            ),
+            pluginCardKeys = setOf("call-1"),
+        )
+
+        assertEquals(3, blocks.size)
+        assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
+        assertEquals("hotel_search", (blocks[1] as TurnBlock.PluginCard).trace.name)
+        assertEquals("找到 6 家酒店", (blocks[2] as TurnBlock.Text).step.text)
     }
 
     @Test

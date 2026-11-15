@@ -10,8 +10,6 @@ internal const val TodoWriteCustomType = "todo_write"
 
 private val HiddenCustomCardTypes = setOf(TodoWriteCustomType)
 
-private const val MCP_EXECUTE_TOOL = "tool_execute"
-
 private val HostCardTools = setOf(
     "present",
     "miniapp_load",
@@ -67,11 +65,17 @@ internal fun turnBlocks(
     val trailingText = steps.takeLastWhile { it is AssistantStep.Text }
     val body = steps.dropLast(trailingText.size)
     val activity = mutableListOf<AssistantStep>()
+    val pendingCards = mutableListOf<ToolTrace>()
 
     fun flushActivity() {
-        if (activity.isEmpty()) return
-        blocks += TurnBlock.Activity(activity.toList())
-        activity.forEach { step -> toolBlock(step)?.let(blocks::add) }
+        if (activity.isEmpty() && pendingCards.isEmpty()) return
+        if (activity.isNotEmpty()) {
+            val steps = activity.toList()
+            blocks += TurnBlock.Activity(steps)
+            steps.forEach { step -> toolBlock(step)?.let(blocks::add) }
+        }
+        pendingCards.forEach { trace -> blocks += TurnBlock.PluginCard(trace) }
+        pendingCards.clear()
         activity.clear()
     }
 
@@ -83,9 +87,8 @@ internal fun turnBlocks(
             }
 
             step is AssistantStep.Tool && step.trace.isPluginCard(pluginCardKeys) -> {
-                if (step.trace.name == MCP_EXECUTE_TOOL) activity += step
-                flushActivity()
-                blocks += TurnBlock.PluginCard(step.trace)
+                activity += step
+                pendingCards += step.trace
             }
 
             else -> activity += step
