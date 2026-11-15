@@ -3,6 +3,7 @@ package io.github.whywood.deepdeep.ui.common.chat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
@@ -48,6 +49,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -116,7 +118,7 @@ internal fun ActivitySection(
     fun <T> settleSpec(): AnimationSpec<T> =
         if (motionEnabled) tween(DdMotion.BASE, easing = DdMotion.EaseOut) else snap()
 
-    fun <T> layoutSpec(): AnimationSpec<T> =
+    fun <T> layoutSpec(): FiniteAnimationSpec<T> =
         if (message.streaming || !motionEnabled) snap() else tween(DdMotion.BASE, easing = DdMotion.EaseOut)
 
     val statusColor by animateColorAsState(
@@ -270,13 +272,13 @@ internal fun ActivitySection(
         AnimatedVisibility(
             visible = expanded,
             enter = expandVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                animationSpec = layoutSpec<IntSize>(),
                 expandFrom = Alignment.Top,
-            ) + fadeIn(tween(DdMotion.FAST)),
+            ) + fadeIn(layoutSpec<Float>()),
             exit = shrinkVertically(
-                animationSpec = tween(DdMotion.BASE, easing = DdMotion.EaseOut),
+                animationSpec = layoutSpec<IntSize>(),
                 shrinkTowards = Alignment.Top,
-            ) + fadeOut(tween(DdMotion.FAST)),
+            ) + fadeOut(layoutSpec<Float>()),
         ) {
             Column(
                 Modifier.fillMaxWidth().padding(top = DdSpacing.Xs, bottom = DdSpacing.Sm),

@@ -22,7 +22,8 @@ class TurnBlocksTest {
             ),
         )
         assertEquals(2, blocks.size)
-        assertEquals("mail.search", (blocks[0] as TurnBlock.CustomCard).step.customType)
+        val card = (blocks[0] as TurnBlock.Card).source as AnswerCardSource.Custom
+        assertEquals("mail.search", card.step.customType)
         assertEquals("答案", (blocks[1] as TurnBlock.Text).step.text)
     }
 
@@ -55,13 +56,13 @@ class TurnBlocksTest {
         )
         assertEquals(4, blocks.size)
         assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertTrue(blocks[1] is TurnBlock.CustomCard)
+        assertTrue(blocks[1] is TurnBlock.Card)
         assertEquals(listOf(3L), (blocks[2] as TurnBlock.Activity).steps.map { it.id })
         assertTrue(blocks[3] is TurnBlock.Text)
     }
 
     @Test
-    fun pluginToolStepStaysInProcessAndAddsContentCard() {
+    fun pluginToolCardSplitsActivitySegmentsLikeCliCard() {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "bash"),
@@ -70,9 +71,11 @@ class TurnBlocksTest {
             ),
             pluginCardKeys = setOf("call-2"),
         )
-        assertEquals(2, blocks.size)
-        assertEquals(listOf(1L, 2L, 3L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertEquals("sysu_materials_search", (blocks[1] as TurnBlock.PluginCard).trace.name)
+        assertEquals(3, blocks.size)
+        assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
+        val card = (blocks[1] as TurnBlock.Card).source as AnswerCardSource.Tool
+        assertEquals("sysu_materials_search", card.trace.name)
+        assertEquals(listOf(3L), (blocks[2] as TurnBlock.Activity).steps.map { it.id })
     }
 
     @Test
@@ -87,7 +90,7 @@ class TurnBlocksTest {
 
         assertEquals(2, blocks.size)
         assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertEquals("tool_execute", (blocks[1] as TurnBlock.PluginCard).trace.name)
+        assertEquals("tool_execute", ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Tool).trace.name)
     }
 
     @Test
@@ -102,7 +105,7 @@ class TurnBlocksTest {
 
         assertEquals(3, blocks.size)
         assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertEquals("hotel_search", (blocks[1] as TurnBlock.PluginCard).trace.name)
+        assertEquals("hotel_search", ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Tool).trace.name)
         assertEquals("找到 6 家酒店", (blocks[2] as TurnBlock.Text).step.text)
     }
 

@@ -573,16 +573,13 @@ private fun AssistantTurn(
                             )
                         }
 
-                        is TurnBlock.CustomCard -> ContentEntrance(block.key, animate = message.streaming) {
-                            CustomCardBlock(messageId = message.id, step = block.step)
-                        }
-
-                        is TurnBlock.PluginCard -> ContentEntrance(block.key, animate = message.streaming) {
-                            PluginToolCardBlock(
-                                trace = block.trace,
+                        is TurnBlock.Card -> ContentEntrance(block.key, animate = message.streaming) {
+                            AnswerCardBlock(
+                                message = message,
+                                source = block.source,
                                 onToggleStep = onToggleStep,
                                 onCopyOutput = onCopyOutput,
-                                onFileClick = onOpenFile,
+                                onOpenFile = onOpenFile,
                                 processDetail = processDetail,
                             )
                         }
@@ -673,6 +670,27 @@ private fun AnswerText(
         onSpeak = { spoken -> ReadAloud.speak(context.applicationContext, spoken) },
     ) {
         ChatMarkdown(text, onFileClick = onOpenFile, live = message.streaming)
+    }
+}
+
+@Composable
+private fun AnswerCardBlock(
+    message: AssistantMessage,
+    source: AnswerCardSource,
+    onToggleStep: (Long) -> Unit,
+    onCopyOutput: (String) -> Unit,
+    onOpenFile: (String) -> Unit,
+    processDetail: ProcessDetail,
+) {
+    when (source) {
+        is AnswerCardSource.Custom -> CustomCardBlock(messageId = message.id, step = source.step)
+        is AnswerCardSource.Tool -> PluginToolCardBlock(
+            trace = source.trace,
+            onToggleStep = onToggleStep,
+            onCopyOutput = onCopyOutput,
+            onFileClick = onOpenFile,
+            processDetail = processDetail,
+        )
     }
 }
 

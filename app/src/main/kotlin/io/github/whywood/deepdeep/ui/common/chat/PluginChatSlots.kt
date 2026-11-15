@@ -110,7 +110,7 @@ internal fun rememberPluginCardTraceKeys(traces: List<ToolTrace>): Set<String> {
     val uiState by manager.state.collectAsStateWithLifecycle()
     return remember(uiState, traces) {
         traces.filterTo(mutableSetOf()) { trace ->
-            trace.name in HOST_CARD_TOOLS && return@filterTo false
+            trace.name in HostCardToolNames && return@filterTo false
             if (manager.slotEntries(SlotIds.toolCard(trace.name)).isNotEmpty()) return@filterTo true
             val identity = trace.toolResultIdentity(manager::isPluginTool)
             manager.toolRenderer(identity.source, identity.server, identity.tool) != null
@@ -118,7 +118,7 @@ internal fun rememberPluginCardTraceKeys(traces: List<ToolTrace>): Set<String> {
     }
 }
 
-private val HOST_CARD_TOOLS = setOf("present", "miniapp_load", "miniapp_register", "ask_user_question")
+internal val HostCardToolNames = setOf("present", "miniapp_load", "miniapp_register", "ask_user_question")
 
 @Composable
 internal fun PluginCustomMessageSlot(

@@ -98,8 +98,8 @@ internal class ChatScrollController(
         val last = info.visibleItemsInfo.lastOrNull() ?: return
         if (last.index != info.totalItemsCount - 1) return
         val viewportBottom = info.viewportEndOffset - info.afterContentPadding
-        val overflow = (last.offset + last.size - viewportBottom).toFloat().coerceAtLeast(0f)
-        if (overflow > 0f) listState.scrollBy(overflow)
+        val overflow = (last.offset + last.size - viewportBottom).toFloat()
+        if (overflow != 0f) listState.scrollBy(overflow)
     }
 
     suspend fun settleScroll() {

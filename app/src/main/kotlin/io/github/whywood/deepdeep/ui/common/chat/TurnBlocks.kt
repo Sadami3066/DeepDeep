@@ -10,12 +10,11 @@ internal const val TodoWriteCustomType = "todo_write"
 
 private val HiddenCustomCardTypes = setOf(TodoWriteCustomType)
 
-private val HostCardTools = setOf(
-    "present",
-    "miniapp_load",
-    "miniapp_register",
-    "ask_user_question",
-)
+internal sealed interface AnswerCardSource {
+    data class Custom(val step: AssistantStep.CustomCard) : AnswerCardSource
+
+    data class Tool(val trace: ToolTrace) : AnswerCardSource
+}
 
 internal sealed interface TurnBlock {
     val key: String
@@ -28,12 +27,12 @@ internal sealed interface TurnBlock {
         override val key: String get() = "text-${step.id}"
     }
 
-    data class CustomCard(val step: AssistantStep.CustomCard) : TurnBlock {
-        override val key: String get() = "card-${step.id}"
-    }
-
-    data class PluginCard(val trace: ToolTrace) : TurnBlock {
-        override val key: String get() = "plugin-${trace.id}"
+    data class Card(val source: AnswerCardSource) : TurnBlock {
+        override val key: String
+            get() = when (source) {
+                is AnswerCardSource.Custom -> "card-${source.step.id}"
+                is AnswerCardSource.Tool -> "card-${source.trace.cardKey()}"
+            }
     }
 
     data class Present(val traceId: Long, val items: List<PresentedItem>) : TurnBlock {
@@ -65,33 +64,38 @@ internal fun turnBlocks(
     val trailingText = steps.takeLastWhile { it is AssistantStep.Text }
     val body = steps.dropLast(trailingText.size)
     val activity = mutableListOf<AssistantStep>()
-    val pendingCards = mutableListOf<ToolTrace>()
 
     fun flushActivity() {
-        if (activity.isEmpty() && pendingCards.isEmpty()) return
-        if (activity.isNotEmpty()) {
-            val steps = activity.toList()
-            blocks += TurnBlock.Activity(steps)
-            steps.forEach { step -> toolBlock(step)?.let(blocks::add) }
-        }
-        pendingCards.forEach { trace -> blocks += TurnBlock.PluginCard(trace) }
-        pendingCards.clear()
+        if (activity.isEmpty()) return
+        blocks += TurnBlock.Activity(activity.toList())
         activity.clear()
+    }
+
+    fun addContent(step: AssistantStep, block: TurnBlock) {
+        activity += step
+        flushActivity()
+        blocks += block
     }
 
     body.forEach { step ->
         when {
             step is AssistantStep.CustomCard -> {
                 flushActivity()
-                blocks += TurnBlock.CustomCard(step)
+                blocks += TurnBlock.Card(AnswerCardSource.Custom(step))
             }
 
             step is AssistantStep.Tool && step.trace.isPluginCard(pluginCardKeys) -> {
-                activity += step
-                pendingCards += step.trace
+                addContent(step, TurnBlock.Card(AnswerCardSource.Tool(step.trace)))
             }
 
-            else -> activity += step
+            else -> {
+                val artifact = toolBlock(step)
+                if (artifact == null) {
+                    activity += step
+                } else {
+                    addContent(step, artifact)
+                }
+            }
         }
     }
     flushActivity()
@@ -145,7 +149,7 @@ private fun toolBlock(step: AssistantStep): TurnBlock? {
 }
 
 private fun ToolTrace.isPluginCard(pluginCardKeys: Set<String>): Boolean =
-    name !in HostCardTools && cardKey() in pluginCardKeys
+    name !in HostCardToolNames && cardKey() in pluginCardKeys
 
 internal fun ToolTrace.cardKey(): String = toolCallId.ifBlank { id.toString() }
 
