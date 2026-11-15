@@ -36,3 +36,4 @@
 - explicit API 模式开启：新增公共声明必须显式 `public`，内部实现保持 `internal`。
 - 改公开类型/签名前后跑 `./scripts/api-compat.sh`；破坏性变更必须升 `PLUGIN_API_LEVEL`、更新兼容基线并写 `CHANGELOG.md`。
 - 测试在 `src/test/kotlin`（JUnit4），运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`；`./scripts/gradlew-locked :plugin-api:publishAllPublicationsToPagesRepository` 发布 SDK 到 `build/maven-repo`，再复制到 `deepdeep-maven` 仓库。
+- 工具结果里的卡片数据通过 details 保留键 `deepdeep.card`（`customType` + `title` + `payload`）交给宿主，卡片由模型调用 `present` 展示，不再自动上屏。

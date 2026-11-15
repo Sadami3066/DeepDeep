@@ -43,6 +43,7 @@ fun fileRefDisplayText(path: String, mimeType: String?): String =
 
 object ToolResultDetails {
     const val FILE_REFS_KEY = "deepdeep.fileRefs"
+    const val CARD_KEY = "deepdeep.card"
 
     const val DEEPDEEP_KEY = "deepdeep"
     const val STRUCTURED_CONTENT_KEY = "structuredContent"

@@ -70,7 +70,7 @@ import kotlinx.serialization.json.jsonObject
 
 
 
-enum class PresentedItemType { FILE, IMAGE, VIDEO, HTML, MINIAPP }
+enum class PresentedItemType { FILE, IMAGE, VIDEO, HTML, MINIAPP, CARD }
 
 data class PresentedItem(
     val type: PresentedItemType,
@@ -114,9 +114,20 @@ private fun parsePresentedItem(element: JsonElement): PresentedItem? {
         "video" -> PresentedItemType.VIDEO
         "html" -> PresentedItemType.HTML
         "miniapp" -> PresentedItemType.MINIAPP
+        "card" -> PresentedItemType.CARD
         else -> return null
     }
     val title = item.stringOrNull("title")?.trim()?.takeIf { it.isNotEmpty() }
+    if (type == PresentedItemType.CARD) {
+        val id = item.stringOrNull("id")?.trim().orEmpty()
+        if (id.isEmpty()) return null
+        return PresentedItem(
+            type = type,
+            name = title ?: id,
+            title = title,
+            id = id,
+        )
+    }
     if (type == PresentedItemType.MINIAPP) {
         val id = item.stringOrNull("id")?.trim().orEmpty()
         if (id.isEmpty()) return null
@@ -167,7 +178,11 @@ private fun derivePresentedName(path: String): String =
 private fun String.extension(): String = substringAfterLast('.', "").lowercase(Locale.US)
 
 private val PresentedItem.key: String
-    get() = if (type == PresentedItemType.MINIAPP) "miniapp:${id.orEmpty()}" else "${type.name}:${path.orEmpty()}"
+    get() = when (type) {
+        PresentedItemType.MINIAPP -> "miniapp:${id.orEmpty()}"
+        PresentedItemType.CARD -> "card:${id.orEmpty()}"
+        else -> "${type.name}:${path.orEmpty()}"
+    }
 
 internal fun resolvePresentedPath(raw: String, root: File): String {
     val trimmed = raw.trim().trim('<', '>', '"', '\'')
@@ -182,13 +197,14 @@ internal fun resolvePresentedPath(raw: String, root: File): String {
 }
 
 @Composable
-fun PresentCard(
+internal fun PresentCard(
     items: List<PresentedItem>,
     attachmentRoot: File,
     onOpenFile: (String) -> Unit,
     onShareFile: (String) -> Unit,
     onOpenMiniapp: (String) -> Unit,
     modifier: Modifier = Modifier,
+    resolveCard: (String) -> PresentedCardRef? = { null },
 ) {
     val colors = deepDeepColors()
     Column(
@@ -214,8 +230,69 @@ fun PresentCard(
                 )
 
                 PresentedItemType.MINIAPP -> PresentedMiniappItem(item, onOpenMiniapp)
+                PresentedItemType.CARD -> PresentedCardItem(item, colors, resolveCard)
             }
         }
+    }
+}
+
+@Composable
+private fun PresentedCardItem(
+    item: PresentedItem,
+    colors: DeepDeepColors,
+    resolveCard: (String) -> PresentedCardRef?,
+) {
+    val id = item.id.orEmpty()
+    val card = remember(id) { resolveCard(id) }
+    val fallback: @Composable () -> Unit = {
+        PresentedCardFallback(item.title ?: item.name, colors)
+    }
+    when (card) {
+        is PresentedCardRef.Payload -> PluginCustomMessageSlot(
+            messageId = "present-$id",
+            customType = card.customType,
+            payload = card.payload,
+            fallback = fallback,
+        )
+
+        is PresentedCardRef.Tool -> PluginToolCardSlot(
+            toolName = card.trace.name,
+            callId = card.trace.toolCallId,
+            args = card.trace.rawArguments ?: JsonObject(emptyMap()),
+            result = card.trace.pluginSlotResult(),
+            trace = card.trace,
+            fallback = fallback,
+        )
+
+        null -> PresentedCardFallback(item.title ?: item.name, colors)
+    }
+}
+
+@Composable
+private fun PresentedCardFallback(name: String, colors: DeepDeepColors) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(DdShapes.Medium)
+            .background(colors.wash)
+            .padding(horizontal = 14.dp, vertical = DdSpacing.Md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DdIcon(icon = DdIcons.File, tint = colors.inkTertiary, size = 15.dp)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = name.takeIf { it.isNotBlank() } ?: stringResource(R.string.present_card_unavailable),
+            modifier = Modifier.weight(1f),
+            style = DdType.bodySmall,
+            color = colors.inkSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(R.string.present_card_unavailable),
+            style = DdType.bodySmall,
+            color = colors.inkTertiary,
+        )
     }
 }
 
@@ -470,7 +547,7 @@ private val PresentedItemType.icon: DdIcon
         PresentedItemType.IMAGE -> DdIcons.Image
         PresentedItemType.VIDEO -> DdIcons.Play
         PresentedItemType.HTML -> DdIcons.Globe
-        PresentedItemType.FILE, PresentedItemType.MINIAPP -> DdIcons.File
+        PresentedItemType.FILE, PresentedItemType.MINIAPP, PresentedItemType.CARD -> DdIcons.File
     }
 
 @Composable

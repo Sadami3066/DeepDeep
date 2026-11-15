@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `RuntimeTypes.kt` | 核心模型、事件流与 AgentRuntime 五个接口 |
-| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime/FileRef）；`ToolResultDetails` 定义 details 保留键 `deepdeep.fileRefs` 的编解码，以及 `deepdeep.structuredContent` 的读取（MCP 结构化结果，供工具卡渲染，超限时省略），`fileRefDisplayText` 给文本回退 |
+| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime/FileRef）；`ToolResultDetails` 定义 details 保留键 `deepdeep.fileRefs` 的编解码、`deepdeep.card`（插件卡片数据，供 `present` 引用）与 `deepdeep.structuredContent` 的读取（MCP 结构化结果，供工具卡渲染，超限时省略），`fileRefDisplayText` 给文本回退 |
 | `GoalContracts.kt` | 目标阶段、轮次模型与两个驱动接口 |
 | `JobContracts.kt` | 后台任务快照、状态与 JobController |
 | `Notices.kt` | 回合来源、回合提示与三类带外事件 |
@@ -21,4 +21,4 @@
 - 与 `:runtime` 同包名 `io.github.whywood.deepdeep.runtime`，import 上看不出模块边界；改契约要同时改 `:runtime` 实现和 `:app` 消费方。
 - 只依赖 kotlinx-coroutines 与 kotlinx-serialization-json，不引 Android；不要在这里放 Context、IO 或平台实现。
 - `RuntimeEvent` 接口在 `RuntimeTypes.kt`，`Notices.kt` 的三个事件也扩展它，新增事件别另起体系。
-- `AssistantStep` 是回合内按序步骤（Reasoning/Tool/Text/Notice/CustomCard）；插件自定义消息卡进入 `CustomCard`，历史与实时同一形态。`ToolTrace.answerCard` 标记该工具结果是否有回答区卡片（由宿主识别后写入），`ToolTrace.invocationKey` 统一 callId/兜底 key，避免 UI 各自拼 key。
+- `AssistantStep` 是回合内按序步骤（Reasoning/Tool/Text/Notice/CustomCard）；插件自定义消息卡进入 `CustomCard`，历史与实时同一形态。回答区卡片只由 `present` 触发展示，工具轨迹不自带卡片标记；`ToolTrace.invocationKey` 统一 callId/兜底 key，避免 UI 各自拼 key。

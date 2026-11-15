@@ -97,7 +97,7 @@ class PresentToolTest {
             entry.getValue("required").jsonArray.map { (it as JsonPrimitive).content }.toSet(),
         )
         assertEquals(
-            setOf("file", "image", "video", "html", "miniapp"),
+            setOf("file", "image", "video", "html", "miniapp", "card"),
             entry.getValue("properties").jsonObject.getValue("type").jsonObject
                 .getValue("enum").jsonArray.map { (it as JsonPrimitive).content }.toSet(),
         )
@@ -346,6 +346,27 @@ class PresentToolTest {
     fun miniappRequiresId() = runTest {
         val lookup: suspend (String) -> PresentedMiniapp? = { PresentedMiniapp(it, "A") }
         val (result, text) = run(tool(miniappLookup = lookup), itemsArgs(item { put("type", "miniapp") }))
+        assertEquals(true, result.isError)
+        assertTrue(text.contains("id is required"))
+    }
+
+    @Test
+    fun cardItemsKeepTheirId() = runTest {
+        val (result, text) = run(
+            tool(),
+            itemsArgs(item { put("type", "card"); put("id", "call-42"); put("title", "本周课表") }),
+        )
+        assertNull(result.isError)
+        val card = outputItems(text).single()
+        assertEquals("card", card.string("type"))
+        assertEquals("call-42", card.string("id"))
+        assertEquals("本周课表", card.string("title"))
+        assertFalse(card.containsKey("path"))
+    }
+
+    @Test
+    fun cardRequiresId() = runTest {
+        val (result, text) = run(tool(), itemsArgs(item { put("type", "card") }))
         assertEquals(true, result.isError)
         assertTrue(text.contains("id is required"))
     }

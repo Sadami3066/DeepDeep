@@ -62,7 +62,6 @@ import io.github.whywood.deepdeep.runtime.MessageSummary
 import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
-import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.common.chat.AttachmentCards
 import io.github.whywood.deepdeep.ui.common.chat.PluginCustomMessageSlot
@@ -122,6 +121,7 @@ internal fun ChatTurn(
     onOpenPresentFile: (String) -> Unit = {},
     onSharePresentFile: (String) -> Unit = {},
     onOpenMiniapp: (String) -> Unit = {},
+    presentedCards: Map<String, PresentedCardRef> = emptyMap(),
     retryAttempt: Int? = null,
 ) {
     val notice = message.notice
@@ -180,6 +180,7 @@ internal fun ChatTurn(
             onOpenPresentFile = onOpenPresentFile,
             onSharePresentFile = onSharePresentFile,
             onOpenMiniapp = onOpenMiniapp,
+            presentedCards = presentedCards,
             retryAttempt = retryAttempt,
         )
     }
@@ -528,6 +529,7 @@ private fun AssistantTurn(
     onOpenPresentFile: (String) -> Unit,
     onSharePresentFile: (String) -> Unit,
     onOpenMiniapp: (String) -> Unit,
+    presentedCards: Map<String, PresentedCardRef>,
     retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
@@ -573,14 +575,11 @@ private fun AssistantTurn(
                             AnswerCardBlock(
                                 message = message,
                                 source = block.source,
-                                onToggleStep = onToggleStep,
-                                onCopyOutput = onCopyOutput,
-                                onOpenFile = onOpenFile,
-                                processDetail = processDetail,
                                 attachmentRoot = attachmentRoot,
                                 onOpenPresentFile = onOpenPresentFile,
                                 onSharePresentFile = onSharePresentFile,
                                 onOpenMiniapp = onOpenMiniapp,
+                                resolvePresentedCard = { id -> presentedCards[id] },
                             )
                         }
 
@@ -659,25 +658,14 @@ private fun AnswerText(
 private fun AnswerCardBlock(
     message: AssistantMessage,
     source: AnswerCardSource,
-    onToggleStep: (Long) -> Unit,
-    onCopyOutput: (String) -> Unit,
-    onOpenFile: (String) -> Unit,
-    processDetail: ProcessDetail,
     attachmentRoot: File,
     onOpenPresentFile: (String) -> Unit,
     onSharePresentFile: (String) -> Unit,
     onOpenMiniapp: (String) -> Unit,
+    resolvePresentedCard: (String) -> PresentedCardRef?,
 ) {
     when (source) {
         is AnswerCardSource.Custom -> CustomCardBlock(messageId = message.id, step = source.step)
-        is AnswerCardSource.Tool -> PluginToolCardBlock(
-            trace = source.trace,
-            onToggleStep = onToggleStep,
-            onCopyOutput = onCopyOutput,
-            onFileClick = onOpenFile,
-            processDetail = processDetail,
-        )
-
         is AnswerCardSource.Host -> when (val card = source.card) {
             is HostAnswerCard.Present -> PresentCard(
                 items = card.items,
@@ -685,6 +673,7 @@ private fun AnswerCardBlock(
                 onOpenFile = onOpenPresentFile,
                 onShareFile = onSharePresentFile,
                 onOpenMiniapp = onOpenMiniapp,
+                resolveCard = resolvePresentedCard,
             )
 
             is HostAnswerCard.Miniapp -> MiniappChatCard(app = card.app, onOpen = onOpenMiniapp)
@@ -719,33 +708,6 @@ private fun CustomCardBlock(messageId: Long, step: AssistantStep.CustomCard) {
             }
         },
     )
-}
-
-@Composable
-private fun PluginToolCardBlock(
-    trace: ToolTrace,
-    onToggleStep: (Long) -> Unit,
-    onCopyOutput: (String) -> Unit,
-    onFileClick: (String) -> Unit,
-    processDetail: ProcessDetail,
-) {
-    PluginToolCardSlot(
-        toolName = trace.name,
-        callId = trace.toolCallId,
-        args = remember(trace.rawArguments, trace.arguments) {
-            toolArgumentsJson(trace.rawArguments, trace.arguments)
-        },
-        result = trace.pluginSlotResult(),
-        trace = trace,
-    ) {
-        ToolCard(
-            tool = trace,
-            onToggle = { onToggleStep(trace.id) },
-            onCopyOutput = onCopyOutput,
-            onFileClick = onFileClick,
-            compact = processDetail == ProcessDetail.COMPACT,
-        )
-    }
 }
 
 @Composable

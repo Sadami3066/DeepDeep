@@ -4,8 +4,6 @@ import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
-import io.github.whywood.deepdeep.runtime.ToolTrace
-import io.github.whywood.deepdeep.runtime.invocationKey
 
 internal const val TodoWriteCustomType = "todo_write"
 
@@ -13,8 +11,6 @@ private val HiddenCustomCardTypes = setOf(TodoWriteCustomType)
 
 internal sealed interface AnswerCardSource {
     data class Custom(val step: AssistantStep.CustomCard) : AnswerCardSource
-
-    data class Tool(val trace: ToolTrace) : AnswerCardSource
 
     data class Host(val card: HostAnswerCard) : AnswerCardSource
 }
@@ -42,7 +38,6 @@ internal sealed interface TurnBlock {
         override val key: String
             get() = when (val source = source) {
                 is AnswerCardSource.Custom -> "card-${source.step.id}"
-                is AnswerCardSource.Tool -> "card-${source.trace.invocationKey}"
                 is AnswerCardSource.Host -> when (val card = source.card) {
                     is HostAnswerCard.Present -> "present-${card.traceId}"
                     is HostAnswerCard.Miniapp -> "miniapp-${card.traceId}"
@@ -85,10 +80,6 @@ internal fun turnBlocks(
             step is AssistantStep.CustomCard -> {
                 flushActivity()
                 blocks += TurnBlock.Card(AnswerCardSource.Custom(step))
-            }
-
-            step is AssistantStep.Tool && step.trace.answerCard -> {
-                addContent(step, TurnBlock.Card(AnswerCardSource.Tool(step.trace)))
             }
 
             else -> {

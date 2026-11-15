@@ -19,7 +19,7 @@ runtime 事件经纯函数 `reduce` 变成 `ConversationState`，由 `Conversati
 - 纯函数：除 `ConversationStore` 外不 import Android/Compose/DataStore，不启动协程；时间由调用方传入。
 - 单一投影：所有 surface 只观察 `ConversationStore.observe(sessionId)`，输入草稿/附件/滚动留在各 surface，不在 UI 层再归约事件或另存消息/运行态。
 - 事件只由 store 订阅一次；新增消费方按用途使用 `activeRuns`、`runCompletions`、`droppedInputs`、`runFailures`、`lifecycle`、`sessionChanges`；需要逐字流式的表面用 `events`，但不要归约会话状态，也不要再自建 `runtime.events.collect`。
-- 回答卡识别：`ConversationStore` 注入 `rendersToolCard`，在历史加载、reconcile 与 ToolStarted/Finished 时把识别结果写到 `ToolTrace.answerCard`；UI 不再查询插件管理器判断工具卡。
+- 回答区不再有自动卡片：工具结果只带 facts 与 `deepdeep.card` 数据，是否展示由模型调用 `present` 决定；`ConversationStore` 不做卡片识别，UI 也不查询插件管理器。
 - 通知归约：`NoticeEvent` 的 JobFinished 若当前有流式 assistant 消息，作为 `AssistantStep.Notice` 并入该消息过程区；其余通知（压缩/目标/中断/后台轮）仍生成独立 notice 消息。
 - 回合结束保留全部 Text step（不再剔除末尾流式文本）；`message.text` 仍是最终答案与复制兜底，渲染只在 steps 为空时回退它。
 - Store 负责 LRU（默认 8，pin 的会话不淘汰）、delta 16ms 合并、忙→闲 500ms 对账和运行完成通知；`onEvict` 用于清理表面层按会话持有的资源。

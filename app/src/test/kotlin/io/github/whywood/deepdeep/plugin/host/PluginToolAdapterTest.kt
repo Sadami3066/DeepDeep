@@ -48,7 +48,7 @@ class PluginToolAdapterTest {
     }
 
     @Test
-    fun cardToolAddsModelHintOnlyOnSuccess() = runTest {
+    fun cardToolAppendsCardIdOnlyOnSuccess() = runTest {
         val tool = pluginTool(
             name = "card_tool",
             description = "card",
@@ -60,7 +60,7 @@ class PluginToolAdapterTest {
             .execute("call-1", emptyArgs, null, null)
 
         assertEquals("facts", (result.content.first() as TextContent).text)
-        assertTrue((result.content.last() as TextContent).text.contains("卡片展示"))
+        assertEquals("\n\n卡片 id：call-1", (result.content.last() as TextContent).text)
         assertNull(result.isError)
     }
 

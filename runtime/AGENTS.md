@@ -66,7 +66,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `AskUserQuestionTool.kt` | 结构化提问：1–5 题，等答最多 10 分钟 |
 | `QuestionCenter.kt` | 待答问题的状态流、回答/取消与持久化钩子 |
 | `QuestionPersistence.kt` | 待答问题落盘，重启后提示曾中断 |
-| `PresentTool.kt` | present 交付：文件、图片、视频、HTML、小程序 |
+| `PresentTool.kt` | present 交付：文件、图片、视频、HTML、小程序，以及工具结果里给出的卡片 id（`type=card`） |
 | `WorkspacePaths.kt` | 强制文件工具绝对路径，输出补全目录前缀 |
 | `ToolPayloadMapping.kt` | SDK 工具内容 + details 保留键 ↔ runtime-api `ToolResultPayload`（含 FileRef 还原）、JsonObject 参数展示映射 |
 

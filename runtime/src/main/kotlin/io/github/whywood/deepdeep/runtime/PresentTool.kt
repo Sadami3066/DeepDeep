@@ -68,10 +68,11 @@ private val presentParameters: JsonObject = buildJsonObject {
                             add(JsonPrimitive("video"))
                             add(JsonPrimitive("html"))
                             add(JsonPrimitive("miniapp"))
+                            add(JsonPrimitive("card"))
                         }
                         put(
                             "description",
-                            "file: any generated file; image: picture shown inline; video: clip shown with a cover and player; html: web page shown inline; miniapp: installed mini app",
+                            "file: any generated file; image: picture shown inline; video: clip shown with a cover and player; html: web page shown inline; miniapp: installed mini app; card: a card produced by a tool, shown when it adds value",
                         )
                     }
                     putJsonObject("path") {
@@ -83,7 +84,10 @@ private val presentParameters: JsonObject = buildJsonObject {
                     }
                     putJsonObject("id") {
                         put("type", "string")
-                        put("description", "For miniapp: miniapp id, from miniapp_load")
+                        put(
+                            "description",
+                            "For miniapp: miniapp id, from miniapp_load. For card: the card id shown in a tool result",
+                        )
                     }
                     putJsonObject("title") {
                         put("type", "string")
@@ -102,7 +106,7 @@ fun presentTool(
     session: () -> BoundSession?,
 ): CodingTool = CodingTool(
     name = "present",
-    description = "Deliver one to four finished works to the user: files, images, videos, web pages, or installed miniapps. Chat shows a delivery card for every item; images and web pages render inline, videos show a cover that opens a player.",
+    description = "Deliver finished work to the user: files, images, videos, web pages, installed miniapps, or a card produced by a tool. Use type=card with the id shown in a tool result when showing that card helps the answer; skip cards that add nothing to the text.",
     parameters = presentParameters,
     label = "present",
     execute = { _, args, signal, _ ->
@@ -164,9 +168,20 @@ private suspend fun normalizeItem(
         "video" -> fileItem(index, item, cwd, title, PresentKind.VIDEO)
         "html" -> fileItem(index, item, cwd, title, PresentKind.HTML)
         "miniapp" -> miniappItem(index, item, title, miniappLookup)
+        "card" -> cardItem(index, item)
         else -> throw IllegalArgumentException(
-            "items[$index].type must be one of file, image, video, html, miniapp",
+            "items[$index].type must be one of file, image, video, html, miniapp, card",
         )
+    }
+}
+
+private fun cardItem(index: Int, item: JsonObject): JsonObject {
+    val id = item.argumentString("id")
+        ?: throw IllegalArgumentException("items[$index].id is required for card")
+    return buildJsonObject {
+        put("type", "card")
+        put("id", id)
+        item.argumentString("title")?.let { put("title", it) }
     }
 }
 

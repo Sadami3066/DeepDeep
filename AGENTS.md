@@ -30,7 +30,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 
 插件 SDK 发布产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库；`design` 与 `plugin-api` 版本独立维护，版本号在各自 `build.gradle.kts` 的 `pluginApiVersion` 里维护。
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 2748（app 1991 / runtime 591 / shell 74 / plugin-api 27 / design 65）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 2754（app 1994 / runtime 594 / shell 74 / plugin-api 27 / design 65）、0 失败 0 skip、lint 0 error。
 
 ## 关键事实
 

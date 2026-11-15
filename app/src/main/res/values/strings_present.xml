@@ -7,4 +7,5 @@
     <string name="present_tool_delivered">已交付 %1$d 项</string>
     <string name="present_open_failed">没有可以打开该文件的应用</string>
     <string name="present_share_failed">无法分享该文件</string>
+    <string name="present_card_unavailable">这张卡片暂时无法展示</string>
 </resources>

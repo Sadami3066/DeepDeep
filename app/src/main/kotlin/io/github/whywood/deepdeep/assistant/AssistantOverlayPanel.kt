@@ -66,6 +66,7 @@ import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.RuntimeActivity
 import io.github.whywood.deepdeep.ui.common.chat.ChatTurn
+import io.github.whywood.deepdeep.ui.common.chat.presentedCardLookup
 import io.github.whywood.deepdeep.ui.common.chat.rememberChatScrollController
 import io.github.whywood.deepdeep.ui.common.chat.AskQuestionCard
 import kotlinx.coroutines.delay
@@ -93,6 +94,7 @@ internal fun AssistantOverlayPanel(
         Density(density = density.density, fontScale = density.fontScale * config.chatFontScale)
     }
     val messages = state.conversation.messages
+    val presentedCards = remember(messages) { presentedCardLookup(messages) }
     val retryActivity = state.conversation.activity as? RuntimeActivity.Retrying
     val retryTargetId = messages.lastOrNull { it.streaming || it.retrying }?.id
     val listState = rememberLazyListState(
@@ -292,6 +294,7 @@ internal fun AssistantOverlayPanel(
                                     onOpenPresentFile = actions.onOpenFile,
                                     onSharePresentFile = actions.onShareFile,
                                     onOpenMiniapp = actions.onOpenMiniapp,
+                                    presentedCards = presentedCards,
                                     retryAttempt = if (message.id == retryTargetId) {
                                         retryActivity?.attempt
                                     } else {

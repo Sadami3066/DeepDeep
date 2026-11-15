@@ -62,48 +62,16 @@ class TurnBlocksTest {
     }
 
     @Test
-    fun pluginToolCardSplitsActivitySegmentsLikeCliCard() {
+    fun toolResultsStayInActivityWithoutInlineCards() {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "bash"),
-                tool(2, "sysu_materials_search", answerCard = true),
+                tool(2, "hotel_search", callId = "call-2"),
                 tool(3, "bash"),
             ),
         )
-        assertEquals(3, blocks.size)
-        assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        val card = (blocks[1] as TurnBlock.Card).source as AnswerCardSource.Tool
-        assertEquals("sysu_materials_search", card.trace.name)
-        assertEquals(listOf(3L), (blocks[2] as TurnBlock.Activity).steps.map { it.id })
-    }
-
-    @Test
-    fun toolExecuteStaysInActivityBeforeInlineCard() {
-        val blocks = turnBlocks(
-            assistant(
-                tool(1, "tool_search", callId = "call-1"),
-                tool(2, "tool_execute", callId = "call-2", answerCard = true),
-            ),
-        )
-
-        assertEquals(2, blocks.size)
-        assertEquals(listOf(1L, 2L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertEquals("tool_execute", ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Tool).trace.name)
-    }
-
-    @Test
-    fun pluginCardFollowsActivityBeforeTrailingAnswer() {
-        val blocks = turnBlocks(
-            assistant(
-                tool(1, "hotel_search", callId = "call-1", answerCard = true),
-                AssistantStep.Text(2, "找到 6 家酒店"),
-            ),
-        )
-
-        assertEquals(3, blocks.size)
-        assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertEquals("hotel_search", ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Tool).trace.name)
-        assertEquals("找到 6 家酒店", (blocks[2] as TurnBlock.Text).step.text)
+        assertEquals(1, blocks.size)
+        assertEquals(listOf(1L, 2L, 3L), (blocks.single() as TurnBlock.Activity).steps.map { it.id })
     }
 
     @Test
@@ -222,7 +190,6 @@ class TurnBlocksTest {
         callId: String = "call-$id",
         arguments: Map<String, String> = emptyMap(),
         output: String? = null,
-        answerCard: Boolean = false,
     ): AssistantStep.Tool = AssistantStep.Tool(
         ToolTrace(
             id = id,
@@ -231,7 +198,6 @@ class TurnBlocksTest {
             status = status,
             output = output,
             toolCallId = callId,
-            answerCard = answerCard,
         ),
     )
 }

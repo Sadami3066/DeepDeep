@@ -63,13 +63,15 @@ internal object PluginToolAdapter {
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
         val resolvedSessionId = sessionId()
         if (onUpdate == null) {
-            runTool(showCard) { tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null)) }
+            runTool(showCard, callId) {
+                tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null))
+            }
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
                 for (partial in updates) onUpdate(partial.toAgentToolResult())
             }
-            val result = runTool(showCard) {
+            val result = runTool(showCard, callId) {
                 tool.execute(
                     HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId) { partial ->
                         updates.trySend(partial)
@@ -104,8 +106,12 @@ internal object PluginToolAdapter {
         override fun onCancel(listener: () -> Unit): () -> Unit = signal.onAbort(listener)
     }
 
-    private suspend fun runTool(showCard: Boolean, block: suspend () -> PluginToolResult): AgentToolResult = try {
-        block().toAgentToolResult().withCardHint(showCard)
+    private suspend fun runTool(
+        showCard: Boolean,
+        callId: String,
+        block: suspend () -> PluginToolResult,
+    ): AgentToolResult = try {
+        block().toAgentToolResult().withCardHint(showCard, callId)
     } catch (error: RequestAbortedException) {
         throw error
     } catch (error: CancellationException) {
@@ -117,11 +123,9 @@ internal object PluginToolAdapter {
     private fun toolError(message: String): AgentToolResult =
         AgentToolResult(content = listOf(io.github.whywood.deepdeep.sdk.ai.TextContent(message)), isError = true)
 
-    private fun AgentToolResult.withCardHint(showCard: Boolean): AgentToolResult {
+    private fun AgentToolResult.withCardHint(showCard: Boolean, callId: String): AgentToolResult {
         if (!showCard || isError == true) return this
-        content = content + io.github.whywood.deepdeep.sdk.ai.TextContent(
-            "以上结果已同时以卡片展示；回答可直接给结论、比较或下一步建议。",
-        )
+        content = content + io.github.whywood.deepdeep.sdk.ai.TextContent("\n\n卡片 id：$callId")
         return this
     }
 }

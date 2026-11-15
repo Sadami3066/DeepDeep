@@ -19,7 +19,7 @@
 | `VoiceRecordingBar.kt` | 录音条：波形历史与取消/停止/发送 |
 | `VoiceTranscriptPreview.kt` | 语音转写预览：已提交与临时文本、自动滚底 |
 | `scan/` | 扫码策略 5 个文件：匹配规则、JSON、持久化、按策略拉起 App |
-| `chat/` | 聊天/浮层/悬浮窗共用的渲染组件：消息回合（`ChatTurn` 线性内容流 + 可折叠活动段，`TurnBlocks.kt` 用纯函数把步骤分成内容块与活动段；CLI 自定义消息卡与插件工具结果卡统一为同一个 `TurnBlock.Card`，遇到卡片先截断当前活动段再输出卡片，过程卡不被卡片吞掉）、Markdown（渲染在 `:design` 的 `DdMarkdown`，`ChatMarkdown.kt` 只注入文案/复制反馈/图片加载）、工具卡与工具图标/简洁标题（`ToolPresentation.kt`）、交付卡、提问卡、插件槽位、todo 面板、输入卡与附件、相机扫码、`QrScan.kt`（扫码状态机与结果 sheet）、文件预览、滚动控制；`state/` 放草稿与附件导入 |
+| `chat/` | 聊天/浮层/悬浮窗共用的渲染组件：消息回合（`ChatTurn` 线性内容流 + 可折叠活动段，`TurnBlocks.kt` 用纯函数把步骤分成内容块与活动段；历史遗留的自定义消息卡与宿主内容卡统一为 `TurnBlock.Card`，遇到卡片先截断当前活动段再输出卡片）、Markdown（渲染在 `:design` 的 `DdMarkdown`，`ChatMarkdown.kt` 只注入文案/复制反馈/图片加载）、工具卡与工具图标/简洁标题（`ToolPresentation.kt`）、交付卡（`PresentCard`）、提问卡、插件槽位、`PresentedCards.kt`（把工具结果里的 `deepdeep.card` 与工具轨迹索引成 `present` 可引用的卡片）、todo 面板、输入卡与附件、相机扫码、`QrScan.kt`、文件预览、滚动控制；`state/` 放草稿与附件导入 |
 
 ## 要点
 
@@ -32,7 +32,7 @@
 - `ProviderIcon` 是静态映射，新增厂商要同时补 `res/drawable-nodpi/provider_*`（含 `-night`）与映射表，否则回退首字母。
 
 - `ProcessDisclosure` 是活动段展开/收起唯一实现（流式 snap、结束后 tween）；`ActivitySection` 与工具组共用。
-- 卡片槽位统一由 `PluginAnswerCardSlot` 解析，`HostAnswerCardSlotState` 同时实现工具卡/自定义消息两种状态；`AnswerCardSource` 把 CLI 卡、工具卡、宿主内容卡收成一个 `TurnBlock.Card`。
-- 回答区卡片统一为一个内容块：CLI 自定义消息卡与插件工具结果卡遇到卡片都先截断当前活动段再输出卡片，过程段继续出现在卡片之后，不再有两套块类型或两套切分规则。
+- 卡片槽位统一由 `PluginAnswerCardSlot` 解析，`HostAnswerCardSlotState` 同时实现工具卡/自定义消息两种状态；`AnswerCardSource` 只保留历史自定义消息卡与宿主内容卡，工具结果卡不再自动上屏。
+- 回答区卡片只有一个来源：模型调用 `present`（`type=card` 时按卡片 id 找 `deepdeep.card` 或工具轨迹），宿主不再把工具结果自动变成卡片；历史遗留的自定义消息卡仍作为 `TurnBlock.Card` 渲染。
 - 流式期间活动段展开/收起与摘要尺寸用 snap，`followContent` 用带符号差值贴底，内容收缩也回顶到底部锚点，避免卡片插入或过程折叠把最终正文上下推。
-- 工具卡渲染顺序：精确 `tool.card.content:<name>` 槽位 → 插件工具结果渲染器（`ToolResultRendererContributor`，MCP/插件工具按 source/server/tool 匹配）→ 宿主默认工具卡；`ToolInvocation` 统一 trace key、工具身份、参数与结构化结果，负责把 `mcp__server__tool` 与 `tool_execute` 包装还原成真实 MCP 工具身份；工具卡与自定义消息卡共用 `PluginAnswerCardSlot` 解析入口。
+- 渲染顺序：过程区统一是原始工具卡（精确 `tool.card.content:<name>` 槽位 → 插件工具结果渲染器 → 宿主默认工具卡）；回答区的富卡片只由 `present` 的 `type=card` 引入，按 `deepdeep.card` 的 `customType` 走自定义消息槽位、否则按工具轨迹走工具卡槽位。`ToolInvocation` 统一 trace key、工具身份、参数与结构化结果，负责把 `mcp__server__tool` 与 `tool_execute` 包装还原成真实 MCP 工具身份。
