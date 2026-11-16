@@ -10,7 +10,8 @@ import kotlinx.serialization.json.contentOrNull
 
 internal const val DEEPDEEP_STRUCTURED_CONTENT_VERSION = 1
 internal const val DEEPDEEP_STRUCTURED_CONTENT_MAX_BYTES = 256 * 1024
-internal const val COMPLETE_PAYLOAD_HEADING = "完整返回（未经省略）："
+internal const val COMPLETE_PAYLOAD_HEADING = "完整返回（上游原样）："
+internal const val GUIDANCE_HEADING = "使用说明："
 internal const val CARD_ID_HINT_LABEL = "卡片 id："
 
 internal class ToolResultPostProcessor(
@@ -26,31 +27,38 @@ internal class ToolResultPostProcessor(
             is ToolResultDecision.Replace -> decision.result
         }
         val details = effective.details as? JsonObject
-        val raw = details.rawPayload()
+        val raw = details.rawText()
+        val guidance = details.guidanceText()
         val hasCard = details?.get(ToolResultDetails.CARD_KEY) is JsonObject
         val cardTitle = details.cardTitle()
+        val error = effective.isError == true
         var content = effective.content
-        var appended = false
-        if (!raw.isNullOrEmpty()) {
-            content = content + TextContent("\n\n$COMPLETE_PAYLOAD_HEADING\n$raw")
-            appended = true
+        var changed = false
+        if (raw != null) {
+            val blocks = effective.content.filterNot { it is TextContent }
+            content = blocks + TextContent("$COMPLETE_PAYLOAD_HEADING\n$raw")
+            changed = true
         }
-        if (
-            hasCard &&
-            effective.isError != true &&
-            !content.containsCardHint(context.callId)
-        ) {
+        if (guidance != null) {
+            content = content + TextContent("\n\n$GUIDANCE_HEADING\n$guidance")
+            changed = true
+        }
+        if (hasCard && !error && !content.containsCardHint(context.callId)) {
             val title = cardTitle?.takeIf { it.isNotBlank() }?.let { "（$it）" }.orEmpty()
             content = content + TextContent("\n\n$CARD_ID_HINT_LABEL${context.callId}$title")
-            appended = true
+            changed = true
         }
-        val cleanedDetails = if (raw == null || details == null) {
+        val stripKeys = buildList {
+            if (raw != null) add(ToolResultDetails.RAW_KEY)
+            if (guidance != null) add(ToolResultDetails.GUIDANCE_KEY)
+        }
+        val cleanedDetails = if (stripKeys.isEmpty() || details == null) {
             effective.details
         } else {
-            JsonObject(details - ToolResultDetails.RAW_KEY)
+            JsonObject(details - stripKeys.toSet())
         }
         val detailsChanged = cleanedDetails != effective.details
-        var result = if (appended || detailsChanged) {
+        var result = if (changed || detailsChanged) {
             effective.rebuilt(content, cleanedDetails)
         } else {
             effective
@@ -71,8 +79,11 @@ internal class ToolResultPostProcessor(
 internal fun ToolExecutionHooks?.withPostProcessing(): ToolExecutionHooks =
     ToolResultPostProcessor(this)
 
-private fun JsonObject?.rawPayload(): String? =
+private fun JsonObject?.rawText(): String? =
     (this?.get(ToolResultDetails.RAW_KEY) as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun JsonObject?.guidanceText(): String? =
+    (this?.get(ToolResultDetails.GUIDANCE_KEY) as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
 private fun JsonObject?.cardTitle(): String? =
     ((this?.get(ToolResultDetails.CARD_KEY) as? JsonObject)?.get("title") as? JsonPrimitive)

@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.runtime
 
 import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
+import io.github.whywood.deepdeep.sdk.ai.ImageContent
 import io.github.whywood.deepdeep.sdk.ai.TextContent
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -37,13 +38,18 @@ class ToolResultPostProcessorTest {
 
     private fun AgentToolResult.text(): String = content.filterIsInstance<TextContent>().joinToString("") { it.text }
 
-    private fun cardDetails(raw: String? = null, title: String? = "高德天气（4 天）"): JsonObject = buildJsonObject {
+    private fun cardDetails(
+        raw: String? = null,
+        title: String? = "高德天气（4 天）",
+        guidance: String? = null,
+    ): JsonObject = buildJsonObject {
         put("server", "amap")
         val card = buildJsonObject {
             title?.let { put("title", it) }
         }
         put(ToolResultDetails.CARD_KEY, card)
         raw?.let { put(ToolResultDetails.RAW_KEY, it) }
+        guidance?.let { put(ToolResultDetails.GUIDANCE_KEY, it) }
     }
 
     @Test
@@ -176,8 +182,59 @@ class ToolResultPostProcessorTest {
 
         val text = (ToolResultPostProcessor(chained).afterToolResult(context(result())) as ToolResultDecision.Replace)
             .result.text()
-        assertTrue(text.startsWith("plugin replaced"))
+        assertTrue(text.startsWith(COMPLETE_PAYLOAD_HEADING))
         assertTrue(text.contains("raw payload"))
+        assertFalse(text.contains("plugin replaced"))
         assertTrue(text.contains("卡片 id：call-1"))
+    }
+
+    @Test
+    fun replacesModelTextWithRawAndAppendsGuidance() = runBlocking {
+        val decision = ToolResultPostProcessor(null).afterToolResult(
+            context(
+                result(
+                    text = "找到 20 个地点：中山大学（12,000 字摘要）",
+                    details = cardDetails(raw = """{"pois":[{"name":"中山大学"}]}""", guidance = "需要路线时用 amap_route_*。"),
+                ),
+            ),
+        )
+
+        val replaced = (decision as ToolResultDecision.Replace).result
+        val text = replaced.text()
+        assertTrue(text.startsWith("$COMPLETE_PAYLOAD_HEADING\n"))
+        assertTrue(text.contains("""{"pois":[{"name":"中山大学"}]}"""))
+        assertTrue(text.contains("$GUIDANCE_HEADING\n需要路线时用 amap_route_*。"))
+        assertFalse(text.contains("12,000 字摘要"))
+        val details = replaced.details as JsonObject
+        assertFalse(details.containsKey(ToolResultDetails.RAW_KEY))
+        assertFalse(details.containsKey(ToolResultDetails.GUIDANCE_KEY))
+    }
+
+    @Test
+    fun appendsGuidanceWithoutRawToExistingContent() = runBlocking {
+        val decision = ToolResultPostProcessor(null).afterToolResult(
+            context(result(text = "current text", details = cardDetails(raw = null, guidance = "先登录。"))),
+        )
+
+        val text = (decision as ToolResultDecision.Replace).result.text()
+        assertTrue(text.startsWith("current text"))
+        assertTrue(text.contains("$GUIDANCE_HEADING\n先登录。"))
+    }
+
+    @Test
+    fun keepsNonTextContentWhenRawReplacesText() = runBlocking {
+        val image = ImageContent("aGVsbG8=", "image/png")
+        val decision = ToolResultPostProcessor(null).afterToolResult(
+            context(
+                AgentToolResult(
+                    content = listOf(TextContent("old summary"), image),
+                    details = cardDetails(raw = "raw payload"),
+                ),
+            ),
+        )
+
+        val content = (decision as ToolResultDecision.Replace).result.content
+        assertEquals(1, content.filterIsInstance<ImageContent>().size)
+        assertTrue(content.filterIsInstance<TextContent>().none { it.text.contains("old summary") })
     }
 }

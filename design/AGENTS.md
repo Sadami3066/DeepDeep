@@ -1,6 +1,6 @@
 # design · 主题与通用组件
 
-DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通用 Compose 组件和图标资源。只被界面层使用，不含业务逻辑；同时作为插件 UI 的 SDK 发布（`io.github.sadami3066.deepdeep:design`，版本独立于 `plugin-api`，当前 0.10.0），让插件页面与 App 共用同一套组件与主题。
+DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通用 Compose 组件和图标资源。只被界面层使用，不含业务逻辑；同时作为插件 UI 的 SDK 发布（`io.github.sadami3066.deepdeep:design`，版本独立于 `plugin-api`，当前 0.11.0），让插件页面与 App 共用同一套组件与主题。
 
 ## 文件
 
@@ -29,6 +29,7 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 | `DdIcon.kt` | 图标类型与 `DdIcon()` composable，统一 tint 与尺寸 |
 | `DdIcons.kt` | 图标映射表（由 `design/icons/gen.mjs` 从 `catalog.json` 生成，勿手改） |
 | `DdImage.kt` | 图片显示：本地路径/ByteArray/ImageBitmap，按长边采样解码、圆角裁剪、失败占位 |
+| `DdRemoteImage.kt` | 远程图片显示：调用方注入 `suspend (url) -> ImageBitmap?` 加载器，自带加载/失败占位与圆角裁剪；不直接联网，缓存由宿主 `ImageService` 负责 |
 | `DdImageScaling.kt` | 解码采样与长边缩放纯函数（`DdImageScaling`/`DdScaledSize`） |
 | `DdImageViewer.kt` | 全屏图片预览：scrim 底、点按关闭、淡入 |
 | `DdLoadingBlock.kt` | 转圈加说明文字的加载占位 |
@@ -75,4 +76,4 @@ DeepDeep 的视觉底座：明暗配色、字体与字号、动效 token、通�
 - 减少动态效果：`LocalDdMotionEnabled` 由 `DeepDeepTheme` 从 `ValueAnimator.areAnimatorsEnabled()` 注入；新动效在它为 false 时跳过或直接结束（sheet/dialog 已接）。`DdSwipeRow` 触感读 `LocalDdHapticsEnabled`（design 侧，默认 true）；App 若要把全局触感开关接到滑动行，需在根层 provide 该 local。
 - `design` 是向后兼容的发布 SDK：新增组件与服务内聚的 `Dd*` 符号是加法，不改已有公开签名；`DdMarkdown`/`highlightedCode`/`markdownToPlainText`/`DdImageScaling` 供 App 与插件共用，App 不得再保留第二套 Markdown 解析或图片缩放实现。
 - 插件 UI 直接消费本模块组件（`DdGroupCard`/`DdListRow`/`DdPrimaryButton`/`DdTextField`/`DdSwitch`/`DdType`/`deepDeepColors()` 等），所以公共组件的签名与视觉是跨仓库 API：改签名要同步 `plugin-api` ABI 与 `docs/PLUGIN_DEV.md`，并让 `plugins/` 仓库重编译。
-- 发布：`./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository`（`maven-publish`，artifact `design`，版本独立维护，当前 0.10.0）；产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库。`plugin-api` 单独发布。
+- 发布：`./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository`（`maven-publish`，artifact `design`，版本独立维护，当前 0.11.0）；产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库。`plugin-api` 单独发布。

@@ -162,6 +162,13 @@ public data class DownloadResult(
     public val size: Long,
     public val sha256: String,
 )
+public data class RemoteImage(
+    public val bitmap: androidx.compose.ui.graphics.ImageBitmap,
+    public val width: Int,
+    public val height: Int,
+    public val contentType: String? = null,
+    public val fromCache: Boolean = false,
+)
 
 public data class FileEntry(
     public val path: String,

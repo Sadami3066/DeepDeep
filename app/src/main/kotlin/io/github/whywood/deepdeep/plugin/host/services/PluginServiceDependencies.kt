@@ -13,6 +13,7 @@ import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.host.PluginServices
 import io.github.whywood.deepdeep.plugin.host.extensions.data.DataPluginServices
 import io.github.whywood.deepdeep.plugin.host.extensions.device.DevicePluginServices
+import io.github.whywood.deepdeep.plugin.host.images.RemoteImageCache
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteraction
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.runtime.ConversationQueries
@@ -54,6 +55,7 @@ internal data class PluginServiceDependencies(
     val files: () -> FileSystem = { FileSystem.SYSTEM },
     val secrets: EncryptedSecretStore? = null,
     val network: HttpTransport? = null,
+    val imageCache: RemoteImageCache? = null,
     val sessions: ConversationQueries? = null,
     val sessionCommands: SessionCommands? = null,
     val maintenance: Maintenance? = null,
@@ -118,6 +120,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
         ),
         secrets = deps.secrets?.let { SecretPluginService(it, deps.pluginId) },
         network = deps.network?.let { NetworkPluginService(it) },
+        images = deps.imageCache?.let { ImagePluginService(it) },
         files = FilePluginService(
             root = deps.pluginDataDir,
             workspace = deps.workspaceDir,

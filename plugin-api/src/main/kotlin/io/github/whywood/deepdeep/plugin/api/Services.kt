@@ -131,6 +131,17 @@ public suspend fun NetworkService.post(
     headers: Map<String, String> = emptyMap(),
 ): NetworkResponse = request("POST", url, headers, body)
 
+public interface ImageService {
+    public suspend fun load(
+        url: String,
+        maxEdgePx: Int = DEFAULT_MAX_EDGE_PX,
+    ): RemoteImage?
+
+    public companion object {
+        public const val DEFAULT_MAX_EDGE_PX: Int = 720
+    }
+}
+
 public interface FileService {
     public val rootDir: String
 

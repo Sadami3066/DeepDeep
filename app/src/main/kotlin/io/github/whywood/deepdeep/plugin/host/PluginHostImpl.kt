@@ -12,6 +12,7 @@ import io.github.whywood.deepdeep.plugin.api.ContactsService
 import io.github.whywood.deepdeep.plugin.api.CredentialService
 import io.github.whywood.deepdeep.plugin.api.DeviceService
 import io.github.whywood.deepdeep.plugin.api.FileService
+import io.github.whywood.deepdeep.plugin.api.ImageService
 import io.github.whywood.deepdeep.plugin.api.IntentsService
 import io.github.whywood.deepdeep.plugin.api.LocationService
 import io.github.whywood.deepdeep.plugin.api.MediaService
@@ -50,6 +51,7 @@ internal data class PluginServices(
     val notifications: NotificationService? = null,
     val secrets: SecretService? = null,
     val network: NetworkService? = null,
+    val images: ImageService? = null,
     val files: FileService? = null,
     val sessions: SessionService? = null,
     val jobs: JobService? = null,
@@ -92,6 +94,7 @@ internal fun PluginServices.declaredOnly(capabilities: Set<PluginCapability>): P
     notifications = notifications.takeIf { PluginCapability.NOTIFICATIONS in capabilities },
     secrets = secrets.takeIf { PluginCapability.SECRETS in capabilities },
     network = network.takeIf { PluginCapability.NETWORK in capabilities },
+    images = images.takeIf { PluginCapability.IMAGES in capabilities },
     files = files.takeIf { PluginCapability.FILES in capabilities },
     sessions = sessions.takeIf { PluginCapability.SESSIONS in capabilities },
     jobs = jobs.takeIf { PluginCapability.JOBS in capabilities },
@@ -148,6 +151,8 @@ internal class PluginHostImpl(
     override fun secrets(): SecretService = service("secrets", services.secrets)
 
     override fun network(): NetworkService = service("network", services.network)
+
+    override fun images(): ImageService = service("images", services.images)
 
     override fun files(): FileService = service("files", services.files)
 

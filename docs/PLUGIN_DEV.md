@@ -10,7 +10,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 
 `plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.3.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0`/`0.9.0` 单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
 
-`plugin-api 1.3.0` 是 level 6 内的纯加法：已发布、只用 1.0.x/1.1.x/1.2.x 能力的插件不需要重新编译；使用 1.3.0 新能力（工具结果渲染器）的插件要写 `minHostVersion: "1.1.0"`（宿主 1.1.0+）。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
+`plugin-api 1.3.0` 是 level 6 内的纯加法：已发布、只用 1.0.x/1.1.x/1.2.x 能力的插件不需要重新编译；使用 1.3.0 新能力（工具结果渲染器）的插件要写 `minHostVersion: "1.1.0"`（宿主 1.1.0+）。`plugin-api 1.3.1` / `design 0.11.0` 同样是加法：新增 `host.images()` 与 `DdRemoteImage`，使用它们的插件写 `minHostVersion: "1.4.0"`。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
 
 插件工程从 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) 的 `template/` 起步：独立 Gradle Android 工程，包含一个示例工具、一个示例技能、一段提示词与完整的 `.ddp` 打包/签名/验签实现，复制或改名即起点。官方插件实现见 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)。
 
@@ -88,7 +88,7 @@ cp -R template my-plugin && cd my-plugin
 | `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
 | `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
 | `apiLevel` | int | 否（默认 6） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 6..6）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（6）处理；宿主 1.0.4 起 level 5 插件会被拒绝 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"`；使用 design 0.9.0 组件或 plugin-api 1.2.0 新能力的插件写 `"1.0.8"`；使用工具结果渲染器等 1.3.0 新能力的插件写 `"1.1.0"` |
+| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"`；使用 design 0.9.0 组件或 plugin-api 1.2.0 新能力的插件写 `"1.0.8"`；使用工具结果渲染器等 1.3.0 新能力的插件写 `"1.1.0"`；使用 `host.images()`/`DdRemoteImage` 的插件写 `"1.4.0"` |
 | `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
 | `name` | LocalizedText | 是 | 插件名，至少含 `default` |
 | `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
@@ -559,6 +559,23 @@ pluginTool(
 
 `isError = true` 表示一次失败的工具结果（模型可重试/解释）；`execute` 抛异常（取消除外）也会转成 error 结果，所以不要用异常传业务错误。
 
+#### 返回三层：raw / guidance / card（1.4.0）
+
+工具结果给模型和界面的分工固定为三层，全部通过 details 保留键传递：
+
+| details 键 | 内容 | 谁使用 |
+|---|---|---|
+| `deepdeep.raw` | 上游完整输出（逐字；CLI 结果去掉 ANSI、`[exit: N]` 和宿主提示，不做摘要、不截断） | 宿主把它作为模型可见正文 |
+| `deepdeep.guidance` | 给模型的短指导：下一步、失败原因、必须询问的约束、输出文件路径、分页/登录提示；不写名称/价格/ID 等已在 raw 里的事实 | 宿主追加在 raw 之后 |
+| `deepdeep.card` | `{ "title": "...", "customType": "...", "payload": {...} }`；title 必填，宿主据此追加 `卡片 id：<callId>（标题）` | 模型用 `present` 交付，界面按 payload 渲染 |
+
+- `raw` 存在时宿主丢弃 `textResult` 的 text（非文本内容块保留）；`raw` 不存在时 text 必须本身就是完整上游输出（例如邮箱解码文本、未识别的 CLI 命令透传）。
+- 插件自己的“可读摘要”不再进模型上下文；需要解释就写 `guidance`，需要展示就写 `card`。
+- 卡片 payload 必须全量（含原始脏字符串、ID、坐标、图片 URL、状态、分页 token）；裁剪只发生在渲染层的默认预览/展开。
+- 错误结果不追加卡片 id；把可操作说明写进 `guidance`。
+- 图片 URL 用 `host.images().load(url, maxEdgePx)` 取（需 manifest 声明 `images` capability），返回 `RemoteImage.bitmap`；配合 design 0.11.0 的 `DdRemoteImage` 渲染，全屏用 `DdImageViewer(bitmap)`。图片只进宿主内存与私有缓存，不要写共享存储或插件数据目录。
+- `plugin-api 1.3.1` + `design 0.11.0`：使用 `host.images()` 的插件写 `minHostVersion: "1.4.0"`；`plugin-api 1.3.1` 仍是 level 6 内的加法。
+
 工具默认随启用插件进入会话；需要会话信息时用 `contributionsFor` 的 live handle：
 
 ```kotlin
@@ -992,7 +1009,7 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`；使用 design 0.10.0 组件（`DdExpandToggle`）要写 `"1.3.0"` 并声明 `design:0.10.0`；使用工具结果渲染器要写 `"1.1.0"` 并依赖 `plugin-api 1.3.0`。
+日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`；使用 design 0.10.0 组件（`DdExpandToggle`）要写 `"1.3.0"` 并声明 `design:0.10.0`；使用 design 0.11.0 组件（`DdRemoteImage`）要写 `"1.4.0"` 并声明 `design:0.11.0`；使用工具结果渲染器要写 `"1.1.0"` 并依赖 `plugin-api 1.3.0`。
 
 约定：
 
@@ -1525,6 +1542,8 @@ if (host.accessibility().enabled) {
 ### 1.2.x → 1.3.0（纯加法）
 
 `plugin-api 1.3.0` 不升 apiLevel：现有插件不需要改代码或重新编译。需要在 MCP/插件工具结果上出卡片时：依赖升到 `plugin-api 1.3.0`，清单写 `minHostVersion: "1.1.0"`；在 `ui()` 返回对象上同时实现 `ToolResultRendererContributor`，用 `toolResultMatch(source/server/tool/toolPrefix)` 匹配、`toolResultRenderer` 构造。MCP 工具由 Agent 通过 `tool_execute` 调用时，宿主会自动还原内部工具身份，渲染器直接按真实 MCP server/tool 匹配。
+
+`plugin-api 1.3.1` / `design 0.11.0` 也不升 apiLevel：新增 `PluginHost.images()`（返回 `RemoteImage`）与 `DdRemoteImage`，插件的 `plugin.json` capabilities 加 `images` 即可在卡片里加载远程图片；两者都只做加法，旧插件不需要重编译。
 
 ### 1.1.x → 1.2.0（纯加法）
 

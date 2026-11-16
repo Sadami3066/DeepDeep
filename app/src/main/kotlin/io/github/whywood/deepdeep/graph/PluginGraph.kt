@@ -13,6 +13,7 @@ import io.github.whywood.deepdeep.plugin.api.textBlock
 import io.github.whywood.deepdeep.plugin.host.external.ExternalPluginRecordStore
 import io.github.whywood.deepdeep.plugin.host.external.PluginInstaller
 import io.github.whywood.deepdeep.plugin.host.external.PublisherTrustStore
+import io.github.whywood.deepdeep.plugin.host.images.RemoteImageCache
 import io.github.whywood.deepdeep.plugin.host.services.McpModelMapping
 import io.github.whywood.deepdeep.plugin.host.services.PluginServiceDependencies
 import io.github.whywood.deepdeep.plugin.host.services.PluginUiBridge
@@ -37,6 +38,12 @@ import kotlinx.coroutines.launch
 
 internal class PluginGraph(private val deps: PluginGraphDeps) {
     private val language: () -> String = { LanguagePreferences(deps.appContext).read().tag }
+    private val remoteImages: RemoteImageCache by lazy {
+        RemoteImageCache(
+            cacheDir = File(deps.appContext.cacheDir, "remote-images"),
+            transport = deps.httpTransport,
+        )
+    }
 
     val manager: PluginHostManager by lazy {
         val pluginsRoot = File(deps.appContext.filesDir, "plugins")
@@ -168,6 +175,7 @@ internal class PluginGraph(private val deps: PluginGraphDeps) {
             files = { deps.hostEnvironment.current().files },
             secrets = deps.secretStore,
             network = deps.httpTransport,
+            imageCache = remoteImages,
             sessions = deps.host,
             sessionCommands = deps.host,
             maintenance = deps.host,
