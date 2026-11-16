@@ -48,7 +48,7 @@ class PluginToolAdapterTest {
     }
 
     @Test
-    fun cardToolAppendsCardIdOnlyOnSuccess() = runTest {
+    fun cardIdHintIsAddedByHostPostProcessorNotAdapter() = runTest {
         val tool = pluginTool(
             name = "card_tool",
             description = "card",
@@ -56,16 +56,16 @@ class PluginToolAdapterTest {
             execute = { textResult("facts") },
         )
 
-        val result = PluginToolAdapter.toCodingTool(tool, showCard = true)
+        val result = PluginToolAdapter.toCodingTool(tool)
             .execute("call-1", emptyArgs, null, null)
 
-        assertEquals("facts", (result.content.first() as TextContent).text)
-        assertEquals("\n\n卡片 id：call-1", (result.content.last() as TextContent).text)
+        assertEquals(1, result.content.size)
+        assertEquals("facts", (result.content.single() as TextContent).text)
         assertNull(result.isError)
     }
 
     @Test
-    fun errorCardToolDoesNotAddModelHint() = runTest {
+    fun errorResultKeepsSingleContentPart() = runTest {
         val tool = pluginTool(
             name = "card_tool",
             description = "card",
@@ -73,7 +73,7 @@ class PluginToolAdapterTest {
             execute = { throw IllegalStateException("failed") },
         )
 
-        val result = PluginToolAdapter.toCodingTool(tool, showCard = true)
+        val result = PluginToolAdapter.toCodingTool(tool)
             .execute("call-1", emptyArgs, null, null)
 
         assertEquals(1, result.content.size)

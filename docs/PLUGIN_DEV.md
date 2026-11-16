@@ -17,7 +17,7 @@ DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPl
 前置条件：
 
 - JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.3.0` / `design 0.9.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
+- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.3.0` / `design 0.10.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
 
 `plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
 
@@ -937,6 +937,23 @@ DdHtmlBlocks(
 )
 ```
 
+`design 0.10.0` 新增（需要显式依赖与 `minHostVersion: "1.3.0"`）：
+
+| 组件 / API | 用途 |
+|---|---|
+| `DdExpandToggle(expanded, collapsedLabel, expandedLabel, onToggle)` | 卡片长列表的展开/收起：一行文字 + 旋转 chevron，可点区域 44dp；文案由调用方传入 |
+
+```kotlin
+if (items.size > PreviewRows) {
+    DdExpandToggle(
+        expanded = expanded,
+        collapsedLabel = host.t("展开全部 ${items.size} 条", "Show all ${items.size}"),
+        expandedLabel = host.t("收起", "Show less"),
+        onToggle = { expanded = !expanded },
+    )
+}
+```
+
 `design 0.9.0` 新增（需要显式依赖与 `minHostVersion: "1.0.8"`，见下）：
 
 | 组件 / API | 用途 |
@@ -975,7 +992,7 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`；使用工具结果渲染器要写 `"1.1.0"` 并依赖 `plugin-api 1.3.0`。
+日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`；使用 design 0.10.0 组件（`DdExpandToggle`）要写 `"1.3.0"` 并声明 `design:0.10.0`；使用工具结果渲染器要写 `"1.1.0"` 并依赖 `plugin-api 1.3.0`。
 
 约定：
 

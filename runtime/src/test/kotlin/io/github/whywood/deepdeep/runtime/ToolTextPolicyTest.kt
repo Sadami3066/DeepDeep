@@ -41,7 +41,9 @@ class ToolTextPolicyTest {
     fun runtimeToolTextStaysTaskOriented() {
         tools().forEach { tool ->
             assertTrue("${tool.name} description is empty", tool.description.isNotBlank())
-            assertNull("${tool.name} should not send promptSnippet", tool.promptSnippet)
+            if (tool.name != "present") {
+                assertNull("${tool.name} should not send promptSnippet", tool.promptSnippet)
+            }
             tool.promptGuidelines.orEmpty().forEach { guideline ->
                 assertTrue("${tool.name} guideline is empty", guideline.isNotBlank())
                 assertFalse("${tool.name} guideline should stay one line", guideline.contains("\n"))
@@ -49,6 +51,16 @@ class ToolTextPolicyTest {
             scan(tool.name, tool.description)
             scan(tool.name, tool.parameters)
         }
+    }
+
+    @Test
+    fun presentAdvertisesCardDelivery() {
+        val present = presentTool(null) { null }
+
+        assertTrue(present.promptSnippet.orEmpty().contains("card"))
+        assertTrue(
+            present.promptGuidelines.orEmpty().any { it.contains("card id") && it.contains("present") },
+        )
     }
 
     private fun scan(tool: String, text: String) {

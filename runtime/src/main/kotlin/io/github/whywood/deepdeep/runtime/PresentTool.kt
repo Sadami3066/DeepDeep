@@ -109,6 +109,10 @@ fun presentTool(
     description = "Deliver finished work to the user: files, images, videos, web pages, installed miniapps, or a card produced by a tool. Use type=card with the id shown in a tool result when showing that card helps the answer; skip cards that add nothing to the text.",
     parameters = presentParameters,
     label = "present",
+    promptSnippet = "Deliver finished work to the user: files, images, pages, miniapps, or cards from tool results",
+    promptGuidelines = listOf(
+        "When a tool result ends with a card id, deliver that card with present(type=card) instead of restating its data; several related cards may be delivered in one call.",
+    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         val bound = session()

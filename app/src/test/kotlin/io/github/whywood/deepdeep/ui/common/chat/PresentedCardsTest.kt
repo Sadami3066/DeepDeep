@@ -28,6 +28,16 @@ class PresentedCardsTest {
     }
 
     @Test
+    fun descriptorWithTitleOnlyResolvesToRendererToolCard() {
+        val message = assistant(tool("call-3", details = titleOnlyCardDetails()))
+
+        val cards = presentedCardLookup(listOf(message))
+
+        val tool = cards.getValue("call-3") as PresentedCardRef.Tool
+        assertEquals("call-3", tool.trace.toolCallId)
+    }
+
+    @Test
     fun runningAndBlankCallIdsAreIgnored() {
         val message = assistant(
             tool("running", status = ToolActivityStatus.RUNNING),
@@ -62,6 +72,13 @@ class PresentedCardsTest {
             resultDetails = details,
         ),
     )
+
+    private fun titleOnlyCardDetails() = buildJsonObject {
+        put(
+            "deepdeep.card",
+            buildJsonObject { put("title", "高德地点") },
+        )
+    }
 
     private fun cardDetails(customType: String) = buildJsonObject {
         put(

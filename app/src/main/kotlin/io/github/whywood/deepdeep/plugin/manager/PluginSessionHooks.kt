@@ -10,7 +10,6 @@ import io.github.whywood.deepdeep.plugin.api.PluginHooks
 import io.github.whywood.deepdeep.plugin.api.PluginSessionInfo
 import io.github.whywood.deepdeep.plugin.api.PluginSessionSnapshot
 import io.github.whywood.deepdeep.plugin.api.PluginToolExposure
-import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.plugin.host.PluginRegistry
 import io.github.whywood.deepdeep.plugin.host.PluginToolAdapter
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
@@ -44,20 +43,12 @@ internal class PluginSessionHooks(
 
     fun tools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<CodingTool> {
         val sessionId = { binding.current()?.sessionId.orEmpty() }
-        val cardSlots = gate.views().associate { view ->
-            view.id to view.contributions.ui.bindings.mapTo(mutableSetOf()) { it.slotId }
-        }
-        val renderers = registry.snapshot().toolResultRenderers
         return sessionContributions(binding).filterKeys { it !in excludedPlugins }.entries
-            .flatMap { (pluginId, contribution) ->
-                val slots = cardSlots[pluginId].orEmpty()
+            .flatMap { (_, contribution) ->
                 PluginToolAdapter.toCodingTools(
                     contribution.tools.filter { it.exposure == PluginToolExposure.DIRECT },
                     sessionId,
-                ) { name ->
-                    io.github.whywood.deepdeep.plugin.api.SlotIds.toolCard(name) in slots ||
-                        renderers.any { it.renderer.match.matches(ToolResultSource.PLUGIN, null, name) }
-                }
+                )
             }
             .distinctBy { it.name }
     }

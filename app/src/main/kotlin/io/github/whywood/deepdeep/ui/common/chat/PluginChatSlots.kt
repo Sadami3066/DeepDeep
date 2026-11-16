@@ -39,7 +39,7 @@ private fun PluginAnswerCardSlot(
     state: io.github.whywood.deepdeep.plugin.api.SlotState,
     fallback: @Composable () -> Unit,
 ): Boolean {
-    val manager = LocalPluginManager.current ?: run { fallback(); return false }
+    val manager = LocalPluginManager.current ?: return false
     val uiState by manager.state.collectAsStateWithLifecycle()
     val entries = remember(uiState, slotId) { manager.slotEntries(slotId) }
     if (entries.none { it.composeCompatible }) return false
@@ -148,7 +148,7 @@ internal fun PluginCustomMessageSlot(
     payload: JsonObject,
     fallback: @Composable () -> Unit,
 ) {
-    PluginAnswerCardSlot(
+    val rendered = PluginAnswerCardSlot(
         slotId = SlotIds.chatMessage(customType),
         state = HostAnswerCardSlotState(
             callId = "",
@@ -161,5 +161,6 @@ internal fun PluginCustomMessageSlot(
         ),
         fallback = fallback,
     )
+    if (!rendered) fallback()
 }
 
