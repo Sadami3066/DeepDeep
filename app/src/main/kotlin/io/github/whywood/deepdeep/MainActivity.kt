@@ -266,7 +266,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isPluginPackage(uri: Uri, mimeType: String?): Boolean =
-        PluginPackageIntake.isPluginPackage(resolveDisplayName(uri), mimeType)
+        PluginPackageIntake.isPluginPackage(resolveDisplayName(uri), mimeType) ||
+            PluginPackageIntake.isPluginPackage(uri.encodedPath ?: uri.toString(), null)
 
     private fun resolveDisplayName(uri: Uri): String? = runCatching {
         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
