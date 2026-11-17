@@ -4,6 +4,8 @@ import io.github.whywood.deepdeep.ui.common.chat.commandQuery
 
 import io.github.whywood.deepdeep.ui.common.chat.ChatTurn
 
+import io.github.whywood.deepdeep.ui.common.chat.presentedCardLookup
+
 import io.github.whywood.deepdeep.ui.common.chat.LocalSelectionCoordinator
 
 import io.github.whywood.deepdeep.ui.common.chat.copyToClipboard
@@ -273,6 +275,7 @@ fun ChatScreen(
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
     val messages = state.messages
+    val presentedCards = remember(messages) { presentedCardLookup(messages) }
     val streamMessages = remember(messages) { messages.filterNot { it.customType == TodoWriteCustomType } }
     val sessionKey = state.conversationId.orEmpty()
     var visibleMessageCount by rememberSaveable(sessionKey) { mutableStateOf(0) }
@@ -624,6 +627,7 @@ fun ChatScreen(
                                         onOpenPresentFile = onOpenPresentFile,
                                         onSharePresentFile = onSharePresentFile,
                                         onOpenMiniapp = onOpenMiniapp,
+                                        presentedCards = presentedCards,
                                         retryAttempt = if (message.id == retryTargetId) {
                                             retryActivity?.attempt
                                         } else {

@@ -197,14 +197,15 @@ class PiSessionEngine(
             ),
         )
         created = session
-        val progressGuard = ToolProgressGuard()
-        progressGuards[session.sessionId] = progressGuard
-        session.agent.installToolExecutionHooks(progressGuard)
-        session.subscribe { event ->
-            if (event is SessionEvent.AgentEventReceived && event.event is AgentEvent.AgentStart) progressGuard.beginRun()
+        val toolHooks = hooks.toolHooks
+        if (toolHooks == null) {
+            session.agent.afterToolCall = bridgeAfterToolCall(
+                ToolResultPostProcessor(null),
+                session.agent.afterToolCall,
+            )
+        } else {
+            session.agent.installToolExecutionHooks(toolHooks.withPostProcessing())
         }
-        session.agent.installToolExecutionHooks(hooks.toolHooks)
-        installPhongentAnswerReview(session)
         binding.attach(session)
         sessionBindings[session.sessionId] = binding
         hooks.onSessionBound?.invoke(binding)

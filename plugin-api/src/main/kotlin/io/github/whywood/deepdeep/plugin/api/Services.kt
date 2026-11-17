@@ -131,6 +131,17 @@ public suspend fun NetworkService.post(
     headers: Map<String, String> = emptyMap(),
 ): NetworkResponse = request("POST", url, headers, body)
 
+public interface ImageService {
+    public suspend fun load(
+        url: String,
+        maxEdgePx: Int = DEFAULT_MAX_EDGE_PX,
+    ): RemoteImage?
+
+    public companion object {
+        public const val DEFAULT_MAX_EDGE_PX: Int = 720
+    }
+}
+
 public interface FileService {
     public val rootDir: String
 
@@ -244,6 +255,15 @@ public interface McpService {
     public suspend fun tools(server: String): List<McpTool>
 
     public suspend fun call(server: String, tool: String, arguments: JsonObject = JsonObject(emptyMap())): McpCallResult
+
+    public suspend fun callStructured(
+        server: String,
+        tool: String,
+        arguments: JsonObject = JsonObject(emptyMap()),
+    ): McpStructuredCallResult {
+        val result = call(server, tool, arguments)
+        return mcpStructuredCallResult(result.blocks, null, result.isError)
+    }
 }
 
 public interface UiService {

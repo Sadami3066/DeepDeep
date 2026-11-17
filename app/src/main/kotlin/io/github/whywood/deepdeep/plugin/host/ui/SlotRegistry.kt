@@ -57,7 +57,7 @@ class SlotRegistry internal constructor(
     fun entriesOf(pluginId: String): List<SlotRenderEntry> = resolve { it.pluginId == pluginId }
 
     fun uiCompatible(pluginId: String): Boolean =
-        disabledReasonFor(snapshotProvider().plugin(pluginId)?.manifest?.ui) == null
+        uiDisabledReason(snapshotProvider().plugin(pluginId)?.manifest?.ui, hostVersions) == null
 
     private fun resolve(predicate: (PluginBindingEntry) -> Boolean): List<SlotRenderEntry> {
         val snapshot = snapshotProvider()
@@ -75,39 +75,40 @@ class SlotRegistry internal constructor(
                     priority = entry.binding.priority,
                     content = content,
                     assetsDir = PluginPaths.assetsDir(pluginsRoot, descriptor.id, descriptor.manifest.version),
-                    disabledReason = disabledReasonFor(descriptor.manifest.ui),
+                    disabledReason = uiDisabledReason(descriptor.manifest.ui, hostVersions),
                 )
             }
             .sortedWith(compareByDescending<SlotRenderEntry> { it.priority }.thenBy { order[it.pluginId] ?: Int.MAX_VALUE })
     }
 
-    private fun disabledReasonFor(manifest: UiManifest?): SlotDisabledReason? {
-        if (manifest == null) return null
-        if (manifest.apiLevel > HOST_UI_API_LEVEL) {
-            return SlotDisabledReason.UiApiLevelUnsupported(manifest.apiLevel, HOST_UI_API_LEVEL)
-        }
-        manifest.kotlin?.let { declared ->
-            val host = hostVersions.kotlin
-            if (host != null && !sameKotlinMinor(declared, host)) {
-                return SlotDisabledReason.KotlinVersionMismatch(declared, host)
-            }
-        }
-        manifest.compose?.let { declared ->
-            val host = hostVersions.compose
-                ?: return SlotDisabledReason.ComposeVersionUnavailable(hostVersions.composeCompatibilityId)
-            val declaredVersion = ComposeVersionDetector.normalizeVersion(declared) ?: declared
-            if (declaredVersion != host) return SlotDisabledReason.ComposeVersionMismatch(declaredVersion, host)
-        }
-        return null
-    }
+}
 
-    private fun sameKotlinMinor(plugin: String, host: String): Boolean {
-        fun core(value: String): String = value.split('-', '+').first()
-        val pluginCore = core(plugin).split('.')
-        val hostCore = core(host).split('.')
-        return pluginCore.size >= 2 &&
-            hostCore.size >= 2 &&
-            pluginCore[0] == hostCore[0] &&
-            pluginCore[1] == hostCore[1]
+internal fun uiDisabledReason(manifest: UiManifest?, hostVersions: HostUiVersions): SlotDisabledReason? {
+    if (manifest == null) return null
+    if (manifest.apiLevel > HOST_UI_API_LEVEL) {
+        return SlotDisabledReason.UiApiLevelUnsupported(manifest.apiLevel, HOST_UI_API_LEVEL)
     }
+    manifest.kotlin?.let { declared ->
+        val host = hostVersions.kotlin
+        if (host != null && !sameKotlinMinor(declared, host)) {
+            return SlotDisabledReason.KotlinVersionMismatch(declared, host)
+        }
+    }
+    manifest.compose?.let { declared ->
+        val host = hostVersions.compose
+            ?: return SlotDisabledReason.ComposeVersionUnavailable(hostVersions.composeCompatibilityId)
+        val declaredVersion = ComposeVersionDetector.normalizeVersion(declared) ?: declared
+        if (declaredVersion != host) return SlotDisabledReason.ComposeVersionMismatch(declaredVersion, host)
+    }
+    return null
+}
+
+private fun sameKotlinMinor(plugin: String, host: String): Boolean {
+    fun core(value: String): String = value.split('-', '+').first()
+    val pluginCore = core(plugin).split('.')
+    val hostCore = core(host).split('.')
+    return pluginCore.size >= 2 &&
+        hostCore.size >= 2 &&
+        pluginCore[0] == hostCore[0] &&
+        pluginCore[1] == hostCore[1]
 }

@@ -29,6 +29,7 @@ private val rootPromptLines = listOf(
     "- /sdcard = /storage/emulated/0 (rw), same data as /data/media/0.",
     "- /proc /sys /dev: host.",
     "Android system commands run directly via the root shell capability.",
+    "/data/user/0/<package> and /data/data/<package> refer to the same app data; bash may show either form.",
     "read, edit and write use the Android host filesystem; bash runs inside the Alpine chroot. Workspace, /data and /storage paths are shared; /etc, /root and /usr differ between them.",
 )
 

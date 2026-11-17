@@ -172,6 +172,9 @@ public final class io.github.whywood.deepdeep.design.DdEmptyStateKt {
   public static final void DdEmptyState(java.lang.String, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
   public static final void DdEmptyState(java.lang.String, io.github.whywood.deepdeep.design.DdIcon, androidx.compose.ui.Modifier, kotlin.jvm.functions.Function2<? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }
+public final class io.github.whywood.deepdeep.design.DdExpandToggleKt {
+  public static final void DdExpandToggle(boolean, java.lang.String, java.lang.String, kotlin.jvm.functions.Function0<kotlin.Unit>, androidx.compose.ui.Modifier, androidx.compose.runtime.Composer, int, int);
+}
 public final class io.github.whywood.deepdeep.design.DdFileRowKt {
   public static final void DdFileRow(java.lang.String, androidx.compose.ui.Modifier, java.lang.String, io.github.whywood.deepdeep.design.DdIcon, kotlin.jvm.functions.Function0<kotlin.Unit>, boolean, kotlin.jvm.functions.Function3<? super androidx.compose.foundation.layout.RowScope, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>, androidx.compose.runtime.Composer, int, int);
 }

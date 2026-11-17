@@ -11,11 +11,12 @@
 | `PluginRegistry.kt` | 内存插件表：`PluginDescriptor`（manifest + 派生相位 + error + 物化贡献 + 主题来源）、线程安全 `PluginRegistrySnapshot`（递增 version、tools/skills/promptSections/ui/hooks/bindings/pages/composerActions/themeSources 聚合、重复 id 拒绝、跨插件冲突记录） |
 | `PluginHostImpl.kt` | `PluginHost` 实现：服务访问器委托给 `PluginServices` 持有的实现，未提供抛 `PluginServiceUnavailable`；保留旧签名 `text` |
 | `PluginTextResolver.kt` | `LocalizedText` 解析：values 按语言标签取、缺省回退 `default`；`String.format` 参数（插件 API 已无资源 id） |
-| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` 接口 → pi SDK `CodingTool`：元数据直传，`execute(call)` 经宿主 `PluginToolCall` 实现传入，sessionId 在 execute 时解析，Text/Rich 结果（`text/blocks`）映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
+| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` 接口 → pi SDK `CodingTool`：元数据直传，`execute(call)` 经宿主 `PluginToolCall` 实现传入，sessionId 在 execute 时解析，Text/Rich 结果（`text/blocks`）映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError；不追加卡片提示（raw 与 `卡片 id` 由 runtime `ToolResultPostProcessor` 在插件 hook 之后统一追加） |
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、主题包安装校验、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主 |
-| `services/` | 基础宿主服务适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/屏幕/通知/加密存储/网络/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
+| `services/` | 基础宿主服务适配器：`PluginServiceDependencies` + `buildPluginServices`（Linux/屏幕/通知/加密存储/网络/图片/文件/会话/job/timer/goal/小程序/MCP/UI/AppInfo/总线/日志/聊天） |
+| `images/` | 插件远程图片缓存：`RemoteImageCache`（内存 LRU + 应用私有 cacheDir 磁盘缓存、请求去重、失败回退、http→https、采样解码），经 `ImagePluginService` 暴露为 `PluginHost.images()`，受 `images` capability 门禁 |
 | `extensions/` | plugin-api 1.1.0 扩展能力适配器：`device/`（设备/剪贴板/权限/包管理/Root·ADB/Intent/代理组件/后台任务）与 `data/`（设置存储/定位/联系人/短信/日历/媒体/语音/网页/凭据/无障碍），各自持有 `build*PluginServices` 工厂与 `AGENTS.md` |
 | `interaction/` | 插件交互桥 `PluginInteraction`：ActivityResult 队列、确认/输入/选择/日期时间/文件/图片/扫码/目录、Snackbar 与页面上下文；`PluginInteractionOverlay` 挂在 MainActivity 根部，`PluginInteractionHost.forPlugin()` 为每个插件提供实现 |
 | `components/` | manifest 注册的插件宿主 Android 组件：`PluginHostService`（specialUse 前台服务）、`PluginSystemEventReceiver`（开机/更新/精确闹钟）、`PluginHostActivity`（独立插件窗口）、`PluginNotificationListenerService`/`PluginNotificationActionReceiver`（通知监听与动作，见目录内 AGENTS.md） |

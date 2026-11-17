@@ -7,4 +7,5 @@
     <string name="present_tool_delivered">Delivered %1$d</string>
     <string name="present_open_failed">No app can open this file</string>
     <string name="present_share_failed">Could not share this file</string>
+    <string name="present_card_unavailable">This card could not be shown</string>
 </resources>

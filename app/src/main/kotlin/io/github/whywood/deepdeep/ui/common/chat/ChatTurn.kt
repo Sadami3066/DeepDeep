@@ -3,7 +3,6 @@ package io.github.whywood.deepdeep.ui.common.chat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +33,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,7 +62,6 @@ import io.github.whywood.deepdeep.runtime.MessageSummary
 import io.github.whywood.deepdeep.runtime.MessageSummaryKind
 import io.github.whywood.deepdeep.runtime.PendingQuestion
 import io.github.whywood.deepdeep.runtime.QuestionAnswer
-import io.github.whywood.deepdeep.runtime.ToolTrace
 import io.github.whywood.deepdeep.runtime.TurnNotice
 import io.github.whywood.deepdeep.ui.common.chat.AttachmentCards
 import io.github.whywood.deepdeep.ui.common.chat.PluginCustomMessageSlot
@@ -124,6 +121,7 @@ internal fun ChatTurn(
     onOpenPresentFile: (String) -> Unit = {},
     onSharePresentFile: (String) -> Unit = {},
     onOpenMiniapp: (String) -> Unit = {},
+    presentedCards: Map<String, PresentedCardRef> = emptyMap(),
     retryAttempt: Int? = null,
 ) {
     val notice = message.notice
@@ -182,6 +180,7 @@ internal fun ChatTurn(
             onOpenPresentFile = onOpenPresentFile,
             onSharePresentFile = onSharePresentFile,
             onOpenMiniapp = onOpenMiniapp,
+            presentedCards = presentedCards,
             retryAttempt = retryAttempt,
         )
     }
@@ -530,15 +529,12 @@ private fun AssistantTurn(
     onOpenPresentFile: (String) -> Unit,
     onSharePresentFile: (String) -> Unit,
     onOpenMiniapp: (String) -> Unit,
+    presentedCards: Map<String, PresentedCardRef>,
     retryAttempt: Int?,
 ) {
     val colors = deepDeepColors()
-    val toolNames = remember(message.steps) {
-        message.steps.filterIsInstance<AssistantStep.Tool>().map { it.trace.name }.distinct()
-    }
-    val pluginToolNames = rememberPluginToolCardNames(toolNames)
-    val blocks = remember(message.steps, pluginToolNames, pendingQuestions) {
-        turnBlocks(message, pluginToolNames, pendingQuestions)
+    val blocks = remember(message.steps, pendingQuestions) {
+        turnBlocks(message, pendingQuestions)
     }
     val answer = remember(message.text, blocks) { answerText(message, blocks) }
     val lastActivityKey = blocks.lastOrNull { it is TurnBlock.Activity }?.key
@@ -575,36 +571,16 @@ private fun AssistantTurn(
                             )
                         }
 
-                        is TurnBlock.CustomCard -> ContentEntrance(block.key, animate = message.streaming) {
-                            CustomCardBlock(messageId = message.id, step = block.step)
-                        }
-
-                        is TurnBlock.PluginCard -> ContentEntrance(block.key, animate = message.streaming) {
-                            PluginToolCardBlock(
-                                trace = block.trace,
-                                onToggleStep = onToggleStep,
-                                onCopyOutput = onCopyOutput,
-                                onFileClick = onOpenFile,
-                                processDetail = processDetail,
-                            )
-                        }
-
-                        is TurnBlock.Present -> ContentEntrance(block.key, animate = message.streaming) {
-                            PresentCard(
-                                items = block.items,
+                        is TurnBlock.Card -> ContentEntrance(block.key, animate = message.streaming) {
+                            AnswerCardBlock(
+                                message = message,
+                                source = block.source,
                                 attachmentRoot = attachmentRoot,
-                                onOpenFile = onOpenPresentFile,
-                                onShareFile = onSharePresentFile,
+                                onOpenPresentFile = onOpenPresentFile,
+                                onSharePresentFile = onSharePresentFile,
                                 onOpenMiniapp = onOpenMiniapp,
+                                resolvePresentedCard = { id -> presentedCards[id] },
                             )
-                        }
-
-                        is TurnBlock.Miniapp -> ContentEntrance(block.key, animate = message.streaming) {
-                            MiniappChatCard(app = block.app, onOpen = onOpenMiniapp)
-                        }
-
-                        is TurnBlock.AnsweredQuestion -> ContentEntrance(block.key, animate = message.streaming) {
-                            AnsweredAskCard(record = block.record, toolCallId = block.toolCallId)
                         }
 
                         is TurnBlock.LiveQuestion -> ContentEntrance(block.key, animate = message.streaming) {
@@ -653,11 +629,9 @@ private fun ContentEntrance(
     }
     var shown by remember(key) { mutableStateOf(false) }
     LaunchedEffect(key) { shown = true }
-    val offset = with(LocalDensity.current) { 8.dp.roundToPx() }
     AnimatedVisibility(
         visible = shown,
-        enter = fadeIn(tween(DdMotion.BASE, easing = DdMotion.EaseOut)) +
-            slideInVertically(tween(DdMotion.BASE, easing = DdMotion.EaseOut)) { offset },
+        enter = fadeIn(tween(DdMotion.BASE, easing = DdMotion.EaseOut)),
     ) {
         content()
     }
@@ -677,6 +651,38 @@ private fun AnswerText(
         onSpeak = { spoken -> ReadAloud.speak(context.applicationContext, spoken) },
     ) {
         ChatMarkdown(text, onFileClick = onOpenFile, live = message.streaming)
+    }
+}
+
+@Composable
+private fun AnswerCardBlock(
+    message: AssistantMessage,
+    source: AnswerCardSource,
+    attachmentRoot: File,
+    onOpenPresentFile: (String) -> Unit,
+    onSharePresentFile: (String) -> Unit,
+    onOpenMiniapp: (String) -> Unit,
+    resolvePresentedCard: (String) -> PresentedCardRef?,
+) {
+    when (source) {
+        is AnswerCardSource.Custom -> CustomCardBlock(messageId = message.id, step = source.step)
+        is AnswerCardSource.Host -> when (val card = source.card) {
+            is HostAnswerCard.Present -> PresentCard(
+                items = card.items,
+                attachmentRoot = attachmentRoot,
+                onOpenFile = onOpenPresentFile,
+                onShareFile = onSharePresentFile,
+                onOpenMiniapp = onOpenMiniapp,
+                resolveCard = resolvePresentedCard,
+            )
+
+            is HostAnswerCard.Miniapp -> MiniappChatCard(app = card.app, onOpen = onOpenMiniapp)
+
+            is HostAnswerCard.AnsweredQuestion -> AnsweredAskCard(
+                record = card.record,
+                toolCallId = card.toolCallId,
+            )
+        }
     }
 }
 
@@ -702,32 +708,6 @@ private fun CustomCardBlock(messageId: Long, step: AssistantStep.CustomCard) {
             }
         },
     )
-}
-
-@Composable
-private fun PluginToolCardBlock(
-    trace: ToolTrace,
-    onToggleStep: (Long) -> Unit,
-    onCopyOutput: (String) -> Unit,
-    onFileClick: (String) -> Unit,
-    processDetail: ProcessDetail,
-) {
-    PluginToolCardSlot(
-        toolName = trace.name,
-        callId = trace.toolCallId,
-        args = remember(trace.rawArguments, trace.arguments) {
-            toolArgumentsJson(trace.rawArguments, trace.arguments)
-        },
-        result = trace.pluginSlotResult(),
-    ) {
-        ToolCard(
-            tool = trace,
-            onToggle = { onToggleStep(trace.id) },
-            onCopyOutput = onCopyOutput,
-            onFileClick = onFileClick,
-            compact = processDetail == ProcessDetail.COMPACT,
-        )
-    }
 }
 
 @Composable

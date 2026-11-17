@@ -1085,13 +1085,46 @@ public interface io.github.whywood.deepdeep.plugin.api.McpService {
   public abstract java.lang.Object tools(java.lang.String, kotlin.coroutines.Continuation<? super java.util.List<io.github.whywood.deepdeep.plugin.api.McpTool>>);
   public abstract java.lang.Object call(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.McpCallResult>);
   public static java.lang.Object call$default(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public default java.lang.Object callStructured(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult>);
+  public static java.lang.Object callStructured$suspendImpl(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult>);
+  public static java.lang.Object callStructured$default(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object access$callStructured$jd(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation);
 }
 public final class io.github.whywood.deepdeep.plugin.api.McpService$DefaultImpls {
   public static java.lang.Object call$default(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object callStructured(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult>);
+  public static java.lang.Object callStructured$default(io.github.whywood.deepdeep.plugin.api.McpService, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, kotlin.coroutines.Continuation, int, java.lang.Object);
+}
+final class io.github.whywood.deepdeep.plugin.api.McpService$callStructured$1 extends kotlin.coroutines.jvm.internal.ContinuationImpl {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
 }
 public interface io.github.whywood.deepdeep.plugin.api.McpStatusChangedEvent extends io.github.whywood.deepdeep.plugin.api.PluginEvent {
   public abstract java.lang.String getServer();
   public abstract java.lang.String getStatus-4mbFk9o();
+}
+public interface io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult {
+  public abstract java.util.List<io.github.whywood.deepdeep.plugin.api.ToolBlock> getBlocks();
+  public abstract kotlinx.serialization.json.JsonElement getStructuredContent();
+  public abstract boolean isError();
+}
+public final class io.github.whywood.deepdeep.plugin.api.McpStructuredCallResultImpl implements io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.McpStructuredCallResultImpl(java.util.List<? extends io.github.whywood.deepdeep.plugin.api.ToolBlock>, kotlinx.serialization.json.JsonElement, boolean);
+  public java.util.List<io.github.whywood.deepdeep.plugin.api.ToolBlock> getBlocks();
+  public kotlinx.serialization.json.JsonElement getStructuredContent();
+  public boolean isError();
+  public final java.util.List<io.github.whywood.deepdeep.plugin.api.ToolBlock> component1();
+  public final kotlinx.serialization.json.JsonElement component2();
+  public final boolean component3();
+  public final io.github.whywood.deepdeep.plugin.api.McpStructuredCallResultImpl copy(java.util.List<? extends io.github.whywood.deepdeep.plugin.api.ToolBlock>, kotlinx.serialization.json.JsonElement, boolean);
+  public static io.github.whywood.deepdeep.plugin.api.McpStructuredCallResultImpl copy$default(io.github.whywood.deepdeep.plugin.api.McpStructuredCallResultImpl, java.util.List, kotlinx.serialization.json.JsonElement, boolean, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.McpStructuredCallResultKt {
+  public static final io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult mcpStructuredCallResult(java.util.List<? extends io.github.whywood.deepdeep.plugin.api.ToolBlock>, kotlinx.serialization.json.JsonElement, boolean);
+  public static io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult mcpStructuredCallResult$default(java.util.List, kotlinx.serialization.json.JsonElement, boolean, int, java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.plugin.api.McpTool {
   public static final int $stable;
@@ -3724,6 +3757,89 @@ public final class io.github.whywood.deepdeep.plugin.api.ToolResultDecisionImpl 
   public int hashCode();
   public boolean equals(java.lang.Object);
   public io.github.whywood.deepdeep.plugin.api.ToolResultDecisionImpl(java.lang.String, io.github.whywood.deepdeep.plugin.api.PluginToolResult, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public interface io.github.whywood.deepdeep.plugin.api.ToolResultMatch {
+  public abstract java.lang.String getSource-S8Ly-YI();
+  public abstract java.lang.String getServer();
+  public abstract java.lang.String getTool();
+  public abstract java.lang.String getToolPrefix();
+  public abstract boolean matches-syRPFsw(java.lang.String, java.lang.String, java.lang.String);
+  public abstract int specificity();
+}
+public final class io.github.whywood.deepdeep.plugin.api.ToolResultMatchImpl implements io.github.whywood.deepdeep.plugin.api.ToolResultMatch {
+  public static final int $stable;
+  public java.lang.String getSource-S8Ly-YI();
+  public java.lang.String getServer();
+  public java.lang.String getTool();
+  public java.lang.String getToolPrefix();
+  public boolean matches-syRPFsw(java.lang.String, java.lang.String, java.lang.String);
+  public int specificity();
+  public final java.lang.String component1-S8Ly-YI();
+  public final java.lang.String component2();
+  public final java.lang.String component3();
+  public final java.lang.String component4();
+  public final io.github.whywood.deepdeep.plugin.api.ToolResultMatchImpl copy-5JVWTcY(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.ToolResultMatchImpl copy-5JVWTcY$default(io.github.whywood.deepdeep.plugin.api.ToolResultMatchImpl, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
+  public io.github.whywood.deepdeep.plugin.api.ToolResultMatchImpl(java.lang.String, java.lang.String, java.lang.String, java.lang.String, kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public interface io.github.whywood.deepdeep.plugin.api.ToolResultRenderer {
+  public abstract java.lang.String getId();
+  public default int getPriority();
+  public abstract io.github.whywood.deepdeep.plugin.api.ToolResultMatch getMatch();
+  public abstract void content(io.github.whywood.deepdeep.plugin.api.ToolResultState, androidx.compose.runtime.Composer, int);
+  public static int access$getPriority$jd(io.github.whywood.deepdeep.plugin.api.ToolResultRenderer);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ToolResultRenderer$DefaultImpls {
+  public static int getPriority(io.github.whywood.deepdeep.plugin.api.ToolResultRenderer);
+}
+public interface io.github.whywood.deepdeep.plugin.api.ToolResultRendererContributor {
+  public abstract java.util.List<io.github.whywood.deepdeep.plugin.api.ToolResultRenderer> getToolResultRenderers();
+}
+public final class io.github.whywood.deepdeep.plugin.api.ToolResultRenderersKt {
+  public static final io.github.whywood.deepdeep.plugin.api.ToolResultMatch toolResultMatch-5JVWTcY(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.deepdeep.plugin.api.ToolResultMatch toolResultMatch-5JVWTcY$default(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static final io.github.whywood.deepdeep.plugin.api.ToolResultRenderer toolResultRenderer(java.lang.String, io.github.whywood.deepdeep.plugin.api.ToolResultMatch, int, kotlin.jvm.functions.Function3<? super io.github.whywood.deepdeep.plugin.api.ToolResultState, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
+  public static io.github.whywood.deepdeep.plugin.api.ToolResultRenderer toolResultRenderer$default(java.lang.String, io.github.whywood.deepdeep.plugin.api.ToolResultMatch, int, kotlin.jvm.functions.Function3, int, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ToolResultRenderersKt$toolResultRenderer$1 implements io.github.whywood.deepdeep.plugin.api.ToolResultRenderer {
+  public java.lang.String getId();
+  public int getPriority();
+  public io.github.whywood.deepdeep.plugin.api.ToolResultMatch getMatch();
+  public void content(io.github.whywood.deepdeep.plugin.api.ToolResultState, androidx.compose.runtime.Composer, int);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ToolResultSource {
+  public static final io.github.whywood.deepdeep.plugin.api.ToolResultSource$Companion Companion;
+  public final java.lang.String getWire();
+  public static java.lang.String toString-impl(java.lang.String);
+  public java.lang.String toString();
+  public static int hashCode-impl(java.lang.String);
+  public int hashCode();
+  public static boolean equals-impl(java.lang.String, java.lang.Object);
+  public boolean equals(java.lang.Object);
+  public static final io.github.whywood.deepdeep.plugin.api.ToolResultSource box-impl(java.lang.String);
+  public final java.lang.String unbox-impl();
+  public static final boolean equals-impl0(java.lang.String, java.lang.String);
+  public static final java.lang.String access$getPLUGIN$cp();
+  public static final java.lang.String access$getMCP$cp();
+  public static final java.lang.String access$getBUILTIN$cp();
+}
+public final class io.github.whywood.deepdeep.plugin.api.ToolResultSource$Companion {
+  public final java.lang.String getPLUGIN-S_NanRE();
+  public final java.lang.String getMCP-S_NanRE();
+  public final java.lang.String getBUILTIN-S_NanRE();
+  public io.github.whywood.deepdeep.plugin.api.ToolResultSource$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
+}
+public interface io.github.whywood.deepdeep.plugin.api.ToolResultState {
+  public abstract java.lang.String getCallId();
+  public abstract java.lang.String getToolName();
+  public abstract java.lang.String getSource-S_NanRE();
+  public abstract java.lang.String getServer();
+  public abstract kotlinx.serialization.json.JsonObject getArguments();
+  public abstract io.github.whywood.deepdeep.plugin.api.PluginToolResult getResult();
+  public abstract kotlinx.serialization.json.JsonElement getStructuredContent();
 }
 public interface io.github.whywood.deepdeep.plugin.api.TurnFinishedEvent extends io.github.whywood.deepdeep.plugin.api.PluginEvent {
   public abstract java.lang.String getSessionId();

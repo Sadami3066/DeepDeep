@@ -55,6 +55,39 @@ class PluginToolAdapterTest {
     }
 
     @Test
+    fun cardIdHintIsAddedByHostPostProcessorNotAdapter() = runTest {
+        val tool = pluginTool(
+            name = "card_tool",
+            description = "card",
+            parameters = emptyArgs,
+            execute = { textResult("facts") },
+        )
+
+        val result = PluginToolAdapter.toCodingTool(tool)
+            .execute("call-1", emptyArgs, null, null)
+
+        assertEquals(1, result.content.size)
+        assertEquals("facts", (result.content.single() as TextContent).text)
+        assertNull(result.isError)
+    }
+
+    @Test
+    fun errorResultKeepsSingleContentPart() = runTest {
+        val tool = pluginTool(
+            name = "card_tool",
+            description = "card",
+            parameters = emptyArgs,
+            execute = { throw IllegalStateException("failed") },
+        )
+
+        val result = PluginToolAdapter.toCodingTool(tool)
+            .execute("call-1", emptyArgs, null, null)
+
+        assertEquals(1, result.content.size)
+        assertEquals(true, result.isError)
+    }
+
+    @Test
     fun mapsToolMetadata() {
         val parameters = buildJsonObject {
             put("type", "object")

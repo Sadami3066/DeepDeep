@@ -250,6 +250,8 @@ class RootfsBootstrap internal constructor(
                 appendLine("if [ -d /dev/binderfs ]; then mount --rbind /dev/binderfs \"\$ROOT/dev/binderfs\" 2>/dev/null || true; fi")
                 appendLine("mkdir -p \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data\" \"\$ROOT/system\" \"\$ROOT/vendor\" \"\$ROOT/product\" \"\$ROOT/system_ext\" \"\$ROOT/odm\" \"\$ROOT/proc\" \"\$ROOT/sys\" \"\$ROOT/dev\" \"\$ROOT/storage/emulated/0\"")
                 appendLine("mount --rbind /data \"\$ROOT/data\"")
+                appendLine("mkdir -p \"\$ROOT/data/user/0\"")
+                appendLine("mount --bind /data/user/0 \"\$ROOT/data/user/0\" 2>/dev/null || true")
                 appendLine("mount --bind \"\$ROOT/.deepdeep-empty\" \"\$ROOT/data/adb/deepdeep\"")
                 appendLine("for d in system vendor product system_ext odm; do if [ -d \"/\$d\" ]; then mkdir -p \"\$ROOT/\$d\"; mount --rbind \"/\$d\" \"\$ROOT/\$d\"; mount -o remount,bind,ro \"\$ROOT/\$d\" 2>/dev/null || true; fi; done")
                 appendLine("mkdir -p \"\$ROOT/apex/com.android.runtime\" \"\$ROOT/apex/com.android.tzdata\" \"\$ROOT/linkerconfig\"")

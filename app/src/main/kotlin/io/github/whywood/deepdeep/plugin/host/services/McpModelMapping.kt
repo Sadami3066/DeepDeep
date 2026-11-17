@@ -3,7 +3,9 @@ package io.github.whywood.deepdeep.plugin.host.services
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
 import io.github.whywood.deepdeep.plugin.api.McpTool
 import io.github.whywood.deepdeep.plugin.api.ToolBlock
+import io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult
 import io.github.whywood.deepdeep.plugin.api.imageBlock
+import io.github.whywood.deepdeep.plugin.api.mcpStructuredCallResult
 import io.github.whywood.deepdeep.plugin.api.textBlock
 import java.util.Base64
 import kotlinx.serialization.json.JsonObject
@@ -21,6 +23,13 @@ internal object McpModelMapping {
         blocks = result.content.map(::block),
         isError = result.isError,
     )
+
+    fun structuredResult(result: io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult): McpStructuredCallResult =
+        mcpStructuredCallResult(
+            blocks = result.content.map(::block),
+            structuredContent = result.structuredContent,
+            isError = result.isError,
+        )
 
     private fun block(content: JsonObject): ToolBlock {
         val type = (content["type"] as? JsonPrimitive)?.contentOrNull

@@ -6,7 +6,9 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginBackgroundKind
 import io.github.whywood.deepdeep.plugin.api.PluginNotificationRecord
 import io.github.whywood.deepdeep.plugin.api.PluginPage
+import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
+import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererEntry
 import io.github.whywood.deepdeep.runtime.PluginPromptOverrides
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.theme.PluginThemeSource
@@ -59,6 +61,10 @@ interface PluginManagerFacade {
     suspend fun rollbackPlugin(pluginId: String): Boolean
 
     fun slotEntries(slotId: String): List<SlotRenderEntry>
+
+    fun toolRenderer(source: ToolResultSource, server: String?, tool: String): ToolRendererEntry?
+
+    fun isPluginTool(toolName: String): Boolean
 
     fun pagesOf(pluginId: String): List<PluginPage>
 

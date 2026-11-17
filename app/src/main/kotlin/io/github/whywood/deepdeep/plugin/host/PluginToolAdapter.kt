@@ -31,7 +31,10 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 
 internal object PluginToolAdapter {
-    fun toCodingTool(tool: PluginTool, pluginId: String? = null, sessionId: () -> String = { "" }): CodingTool = CodingTool(
+    fun toCodingTool(
+        tool: PluginTool,
+        sessionId: () -> String = { "" },
+    ): CodingTool = CodingTool(
         name = tool.name,
         description = tool.description,
         parameters = tool.parameters,
@@ -44,8 +47,10 @@ internal object PluginToolAdapter {
         },
     )
 
-    fun toCodingTools(tools: List<PluginTool>, pluginId: String? = null, sessionId: () -> String = { "" }): List<CodingTool> =
-        tools.map { toCodingTool(it, pluginId, sessionId) }
+    fun toCodingTools(
+        tools: List<PluginTool>,
+        sessionId: () -> String = { "" },
+    ): List<CodingTool> = tools.map { tool -> toCodingTool(tool, sessionId) }
 
     fun toDeferredTool(tool: PluginTool, source: String, sessionId: () -> String = { "" }): DeferredTool =
         DeferredTool(
@@ -70,7 +75,9 @@ internal object PluginToolAdapter {
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
         val resolvedSessionId = sessionId()
         if (onUpdate == null) {
-            executeWithScreenEvidence(tool, pluginId, HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null))
+            runTool {
+                tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null))
+            }
         } else {
             val updates = Channel<PluginToolResult>(Channel.UNLIMITED)
             val forward = launch {
@@ -156,7 +163,9 @@ internal object PluginToolAdapter {
         override fun onCancel(listener: () -> Unit): () -> Unit = signal.onAbort(listener)
     }
 
-    private suspend fun runTool(block: suspend () -> PluginToolResult): AgentToolResult = try {
+    private suspend fun runTool(
+        block: suspend () -> PluginToolResult,
+    ): AgentToolResult = try {
         block().toAgentToolResult()
     } catch (error: RequestAbortedException) {
         throw error

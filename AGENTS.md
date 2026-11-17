@@ -21,7 +21,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 ./scripts/check.sh --full      # 交付前完整验证：编译 + 单测 + lint + 模块/包边界 + APK + ABI 基线
 ./scripts/check.sh --device    # 再加覆盖安装到手机并启动
 ./scripts/plugin-e2e.sh        # 设备插件端到端（无需 root；需插件仓库的 sample 夹具，见 PLUGIN_DEV.md）
-./scripts/plugin-bundles-e2e.sh  # 设备回归七个官方插件包（无需 root；需先构建插件工程）
+./scripts/plugin-bundles-e2e.sh  # 设备回归十一个官方插件包（无需 root；需先构建插件工程）
 ./scripts/plugin-binary-compat.sh  # 设备回归已发布 .ddp 的安装/升级/卸载二进制兼容（发布前手工跑）
 ./scripts/api-compat.sh        # 校验 plugin-api 与 design 的公开 ABI（--update 重建基线）
 ./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository  # 发布插件 SDK 到 build/maven-repo
@@ -30,7 +30,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 
 插件 SDK 发布产物在 `build/maven-repo`，发布后复制到 `deepdeep-maven` 仓库；`design` 与 `plugin-api` 版本独立维护，版本号在各自 `build.gradle.kts` 的 `pluginApiVersion` 里维护。
 
-首次环境：`./scripts/dev-setup.sh`。基线：单测 2723（app 1977 / runtime 587 / shell 74 / plugin-api 20 / design 65）、0 失败 0 skip、lint 0 error。
+首次环境：`./scripts/dev-setup.sh`。基线：单测 2761（app 1995 / runtime 600 / shell 74 / plugin-api 27 / design 65）、0 失败 0 skip、lint 0 error。
 
 ## 关键事实
 
@@ -56,6 +56,7 @@ Android 个人 agent App（Kotlin + Compose）。模块：[:app](app/AGENTS.md)�
 - 需要流程文档时去 git 历史找（`git log -- docs`），不要新建。
 - 新增任何全局约束（代码风格、流程、目录规范、组件边界等）之前，先向用户汇报理由并获同意；不得把自己临时采用的取舍写成新约束。
 - 盲从比做错更糟：明知有更好的解法，先摆出来让用户选，不要闷头照指示做。
+- **工具过程与插件卡片分层**：工具过程统一显示原始工具卡（名称、参数、状态、输出）；插件提供的富卡片只出现在回答区，不嵌进过程折叠区。跨插件的共性问题走统一渲染管线，不用单个插件或页面的补丁解决。
 - **单一事实源，拒绝第二路径**：环境、身份、状态这类横切概念只能有一个权威来源；改抽象时先列出全部消费者，一次收口改完，旧路径在同一次改动里删除或明确记为待办，不允许「新路径 + 旧路径并存」和「只给症状打补丁」。同一个 App 里禁止出现两套回答同一问题的机制（例如两套档位判断、两套身份解析）。
 - **状态只在执行时解析，禁止会话级快照**：身份/环境/权限这类会随用户切换的状态，工具和业务必须在每次执行时向单一事实源实时查询；不得在会话创建、页面初始化等时刻把状态抓进闭包或缓存。会话内提示词与工具行为必须始终一致。
 - **发布必须经用户明确同意**：打 tag、创建或更新 GitHub Release、发布市场条目/制品/Pages 都算发布；动手前先说清要发布什么、影响是什么，拿到用户明确点头再做。未同意时只做到本地构建与核验，不推 tag、不触发发布 workflow、不发市场。

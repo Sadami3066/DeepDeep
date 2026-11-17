@@ -42,6 +42,7 @@ public value class PluginCapability private constructor(public val wire: String)
         public val ACCESSIBILITY: PluginCapability = PluginCapability("accessibility")
         public val SHARE: PluginCapability = PluginCapability("share")
         public val DEEPLINK: PluginCapability = PluginCapability("deeplink")
+        public val IMAGES: PluginCapability = PluginCapability("images")
 
         public val ALL: List<PluginCapability> = listOf(
             LINUX,
@@ -82,6 +83,7 @@ public value class PluginCapability private constructor(public val wire: String)
             ACCESSIBILITY,
             SHARE,
             DEEPLINK,
+            IMAGES,
         )
 
         public fun fromWire(value: String): PluginCapability? = ALL.firstOrNull { it.wire == value }

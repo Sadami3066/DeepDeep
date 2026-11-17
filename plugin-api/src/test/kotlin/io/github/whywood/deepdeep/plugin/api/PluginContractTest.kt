@@ -16,7 +16,7 @@ class PluginContractTest {
         assertEquals(PluginCapability.PRIVILEGE, PluginCapability.fromWire("privilege"))
         assertEquals(PluginCapability.CREDENTIALS, PluginCapability.fromWire("credentials"))
         assertNull(PluginCapability.fromWire("unknown"))
-        assertEquals(38, PluginCapability.ALL.size)
+        assertEquals(39, PluginCapability.ALL.size)
         assertEquals(18, PluginPermission.ALL.size)
     }
 

@@ -538,17 +538,32 @@ private fun PluginRow(
                     }
                 }
                 Spacer(Modifier.height(5.dp))
-                Text(
-                    text = failure ?: accessHint ?: description,
-                    style = DdType.bodySmall,
-                    color = when {
-                        failure != null -> colors.danger
-                        accessHint != null -> colors.warning
-                        else -> colors.inkTertiary
-                    },
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (failure != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = failure,
+                            modifier = Modifier.weight(1f),
+                            style = DdType.bodySmall,
+                            color = colors.danger,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        DdTextAction(
+                            text = stringResource(R.string.plugins_recovery_retry),
+                            onClick = onRetryActivation,
+                            modifier = Modifier.testTag("plugin_retry_${snapshot.id}"),
+                            enabled = interactive,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = accessHint ?: description,
+                        style = DdType.bodySmall,
+                        color = if (accessHint != null) colors.warning else colors.inkTertiary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Spacer(Modifier.width(DdSpacing.Sm))
             DdSwitch(
@@ -798,8 +813,17 @@ private fun PluginDetailSheet(
 private fun copyToCache(context: Context, uri: Uri): File? = runCatching {
     val directory = File(context.cacheDir, "plugin-import").apply { mkdirs() }
     val target = File(directory, "plugin-${System.currentTimeMillis()}.ddp")
-    context.contentResolver.openInputStream(uri)?.use { input ->
-        target.outputStream().use { output -> input.copyTo(output) }
+    val input = when (uri.scheme) {
+        "file" -> uri.path?.let { path -> File(path).takeIf { it.isFile }?.inputStream() }
+        else -> runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
+            ?: runCatching {
+                context.contentResolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                    java.io.FileInputStream(descriptor.fileDescriptor)
+                }
+            }.getOrNull()
     } ?: return@runCatching null
+    input.use { source ->
+        target.outputStream().use { output -> source.copyTo(output) }
+    }
     target
 }.getOrNull()

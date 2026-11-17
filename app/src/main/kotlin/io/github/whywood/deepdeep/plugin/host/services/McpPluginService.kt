@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.plugin.api.McpProbe
 import io.github.whywood.deepdeep.plugin.api.McpServer
 import io.github.whywood.deepdeep.plugin.api.McpServerStatus
 import io.github.whywood.deepdeep.plugin.api.McpService
+import io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult
 import io.github.whywood.deepdeep.plugin.api.McpTool
 import io.github.whywood.deepdeep.plugin.api.textBlock
 import io.github.whywood.deepdeep.runtime.McpConfigStore
@@ -18,7 +19,7 @@ internal class McpPluginService(
     private val config: McpConfigStore,
     private val probe: McpServerProbe?,
     private val toolsProvider: (suspend (String) -> List<McpTool>)?,
-    private val caller: (suspend (String, String, JsonObject) -> McpCallResult)?,
+    private val caller: (suspend (String, String, JsonObject) -> McpStructuredCallResult)?,
 ) : McpService {
     override suspend fun servers(): List<McpServer> = config.loadServers()
         .map { (name, server) ->
@@ -42,9 +43,19 @@ internal class McpPluginService(
     override suspend fun tools(server: String): List<McpTool> =
         toolsProvider?.invoke(server) ?: emptyList()
 
-    override suspend fun call(server: String, tool: String, arguments: JsonObject): McpCallResult =
-        caller?.invoke(server, tool, arguments) ?: McpCallResult(
+    override suspend fun call(server: String, tool: String, arguments: JsonObject): McpCallResult {
+        val result = callStructured(server, tool, arguments)
+        return McpCallResult(blocks = result.blocks, isError = result.isError)
+    }
+
+    override suspend fun callStructured(
+        server: String,
+        tool: String,
+        arguments: JsonObject,
+    ): McpStructuredCallResult =
+        caller?.invoke(server, tool, arguments) ?: io.github.whywood.deepdeep.plugin.api.mcpStructuredCallResult(
             blocks = listOf(textBlock("MCP tool calls are not available to plugins")),
+            structuredContent = null,
             isError = true,
         )
 

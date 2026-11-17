@@ -5,6 +5,7 @@ import android.os.Build
 import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.data.LanguagePreferences
 import io.github.whywood.deepdeep.plugin.api.McpCallResult
+import io.github.whywood.deepdeep.plugin.api.McpStructuredCallResult
 import io.github.whywood.deepdeep.plugin.api.McpTool
 import io.github.whywood.deepdeep.plugin.api.PluginBus
 import io.github.whywood.deepdeep.plugin.api.PluginLogLevel
@@ -12,6 +13,7 @@ import io.github.whywood.deepdeep.plugin.api.ShareRequest
 import io.github.whywood.deepdeep.plugin.host.PluginServices
 import io.github.whywood.deepdeep.plugin.host.extensions.data.DataPluginServices
 import io.github.whywood.deepdeep.plugin.host.extensions.device.DevicePluginServices
+import io.github.whywood.deepdeep.plugin.host.images.RemoteImageCache
 import io.github.whywood.deepdeep.plugin.host.interaction.PluginInteraction
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFeature
 import io.github.whywood.deepdeep.runtime.ConversationQueries
@@ -53,6 +55,7 @@ internal data class PluginServiceDependencies(
     val files: () -> FileSystem = { FileSystem.SYSTEM },
     val secrets: EncryptedSecretStore? = null,
     val network: HttpTransport? = null,
+    val imageCache: RemoteImageCache? = null,
     val sessions: ConversationQueries? = null,
     val sessionCommands: SessionCommands? = null,
     val maintenance: Maintenance? = null,
@@ -66,7 +69,7 @@ internal data class PluginServiceDependencies(
     val mcpConfig: McpConfigStore? = null,
     val mcpProbe: McpServerProbe? = null,
     val mcpTools: (suspend (String) -> List<McpTool>)? = null,
-    val mcpCall: (suspend (String, String, JsonObject) -> McpCallResult)? = null,
+    val mcpCall: (suspend (String, String, JsonObject) -> McpStructuredCallResult)? = null,
     val screen: ScreenController? = null,
     val mainScreen: ScreenController? = null,
     val virtualScreen: VirtualScreenFeature? = null,
@@ -117,6 +120,7 @@ internal fun buildPluginServices(deps: PluginServiceDependencies): PluginService
         ),
         secrets = deps.secrets?.let { SecretPluginService(it, deps.pluginId) },
         network = deps.network?.let { NetworkPluginService(it) },
+        images = deps.imageCache?.let { ImagePluginService(it) },
         files = FilePluginService(
             root = deps.pluginDataDir,
             workspace = deps.workspaceDir,

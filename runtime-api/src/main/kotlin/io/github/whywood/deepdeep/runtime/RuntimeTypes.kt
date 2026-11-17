@@ -179,6 +179,9 @@ data class ToolTrace(
     val resultDetails: JsonObject? = null,
 )
 
+val ToolTrace.invocationKey: String
+    get() = toolCallId.ifBlank { "trace:$id" }
+
 enum class MessageSummaryKind {
     COMPACTION,
     BRANCH,

@@ -67,6 +67,7 @@ public interface PluginHost {
     public fun mcp(): McpService
 
     public fun ui(): UiService
+    public fun images(): ImageService = throw PluginServiceUnavailable("images")
 
     public fun app(): AppInfoService
 

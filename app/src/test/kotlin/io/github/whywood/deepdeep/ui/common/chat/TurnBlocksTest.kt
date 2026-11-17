@@ -22,7 +22,8 @@ class TurnBlocksTest {
             ),
         )
         assertEquals(2, blocks.size)
-        assertEquals("mail.search", (blocks[0] as TurnBlock.CustomCard).step.customType)
+        val card = (blocks[0] as TurnBlock.Card).source as AnswerCardSource.Custom
+        assertEquals("mail.search", card.step.customType)
         assertEquals("答案", (blocks[1] as TurnBlock.Text).step.text)
     }
 
@@ -55,25 +56,22 @@ class TurnBlocksTest {
         )
         assertEquals(4, blocks.size)
         assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertTrue(blocks[1] is TurnBlock.CustomCard)
+        assertTrue(blocks[1] is TurnBlock.Card)
         assertEquals(listOf(3L), (blocks[2] as TurnBlock.Activity).steps.map { it.id })
         assertTrue(blocks[3] is TurnBlock.Text)
     }
 
     @Test
-    fun pluginToolStepBecomesContentBlock() {
+    fun toolResultsStayInActivityWithoutInlineCards() {
         val blocks = turnBlocks(
             assistant(
                 tool(1, "bash"),
-                tool(2, "sysu_materials_search"),
+                tool(2, "hotel_search", callId = "call-2"),
                 tool(3, "bash"),
             ),
-            pluginToolNames = setOf("sysu_materials_search"),
         )
-        assertEquals(3, blocks.size)
-        assertEquals(listOf(1L), (blocks[0] as TurnBlock.Activity).steps.map { it.id })
-        assertEquals("sysu_materials_search", (blocks[1] as TurnBlock.PluginCard).trace.name)
-        assertEquals(listOf(3L), (blocks[2] as TurnBlock.Activity).steps.map { it.id })
+        assertEquals(1, blocks.size)
+        assertEquals(listOf(1L, 2L, 3L), (blocks.single() as TurnBlock.Activity).steps.map { it.id })
     }
 
     @Test
@@ -87,8 +85,8 @@ class TurnBlocksTest {
         )
         assertEquals(3, blocks.size)
         assertTrue(blocks[0] is TurnBlock.Activity)
-        val present = blocks[1] as TurnBlock.Present
-        assertEquals("a.pdf", present.items.single().name)
+        val present = ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Host).card
+        assertEquals("a.pdf", (present as HostAnswerCard.Present).items.single().name)
         assertEquals("已发送", (blocks[2] as TurnBlock.Text).step.text)
     }
 
@@ -109,7 +107,8 @@ class TurnBlocksTest {
         )
         assertEquals(2, blocks.size)
         assertTrue(blocks[0] is TurnBlock.Activity)
-        val answered = blocks[1] as TurnBlock.AnsweredQuestion
+        val answered = ((blocks[1] as TurnBlock.Card).source as AnswerCardSource.Host).card
+            as HostAnswerCard.AnsweredQuestion
         assertEquals("ask-1", answered.toolCallId)
         assertEquals("选哪个", answered.record.questions.single().question)
     }

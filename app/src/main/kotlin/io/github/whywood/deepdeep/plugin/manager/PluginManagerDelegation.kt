@@ -4,11 +4,14 @@ import io.github.whywood.deepdeep.plugin.api.LocalizedText
 import io.github.whywood.deepdeep.plugin.api.PluginBackgroundKind
 import io.github.whywood.deepdeep.plugin.api.PluginNotificationRecord
 import io.github.whywood.deepdeep.plugin.api.PluginPage
+import io.github.whywood.deepdeep.plugin.api.ToolResultSource
 import io.github.whywood.deepdeep.plugin.host.PluginRegistrySnapshot
 import io.github.whywood.deepdeep.plugin.host.PluginTextResolver
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRegistry
 import io.github.whywood.deepdeep.plugin.host.ui.SlotRenderEntry
+import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererEntry
+import io.github.whywood.deepdeep.plugin.host.ui.ToolRendererRegistry
 import io.github.whywood.deepdeep.runtime.SessionBinding
 import io.github.whywood.deepdeep.runtime.SessionRuntimeEvent
 import io.github.whywood.deepdeep.theme.PluginThemeSource
@@ -24,6 +27,8 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
     internal abstract val sessionHooks: PluginSessionHooks
 
     internal abstract val slotRegistry: SlotRegistry
+
+    internal abstract val toolRendererRegistry: ToolRendererRegistry
 
     internal abstract val textResolver: PluginTextResolver
 
@@ -41,6 +46,12 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
         externalFlow.installExternal(file, acceptPublisher)
 
     override fun slotEntries(slotId: String): List<SlotRenderEntry> = slotRegistry.bindings(slotId)
+
+    override fun toolRenderer(source: ToolResultSource, server: String?, tool: String): ToolRendererEntry? =
+        toolRendererRegistry.resolve(source, server, tool)
+
+    override fun isPluginTool(toolName: String): Boolean =
+        registrySnapshot.tools.any { it.tool.name == toolName }
 
     override fun pagesOf(pluginId: String): List<PluginPage> =
         if (!slotRegistry.uiCompatible(pluginId)) {

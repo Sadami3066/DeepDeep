@@ -8,6 +8,8 @@ import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 internal class PluginInstaller(
     internal val pluginsRoot: File,
@@ -151,6 +153,10 @@ internal class PluginInstaller(
                 "pending bundle failed verification: ${stager.describe(pendingBundle)}",
             )
         }
+        val pendingManifest = runCatching {
+            val json = Json.parseToJsonElement(File(pendingPath, "assets/plugin.json").readText()).jsonObject
+            PluginManifestCodec.parse(json)
+        }.getOrNull()
         val updated = record.copy(
             version = pendingVersion,
             installPath = pendingPath,
@@ -160,6 +166,8 @@ internal class PluginInstaller(
             previousVersion = record.version,
             previousInstallPath = record.installPath,
             previousBundleSha256 = record.activeBundleSha256,
+            apiLevel = pendingManifest?.apiLevel ?: record.apiLevel,
+            uiApiLevel = pendingManifest?.ui?.apiLevel ?: record.uiApiLevel,
             lastError = null,
         )
         recordStore.upsert(updated)
