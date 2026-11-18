@@ -1,6 +1,7 @@
 package io.github.whywood.deepdeep.market
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,6 +31,18 @@ class MarketRegistryParserTest {
         assertEquals("https://mcp.example.com/mcp", mcp.mcp?.url)
         assertEquals(MarketMcpAuthType.OAuth, mcp.mcp?.auth?.type)
         assertEquals("首次授权", mcp.mcp?.authHint?.resolve("zh"))
+    }
+
+    @Test
+    fun parsesEntryCategory() {
+        val plugin = MarketRegistryParser.parse(registry(category = "office").encodeToByteArray()).entries[0]
+        assertEquals("office", plugin.category)
+    }
+
+    @Test
+    fun missingOrBlankCategoryIsNull() {
+        assertNull(MarketRegistryParser.parse(registry().encodeToByteArray()).entries[0].category)
+        assertNull(MarketRegistryParser.parse(registry(category = "   ").encodeToByteArray()).entries[0].category)
     }
 
     @Test
@@ -202,6 +215,7 @@ class MarketRegistryParserTest {
         apiKeyHeader: String? = "Authorization",
         previews: String? = null,
         requiredAccess: String? = null,
+        category: String? = null,
     ): String {
         val secondId = if (duplicateId) "io.example.plugin" else "example-skill"
         val auth = when (mcpAuthType) {
@@ -218,6 +232,7 @@ class MarketRegistryParserTest {
             {
               "type": "plugin",
               "id": "io.example.plugin",
+              ${if (category == null) "" else "\"category\": \"$category\","}
               "name": {"zh": "插件", "en": "Plugin"},
               "summary": {"zh": "一句话", "en": "Summary"},
               "description": {"zh": "说明", "en": "Description"},

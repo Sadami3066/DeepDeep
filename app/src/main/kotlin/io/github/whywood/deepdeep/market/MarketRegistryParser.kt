@@ -41,6 +41,7 @@ internal object MarketRegistryParser {
             else -> error("未知的条目类型")
         }
         val id = obj.string("id")?.takeIf { it.isNotBlank() } ?: error("条目缺少 id")
+        val category = obj.string("category")?.trim()?.takeIf { it.isNotEmpty() }
         val name = parseLocalized(obj, "name")
         val summary = parseLocalized(obj, "summary")
         val description = parseLocalized(obj, "description")
@@ -92,6 +93,7 @@ internal object MarketRegistryParser {
         return MarketEntry(
             type = type,
             id = id,
+            category = category,
             name = name,
             summary = summary,
             description = description,

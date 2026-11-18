@@ -4,10 +4,10 @@
 
 | 文件 | 职责 |
 |---|---|
-| `MarketModels.kt` | 条目、元信息（含 `requiredAccess` 权限档位）、状态与安装状态模型 |
+| `MarketModels.kt` | 条目（含可选 `category` 分类）、元信息（含 `requiredAccess` 权限档位）、状态与安装状态模型 |
 | `MarketDefaults.kt` | 官方源地址、公钥、条数与体积上限、缓存时长 |
 | `MarketSignature.kt` | 对 `registry.json` 原始字节做 ECDSA P-256 SHA-256 验签 |
-| `MarketRegistryParser.kt` | schema v2/v3 解析与字段校验（id 唯一、sha256、体积、MCP 仅 http；`requiredAccess` 缺失或非法按 normal） |
+| `MarketRegistryParser.kt` | schema v2/v3 解析与字段校验（id 唯一、sha256、体积、MCP 仅 http；`requiredAccess` 缺失或非法按 normal；`category` trim 后空值置 null，未知值放行） |
 | `MarketCompatibility.kt` | 插件条目安装门禁纯函数：`apiLevel` 低于 `MIN_SUPPORTED_API_LEVEL` 为插件过旧、高于宿主 level 或 `minHostVersion` 高于 `BuildConfig.VERSION_NAME` 为需要更新 App |
 | `MarketRepository.kt` | 状态、安装、已安装版本查询与安装状态重算接口 |
 | `MarketRepositoryImpl.kt` | 网络拉取 + 缓存/种子回退、三类安装流水线、安装状态汇总 |

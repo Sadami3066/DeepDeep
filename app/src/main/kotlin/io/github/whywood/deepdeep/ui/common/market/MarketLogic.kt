@@ -9,6 +9,17 @@ import java.util.Locale
 
 internal enum class MarketEntryStatus { Install, Installed, Update, Installing, Failed }
 
+internal val MARKET_CATEGORY_IDS = listOf(
+    "office",
+    "content",
+    "dev",
+    "study",
+    "research",
+    "business",
+    "design",
+    "life",
+)
+
 internal fun filterMarketEntries(
     entries: List<MarketEntry>,
     query: String,
@@ -21,6 +32,20 @@ internal fun filterMarketEntries(
             entry.summary(language).contains(keyword, ignoreCase = true) ||
             entry.tags(language).any { it.contains(keyword, ignoreCase = true) }
     }
+}
+
+internal fun filterMarketEntriesByCategory(
+    entries: List<MarketEntry>,
+    category: String?,
+): List<MarketEntry> {
+    val target = category?.trim().orEmpty()
+    if (target.isEmpty()) return entries
+    return entries.filter { it.category?.trim() == target }
+}
+
+internal fun marketCategoriesIn(entries: List<MarketEntry>): List<String> {
+    val present = entries.mapNotNullTo(HashSet()) { it.category?.trim()?.takeIf(String::isNotEmpty) }
+    return MARKET_CATEGORY_IDS.filter { it in present }
 }
 
 internal fun marketEntryStatus(

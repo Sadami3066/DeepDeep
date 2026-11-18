@@ -60,6 +60,7 @@ data class MarketMcpMeta(
 data class MarketEntry(
     val type: MarketEntryType,
     val id: String,
+    val category: String? = null,
     val name: LocalizedText,
     val summary: LocalizedText,
     val description: LocalizedText,

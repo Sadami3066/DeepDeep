@@ -80,6 +80,15 @@
     <string name="market_retry">Retry</string>
     <string name="market_empty">The market has no content yet</string>
     <string name="market_offline_notice">Showing the last saved content</string>
+    <string name="market_category_all">All</string>
+    <string name="market_category_office">Office</string>
+    <string name="market_category_content">Content</string>
+    <string name="market_category_dev">Development</string>
+    <string name="market_category_study">Study</string>
+    <string name="market_category_research">Research</string>
+    <string name="market_category_business">Business</string>
+    <string name="market_category_design">Design</string>
+    <string name="market_category_life">Life</string>
     <string name="market_status_installed">Installed</string>
     <string name="market_status_update">Update</string>
     <string name="market_status_installing">Installing</string>

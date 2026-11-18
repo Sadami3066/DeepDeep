@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.design.DdChip
 import io.github.whywood.deepdeep.design.DdDialog
 import io.github.whywood.deepdeep.design.DdEmptyState
 import io.github.whywood.deepdeep.design.DdSpacing
@@ -87,6 +91,7 @@ internal const val MARKET_TAB_MINE = 1
 
 private val marketInstallScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MarketTab(
     repository: MarketRepository,
@@ -109,15 +114,26 @@ internal fun MarketTab(
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmId by rememberSaveable { mutableStateOf<String?>(null) }
     var tokenId by rememberSaveable { mutableStateOf<String?>(null) }
+    var category by rememberSaveable { mutableStateOf<String?>(null) }
     var retrying by rememberSaveable { mutableStateOf(false) }
     val haptic = rememberHapticFeedback()
 
     val current = state
     val entries = if (current is MarketState.Ready) repository.entries(type) else emptyList()
-    val visible = filterMarketEntries(entries, query, language)
+    val categories = marketCategoriesIn(entries)
+    val activeCategory = category?.takeIf { it in categories }
+    val visible = filterMarketEntries(
+        filterMarketEntriesByCategory(entries, activeCategory),
+        query,
+        language,
+    )
     val selected = entries.firstOrNull { it.id == selectedId }
     val confirm = entries.firstOrNull { it.id == confirmId }
     val tokenEntry = entries.firstOrNull { it.id == tokenId }
+
+    LaunchedEffect(categories, category) {
+        if (category != null && category !in categories) category = null
+    }
 
     fun install(entry: MarketEntry, apiKey: String? = null) {
         marketInstallScope.launch {
@@ -208,6 +224,17 @@ internal fun MarketTab(
                                 .testTag("${testTagPrefix}_market_offline"),
                             style = DdType.bodySmall,
                             color = colors.inkTertiary,
+                        )
+                    }
+                }
+                if (categories.isNotEmpty()) {
+                    stickyHeader {
+                        MarketCategoryBar(
+                            categories = categories,
+                            selected = activeCategory,
+                            onSelect = { category = it },
+                            testTagPrefix = testTagPrefix,
+                            modifier = Modifier.background(colors.paper),
                         )
                     }
                 }
@@ -381,6 +408,53 @@ internal fun MarketTab(
                 )
             },
         )
+    }
+}
+
+private val marketCategoryLabels = mapOf(
+    "office" to R.string.market_category_office,
+    "content" to R.string.market_category_content,
+    "dev" to R.string.market_category_dev,
+    "study" to R.string.market_category_study,
+    "research" to R.string.market_category_research,
+    "business" to R.string.market_category_business,
+    "design" to R.string.market_category_design,
+    "life" to R.string.market_category_life,
+)
+
+@Composable
+private fun MarketCategoryBar(
+    categories: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+    testTagPrefix: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = DdSpacing.Lg, vertical = DdSpacing.Sm),
+        horizontalArrangement = Arrangement.spacedBy(DdSpacing.Sm),
+    ) {
+        DdChip(
+            text = stringResource(R.string.market_category_all),
+            onClick = { onSelect(null) },
+            selected = selected == null,
+            modifier = Modifier
+                .height(44.dp)
+                .testTag("${testTagPrefix}_market_category_all"),
+        )
+        categories.forEach { category ->
+            DdChip(
+                text = stringResource(marketCategoryLabels.getValue(category)),
+                onClick = { onSelect(category) },
+                selected = selected == category,
+                modifier = Modifier
+                    .height(44.dp)
+                    .testTag("${testTagPrefix}_market_category_$category"),
+            )
+        }
     }
 }
 

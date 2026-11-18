@@ -23,9 +23,11 @@ class MarketLogicTest {
         summary: String = "",
         tags: List<String> = emptyList(),
         version: String = "1.0.0",
+        category: String? = null,
     ) = MarketEntry(
         type = MarketEntryType.Skill,
         id = id,
+        category = category,
         name = nameText ?: text(name),
         summary = text(summary),
         description = LocalizedText(emptyMap()),
@@ -57,6 +59,47 @@ class MarketLogicTest {
     fun queryDoesNotMatchOtherFields() {
         val entries = listOf(entry("a", name = "Alpha"))
         assertTrue(filterMarketEntries(entries, "alpha-id", "zh").isEmpty())
+    }
+
+    @Test
+    fun nullOrBlankCategoryKeepsAllEntries() {
+        val entries = listOf(entry("a", category = "office"), entry("b", category = "dev"))
+        assertEquals(entries, filterMarketEntriesByCategory(entries, null))
+        assertEquals(entries, filterMarketEntriesByCategory(entries, "  "))
+    }
+
+    @Test
+    fun categoryKeepsOnlyMatchingEntries() {
+        val entries = listOf(
+            entry("a", category = "office"),
+            entry("b", category = "dev"),
+            entry("c", category = "office"),
+            entry("d"),
+        )
+        assertEquals(listOf(entries[0], entries[2]), filterMarketEntriesByCategory(entries, "office"))
+    }
+
+    @Test
+    fun unknownCategoryMatchesNothing() {
+        val entries = listOf(entry("a", category = "office"))
+        assertTrue(filterMarketEntriesByCategory(entries, "gaming").isEmpty())
+    }
+
+    @Test
+    fun emptyListStaysEmpty() {
+        assertTrue(filterMarketEntriesByCategory(emptyList(), "office").isEmpty())
+    }
+
+    @Test
+    fun categoriesFollowFixedOrderAndSkipUnknown() {
+        val entries = listOf(
+            entry("a", category = "life"),
+            entry("b", category = "office"),
+            entry("c", category = "gaming"),
+            entry("d"),
+            entry("e", category = "dev"),
+        )
+        assertEquals(listOf("office", "dev", "life"), marketCategoriesIn(entries))
     }
 
     @Test
