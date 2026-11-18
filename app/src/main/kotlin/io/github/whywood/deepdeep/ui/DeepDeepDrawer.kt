@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -70,6 +71,7 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.common.AvatarBadge
+import io.github.whywood.deepdeep.ui.common.BotAvatar
 import io.github.whywood.deepdeep.ui.common.LocalHapticsEnabled
 import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
 import io.github.whywood.deepdeep.ui.sessions.DeleteSessionDialog
@@ -266,18 +268,6 @@ fun DeepDeepDrawer(
                 testTag = "drawer_plugins",
             )
             DrawerNavItem(
-                icon = DdIcons.Brain,
-                label = stringResource(R.string.drawer_nav_memory),
-                onClick = onOpenMemory,
-                testTag = "drawer_memory",
-            )
-            DrawerNavItem(
-                icon = DdIcons.Desktop,
-                label = stringResource(R.string.drawer_nav_remote),
-                onClick = onOpenRemote,
-                testTag = "drawer_remote",
-            )
-            DrawerNavItem(
                 icon = DdIcons.DotsVertical,
                 label = stringResource(if (moreExpanded) R.string.drawer_nav_less else R.string.drawer_nav_more),
                 onClick = { moreExpanded = !moreExpanded },
@@ -285,6 +275,20 @@ fun DeepDeepDrawer(
                 trailing = { DrawerMoreChevron(expanded = moreExpanded) },
             )
             if (moreExpanded) {
+                DrawerNavItem(
+                    icon = DdIcons.Brain,
+                    label = stringResource(R.string.drawer_nav_memory),
+                    onClick = onOpenMemory,
+                    testTag = "drawer_memory",
+                    modifier = Modifier.padding(start = 14.dp),
+                )
+                DrawerNavItem(
+                    icon = DdIcons.Desktop,
+                    label = stringResource(R.string.drawer_nav_remote),
+                    onClick = onOpenRemote,
+                    testTag = "drawer_remote",
+                    modifier = Modifier.padding(start = 14.dp),
+                )
                 DrawerNavItem(
                     icon = DdIcons.Plug,
                     label = stringResource(R.string.drawer_nav_mcp),
@@ -507,7 +511,7 @@ private fun DrawerWorkspaceRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .heightIn(min = 52.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.ink.copy(alpha = wash))
                 .pointerInput(workspace.id) {
@@ -528,20 +532,27 @@ private fun DrawerWorkspaceRow(
                 .padding(start = 10.dp, end = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdIcon(
-                icon = if (expanded) DdIcons.FolderOpen else DdIcons.Workspace,
-                tint = colors.inkTertiary,
-                size = 16.dp,
-            )
-            Spacer(Modifier.width(DdSpacing.Sm))
-            Text(
-                text = workspace.name,
-                modifier = Modifier.weight(1f),
-                style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            BotAvatar(workspace = workspace, size = 30.dp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = workspace.name,
+                    style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val intro = workspace.intro?.trim().orEmpty()
+                if (intro.isNotEmpty()) {
+                    Text(
+                        text = intro,
+                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             DdIconButton(
                 icon = DdIcons.More,
                 onClick = { menuOpen = true },
@@ -567,15 +578,17 @@ private fun DrawerWorkspaceRow(
                     onNewSession()
                 },
             )
-            DdMenuItem(
-                text = stringResource(R.string.drawer_action_rename),
-                icon = DdIcons.Compose,
-                testTag = "workspace_menu_rename_${workspace.id}",
-                onClick = {
-                    menuOpen = false
-                    onRename()
-                },
-            )
+            if (!workspace.isHome) {
+                DdMenuItem(
+                    text = stringResource(R.string.drawer_action_rename),
+                    icon = DdIcons.Compose,
+                    testTag = "workspace_menu_rename_${workspace.id}",
+                    onClick = {
+                        menuOpen = false
+                        onRename()
+                    },
+                )
+            }
             DdMenuItem(
                 text = stringResource(if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin),
                 icon = DdIcons.Pin,
@@ -594,16 +607,18 @@ private fun DrawerWorkspaceRow(
                     onSettings()
                 },
             )
-            DdMenuItem(
-                text = stringResource(R.string.drawer_action_delete),
-                icon = DdIcons.Trash,
-                destructive = true,
-                testTag = "workspace_menu_delete_${workspace.id}",
-                onClick = {
-                    menuOpen = false
-                    onDelete()
-                },
-            )
+            if (!workspace.isHome) {
+                DdMenuItem(
+                    text = stringResource(R.string.drawer_action_delete),
+                    icon = DdIcons.Trash,
+                    destructive = true,
+                    testTag = "workspace_menu_delete_${workspace.id}",
+                    onClick = {
+                        menuOpen = false
+                        onDelete()
+                    },
+                )
+            }
         }
     }
 }

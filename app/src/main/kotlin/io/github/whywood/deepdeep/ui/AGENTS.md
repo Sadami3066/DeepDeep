@@ -1,6 +1,6 @@
 # ui · 页面与组件
 
-Compose 界面层：按功能分子包，每个子包是一个页面/组件域。Screen 只渲染状态与回调，数据由 ViewModel 或 StateHolder 提供，装配与导航统一在 `navigation/`。本目录直接文件为 `DeepDeepDrawer.kt`（常驻抽屉：账户行、功能导航、按工作区分组的会话列表，会话行尾显示定时/后台任务标记；有新版本时账户行齿轮旁显示小圆点）与 `DrawerSessionMarkers.kt`（从定时器与后台任务状态推导会话标记的纯函数），其余都是子包。
+Compose 界面层：按功能分子包，每个子包是一个页面/组件域。Screen 只渲染状态与回调，数据由 ViewModel 或 StateHolder 提供，装配与导航统一在 `navigation/`。本目录直接文件为 `DeepDeepDrawer.kt`（常驻抽屉：账户行、功能导航、按 Bot 分组的会话列表；Bot 行显示头像、名字与可选简介，会话行尾显示定时/后台任务标记；「记忆」「远程连接」收在「展开更多」里；有新版本时账户行齿轮旁显示小圆点）与 `DrawerSessionMarkers.kt`（从定时器与后台任务状态推导会话标记的纯函数），其余都是子包。
 
 ## 子包
 
@@ -24,7 +24,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 | [remote/](remote/AGENTS.md) | 远程连接页：扫码/粘贴配对、电脑列表与状态、连接页 WebView 与手机端样式注入 |
 | `timers/` | 定时任务页：列表、编辑器、日期/时间选择与 cron 草稿 |
 | [miniapp/](miniapp/AGENTS.md) | 小程序：列表/查看器、WebView 与 bridge |
-| `workspaces/` | 工作区设置：项目技能、继承的全局技能/插件（`WorkspaceInheritedSheet`，关闭后新会话不注入）、AGENTS.md 编辑与工作区对话框 |
+| `workspaces/` | Bot 身份与设置：头像（相册选图，存 `files/bot-avatars`）、名字、简介、Bot 技能、继承的全局技能/插件（`WorkspaceInheritedSheet`，关闭后新会话不注入）、Bot 设定编辑与新建/重命名/删除对话框 |
 
 ## 要点
 

@@ -1,6 +1,12 @@
 package io.github.whywood.deepdeep.ui.navigation.routes
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import io.github.whywood.deepdeep.data.BotAvatarStore
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.runtime.ConversationSummary
@@ -75,9 +81,14 @@ internal fun WorkspaceSettingsRoute(
     navigator: AppNavigator,
     workspaces: List<RuntimeWorkspace>,
     workspaceId: String,
+    onUpdateProfile: (String, String?, String?) -> Unit,
+    onRenameWorkspace: (String, String) -> Unit,
     onBack: () -> Unit,
 ) {
     val workspace = workspaces.firstOrNull { it.id == workspaceId }
+    val context = LocalContext.current
+    val botAvatars = remember { BotAvatarStore(context) }
+    val scope = rememberCoroutineScope()
     if (workspace == null) {
         LaunchedEffect(workspaceId) { navigator.pop() }
         return
@@ -89,6 +100,21 @@ internal fun WorkspaceSettingsRoute(
         workspaceToolPolicies = dependencies.workspaceToolPolicies,
         pluginManager = dependencies.pluginManager,
         mcpConfigStore = dependencies.mcpConfigStore,
+        existingNames = workspaces.filterNot { it.id == workspaceId }.map { it.name },
+        onRename = { name -> onRenameWorkspace(workspaceId, name) },
+        onAvatarPicked = { uri ->
+            scope.launch {
+                val previous = workspace.avatar
+                val path = if (uri == null) null else botAvatars.save(uri)
+                if (uri == null || path != null) {
+                    onUpdateProfile(workspaceId, path, workspace.intro)
+                    botAvatars.delete(previous)
+                }
+            }
+        },
+        onIntroChange = { intro ->
+            onUpdateProfile(workspaceId, workspace.avatar, intro.trim().takeIf { it.isNotEmpty() })
+        },
         onBack = onBack,
         onOpenSkills = { navigator.push(AppDestination.Skills) },
     )

@@ -49,6 +49,8 @@ data class RuntimeWorkspace(
     val cwd: String,
     val createdAt: Long = 0L,
     val isHome: Boolean = false,
+    val avatar: String? = null,
+    val intro: String? = null,
 )
 
 data class OpenedSession(
@@ -420,9 +422,16 @@ interface ConversationQueries {
 }
 
 interface WorkspaceAdmin {
-    suspend fun createWorkspace(name: String, directory: String? = null): RuntimeWorkspace
+    suspend fun createWorkspace(
+        name: String,
+        directory: String? = null,
+        avatar: String? = null,
+        intro: String? = null,
+    ): RuntimeWorkspace
 
     suspend fun renameWorkspace(id: String, name: String)
+
+    suspend fun updateWorkspaceProfile(id: String, avatar: String?, intro: String?)
 
     suspend fun deleteWorkspace(id: String)
 

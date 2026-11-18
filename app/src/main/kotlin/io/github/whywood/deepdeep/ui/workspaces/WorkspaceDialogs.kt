@@ -7,8 +7,13 @@ import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.focus.FocusRequester
@@ -31,6 +37,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.ui.common.UriAvatarPreview
 import io.github.whywood.deepdeep.ui.common.rememberHapticFeedback
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.data.mountDisplayPath
@@ -46,18 +53,24 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 private const val MAX_WORKSPACE_NAME_LENGTH = 40
+private const val MAX_INTRO_LENGTH = 40
 
 @Composable
 fun WorkspaceCreateDialog(
     existingNames: List<String>,
     privateDirectory: String,
-    onConfirm: (String, String?) -> Unit,
+    onConfirm: (String, String?, Uri?, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = deepDeepColors()
     val context = LocalContext.current
     var name by rememberSaveable { mutableStateOf("") }
+    var intro by rememberSaveable { mutableStateOf("") }
+    var avatarUri by remember { mutableStateOf<Uri?>(null) }
     var submitted by remember { mutableStateOf(false) }
+    val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) avatarUri = uri
+    }
     var useSharedStorage by rememberSaveable { mutableStateOf(false) }
     var sharedDirectory by rememberSaveable { mutableStateOf<String?>(null) }
     var sharedStorageGranted by remember { mutableStateOf(isSharedStorageGranted()) }
@@ -82,15 +95,20 @@ fun WorkspaceCreateDialog(
     val submit: () -> Unit = {
         submitted = true
         if (nameError == null) {
-            onConfirm(name.trim(), sharedDirectory.takeIf { useSharedStorage })
+            onConfirm(
+                name.trim(),
+                sharedDirectory.takeIf { useSharedStorage },
+                avatarUri,
+                intro.trim().takeIf { it.isNotEmpty() },
+            )
         }
     }
     DdDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("workspace_create_dialog"),
-        title = stringResource(R.string.workspace_create),
+        title = stringResource(R.string.bot_create),
         content = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 WorkspaceNameField(
                     value = name,
                     onValueChange = { name = it },
@@ -98,6 +116,23 @@ fun WorkspaceCreateDialog(
                     submitted = submitted,
                     focusRequester = focusRequester,
                     onDone = { submit() },
+                )
+                Spacer(Modifier.height(18.dp))
+                BotAvatarField(
+                    avatarUri = avatarUri,
+                    onChoose = {
+                        pickAvatar.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                    onUseDefault = { avatarUri = null },
+                )
+                Spacer(Modifier.height(18.dp))
+                DdSectionLabel(stringResource(R.string.bot_intro))
+                Spacer(Modifier.height(6.dp))
+                DdTextField(
+                    value = intro,
+                    onValueChange = { value -> if (value.length <= MAX_INTRO_LENGTH) intro = value },
+                    placeholder = stringResource(R.string.bot_intro_placeholder),
+                    testTag = "bot_intro_input",
                 )
                 Spacer(Modifier.height(18.dp))
                 DdSectionLabel(stringResource(R.string.workspace_directory_label))
@@ -169,6 +204,132 @@ fun WorkspaceCreateDialog(
         },
     )
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+}
+
+@Composable
+private fun BotAvatarField(
+    avatarUri: Uri?,
+    onChoose: () -> Unit,
+    onUseDefault: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    Column {
+        DdSectionLabel(stringResource(R.string.bot_avatar))
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            UriAvatarPreview(uri = avatarUri, size = 44.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = if (avatarUri == null) {
+                        stringResource(R.string.bot_avatar_default_hint)
+                    } else {
+                        stringResource(R.string.bot_avatar_choose)
+                    },
+                    style = DdType.bodySmall,
+                    color = colors.inkTertiary,
+                )
+                Spacer(Modifier.height(2.dp))
+                DdTextAction(
+                    text = stringResource(if (avatarUri == null) R.string.bot_avatar_choose else R.string.bot_avatar_change),
+                    onClick = onChoose,
+                    modifier = Modifier.testTag("bot_avatar_choose"),
+                )
+            }
+            if (avatarUri != null) {
+                DdTextAction(
+                    text = stringResource(R.string.bot_avatar_use_default),
+                    onClick = onUseDefault,
+                    color = colors.inkSecondary,
+                    modifier = Modifier.testTag("bot_avatar_use_default"),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BotIntroDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    var intro by rememberSaveable(initial) { mutableStateOf(initial) }
+    DdDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("bot_intro_dialog"),
+        title = stringResource(R.string.bot_intro),
+        content = {
+            Column {
+                DdTextField(
+                    value = intro,
+                    onValueChange = { value -> if (value.length <= MAX_INTRO_LENGTH) intro = value },
+                    placeholder = stringResource(R.string.bot_intro_placeholder),
+                    testTag = "bot_intro_dialog_input",
+                )
+            }
+        },
+        actions = {
+            DdTextAction(
+                text = stringResource(R.string.drawer_cancel),
+                onClick = onDismiss,
+                color = colors.inkSecondary,
+            )
+            DdTextAction(
+                text = stringResource(R.string.workspace_name_confirm),
+                onClick = { onConfirm(intro.trim()) },
+                modifier = Modifier.testTag("bot_intro_confirm"),
+            )
+        },
+    )
+}
+
+@Composable
+fun BotAvatarSheet(
+    hasCustomAvatar: Boolean,
+    onChooseImage: () -> Unit,
+    onUseDefault: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = deepDeepColors()
+    DdDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("bot_avatar_sheet"),
+        title = stringResource(R.string.bot_avatar),
+        content = {
+            Column {
+                DdListRow(
+                    title = stringResource(R.string.bot_avatar_choose),
+                    modifier = Modifier.testTag("bot_avatar_sheet_choose"),
+                    onClick = {
+                        onDismiss()
+                        onChooseImage()
+                    },
+                    showChevron = true,
+                )
+                if (hasCustomAvatar) {
+                    DdRowDivider()
+                    DdListRow(
+                        title = stringResource(R.string.bot_avatar_use_default),
+                        modifier = Modifier.testTag("bot_avatar_sheet_default"),
+                        onClick = {
+                            onDismiss()
+                            onUseDefault()
+                        },
+                        showChevron = true,
+                    )
+                }
+            }
+        },
+        actions = {
+            DdTextAction(
+                text = stringResource(R.string.drawer_cancel),
+                onClick = onDismiss,
+                color = colors.inkSecondary,
+            )
+        },
+    )
 }
 
 @Composable

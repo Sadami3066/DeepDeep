@@ -61,6 +61,6 @@
     <string name="remote_guide_step2">打开电脑端「移动访问」：局域网让手机和电脑连同一 Wi-Fi；远程可选 Tailscale、cpolar、cloudflared、FRP 或自有反向代理。</string>
     <string name="remote_guide_step3">点「生成配对二维码」，也可以直接复制配对链接。</string>
     <string name="remote_guide_step4">手机点右上角 +：能扫码就选「扫码添加」，不方便扫码就选「粘贴配对链接」。</string>
-    <string name="remote_guide_step5">配对成功后电脑会出现在列表，点一下就能在手机上使用电脑里的会话与工作区。</string>
+    <string name="remote_guide_step5">配对成功后电脑会出现在列表，点一下就能在手机上使用电脑里的会话与 Bot。</string>
     <string name="remote_guide_step6">状态点绿色表示在线；打不开先刷新，仍失败就重新配对，或在电脑端「移动访问」撤销设备后重扫。</string>
 </resources>

@@ -69,7 +69,7 @@
     <string name="settings_linux_enable">Allow DeepDeep to run Linux commands</string>
     <string name="settings_linux_reset">Prepare built-in environment again</string>
     <string name="settings_linux_reset_title">Prepare built-in environment again?</string>
-    <string name="settings_linux_reset_dialog">This deletes the current built-in environment and turns it off. It will be prepared again on next launch. Workspace files are kept.</string>
+    <string name="settings_linux_reset_dialog">This deletes the current built-in environment and turns it off. It will be prepared again on next launch. Bot files are kept.</string>
     <string name="settings_linux_reset_confirm">Reset</string>
     <string name="settings_linux_cancel">Cancel</string>
     <string name="settings_linux_unsupported">Linux is not supported on this device (arm64-v8a only).</string>
@@ -133,7 +133,7 @@
 
     <string name="agreement_intro">By using this app, you agree to the following.</string>
     <string name="agreement_data_title">Data &amp; Privacy</string>
-    <string name="agreement_data_local">Conversations, workspace files, API keys, and OAuth and connector credentials are stored only in the app\'s private directory and are never uploaded to DeepDeep\'s servers.</string>
+    <string name="agreement_data_local">Conversations, bot files, API keys, and OAuth and connector credentials are stored only in the app\'s private directory and are never uploaded to DeepDeep\'s servers.</string>
     <string name="agreement_data_provider">Conversation content is sent only to the model provider you choose; DeepDeep keeps no copy on its servers.</string>
     <string name="agreement_data_connectors">Content read through connectors becomes part of your chat history and may be sent to the model provider with the conversation.</string>
     <string name="agreement_data_tracking">No analytics, advertising, or third-party tracking SDKs are included.</string>
@@ -148,7 +148,7 @@
     <string name="agreement_disclaimer_output">Model output may be inaccurate, outdated, or incomplete and is not professional advice; use your own judgment and accept the risks.</string>
     <string name="agreement_license_title">Open source license</string>
     <string name="agreement_license_apache">The app is released under the Apache License 2.0; you may use, modify, and distribute it under the license terms.</string>
-    <string name="agreement_license_source">The full source code and license are available in the project repository.</string>
+    <string name="agreement_license_source">The full source code and license are available in the bot repository.</string>
 
     <string name="settings_font_title">Font</string>
     <string name="settings_font_current">Current</string>
@@ -201,8 +201,8 @@
     <string name="dev_package_git">Version control and repositories</string>
     <string name="dev_package_github_cli">Use GitHub from the command line</string>
     <string name="dev_package_build_base">C/C++ compiler toolchain</string>
-    <string name="dev_package_cmake">Build projects with CMake</string>
-    <string name="dev_package_make">Build projects with Make</string>
+    <string name="dev_package_cmake">Build bots with CMake</string>
+    <string name="dev_package_make">Build bots with Make</string>
     <string name="dev_package_pkgconf">Find libraries at build time</string>
     <string name="settings_background_job_wake">Wake when a background job finishes</string>
     <string name="settings_oauth_manual_hint">Browser did not return automatically? Paste the authorization code or redirect URL below.</string>

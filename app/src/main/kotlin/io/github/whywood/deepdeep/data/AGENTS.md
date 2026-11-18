@@ -11,6 +11,7 @@
 | `BundledSkills.kt` | 随包技能：`assets/skills/**` 按内容同步到技能仓库与全局启用目录，可传入门控谓词并删除被排除的自有技能；跳过插件标记/用户自有目录 |
 | `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、过程详细度、自动重试、后台唤醒、置顶、字号 |
+| `BotAvatarStore.kt` | Bot 头像：把相册图片解码、缩放到 256px 存为 JPEG 到 `files/bot-avatars/`，返回绝对路径给 `RuntimeWorkspace.avatar`；删除/替换时清理旧文件，`cleanup` 清掉未被引用的残留 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
 | `AttachmentStore.kt` | 导入附件到工作区，校验大小/空间/像素；文件读写经 `HostFiles`（Root 档可读系统目录，其余档自然失败），解析绝对路径时按共享存储开关放行 `/storage/emulated/0` 内文件；分享/预览前把不可读文件暂存到 cache，暂存不了（超大文件）时回退导出到共享存储或系统下载目录 |
 | `CustomProviderStore.kt` | 自定义模型服务商：读写 `files/agent/models.json`（SDK models.json 格式，供 pi 会话与 ProviderCatalog 合并），含模型能力字段（上下文大小、最大输出、图片输入、思考档位 → input/reasoning/thinkingLevelMap）；思考档位由用户勾选，写入时选中档位给值、其余显式 null（off 支持时省略键），未勾选任何档位则 reasoning=false；容错解析与临时文件原子替换 |

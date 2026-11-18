@@ -73,7 +73,12 @@ class FakeAgentRuntime : AgentRuntime {
 
     val createdWorkspaceDirectories = mutableListOf<String?>()
 
-    override suspend fun createWorkspace(name: String, directory: String?): RuntimeWorkspace {
+    override suspend fun createWorkspace(
+        name: String,
+        directory: String?,
+        avatar: String?,
+        intro: String?,
+    ): RuntimeWorkspace {
         createdWorkspaceDirectories += directory
         val workspace = RuntimeWorkspace("workspace-$name", name, directory ?: "/workspaces/$name", createdAt = 1L)
         extraProjects += workspace
@@ -81,6 +86,8 @@ class FakeAgentRuntime : AgentRuntime {
     }
 
     override suspend fun renameWorkspace(id: String, name: String) = Unit
+
+    override suspend fun updateWorkspaceProfile(id: String, avatar: String?, intro: String?) = Unit
 
     override suspend fun deleteWorkspace(id: String) = Unit
 

@@ -220,6 +220,8 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
             navigator = host.navigator,
             workspaces = host.chat.workspaces,
             workspaceId = destination.workspaceId,
+            onUpdateProfile = host.chatViewModel::updateWorkspaceProfile,
+            onRenameWorkspace = host.chatViewModel::renameWorkspace,
             onBack = onBack,
         )
 

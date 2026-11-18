@@ -61,6 +61,6 @@
     <string name="remote_guide_step2">Open "Mobile access" on the computer: LAN needs the phone and computer on the same Wi-Fi; remote access can use Tailscale, cpolar, cloudflared, FRP, or your own reverse proxy.</string>
     <string name="remote_guide_step3">Tap "Generate pairing QR code", or copy the pairing link.</string>
     <string name="remote_guide_step4">On the phone tap +: use "Scan to add" with a camera, or "Paste pairing link" if scanning is not convenient.</string>
-    <string name="remote_guide_step5">The computer appears in the list once paired. Tap it to use its sessions and workspaces from the phone.</string>
+    <string name="remote_guide_step5">The computer appears in the list once paired. Tap it to use its sessions and bots from the phone.</string>
     <string name="remote_guide_step6">A green dot means online. If it fails, refresh first, then pair again or revoke the device in "Mobile access" on the computer and scan a new code.</string>
 </resources>

@@ -67,6 +67,8 @@ class WorkspaceStore(context: Context) {
                             name = name,
                             cwd = cwd,
                             createdAt = item.optLong("createdAt", 0L),
+                            avatar = item.optString("avatar").trim().takeIf { it.isNotEmpty() },
+                            intro = item.optString("intro").trim().takeIf { it.isNotEmpty() },
                         ),
                     )
                 }
@@ -77,13 +79,14 @@ class WorkspaceStore(context: Context) {
     private fun encode(workspaces: List<RuntimeWorkspace>): String {
         val array = JSONArray()
         workspaces.forEach { workspace ->
-            array.put(
-                JSONObject()
-                    .put("id", workspace.id)
-                    .put("name", workspace.name)
-                    .put("cwd", workspace.cwd)
-                    .put("createdAt", workspace.createdAt),
-            )
+            val item = JSONObject()
+                .put("id", workspace.id)
+                .put("name", workspace.name)
+                .put("cwd", workspace.cwd)
+                .put("createdAt", workspace.createdAt)
+            workspace.avatar?.let { item.put("avatar", it) }
+            workspace.intro?.let { item.put("intro", it) }
+            array.put(item)
         }
         return array.toString()
     }

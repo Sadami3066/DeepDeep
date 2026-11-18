@@ -3,10 +3,12 @@ package io.github.whywood.deepdeep.ui.workspaces
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -26,6 +28,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import io.github.whywood.deepdeep.ui.common.BotAvatar
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.SkillRepository
@@ -50,6 +57,10 @@ fun WorkspaceSettingsScreen(
     workspaceToolPolicies: WorkspaceToolPolicyStore,
     pluginManager: PluginManagerFacade,
     mcpConfigStore: McpConfigStore,
+    existingNames: List<String>,
+    onRename: (String) -> Unit,
+    onAvatarPicked: (Uri?) -> Unit,
+    onIntroChange: (String) -> Unit,
     onBack: () -> Unit,
     onOpenSkills: () -> Unit,
     modifier: Modifier = Modifier,
@@ -64,6 +75,12 @@ fun WorkspaceSettingsScreen(
     var showInheritedSkills by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showInheritedPlugins by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showInheritedMcp by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showAvatarSheet by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showIntroDialog by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showRenameDialog by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) onAvatarPicked(uri)
+    }
     var inheritedSkillsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
     var inheritedPluginsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
     var inheritedMcpValue by remember(workspace.id) { mutableStateOf<String?>(null) }
@@ -113,14 +130,75 @@ fun WorkspaceSettingsScreen(
                 .padding(horizontal = 24.dp),
         ) {
             DdSectionLabel(stringResource(R.string.workspace_settings_label))
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = workspace.name,
-                style = DdType.pageTitle,
-                color = colors.ink,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BotAvatar(workspace = workspace, size = 44.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = workspace.name,
+                        style = DdType.pageTitle,
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val intro = workspace.intro?.trim().orEmpty()
+                    if (intro.isNotEmpty()) {
+                        Text(
+                            text = intro,
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } else if (workspace.isHome) {
+                        Text(
+                            text = stringResource(R.string.bot_default_badge),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+            if (!workspace.isHome) {
+                Spacer(Modifier.height(20.dp))
+                DdSectionLabel(stringResource(R.string.bot_identity))
+                Spacer(Modifier.height(8.dp))
+                SettingsGroup {
+                    DdListRow(
+                        icon = DdIcons.Image,
+                        title = stringResource(R.string.bot_avatar),
+                        value = if (workspace.avatar.isNullOrBlank()) {
+                            stringResource(R.string.bot_avatar_default_hint)
+                        } else {
+                            stringResource(R.string.bot_avatar_change)
+                        },
+                        onClick = { showAvatarSheet = true },
+                        showChevron = true,
+                        modifier = Modifier.testTag("bot_settings_avatar"),
+                    )
+                    DdHairline()
+                    DdListRow(
+                        icon = DdIcons.Pen,
+                        title = stringResource(R.string.workspace_name_placeholder),
+                        value = workspace.name,
+                        onClick = { showRenameDialog = true },
+                        showChevron = true,
+                        modifier = Modifier.testTag("bot_settings_name"),
+                    )
+                    DdHairline()
+                    DdListRow(
+                        icon = DdIcons.Info,
+                        title = stringResource(R.string.bot_intro),
+                        value = workspace.intro?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.bot_intro_placeholder),
+                        onClick = { showIntroDialog = true },
+                        showChevron = true,
+                        modifier = Modifier.testTag("bot_settings_intro"),
+                    )
+                }
+            }
             Spacer(Modifier.height(20.dp))
             val skillCount = projectSkillCount
             SettingsGroup {
@@ -244,6 +322,44 @@ fun WorkspaceSettingsScreen(
             agentDocStore = agentDocStore,
             onSaved = { reloadKey += 1 },
             onDismiss = { showAgentsDoc = false },
+        )
+    }
+
+    if (showAvatarSheet) {
+        BotAvatarSheet(
+            hasCustomAvatar = !workspace.avatar.isNullOrBlank(),
+            onChooseImage = {
+                showAvatarSheet = false
+                pickAvatar.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+            onUseDefault = {
+                showAvatarSheet = false
+                onAvatarPicked(null)
+            },
+            onDismiss = { showAvatarSheet = false },
+        )
+    }
+
+    if (showIntroDialog) {
+        BotIntroDialog(
+            initial = workspace.intro.orEmpty(),
+            onConfirm = { text ->
+                showIntroDialog = false
+                onIntroChange(text)
+            },
+            onDismiss = { showIntroDialog = false },
+        )
+    }
+
+    if (showRenameDialog) {
+        WorkspaceNameDialog(
+            initial = workspace.name,
+            existingNames = existingNames,
+            onConfirm = { name ->
+                showRenameDialog = false
+                onRename(name)
+            },
+            onDismiss = { showRenameDialog = false },
         )
     }
 }

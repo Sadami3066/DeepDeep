@@ -14,9 +14,9 @@
     <string name="assistant_overlay_voice_unavailable">Speech recognition is unavailable.</string>
     <string name="assistant_overlay_open_settings">Open settings</string>
     <string name="assistant_overlay_session">Chat</string>
-    <string name="assistant_overlay_workspace">Workspace</string>
+    <string name="assistant_overlay_workspace">Bot</string>
     <string name="assistant_overlay_back">Back</string>
     <string name="assistant_overlay_fullscreen">Full screen</string>
-    <string name="assistant_overlay_switch_workspace">Switch workspace</string>
+    <string name="assistant_overlay_switch_workspace">Switch bot</string>
     <string name="assistant_overlay_switcher_empty">No chats yet</string>
 </resources>

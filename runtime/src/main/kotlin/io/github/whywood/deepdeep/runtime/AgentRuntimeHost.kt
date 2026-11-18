@@ -198,10 +198,18 @@ class AgentRuntimeHost internal constructor(
 
     override suspend fun workspaces(): List<RuntimeWorkspace> = workspaceAdmin.list()
 
-    override suspend fun createWorkspace(name: String, directory: String?): RuntimeWorkspace =
-        workspaceAdmin.create(name, directory)
+    override suspend fun createWorkspace(
+        name: String,
+        directory: String?,
+        avatar: String?,
+        intro: String?,
+    ): RuntimeWorkspace = workspaceAdmin.create(name, directory, avatar, intro)
 
     override suspend fun renameWorkspace(id: String, name: String) = workspaceAdmin.rename(id, name)
+
+    override suspend fun updateWorkspaceProfile(id: String, avatar: String?, intro: String?) {
+        workspaceAdmin.updateProfile(id, avatar, intro)
+    }
 
     override suspend fun deleteWorkspace(id: String) = workspaceAdmin.delete(id)
 
@@ -326,7 +334,7 @@ class AgentRuntimeHost internal constructor(
 
     companion object {
         const val HOME_ID = "home"
-        const val HOME_NAME = "Home"
+        const val HOME_NAME = "DeepDeep"
     }
 }
 

@@ -2,12 +2,15 @@ package io.github.whywood.deepdeep.ui.chat
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +23,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -34,7 +38,9 @@ import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
+import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
+import io.github.whywood.deepdeep.ui.common.BotAvatar
 
 data class ChatTopBarState(
     val reminderCount: Int,
@@ -64,6 +70,7 @@ internal fun ChatTopBar(
     state: ChatTopBarState,
     actions: ChatTopBarActions,
     modifier: Modifier = Modifier,
+    activeBot: RuntimeWorkspace? = null,
 ) {
     val colors = deepDeepColors()
     var menuOpen by remember { mutableStateOf(false) }
@@ -80,13 +87,33 @@ internal fun ChatTopBar(
         val leadingWidth = with(density) { leadingWidthPx.toDp() }
         val trailingWidth = with(density) { trailingWidthPx.toDp() }
         val wordmarkStyle = wordmarkStyle(maxWidth, leadingWidth, trailingWidth, compact)
+        val botTitleMaxWidth = maxWidth * 0.52f
         Box(Modifier.fillMaxSize()) {
-            DdWordmark(
-                modifier = Modifier.align(Alignment.Center),
-                color = colors.ink,
-                dotColor = colors.accent,
-                style = wordmarkStyle,
-            )
+            if (activeBot != null) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .widthIn(max = botTitleMaxWidth),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                ) {
+                    BotAvatar(workspace = activeBot, size = 22.dp)
+                    Text(
+                        text = activeBot.name,
+                        style = DdType.label.copy(fontSize = 17.sp),
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                DdWordmark(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = colors.ink,
+                    dotColor = colors.accent,
+                    style = wordmarkStyle,
+                )
+            }
             Row(
                 Modifier
                     .fillMaxSize()

@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.chat
 
+import io.github.whywood.deepdeep.ui.common.chat.activeBotFor
 import io.github.whywood.deepdeep.ui.common.chat.commandQuery
 
 import io.github.whywood.deepdeep.ui.common.chat.ChatTurn
@@ -511,7 +512,11 @@ fun ChatScreen(
             },
     ) {
         CompositionLocalProvider(LocalSelectionCoordinator provides selectionCoordinator) {
+        val activeBot = remember(state.workspaces, state.currentWorkspaceId, state.conversationCwd) {
+            activeBotFor(state.workspaces, state.currentWorkspaceId, state.conversationCwd)
+        }
         ChatTopBar(
+            activeBot = activeBot,
             state = ChatTopBarState(
                 reminderCount = reminderCount,
                 reloading = reloading,

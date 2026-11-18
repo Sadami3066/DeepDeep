@@ -146,6 +146,69 @@ class RuntimeWorkspacesTest {
         assertTrue(workspaces.list().none { it.id == workspace.id })
     }
 
+
+    @Test
+    fun createStoresAvatarAndIntro() = runBlocking {
+        val workspace = workspaces.create("Writer", avatar = "/data/avatars/a.webp", intro = "帮我写长文")
+
+        assertEquals("/data/avatars/a.webp", workspace.avatar)
+        assertEquals("帮我写长文", workspace.intro)
+        assertEquals("/data/avatars/a.webp", workspaces.find(workspace.id).avatar)
+        assertEquals("帮我写长文", workspaces.find(workspace.id).intro)
+    }
+
+    @Test
+    fun createNormalizesAvatarAndIntro() = runBlocking {
+        val workspace = workspaces.create(
+            "Trimmed",
+            avatar = "  /data/avatars/b.webp  ",
+            intro = "  " + "x".repeat(50) + "  ",
+        )
+        assertEquals("/data/avatars/b.webp", workspace.avatar)
+        assertEquals("x".repeat(40), workspace.intro)
+    }
+
+    @Test
+    fun createKeepsIdentityEmptyWhenBlank() = runBlocking {
+        val workspace = workspaces.create("Plain", avatar = "   ", intro = "")
+
+        assertEquals(null, workspace.avatar)
+        assertEquals(null, workspace.intro)
+    }
+
+    @Test
+    fun renameKeepsAvatarAndIntro() = runBlocking {
+        val workspace = workspaces.create("Writer", avatar = "/data/avatars/c.webp", intro = "短句")
+
+        workspaces.rename(workspace.id, "New Name")
+
+        val renamed = workspaces.find(workspace.id)
+        assertEquals("New Name", renamed.name)
+        assertEquals("/data/avatars/c.webp", renamed.avatar)
+        assertEquals("短句", renamed.intro)
+    }
+
+    @Test
+    fun updateProfileOnlyChangesIdentity() = runBlocking {
+        val workspace = workspaces.create("Writer", avatar = "/data/avatars/c.webp", intro = "短句")
+
+        workspaces.updateProfile(workspace.id, null, "新简介")
+
+        val updated = workspaces.find(workspace.id)
+        assertEquals("Writer", updated.name)
+        assertEquals(null, updated.avatar)
+        assertEquals("新简介", updated.intro)
+    }
+
+    @Test
+    fun homeWorkspaceUsesDeepDeepNameAndNoAvatar() = runBlocking {
+        val home = workspaces.list().single { it.isHome }
+
+        assertEquals("DeepDeep", home.name)
+        assertEquals(null, home.avatar)
+        assertEquals(null, home.intro)
+    }
+
     private class FakeWorkspaceDirectory : WorkspaceDirectory {
         val entries = mutableListOf<RuntimeWorkspace>()
 

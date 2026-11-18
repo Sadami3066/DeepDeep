@@ -22,7 +22,12 @@ internal class RuntimeWorkspaces(
         addAll(directories.read().filter { it.id != AgentRuntimeHost.HOME_ID })
     }
 
-    suspend fun create(name: String, directory: String? = null): RuntimeWorkspace = mutex.withLock {
+    suspend fun create(
+        name: String,
+        directory: String? = null,
+        avatar: String? = null,
+        intro: String? = null,
+    ): RuntimeWorkspace = mutex.withLock {
         val trimmed = name.trim()
         require(trimmed.isNotEmpty()) { "工作区名称不能为空" }
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
@@ -38,6 +43,8 @@ internal class RuntimeWorkspaces(
             name = trimmed,
             cwd = cwd,
             createdAt = System.currentTimeMillis(),
+            avatar = normalizeAvatar(avatar),
+            intro = normalizeIntro(intro),
         )
         directories.add(workspace)
         emitListChanged()
@@ -52,6 +59,19 @@ internal class RuntimeWorkspaces(
         directories.add(workspace.copy(name = trimmed))
         emitListChanged()
     }
+
+    suspend fun updateProfile(id: String, avatar: String?, intro: String?): RuntimeWorkspace? =
+        mutex.withLock {
+            if (id == AgentRuntimeHost.HOME_ID) return@withLock null
+            val workspace = directories.read().firstOrNull { it.id == id } ?: return@withLock null
+            val updated = workspace.copy(
+                avatar = normalizeAvatar(avatar),
+                intro = normalizeIntro(intro),
+            )
+            directories.add(updated)
+            emitListChanged()
+            updated
+        }
 
     suspend fun delete(id: String) {
         if (id == AgentRuntimeHost.HOME_ID) return
@@ -90,10 +110,21 @@ internal class RuntimeWorkspaces(
         return directory.startsWith(root + File.separator)
     }
 
+    private fun normalizeAvatar(raw: String?): String? =
+        raw?.trim().takeUnless { it.isNullOrEmpty() }?.take(MAX_AVATAR_PATH_LENGTH)
+
+    private fun normalizeIntro(raw: String?): String? =
+        raw?.trim().takeUnless { it.isNullOrEmpty() }?.take(MAX_INTRO_LENGTH)
+
     private fun homeWorkspace(): RuntimeWorkspace = RuntimeWorkspace(
         id = AgentRuntimeHost.HOME_ID,
         name = AgentRuntimeHost.HOME_NAME,
         cwd = homeDir.absolutePath,
         isHome = true,
     )
+
+    companion object {
+        private const val MAX_AVATAR_PATH_LENGTH = 512
+        private const val MAX_INTRO_LENGTH = 40
+    }
 }

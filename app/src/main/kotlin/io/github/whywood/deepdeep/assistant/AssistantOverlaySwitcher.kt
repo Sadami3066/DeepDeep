@@ -59,6 +59,7 @@ import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.ConversationSummary
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.common.BotAvatar
 import io.github.whywood.deepdeep.ui.common.rememberRelativeTime
 
 internal sealed interface OverlaySwitcherLevel {
@@ -300,19 +301,10 @@ private fun WorkspaceRow(
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(if (selected) colors.surface else colors.wash),
-                contentAlignment = Alignment.Center,
-            ) {
-                DdIcon(
-                    icon = DdIcons.Folder,
-                    tint = colors.inkSecondary,
-                    size = 15.dp,
-                )
-            }
+            BotAvatar(
+                workspace = workspace,
+                size = 28.dp,
+            )
             Spacer(Modifier.width(9.dp))
             Text(
                 text = workspace.name,

@@ -18,6 +18,14 @@ data class QuotedMessage(
     val text: String,
 )
 
+internal fun activeBotFor(
+    workspaces: List<io.github.whywood.deepdeep.runtime.RuntimeWorkspace>,
+    workspaceId: String,
+    cwd: String,
+): io.github.whywood.deepdeep.runtime.RuntimeWorkspace? = workspaces.firstOrNull {
+    it.id == workspaceId && it.cwd == cwd && !it.isHome
+}
+
 data class ChatUiState(
     val conversation: ConversationState = ConversationState(),
     val ready: Boolean = false,

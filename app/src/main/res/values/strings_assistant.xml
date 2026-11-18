@@ -14,9 +14,9 @@
     <string name="assistant_overlay_voice_unavailable">此设备不支持语音识别</string>
     <string name="assistant_overlay_open_settings">去设置</string>
     <string name="assistant_overlay_session">会话</string>
-    <string name="assistant_overlay_workspace">工作区</string>
+    <string name="assistant_overlay_workspace">Bot</string>
     <string name="assistant_overlay_back">返回</string>
     <string name="assistant_overlay_fullscreen">全屏</string>
-    <string name="assistant_overlay_switch_workspace">切换工作区</string>
+    <string name="assistant_overlay_switch_workspace">切换 Bot</string>
     <string name="assistant_overlay_switcher_empty">暂无会话</string>
 </resources>

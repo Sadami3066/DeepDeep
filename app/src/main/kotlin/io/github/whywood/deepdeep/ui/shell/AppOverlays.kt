@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.data.AttachmentExport
+import io.github.whywood.deepdeep.data.BotAvatarStore
 import io.github.whywood.deepdeep.data.AttachmentRef
 import io.github.whywood.deepdeep.data.exportShareIntent
 import io.github.whywood.deepdeep.plugin.host.services.PluginPageRequest
@@ -93,6 +94,10 @@ internal fun AppOverlays(
     val exportDone = stringResource(R.string.files_export_done)
     val exportDonePathFormat = stringResource(R.string.files_export_done_path)
     val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
+    val botAvatarStore = remember { BotAvatarStore(context) }
+    LaunchedEffect(state.workspaces, state.ready) {
+        if (state.ready) botAvatarStore.cleanup(state.workspaces.mapNotNull { it.avatar })
+    }
     LaunchedEffect(overlays.jobsSheetOpen, overlays.selectedJobId) {
         val id = overlays.selectedJobId
         if (!overlays.jobsSheetOpen || id == null) return@LaunchedEffect
@@ -130,9 +135,12 @@ internal fun AppOverlays(
         ),
         overlayActions = ShellOverlayActions(
             onDismissPluginPage = { overlays.pluginPage = null },
-            onConfirmWorkspaceCreate = { name, directory ->
+            onConfirmWorkspaceCreate = { name, directory, avatarUri, intro ->
                 overlays.workspaceCreateOpen = false
-                chatViewModel.createWorkspace(name, directory)
+                scope.launch {
+                    val avatarPath = avatarUri?.let { botAvatarStore.save(it) }
+                    chatViewModel.createWorkspace(name, directory, avatarPath, intro)
+                }
             },
             onDismissWorkspaceCreate = { overlays.workspaceCreateOpen = false },
             onConfirmWorkspaceRename = { name ->
@@ -144,7 +152,10 @@ internal fun AppOverlays(
             onConfirmWorkspaceDelete = {
                 val target = overlays.workspaceDeleteTarget
                 overlays.workspaceDeleteTarget = null
-                target?.let { chatViewModel.deleteWorkspace(it.id) }
+                target?.let {
+                    botAvatarStore.delete(it.avatar)
+                    chatViewModel.deleteWorkspace(it.id)
+                }
             },
             onDismissWorkspaceDelete = { overlays.workspaceDeleteTarget = null },
             onDismissAttachmentPreview = { overlays.previewAttachment = null; overlays.previewRoot = null },

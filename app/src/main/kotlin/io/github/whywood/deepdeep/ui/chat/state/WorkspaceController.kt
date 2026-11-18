@@ -23,13 +23,33 @@ internal class WorkspaceController(
     private val userFacingError: (String) -> String,
     private val createWorkspaceFailedText: () -> String,
 ) {
-    fun create(name: String, directory: String? = null) {
+    fun create(
+        name: String,
+        directory: String? = null,
+        avatar: String? = null,
+        intro: String? = null,
+    ) {
         scope.launch {
             try {
-                val workspace = withContext(ioDispatcher) { runtime.createWorkspace(name, directory) }
+                val workspace = withContext(ioDispatcher) {
+                    runtime.createWorkspace(name, directory, avatar, intro)
+                }
                 val workspaces = withContext(ioDispatcher) { queries.workspaces() }
                 update { it.copy(workspaces = workspaces) }
                 selectWorkspace(workspace.id)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                update { it.copy(error = userFacingError(error.message ?: createWorkspaceFailedText())) }
+            }
+        }
+    }
+
+    fun updateProfile(workspaceId: String, avatar: String?, intro: String?) {
+        scope.launch {
+            try {
+                withContext(ioDispatcher) { runtime.updateWorkspaceProfile(workspaceId, avatar, intro) }
+                refreshSessions()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
