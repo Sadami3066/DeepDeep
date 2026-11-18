@@ -53,6 +53,12 @@ data class GuiSnapshotNode(
     val enabled: Boolean,
     val depth: Int,
     val token: Any? = null,
+    val focused: Boolean = false,
+    val hint: Boolean = false,
+    val secret: Boolean = false,
+    val checked: Boolean = false,
+    val selected: Boolean = false,
+    val placeholder: String? = null,
 )
 
 enum class GuiWindowKind {
@@ -73,6 +79,8 @@ data class GuiWindowInfo(
     val active: Boolean = false,
     val readable: Boolean = false,
     val selected: Boolean = false,
+    val id: Int = -1,
+    val layer: Int = 0,
 )
 
 data class GuiSnapshot(
@@ -156,8 +164,13 @@ object GuiNodeTree {
     fun nodeJson(node: GuiSnapshotNode): JsonObject = buildJsonObject {
         put("ref", node.ref)
         put("class", node.className)
-        node.text?.let { put("text", it) }
-        node.desc?.let { put("desc", it) }
+        if (node.secret) {
+            put("secret", true)
+        } else {
+            node.text?.let { put("text", it) }
+            node.desc?.let { put("desc", it) }
+        }
+        if (node.focused) put("focused", true)
         node.resourceId?.let { put("resourceId", it) }
         put("bounds", node.bounds.format())
         if (node.clickable) put("clickable", true)

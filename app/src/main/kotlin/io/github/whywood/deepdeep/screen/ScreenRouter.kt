@@ -9,7 +9,7 @@ class ScreenRouter(
     private val apps: ScreenAppCatalog,
     private val accessibilityEnabled: () -> Boolean = { accessibility.connected },
 ) : ScreenController {
-    private var screenInstance: String? = null
+    private var screenBinding: VirtualBinding? = null
 
     override suspend fun status(): ScreenStatusSnapshot {
         val state = virtual.state()
@@ -26,7 +26,7 @@ class ScreenRouter(
             },
             virtual = online?.let {
                 ScreenDisplayInfo(it.displayId, it.width, it.height, BACKEND_HELPER,
-                    if (connected) BACKEND_ACCESSIBILITY else BACKEND_NONE, BACKEND_HELPER)
+                    if (connected) BACKEND_ACCESSIBILITY else BACKEND_NONE, BACKEND_HELPER, it.instanceId)
             },
             virtualBackend = online?.backend,
             virtualUid = virtual.helperUid(),
@@ -36,15 +36,43 @@ class ScreenRouter(
         )
     }
 
+    override suspend fun effectDisplayInfo() = (virtual.state() as? VirtualScreenState.Online)?.let {
+        ScreenDisplayInfo(it.displayId, it.width, it.height, BACKEND_HELPER,
+            if (accessibility.connected) BACKEND_ACCESSIBILITY else BACKEND_NONE, BACKEND_HELPER, it.instanceId)
+    }
+
+    override suspend fun effectFrameGrid() = virtual.effectFrameGrid()
+
+    override fun previewForEffect(display: ScreenDisplayInfo) = virtual.previewForEffect(display)
+
+    override suspend fun screenshotForEffect(display: ScreenDisplayInfo): ScreenCapture? {
+        val current = requireVirtualOnline()
+        if (current.displayId != display.displayId || current.instanceId != display.instanceId) return null
+        val capture = screenshot()
+        requireVirtualOnline(current.binding())
+        return capture
+    }
+
+    override suspend fun settleForEffect(timeoutMs: Long) =
+        accessibility.settleForEffect(requireVirtualOnline().displayId, timeoutMs)
+
+    override suspend fun awaitScreenChange(timeoutMs: Long): Boolean? {
+        val online = requireVirtualOnline()
+        val changed = accessibility.awaitScreenChange(online.displayId, timeoutMs)
+        requireVirtualOnline(online.binding())
+        return changed
+    }
+
     override suspend fun observe(maxDepth: Int, maxNodes: Int, expectedPackage: String?): ScreenObserveResult {
         val online = requireVirtualOnline()
         requireAccessibility()
         val snapshot = accessibility.observe(online.displayId, maxDepth, maxNodes, expectedPackage)
+        requireVirtualOnline(online.binding())
         val pruned = snapshot.usableOn(online.bounds())
         if (expectedPackage != null && pruned.packageName != expectedPackage) {
             throw IllegalStateException("Current window belongs to ${pruned.packageName ?: "an unknown app"}, not $expectedPackage; call screen_launch to start the target app")
         }
-        return ScreenObserveResult(BACKEND_ACCESSIBILITY, pruned, snapshot.nodes.size - pruned.nodes.size)
+        return ScreenObserveResult(BACKEND_ACCESSIBILITY, pruned, snapshot.nodes.size - pruned.nodes.size, online.instanceId)
     }
 
     override suspend fun find(selectors: List<GuiSelector>, limit: Int): ScreenFindResult {
@@ -60,7 +88,13 @@ class ScreenRouter(
             virtual.tap(selector.x, selector.y, durationMs).requireOk()
         } else {
             requireAccessibility()
-            accessibility.tap(online.displayId, selector, durationMs)
+            try {
+                accessibility.tap(online.displayId, selector, durationMs)
+            } catch (error: GestureRejectedBeforeDispatch) {
+                requireVirtualOnline(online.binding())
+                invalidTapCoordinate(error.x, error.y, online.bounds())?.let { throw IllegalArgumentException(it) }
+                virtual.tap(error.x, error.y, durationMs).requireOk()
+            }
         }
         return "Tapped virtual screen ${selector.describeSelector()}"
     }
@@ -74,6 +108,7 @@ class ScreenRouter(
 
     override suspend fun scroll(direction: GuiScrollDirection, amount: Int, selector: GuiSelector?): String {
         val online = requireVirtualOnline()
+        val binding = online.binding()
         val bounds = if (selector == null) online.bounds() else {
             requireAccessibility()
             accessibility.bounds(online.displayId, selector)
@@ -82,7 +117,7 @@ class ScreenRouter(
             ?: throw IllegalArgumentException("Scroll target is not visible or too small to scroll; call screen_observe again")
         val steps = amount.coerceIn(1, 10)
         repeat(steps) {
-            requireVirtualOnline()
+            requireVirtualOnline(binding)
             virtual.swipe(path[0], path[1], path[2], path[3], 300).requireOk()
         }
         return "Scrolled virtual screen ${direction.name.lowercase()} $steps times"
@@ -94,7 +129,8 @@ class ScreenRouter(
         if (selector != null) {
             requireAccessibility()
             val result = accessibility.setText(online.displayId, selector, text)
-            return ScreenTextResult(BACKEND_ACCESSIBILITY, result.text, result.verified)
+            requireVirtualOnline(online.binding())
+            return ScreenTextResult(BACKEND_ACCESSIBILITY, result.text, result.verified, result.secret)
         }
         require(isAsciiText(text)) { "Non-ASCII text needs accessibility plus a field ref or fieldText; call screen_observe first" }
         virtual.text(text).requireOk()
@@ -111,7 +147,9 @@ class ScreenRouter(
     override suspend fun waitFor(packageName: String?, text: String?, textGone: String?, timeoutMs: Long): ScreenWaitOutcome {
         val online = requireVirtualOnline()
         requireAccessibility()
-        return accessibility.waitFor(online.displayId, packageName, text, textGone, timeoutMs).toScreenWaitOutcome()
+        val outcome = accessibility.waitFor(online.displayId, packageName, text, textGone, timeoutMs)
+        requireVirtualOnline(online.binding())
+        return outcome.toScreenWaitOutcome()
     }
 
     override suspend fun screenshot(): ScreenCapture {
@@ -137,11 +175,11 @@ class ScreenRouter(
 
     override suspend fun listApps(): List<ScreenApp> = apps.launchableApps()
 
-    private suspend fun requireVirtualOnline(): VirtualScreenState.Online {
+    private suspend fun requireVirtualOnline(expected: VirtualBinding? = null): VirtualScreenState.Online {
         val state = virtual.state()
         if (state !is VirtualScreenState.Online) {
             accessibility.invalidateSnapshots()
-            screenInstance = null
+            screenBinding = null
             throw IllegalStateException(when {
                 virtual.reconnecting() -> "Virtual screen is reconnecting; check screen_status shortly"
                 state is VirtualScreenState.Starting -> "Virtual screen is starting; retry shortly"
@@ -150,9 +188,16 @@ class ScreenRouter(
             })
         }
         check(state.displayId > 0) { "Invalid virtual screen display id; refusing to operate the main screen" }
-        if (screenInstance != state.instanceId) {
+        val current = state.binding()
+        if (screenBinding != current) {
             accessibility.invalidateSnapshots()
-            screenInstance = state.instanceId
+            screenBinding = current
+        }
+        if (expected != null && current != expected) {
+            throw IllegalStateException(
+                "Virtual screen restarted during the operation; old refs and coordinates were discarded. " +
+                    "Call screen_observe again before retrying",
+            )
         }
         return state
     }
@@ -165,6 +210,10 @@ class ScreenRouter(
     }
 
     private fun VirtualScreenState.Online.bounds() = GuiBounds(0, 0, width, height)
+
+    private fun VirtualScreenState.Online.binding() = VirtualBinding(instanceId, displayId)
+
+    private data class VirtualBinding(val instanceId: String, val displayId: Int)
 }
 
 internal fun swipePathFor(direction: GuiScrollDirection, bounds: GuiBounds): IntArray {

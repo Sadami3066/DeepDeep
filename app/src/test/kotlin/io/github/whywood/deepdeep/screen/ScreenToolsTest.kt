@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.screen
 
+import io.github.whywood.deepdeep.runtime.PHONGENT_VISIBLE_READS
 import io.github.whywood.deepdeep.sdk.ai.TextContent
 import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
@@ -10,11 +11,14 @@ import kotlinx.coroutines.test.runCurrent
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -74,6 +78,94 @@ class ScreenToolsTest {
             "virtual_screen_screenshot",
         )
         assertTrue(legacy.intersect(names.toSet()).isEmpty())
+    }
+
+    @Test
+    fun interfaceUsesOriginalSnapshotDeltaAndRejectsRefsAcrossRecreation() = runTest {
+        val tools = screenTools(controller, screenshotDir).associateBy { it.name }
+        suspend fun observe(base: String? = null) = Json.parseToJsonElement(
+            tools.getValue("screen_observe").execute("observe", buildJsonObject {
+                put("interface", true)
+                base?.let { put("baseSnapshotId", it) }
+            }, null, null).text(),
+        ).jsonObject
+        val first = observe()
+        val base = first.getValue("snapshotId").jsonPrimitive.content
+        val ref = first.getValue("elements").jsonArray.first().jsonObject.getValue("ref").jsonPrimitive.content
+        assertEquals(JsonPrimitive(true), first["full"])
+        val delta = observe(base)
+        assertEquals(JsonPrimitive(false), delta["full"])
+        assertEquals(JsonPrimitive(base), delta["base"])
+        val click = buildJsonObject {
+            put("snapshotId", base)
+            put("ref", ref)
+        }
+        val tap = tools.getValue("screen_tap")
+        assertNull(tap.execute("tap", click, null, null).isError)
+        assertEquals(1, controller.tapCalls)
+        controller.observeScope = "replacement"
+        assertEquals(true, tap.execute("stale", click, null, null).isError)
+        assertEquals(1, controller.tapCalls)
+        assertEquals(JsonPrimitive(true), observe(base)["full"])
+    }
+
+    @Test
+    fun tapResultCarriesScreenDiffAndKeepsTheNewRefUsable() = runTest {
+        val tools = screenTools(controller, screenshotDir).associateBy { it.name }
+        fun withContainers(snap: GuiSnapshot) = snap.copy(
+            windows = listOf(GuiWindowInfo("com.example", "Fixture", GuiWindowKind.APPLICATION, selected = true, id = 3)),
+            nodes = (0 until 14).map { i ->
+                GuiSnapshotNode("layout-$i", "layout", GuiBounds(0, 0, 700, 1200),
+                    null, null, null, false, false, false, true, i)
+            } + snap.nodes.map { it.copy(depth = 14) },
+        )
+        val before = withContainers(screenWithButtons((1..10).map { "项$it" }))
+        controller.observeSnapshot = before
+        controller.snapshotAfterTap = withContainers(
+            screenWithButtons((1..10).map { if (it == 10) "新的" else "项$it" }),
+        )
+        val shown = Json.parseToJsonElement(tools.getValue("screen_observe").execute("observe",
+            buildJsonObject { put("interface", true) }, null, null).text()).jsonObject
+        val base = shown.getValue("snapshotId").jsonPrimitive.content
+        val ref = shown.getValue("elements").jsonArray.first().jsonObject.getValue("ref")
+        val delta = Json.parseToJsonElement(tools.getValue("screen_tap").execute("tap", buildJsonObject {
+            put("ref", ref)
+            put("snapshotId", base)
+        }, null, null).text()).jsonObject
+        assertNull(delta["interfaceStale"])
+        val screen = delta.getValue("screen").jsonObject
+        assertEquals(JsonPrimitive(false), screen["full"])
+        assertEquals(JsonPrimitive(base), screen["base"])
+        val added = screen.getValue("added").jsonArray.single().jsonObject
+        assertEquals(JsonPrimitive("新的"), added["name"])
+        assertEquals(JsonPrimitive("项10"), screen.getValue("removed").jsonArray.single().jsonObject["name"])
+        assertEquals(1, screen.getValue("treeChanges").jsonObject.getValue("updated").jsonArray.size)
+        val next = tools.getValue("screen_tap").execute("tap-again", buildJsonObject {
+            put("ref", added.getValue("ref"))
+            put("snapshotId", screen.getValue("snapshotId"))
+        }, null, null)
+        assertNull(next.isError)
+        assertEquals(2, controller.tapCalls)
+    }
+
+    @Test
+    fun sendsFullWhenLastFullScreenNotVisible() = runTest {
+        val tools = screenTools(controller, screenshotDir).associateBy { it.name }
+        controller.observeSnapshot = screenWithButtons((1..10).map { "项$it" })
+        suspend fun screenCall(name: String, args: JsonObject) = Json.parseToJsonElement(
+            tools.getValue(name).execute(name, args, null, null).text(),
+        ).jsonObject
+        val first = screenCall("screen_observe", buildJsonObject { put("interface", true) })
+        val delta = screenCall("screen_key", buildJsonObject {
+            put("key", "back")
+            put(PHONGENT_VISIBLE_READS, JsonArray(listOf(first.getValue("snapshotId"))))
+        }).getValue("screen").jsonObject
+        assertEquals(JsonPrimitive(false), delta["full"])
+        val full = screenCall("screen_key", buildJsonObject {
+            put("key", "back")
+            put(PHONGENT_VISIBLE_READS, JsonArray(listOf(delta.getValue("snapshotId"))))
+        }).getValue("screen").jsonObject
+        assertEquals(JsonPrimitive(true), full["full"])
     }
 
     @Test
@@ -337,6 +429,20 @@ class ScreenToolsTest {
     }
 
     @Test
+    fun observeToolClampsOutOfRangeLimitsAndIgnoresBlankFilters() = runTest {
+        val minimum = run(
+            "screen_observe",
+            buildJsonObject { put("limit", 0); put("text", " "); put("resourceId", "") },
+        )
+        assertNull(minimum.isError)
+        assertTrue(minimum.text().contains("\"count\":1"))
+
+        val maximum = run("screen_observe", buildJsonObject { put("limit", 500) })
+        assertNull(maximum.isError)
+        assertTrue(maximum.text().contains("\"count\":3"))
+    }
+
+    @Test
     fun observeToolReturnsAllMatchesOverTwentyWithoutLimit() = runTest {
         controller.observeSnapshot = GuiNodeTree.buildSnapshot(
             root = GuiNode(
@@ -432,7 +538,31 @@ class ScreenToolsTest {
     }
 
     @Test
-    fun tapToolRejectsConflictingSelectors() = runTest {
+    fun tapToolDistinguishesDispatchFromVisibleEffect() = runTest {
+        val result = run("screen_tap", buildJsonObject { put("x", 10); put("y", 20) })
+
+        assertTrue(result.text().contains("\"ok\":true"))
+        assertTrue(result.text().contains("\"changed\":false"))
+        assertTrue(result.text().contains("\"kind\":\"no_effect\""))
+    }
+
+    @Test
+    fun tapToolReportsVerifiedContentChange() = runTest {
+        controller.snapshotAfterTap = GuiSnapshot(
+            packageName = "com.example",
+            windowTitle = null,
+            nodes = emptyList(),
+            truncated = false,
+        )
+
+        val result = run("screen_tap", buildJsonObject { put("x", 10); put("y", 20) })
+
+        assertTrue(result.text().contains("\"ok\":true"))
+        assertTrue(result.text().contains("\"kind\":\"small_change\""))
+    }
+
+    @Test
+    fun tapToolPrefersNamedSelectorOverCoordinates() = runTest {
         val result = run(
             "screen_tap",
             buildJsonObject {
@@ -441,7 +571,27 @@ class ScreenToolsTest {
                 put("y", 2)
             },
         )
-        assertTrue(result.isError == true)
+        assertNull(result.isError)
+        assertEquals(GuiSelector.Ref("1"), controller.lastTapSelector)
+    }
+
+    @Test
+    fun tapToolRefreshesStaleNodeOnce() = runTest {
+        controller.tapFailures = 1
+        val result = run("screen_tap", buildJsonObject { put("ref", "1") })
+        assertNull(result.isError)
+        assertTrue(controller.observeCalls >= 3)
+        assertEquals(2, controller.tapCalls)
+    }
+
+    @Test
+    fun tapToolDoesNotLoopWhenRefreshStillCannotResolveNode() = runTest {
+        controller.tapFailures = 2
+        val result = run("screen_tap", buildJsonObject { put("ref", "1") })
+        assertEquals(true, result.isError)
+        assertEquals(2, controller.observeCalls)
+        assertEquals(2, controller.tapCalls)
+        assertFalse(result.text().contains("\"screen\":"))
     }
 
     @Test
@@ -625,7 +775,9 @@ class ScreenToolsTest {
         assertNull(result.isError)
         val text = result.text()
         assertTrue(text.contains("\"target\":\"virtual\""))
-        assertTrue(text.contains("\"path\":\"${screenshotDir.absolutePath}/screen-"))
+        val writtenPath = (Json.parseToJsonElement(text).jsonObject["path"] as JsonPrimitive).content
+        assertEquals(screenshotDir.absoluteFile, File(writtenPath).parentFile!!.absoluteFile)
+        assertTrue(File(writtenPath).name.startsWith("screen-"))
         assertTrue(!text.contains("\"bashPath\""))
         assertTrue(!text.contains("\"hostPath\""))
         assertTrue(text.contains("\"width\":1080"))
@@ -839,11 +991,24 @@ class ScreenToolsTest {
         }
     }
 
+    private fun screenWithButtons(labels: List<String>): GuiSnapshot = GuiSnapshot(
+        packageName = "com.example", windowTitle = "Fixture", truncated = false,
+        nodes = labels.map { label ->
+            val index = label.removePrefix("项").toIntOrNull() ?: 11
+            GuiSnapshotNode("button-$index", "button", GuiBounds(100, index * 100, 220, index * 100 + 65),
+                label, null, "button-$index", true, false, false, true, 0)
+        },
+    )
+
     private class FakeController : ScreenController {
         var lastObserveMaxDepth = -1
+        var observeCalls = 0
         var filteredNodes = 0
         var lastTapSelector: GuiSelector? = null
         var lastTapDuration = -1
+        var tapCalls = 0
+        var tapFailures = 0
+        var snapshotAfterTap: GuiSnapshot? = null
         var lastScrollDirection: GuiScrollDirection? = null
         var lastScrollAmount = -1
         var lastTypedText: String? = null
@@ -851,6 +1016,7 @@ class ScreenToolsTest {
         var capture = ScreenCapture(byteArrayOf(9), 1, 1, BACKEND_ACCESSIBILITY)
         var waitOutcome = ScreenWaitOutcome(matched = true)
         var observeSnapshot: GuiSnapshot? = null
+        var observeScope: String? = null
         var listAppsFailure: Throwable? = null
         var statusSnapshot = ScreenStatusSnapshot(
             accessibilityConnected = true,
@@ -870,13 +1036,16 @@ class ScreenToolsTest {
 
         override suspend fun status(): ScreenStatusSnapshot = statusSnapshot
 
+        override suspend fun effectDisplayInfo(): ScreenDisplayInfo? = statusSnapshot.virtual
+
         override suspend fun observe(
             maxDepth: Int,
             maxNodes: Int,
             expectedPackage: String?,
         ): ScreenObserveResult {
+            observeCalls++
             lastObserveMaxDepth = maxDepth
-            return ScreenObserveResult(BACKEND_ACCESSIBILITY, observeSnapshot ?: snapshot(), filteredNodes)
+            return ScreenObserveResult(BACKEND_ACCESSIBILITY, observeSnapshot ?: snapshot(), filteredNodes, observeScope)
         }
 
         override suspend fun find(
@@ -888,8 +1057,14 @@ class ScreenToolsTest {
         }
 
         override suspend fun tap(selector: GuiSelector, durationMs: Int): String {
+            tapCalls++
             lastTapSelector = selector
             lastTapDuration = durationMs
+            if (tapFailures > 0) {
+                tapFailures--
+                throw IllegalStateException("Node ref is stale; call screen_observe again")
+            }
+            snapshotAfterTap?.let { observeSnapshot = it }
             return "已点击"
         }
 

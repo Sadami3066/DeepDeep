@@ -3,6 +3,10 @@ package io.github.whywood.deepdeep.screen
 
 class AccessibilityScreenBackend(private val actions: GuiActions) : ScreenAccessibilityBackend {
     override val connected: Boolean get() = actions.connected
+    override suspend fun settleForEffect(displayId: Int, timeoutMs: Long): Boolean? =
+        actions.settleForEffect(displayId, timeoutMs)
+    override suspend fun awaitScreenChange(displayId: Int, timeoutMs: Long): Boolean? =
+        actions.awaitScreenChange(displayId, timeoutMs)
     override fun invalidateSnapshots() = actions.invalidateSnapshots()
     override fun bounds(displayId: Int, selector: GuiSelector): GuiBounds = actions.bounds(displayId, selector)
     override suspend fun observe(displayId: Int, maxDepth: Int, maxNodes: Int, expectedPackage: String?): GuiSnapshot =

@@ -23,6 +23,7 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
 | spake2-android 2.2.1 | LGPL-3.0 | 可与 App 链接分发；需提供库源码与重新链接条件 | 附许可全文；提供源码；不限制用户替换/重链接 |
 | Bouncy Castle 1.86（bcprov/bcpkix/bcutil） | Bouncy Castle License（MIT 式） | 可闭源使用与再分发 | 保留版权声明与许可全文 |
 | hiddenapibypass 6.1 | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本 |
+| Mika / Phongent GUI 执行、读屏、效果与退出核验源码 | Apache-2.0 | 可闭源使用与再分发 | Copyright 2026 wangzan101，保留 Apache-2.0 与 [Mika NOTICE](https://github.com/mylea1/phongent/blob/cb58c10425a870d189ef39b8cc3dd1c8e8155d3e/NOTICE) |
 | OkHttp 5.4.0 | Apache-2.0 | 可闭源使用与再分发 | 保留许可副本 |
 | DataStore 重打包 proto-lite | BSD-3-Clause | 可闭源使用与再分发 | 保留版权声明与许可全文 |
 | Lora / Manrope / Open Runde / Fredoka | OFL-1.1 | 可嵌入 App 分发 | 保留版权与许可全文；字体不得单独出售 |
@@ -159,13 +160,13 @@ deepdeep 自有代码 Copyright 2026 The deepdeep Authors，采用 Apache Licens
   - 用途：访问本机 daemon 的 HTTP 回环接口
   - 许可全文：`licenses/Apache-2.0.txt`
 
-### 2.5 ML Kit 条码扫描（非开源）
+### 2.5 ML Kit 条码扫描与文本识别（非开源）
 
-- 构件：`com.google.mlkit:barcode-scanning:17.3.0`（内置模型版，代码与模型随 APK 分发）
+- 构件：`com.google.mlkit:barcode-scanning:17.3.0`、`com.google.mlkit:text-recognition:16.0.1`、`com.google.mlkit:text-recognition-chinese:16.0.1`（内置模型版，代码与模型随 APK 分发）
 - 版权与许可：Google ML Kit Terms of Service，非开源；不适用 Apache-2.0，随 APK 的 ML Kit 代码与模型按 Google 条款使用。
 - 来源：<https://developers.google.com/ml-kit/terms>、<https://maven.google.com>（`com.google.mlkit:barcode-scanning:17.3.0`）
-- 用途：相机扫码的本地条码识别，离线运行，不依赖 Google Play 服务
-- 本仓库内声明：`gradle/libs.versions.toml`（`mlkit-barcode = "17.3.0"`）
+- 用途：相机扫码及节点树不足时的虚拟屏局部文字识别，本地离线处理
+- 本仓库内声明：`gradle/libs.versions.toml`（`mlkit-barcode = "17.3.0"`，`mlkit-text = "16.0.1"`）
 
 ### 2.6 仅构建/测试期使用、不随 APK 分发
 

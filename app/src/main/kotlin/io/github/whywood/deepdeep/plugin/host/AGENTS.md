@@ -32,6 +32,7 @@
 - `PluginTextResolver` 的语言 tag 由宿主注入（App 语言），不在宿主里硬编码语言；`text` 参数为宿主提供的 `String.format` 参数。
 - 工具结果映射：`ImageBlock` 的字节按 base64 进 `ImageContent`；`FileRefBlock` 的 content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`（工具卡与历史消息据此渲染文件行），path 按插件给出的绝对路径原样输出，不读文件、不当附件投递；插件不要读写该保留键。
 - `partial` 更新经 unlimited channel 在 `execute` 内顺序转发，插件回调可在任意线程调用；`execute` 异常（取消/中断除外）转成 `isError` 结果。
+- GUI Act 的 `screen_act` 在调用作用域内汇集宿主输入和等待证据。插件通过既有 `partial` 标记步骤，宿主在 `results[].host_verification` 关联操作序号或断言读回，在 `host_actions` 提供各操作证据，插件 API 保持原签名。
 - 槽渲染没有崩溃隔离：插件 Compose 内容抛异常会带崩 App（与工具/回调异常一致）；插件作者需自测，宿主不会静默禁用绑定位。
 - 外部插件清单只解析一次（`PluginManifestCodec.parse`），严格校验（`decode/validate`）由安装流程负责；`provides.themes` 与 `assets/themes.json` 的校验也在安装候选阶段完成，运行期只聚合已安装且启用插件的主题来源。
 - manifest 契约（`PluginManifest`/`UiManifest`/`Provides`/`PublisherInfo`/`PluginComponentDeclaration`）是宿主实现的只读接口，内部实现与解析/校验在 `external/HostPluginManifest.kt` 与搬入的 `PluginManifestCodec/PluginValidation/PluginVersion`；1.1.0 起 manifest 还包含 `permissions` 与 `components`，安装期校验权限/组件与 capability 的一致性；事件同理由 `events/HostPluginEvents.kt` 实现。

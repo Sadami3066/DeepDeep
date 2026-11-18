@@ -12,7 +12,7 @@ App 常驻后台的系统接线：前台服务是唯一常驻入口，通知中�
 | `NotificationCenter.kt` | 通知中心：订阅 ConversationStore 的运行状态与完成事件，发出前台、提问、结果、安装、无障碍通知 |
 | `AppVisibility.kt` | App 前后台计数与把任务拉到前台 |
 | `ProcessExitLog.kt` | 记录历史进程退出原因到诊断日志 |
-| `GuiAccessibilityService.kt` | 无障碍服务，为屏幕工具提供节点树 |
+| `GuiAccessibilityService.kt` | 无障碍服务，为屏幕工具提供节点树、显示屏变化事件与静默判定 |
 | `GuiAccessibilityState.kt` | 无障碍服务连接与启用状态 |
 | `AppShellExecutor.kt` | 把 Linux 执行器（proot 或 root chroot）适配成 runtime 的 shell 执行器 |
 | `AccessibilityBootstrap.kt` | 无障碍注入计划与系统设置命令拼装 |

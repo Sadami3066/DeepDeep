@@ -32,7 +32,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `RunLedger.kt` | 落盘未完成运行，重启后提示被中断 |
 | `HandleBudget.kt` | 空闲淘汰规则：闲置超 5 分钟即回收，不设数量上限；当前打开、忙碌、重配、keepAlive 的会话除外；每分钟扫描一次 |
 | `SessionCloseReason.kt` | 句柄关闭原因（Idle/Reload/Reconfigure/Deleted/Closed）与 `SessionClosure` 事件模型 |
-| `PendingInputs.kt` | 插话与排队输入的本地队列及认领 |
+| `PendingInputs.kt` | 插话与排队输入的本地队列及认领；发布 Phongent 批等待的待处理插话状态 |
 | `Personalization.kt` | 称呼、交互风格与语气等提示词分节；环境段由 `HostEnvironment.promptLines` 提供；`buildSessionSystemPromptSections` 支持插件 preamble/rules 覆盖与 plugins 段 |
 | `PluginPromptOverrides.kt` | 插件 prompt override 模型与纯合并函数：preamble/rules 按 priority + 注册顺序取单胜者、sections 按 priority 排序去重、单插件 32KiB/总量 64KiB 超限跳过，冲突经 `PluginPrompt` warn 输出 |
 | `PromptPaths.kt` | 提示词 paths 段：Skills / App data / Shared storage / Mounted directories（挂载目录名称、路径与说明） |
@@ -42,6 +42,8 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `RuntimeLog.kt` | 包内 Log 包装，失败不抛 |
 
 ### 宿主环境
+
+退出核验以 Phongent `cb58c104` 的生产路径为基线。运行时保留原版 `BeforeAccept`、`AnswerReview`、证据账本、引用来源和独立 Verifier 实现及原始测试。生产输出仅整理来源，沿用上游关闭独立核查模型的设置。`prepareRequest` 把提示加到 Agent 的模型上下文，SDK 在调用 `finishTurn` 前可能已经流式显示并记录草稿。被接受的结果写入带有末条助手消息时间戳的条目。未结构化的截图、剪贴板与 shell 输出不作为文字证据。
 
 | 文件 | 职责 |
 |---|---|
@@ -62,6 +64,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `CommandResult.kt` | 命令结果模型与可带详细输出的执行器 |
 | `DeepDeepBashTool.kt` | bash 工具：执行、截尾、退出码与超时；描述与模式无关，模式与路径布局由系统提示词环境段说明 |
 | `SystemShellTool.kt` | system_shell 工具：Android 系统命令，合并输出与超时/退出码；执行器由 provider 每次调用时解析，当前档位没有系统 Shell 时返回错误提示切换档位 |
+| `SystemShellCommandPolicy.kt` | system_shell 宿主自保护：拒绝停止、清除、卸载 DeepDeep 或移除其无障碍服务的命令链，允许只读诊断 |
 | `RootCommands.kt` | Root 命令结果模型与执行器接口（AdbBootstrap、无障碍注入等共用） |
 | `AskUserQuestionTool.kt` | 结构化提问：1–5 题，等答最多 10 分钟 |
 | `QuestionCenter.kt` | 待答问题的状态流、回答/取消与持久化钩子 |

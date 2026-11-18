@@ -38,10 +38,23 @@ class ScreenToolset(
         screenshotSupported = { Build.VERSION.SDK_INT >= Build.VERSION_CODES.R },
     )
 
-    fun tools(): List<CodingTool> = screenTools(
-        controller = virtual,
-        screenshotDir = screenshotDir,
-        mainController = main,
-        onVirtualActivity = { VirtualScreenRuntime.engine()?.touch() },
-    )
+    fun tools(): List<CodingTool> {
+        val screenReferences = ScreenReferences()
+        val tools = screenTools(
+            controller = virtual,
+            screenshotDir = screenshotDir,
+            mainController = main,
+            onVirtualActivity = { VirtualScreenRuntime.engine()?.touch() },
+            inlineReadback = true,
+            references = screenReferences,
+        )
+        val batchTools = screenTools(virtual, screenshotDir, main,
+            onVirtualActivity = { VirtualScreenRuntime.engine()?.touch() }, inlineReadback = false,
+            references = screenReferences).associateBy { it.name }
+        val batch = phongentBatchTool(
+            resolve = { target -> if (target == "main") main else virtual },
+            toolsForTarget = { batchTools },
+        )
+        return tools + batch
+    }
 }

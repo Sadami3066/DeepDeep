@@ -87,6 +87,21 @@ class ScreenRouterTest {
     }
 
     @Test
+    fun virtualNodeTapFallsBackOnlyAfterDispatchRejection() = runBlocking {
+        accessibility.tapError = GestureRejectedBeforeDispatch(15, 40, IllegalStateException("dispatch rejected"))
+        router().tap(GuiSelector.Text("OK"), 60)
+        assertEquals(VIRTUAL_DISPLAY_ID, accessibility.lastTapDisplayId)
+        assertEquals(15 to 40, virtual.tapped)
+    }
+
+    @Test
+    fun virtualNodeTapDoesNotReplayUnconfirmedGesture() = runBlocking {
+        accessibility.tapError = IllegalStateException("completion unconfirmed")
+        expectFailure { router().tap(GuiSelector.Text("OK"), 60) }
+        assertNull(virtual.tapped)
+    }
+
+    @Test
     fun virtualNodeTapWithoutAccessibilityFailsReadable() = runBlocking {
         accessibility.connected = false
         val error = expectFailure { router().tap(GuiSelector.Text("OK"), 60) }
@@ -467,6 +482,34 @@ class ScreenRouterTest {
     }
 
     @Test
+    fun displayIdChangeWithinSameInstanceRebindsNodeActions() = runBlocking {
+        val router = router()
+        router.observe(8, 120, null)
+        val before = accessibility.invalidations
+        val initial = virtual.stateValue as VirtualScreenState.Online
+        virtual.stateValue = initial.copy(displayId = VIRTUAL_DISPLAY_ID + 1)
+
+        router.tap(GuiSelector.Text("OK"), 60)
+
+        assertEquals(before + 1, accessibility.invalidations)
+        assertEquals(VIRTUAL_DISPLAY_ID + 1, accessibility.lastTapDisplayId)
+    }
+
+    @Test
+    fun observeRejectsSnapshotWhenVirtualScreenRebindsMidRead() = runBlocking {
+        val router = router()
+        val initial = virtual.stateValue as VirtualScreenState.Online
+        accessibility.onObserve = {
+            virtual.stateValue = initial.copy(displayId = VIRTUAL_DISPLAY_ID + 1)
+        }
+
+        val error = expectFailure { router.observe(8, 120, null) }
+
+        assertTrue(error.message.orEmpty().contains("restarted during the operation"))
+        assertTrue(accessibility.invalidations >= 2)
+    }
+
+    @Test
     fun statusSeparatesEnabledFromConnectedAndReportsChannels() = runBlocking {
         accessibility.connected = false
         val status = router(accessibilityEnabled = { true }).status()
@@ -609,8 +652,10 @@ class ScreenRouterTest {
         var lastObserveExpectedPackage: String? = null
         var snapshot: GuiSnapshot = testSnapshot()
         var snapshotForDepth: ((Int, Int) -> GuiSnapshot)? = null
+        var onObserve: (() -> Unit)? = null
         var lastTapDisplayId = -1
         var lastTapSelector: GuiSelector? = null
+        var tapError: IllegalStateException? = null
         var lastSetTextDisplayId = -1
         var lastSetTextValue = ""
         var waitOutcome = GuiWaitOutcome(matched = true)
@@ -620,12 +665,14 @@ class ScreenRouterTest {
             lastObserveDisplayId = displayId
             lastObserveMaxDepth = maxDepth
             lastObserveExpectedPackage = expectedPackage
+            onObserve?.invoke()
             return snapshotForDepth?.invoke(maxDepth, maxNodes) ?: snapshot
         }
 
         override suspend fun tap(displayId: Int, selector: GuiSelector, durationMs: Int) {
             lastTapDisplayId = displayId
             lastTapSelector = selector
+            tapError?.let { throw it }
         }
 
         override suspend fun setText(displayId: Int, selector: GuiSelector, text: String): GuiTextResult {

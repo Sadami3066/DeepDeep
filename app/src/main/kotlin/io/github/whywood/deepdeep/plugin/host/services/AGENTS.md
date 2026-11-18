@@ -9,6 +9,7 @@
 | `PluginServiceDependencies.kt` | `PluginServiceDependencies`（注入的 app 对象与回调，含 `interaction`/`dataServices`/`deviceServices`）+ `buildPluginServices(deps)`；只有 deps 提供了后端才构造对应服务，缺省为 null |
 | `LinuxPluginService.kt` | `runtime.host.HostEnvironment`：`exec` 走 `hostEnvironment.current().bash(cwd)` 并把 `CommandResult` 映射为插件结果（合并输出在 `stdout`，`stderr` 恒空）；`stream` 优先走 `bashStreaming`（LOCAL/ADB proot、ROOT chroot 实时回调逐行推送，24 小时超时），当前环境无流式实现时回退为命令完成后一次性推送；输出经无界 channel 背压排队，不丢弃行；`available` 由注入的 lambda 决定；chunk 用宿主 `HostLinuxChunk` + `LinuxChunkKind` |
 | `ScreenPluginService.kt` | `screen.ScreenController`（虚拟）+ 可选主屏 controller + `VirtualScreenFeature` 生命周期的薄适配；`status` 首次读取后每秒轮询后端跟随状态，截图落 `screenshotDir` |
+| `PluginScreenEvidence.kt` | GUI Act 批次作用域的宿主逐动作前后核验；正常屏幕服务和限定的 Root 输入回退走同一效果判定 |
 | `NotificationPluginService.kt` | 插件专属通知频道（频道 id 用完整 pluginId 区分）与稳定通知 id；`enabled` 同时看通知开关与 POST_NOTIFICATIONS 权限；1.1.0 增加 `notifyChecked`、通知动作按钮（`PluginNotificationActionReceiver`）与监听侧 `recent/received/removed/dismiss/listenerGranted`（读 `PluginNotificationEvents`，权限与组件门槛见 manifest） |
 | `SecretPluginService.kt` | `runtime.EncryptedSecretStore`，命名空间 `plugin.<pluginId>.` |
 | `NetworkPluginService.kt` | `io.github.whywood.deepdeep.sdk.ai.http.HttpTransport`：`request`（2 MiB 截断）与 `download`（512 MiB 上限、sha256 校验、进度回调） |

@@ -29,6 +29,15 @@ class MainScreenController(
         )
     }
 
+    override suspend fun effectDisplayInfo(): ScreenDisplayInfo {
+        val (width, height) = displaySize()
+        return ScreenDisplayInfo(0, width, height, BACKEND_NONE)
+    }
+
+    override suspend fun settleForEffect(timeoutMs: Long) = actions.settleForEffect(0, timeoutMs)
+
+    override suspend fun awaitScreenChange(timeoutMs: Long) = actions.awaitScreenChange(0, timeoutMs)
+
     override suspend fun observe(maxDepth: Int, maxNodes: Int, expectedPackage: String?): ScreenObserveResult {
         requireNodes()
         val snapshot = actions.observe(0, maxDepth, maxNodes, expectedPackage)
@@ -77,7 +86,7 @@ class MainScreenController(
         if (selector != null) {
             requireNodes()
             val result = actions.setText(0, selector, text)
-            return ScreenTextResult(BACKEND_ACCESSIBILITY, result.text, result.verified)
+            return ScreenTextResult(BACKEND_ACCESSIBILITY, result.text, result.verified, result.secret)
         }
         require(isAsciiText(text)) { "Main screen Unicode input needs screen_observe(target=main) first, then a field ref or fieldText" }
         requireShell().execute("input -d 0 text ${mainShellQuote(text.replace(" ", "%s"))}")

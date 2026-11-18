@@ -18,6 +18,7 @@ class HostToolNamesTest {
         "web_search", "web_fetch", "calendar", "virtual_screen",
         "screen_status", "screen_observe", "screen_screenshot", "screen_tap", "screen_swipe",
         "screen_scroll", "screen_type", "screen_key", "screen_wait", "screen_list_apps", "screen_launch",
+        "do_steps",
         "tool_search", "tool_execute",
         "list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource",
     )

@@ -22,6 +22,12 @@ import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+internal class GestureRejectedBeforeDispatch(val x: Int, val y: Int, cause: Throwable) :
+    IllegalStateException(cause.message, cause)
+
+private class AccessibilityDispatchRejected :
+    IllegalStateException("Failed to dispatch gesture: accessibility may be disconnected")
+
 class GuiAccessibilityActions(
     private val serviceProvider: () -> GuiAccessibilityService? = { GuiAccessibilityState.service },
 ) : GuiActions {
@@ -31,6 +37,12 @@ class GuiAccessibilityActions(
         get() = serviceProvider() != null
 
     override fun invalidateSnapshots() = snapshots.clear()
+
+    override suspend fun settleForEffect(displayId: Int, timeoutMs: Long): Boolean? =
+        serviceProvider()?.awaitQuiet(displayId, 500L, timeoutMs)
+
+    override suspend fun awaitScreenChange(displayId: Int, timeoutMs: Long): Boolean? =
+        serviceProvider()?.awaitDisplayChange(displayId, timeoutMs)
 
     override fun bounds(displayId: Int, selector: GuiSelector): GuiBounds = requireNode(displayId, selector).bounds
 
@@ -68,6 +80,7 @@ class GuiAccessibilityActions(
             packageName = root?.packageName?.toString(),
             title = window.title?.toString()?.trim()?.takeIf { it.isNotEmpty() },
             bounds = GuiBounds(bounds.left, bounds.top, bounds.right, bounds.bottom),
+            id = window.id,
         )
     }
 
@@ -80,6 +93,8 @@ class GuiAccessibilityActions(
             focused = candidate.focused,
             active = candidate.active,
             readable = candidate.readable,
+            id = candidate.id,
+            layer = candidate.layer,
         )
     }
 
@@ -105,7 +120,7 @@ class GuiAccessibilityActions(
                 ref = "$displayId:$generation:${nodes.size}",
                 className = node.className?.toString().orEmpty(),
                 bounds = GuiBounds(rect.left, rect.top, rect.right, rect.bottom),
-                text = node.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.take(MAX_LIVE_TEXT),
+                text = node.text?.toString()?.trim()?.takeIf { it.isNotEmpty() && !node.isPassword }?.take(MAX_LIVE_TEXT),
                 desc = node.contentDescription?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.take(MAX_LIVE_TEXT),
                 resourceId = node.viewIdResourceName,
                 clickable = node.isClickable,
@@ -114,6 +129,12 @@ class GuiAccessibilityActions(
                 enabled = node.isEnabled,
                 depth = depth,
                 token = node,
+                focused = node.isFocused,
+                hint = node.isShowingHintText,
+                secret = node.isPassword,
+                checked = node.isChecked,
+                selected = node.isSelected,
+                placeholder = node.hintText?.toString()?.take(MAX_LIVE_TEXT),
             )
             for (index in 0 until node.childCount) {
                 if (depth >= maxDepth || nodes.size >= maxNodes) {
@@ -166,6 +187,7 @@ class GuiAccessibilityActions(
             throw IllegalStateException("Failed to write text: the field may not accept programmatic input")
         }
         if (!info.refresh()) throw IllegalStateException("Cannot read the field back after writing; call screen_observe again to confirm")
+        if (info.isPassword) return GuiTextResult("", false, secret = true)
         val actual = info.text?.toString().orEmpty()
         return GuiTextResult(actual, actual == text)
     }
@@ -341,7 +363,11 @@ class GuiAccessibilityActions(
             moveTo(x.toFloat(), y.toFloat())
             lineTo(x + 1f, y.toFloat())
         }
-        dispatch(service, path, duration, displayId)
+        try {
+            dispatch(service, path, duration, displayId)
+        } catch (error: AccessibilityDispatchRejected) {
+            throw GestureRejectedBeforeDispatch(x, y, error)
+        }
     }
 
     private suspend fun dispatch(
@@ -367,7 +393,7 @@ class GuiAccessibilityActions(
                     }
                 }
                 if (!service.dispatchGesture(gesture, callback, null) && continuation.isActive) {
-                    continuation.resumeWithException(IllegalStateException("Failed to dispatch gesture: accessibility may be disconnected"))
+                    continuation.resumeWithException(AccessibilityDispatchRejected())
                 }
             }
         }
@@ -464,6 +490,7 @@ internal data class GuiWindowCandidate(
     val packageName: String? = null,
     val title: String? = null,
     val bounds: GuiBounds = GuiBounds(0, 0, 0, 0),
+    val id: Int = -1,
 )
 
 internal object GuiWindowSelection {

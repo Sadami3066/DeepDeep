@@ -14,7 +14,7 @@
 | `PluginContributionMaterializer.kt` | 一次物化：每次 refresh 每插件每方法最多调用一次，结果写入状态闸门；声明 `prompt` 且实现 `PromptOverridePlugin` 时收集 prompt override；已安装且启用的插件按 manifest `provides.themes` 暴露 `PluginThemeSource`（只读安装目录，不执行插件代码） |
 | `PluginLifecycle.kt` | 每插件 `SupervisorJob` scope、`PluginHostFactory`、enable/disable/uninstall 收尾、技能同步 |
 | `PluginActivationProtocol.kt` | 激活协议 prepare→probe→commit→swap 与失败矩阵 |
-| `PluginSessionHooks.kt` | 会话 hooks 绑定（`SessionBinding`）、每 `SessionBinding` 一次 `contributionsFor`（工具与会话 hooks 共用）、per-session hook source、run 级冻结、运行期/SDK 事件派发 |
+| `PluginSessionHooks.kt` | 会话 hooks 绑定、每 `SessionBinding` 一次 `contributionsFor`、run 级冻结、运行期/SDK 事件派发；工具装配时保留发布插件 ID 供宿主匹配核验 |
 | `PluginUiProjection.kt` | UI 状态投影：只读 record+runtime+descriptor，不调用插件 |
 | `PluginRecoveryPolicy.kt` | 崩溃恢复纯策略：激活中断（marker attempts）与同版本连续启动次数 → 继续/需手动重试/自动禁用 |
 | `PluginManagerFacade.kt` | 对 UI/装配层暴露的接口（状态流、启停/卸载、导入/更新、槽位、页面、composer 动作、已安装主题来源、恢复、无会话系统事件入口） |

@@ -190,12 +190,18 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 VirtualScreenCommands.SWIPE -> handleSwipe(json, id)
                 VirtualScreenCommands.KEY -> handleKey(json, id)
                 VirtualScreenCommands.TEXT -> handleText(json, id)
+                VirtualScreenCommands.INPUT_APPLIED -> {
+                    val display = session ?: error("Virtual screen is not running")
+                    check(display.displayId == json.intField("displayId")) { "Input acknowledgment targets a different display" }
+                    display.noteInput()
+                    respond(id) {}
+                }
                 VirtualScreenCommands.SCREENSHOT -> handleScreenshot(id)
                 else -> respondError(id, "Unknown command: $command")
             }
         } catch (t: Throwable) {
             Log.w(TAG, "$command 执行失败", t)
-            respondError(id, messageOf(t))
+            respondError(id, messageOf(t), (t as? InputDeniedBeforeDispatch)?.let { INPUT_DENIED_BEFORE_DISPATCH })
         }
         return true
     }
@@ -261,19 +267,25 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val duration = (json.longField("durationMs") ?: DEFAULT_TAP_MILLIS).coerceIn(0L, MAX_TAP_MILLIS)
         val downTime = SystemClock.uptimeMillis()
         val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0)
-        if (!inject(down, displayId)) {
+        val pressed = try {
+            injectFirst(down, displayId)
+        } finally {
             down.recycle()
+        }
+        if (!pressed) {
             throw IllegalStateException("Failed to inject press event: ($x, $y) display=$displayId")
         }
-        down.recycle()
         if (duration > 0) Thread.sleep(duration)
         val upTime = SystemClock.uptimeMillis()
         val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0)
-        if (!inject(up, displayId)) {
+        val released = try {
+            inject(up, displayId) || inject(up, displayId)
+        } finally {
             up.recycle()
+        }
+        if (!released) {
             throw IllegalStateException("Failed to inject release event: ($x, $y) display=$displayId")
         }
-        up.recycle()
         display.noteInput()
         respond(id) { put("message", "Tapped ($x, $y)") }
     }
@@ -296,29 +308,38 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val stepDelay = (duration / steps).coerceAtLeast(8L)
         val downTime = SystemClock.uptimeMillis()
         val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x1.toFloat(), y1.toFloat(), 0)
-        if (!inject(down, displayId)) {
+        val pressed = try {
+            injectFirst(down, displayId)
+        } finally {
             down.recycle()
+        }
+        if (!pressed) {
             throw IllegalStateException("Failed to inject press event: ($x1, $y1) display=$displayId")
         }
-        down.recycle()
-        for (index in 1..steps) {
-            val fraction = index.toFloat() / steps
-            val x = x1 + (x2 - x1) * fraction
-            val y = y1 + (y2 - y1) * fraction
-            val eventTime = downTime + duration * index / steps
-            val move = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0)
-            val injected = inject(move, displayId)
-            move.recycle()
-            if (!injected) throw IllegalStateException("Failed to inject move event: (${x.toInt()}, ${y.toInt()}) display=$displayId")
-            Thread.sleep(stepDelay)
+        try {
+            for (index in 1..steps) {
+                val fraction = index.toFloat() / steps
+                val x = x1 + (x2 - x1) * fraction
+                val y = y1 + (y2 - y1) * fraction
+                val eventTime = downTime + duration * index / steps
+                val move = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, x, y, 0)
+                try {
+                    inject(move, displayId)
+                } finally {
+                    move.recycle()
+                }
+                Thread.sleep(stepDelay)
+            }
+        } finally {
+            val up = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat(), 0)
+            try {
+                check(inject(up, displayId) || inject(up, displayId)) {
+                    "Failed to inject release event: ($x2, $y2) display=$displayId"
+                }
+            } finally {
+                up.recycle()
+            }
         }
-        val upTime = SystemClock.uptimeMillis()
-        val up = MotionEvent.obtain(downTime, upTime, MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat(), 0)
-        if (!inject(up, displayId)) {
-            up.recycle()
-            throw IllegalStateException("Failed to inject release event: ($x2, $y2) display=$displayId")
-        }
-        up.recycle()
         display.noteInput()
         respond(id) { put("message", "Swiped ($x1, $y1) -> ($x2, $y2)") }
     }
@@ -327,8 +348,8 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val displayId = requireDisplayId()
         val name = json.stringField("key")?.trim()?.lowercase()
             ?: throw IllegalArgumentException("Missing key")
-        val keyCode = KEY_CODES[name]
-            ?: throw IllegalArgumentException("Unsupported key: $name; available: ${KEY_CODES.keys.joinToString(", ")}")
+        val keyCode = virtualInputKeyCodes[name]
+            ?: throw IllegalArgumentException("Unsupported key: $name; available: ${virtualInputKeyCodes.keys.joinToString(", ")}")
         injectKey(displayId, keyCode)
         session?.noteInput()
         respond(id) { put("message", "Sent key $name") }
@@ -486,9 +507,19 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     private fun injectKey(displayId: Int, keyCode: Int) {
         val downTime = SystemClock.uptimeMillis()
         val down = KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0)
-        if (!inject(down, displayId)) throw IllegalStateException("Failed to inject key-down event")
+        if (!injectFirst(down, displayId)) throw IllegalStateException("Failed to inject key-down event")
         val up = KeyEvent(downTime, downTime + 40, KeyEvent.ACTION_UP, keyCode, 0)
-        if (!inject(up, displayId)) throw IllegalStateException("Failed to inject key-up event")
+        if (!inject(up, displayId) && !inject(up, displayId)) throw IllegalStateException("Failed to inject key-up event")
+    }
+
+    private fun injectFirst(event: InputEvent, displayId: Int): Boolean = try {
+        inject(event, displayId)
+    } catch (error: java.lang.reflect.InvocationTargetException) {
+        val cause = error.targetException
+        if (cause is SecurityException && cause.message.orEmpty().contains("INJECT_EVENTS")) {
+            throw InputDeniedBeforeDispatch(cause)
+        }
+        throw error
     }
 
     private fun inject(event: InputEvent, displayId: Int): Boolean {
@@ -638,12 +669,13 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         )
     }
 
-    private fun respondError(id: Int, message: String) {
+    private fun respondError(id: Int, message: String, errorCode: String? = null) {
         sendJson(
             buildJsonObject {
                 put("id", id)
                 put("ok", false)
                 put("error", message)
+                errorCode?.let { put("errorCode", it) }
             },
         )
     }
@@ -954,23 +986,6 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         const val CONNECT_ATTEMPT_TIMEOUT_MS = 500
         const val CONNECT_RETRY_MS = 100L
         const val INJECT_MODE_WAIT_FOR_FINISH = 2
-        const val DEFAULT_TAP_MILLIS = 60L
-        const val MAX_TAP_MILLIS = 3000L
-        const val DEFAULT_SWIPE_MILLIS = 300L
-        const val MAX_SWIPE_MILLIS = 5000L
-
-        val KEY_CODES: Map<String, Int> = mapOf(
-            "back" to KeyEvent.KEYCODE_BACK,
-            "enter" to KeyEvent.KEYCODE_ENTER,
-            "delete" to KeyEvent.KEYCODE_DEL,
-            "tab" to KeyEvent.KEYCODE_TAB,
-            "escape" to KeyEvent.KEYCODE_ESCAPE,
-            "space" to KeyEvent.KEYCODE_SPACE,
-            "arrow_up" to KeyEvent.KEYCODE_DPAD_UP,
-            "arrow_down" to KeyEvent.KEYCODE_DPAD_DOWN,
-            "arrow_left" to KeyEvent.KEYCODE_DPAD_LEFT,
-            "arrow_right" to KeyEvent.KEYCODE_DPAD_RIGHT,
-        )
 
         fun messageOf(t: Throwable): String {
             val cause = t.cause ?: t
@@ -979,6 +994,8 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         }
     }
 }
+
+private class InputDeniedBeforeDispatch(cause: SecurityException) : IllegalStateException(cause.message, cause)
 
 internal data class PortraitScreenSize(val width: Int, val height: Int)
 

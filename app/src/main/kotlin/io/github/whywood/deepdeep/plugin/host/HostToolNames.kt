@@ -43,6 +43,7 @@ internal object HostToolNames {
         "screen_wait",
         "screen_list_apps",
         "screen_launch",
+        "do_steps",
     )
 
     private val sdkTools = setOf(

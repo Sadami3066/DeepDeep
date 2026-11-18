@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.whywood.deepdeep.adb.AdbBootstrap
 import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.runtime.host.HostAccessController
+import io.github.whywood.deepdeep.shell.RootShell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,6 +17,25 @@ class PrivilegedLauncher(
 ) {
     private val appContext = context.applicationContext
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val rootShell by lazy(::RootShell)
+
+    internal suspend fun sendFallbackInput(command: VirtualFallbackInput) {
+        when (access.state.value.effective) {
+            HostAccess.LOCAL -> error("The authorized system input port is unavailable")
+            HostAccess.ADB -> {
+                val result = adb.exec(command.line, FALLBACK_INPUT_TIMEOUT_MS)
+                check(result.exitCode == 0 && !result.timedOut && !result.truncated) {
+                    "ADB did not confirm virtual input. Observe the screen before retrying."
+                }
+            }
+            HostAccess.ROOT -> {
+                val result = rootShell.execute(command.line, FALLBACK_INPUT_TIMEOUT_MS)
+                check(result.exitCode == 0 && !result.timedOut && !result.truncated) {
+                    "Root did not confirm virtual input. Observe the screen before retrying."
+                }
+            }
+        }
+    }
 
     fun backends(): List<String> {
         val state = access.state.value
@@ -58,6 +78,7 @@ class PrivilegedLauncher(
         const val BACKEND_ROOT = "root"
 
         private const val SHELL_UID = 2000
+        private const val FALLBACK_INPUT_TIMEOUT_MS = 8_000L
     }
 }
 

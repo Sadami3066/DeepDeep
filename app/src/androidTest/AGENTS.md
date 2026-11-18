@@ -9,6 +9,7 @@
 | `AndroidManifest.xml` | instrumentation 声明（`androidx.test.runner.AndroidJUnitRunner`） |
 | `arrange/` | 系统日历读写设备测试（需日历权限） |
 | `contract/` | 工具契约与夹具 Activity 设备测试 |
+| `com/wangzan101/mika/cap/phone/a11y/PhoneOcrTest.kt` | Mika 原设备测试，加载随 APK 安装的中英识别模型 |
 | `data/` | 网络明文策略、图片归一化、头像存储设备测试 |
 | `plugin/manager/` | 插件设备端到端：`ExternalPluginE2ETest`（外部包安装/坏包隔离/升级）、`PluginBundleE2ETest`（官方四插件包）、`PluginBinaryCompatTest`（已发布 `.ddp` 安装→启用→停用→升级→卸载）；`ExternalPluginDdpFixture` 用测试密钥现场合成 `.ddp` |
 | `assets/plugin-fixtures/` | `scripts/plugin-binary-compat.sh` 推到设备 app 外部目录的已签名 `.ddp` 夹具，见目录内 README |

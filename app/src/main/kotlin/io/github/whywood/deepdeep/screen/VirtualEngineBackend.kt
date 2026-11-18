@@ -1,5 +1,7 @@
 package io.github.whywood.deepdeep.screen
 
+import com.wangzan101.mika.core.visual.FrameGrid
+
 import io.github.whywood.deepdeep.vscreen.VirtualScreenEngine
 import io.github.whywood.deepdeep.vscreen.VirtualScreenFailureCategory
 import io.github.whywood.deepdeep.vscreen.VirtualScreenLaunchReport
@@ -11,6 +13,16 @@ class VirtualEngineBackend(
     private val engineProvider: () -> VirtualScreenEngine? = { VirtualScreenRuntime.engine() },
 ) : ScreenVirtualBackend {
     override suspend fun state(): VirtualScreenState = requireEngine().state.value
+
+    override fun effectFrameGrid(): FrameGrid? {
+        val frame = (engineProvider()?.state?.value as? VirtualScreenState.Online)?.frame ?: return null
+        return runCatching { FrameGrid.sample(frame.width, frame.height, frame::getPixel) }.getOrNull()
+    }
+
+    override fun previewForEffect(display: ScreenDisplayInfo) =
+        (engineProvider()?.state?.value as? VirtualScreenState.Online)
+            ?.takeIf { it.displayId == display.displayId && it.instanceId == display.instanceId }
+            ?.frame
 
     override suspend fun tap(x: Int, y: Int, durationMs: Int): VirtualScreenResult = requireEngine().tap(x, y, durationMs)
 
