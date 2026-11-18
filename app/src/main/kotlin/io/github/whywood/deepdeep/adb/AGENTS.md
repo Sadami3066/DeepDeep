@@ -21,6 +21,6 @@
 
 - daemon 由 adbd 拉起、跑在 shell(2000)；关闭无线调试或重启后会被系统清理，需要在「设置 → 系统访问」重新「连接并启动」，不必重新配对。
 - 配对码链路：通知 RemoteInput 或 App 输入 → `AgentService.ACTION_PAIRING_CODE` → `AdbBootstrap.handlePairingReply`；配对状态与 token 存 SharedPreferences。
-- 本地模式：`connectLocalAndStart(host, port)` 校验端点后直连，跳过无线调试门槛与配对；未授权时回 `LOCAL_AUTH_REQUIRED`，连不上回 `LOCAL_CONNECT_FAILED`；连接成功后与无线模式共用 `startDaemon`/健康检查。手机重启后 adbd 回到 USB 模式，需要重新执行电脑命令。
+- 本地模式：`connectLocalAndStart(host, port)` 校验端点后直连，跳过无线调试门槛与配对；未授权 key 时连接会发送公钥并等待手机上的调试授权弹窗（最长 30 秒），用户未允许回 `LOCAL_AUTH_REQUIRED`，连不上回 `LOCAL_CONNECT_FAILED`；连接成功后与无线模式共用 `startDaemon`/健康检查。手机重启后 adbd 回到 USB 模式，需要重新执行电脑命令。
 - 模式与本地端点存 SharedPreferences（`connect_mode`/`local_host`/`local_port`），`AdbBridgeState` 同时携带模式与端点供设置页渲染。
 - 虚拟屏 helper 也由 daemon 拉起（`startHelper`/`killHelper`）；Root 后端不依赖 AdbBootstrap。
