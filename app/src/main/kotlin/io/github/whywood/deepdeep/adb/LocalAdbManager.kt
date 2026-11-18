@@ -19,6 +19,16 @@ class LocalAdbManager(context: Context) : AbsAdbConnectionManager() {
         setThrowOnUnauthorised(true)
     }
 
+    fun prepareLocalConnect() {
+        setTimeout(AUTHORIZATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        setThrowOnUnauthorised(false)
+    }
+
+    fun prepareWirelessConnect() {
+        setTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        setThrowOnUnauthorised(true)
+    }
+
     override fun getPrivateKey(): PrivateKey = credentials.privateKey
 
     override fun getCertificate(): Certificate = credentials.certificate
@@ -28,6 +38,7 @@ class LocalAdbManager(context: Context) : AbsAdbConnectionManager() {
     private companion object {
         const val LOOPBACK = "127.0.0.1"
         const val CONNECT_TIMEOUT_SECONDS = 8L
+        const val AUTHORIZATION_TIMEOUT_SECONDS = 30L
         const val DEVICE_NAME = "DeepDeep"
     }
 }

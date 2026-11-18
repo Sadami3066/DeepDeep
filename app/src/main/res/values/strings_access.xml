@@ -50,8 +50,9 @@
     <string name="access_adb_local_host">主机（默认 127.0.0.1）</string>
     <string name="access_adb_local_port">端口（默认 5555）</string>
     <string name="access_action_adb_local_connect">连接并启动</string>
-    <string name="access_hint_adb_local">先用电脑开启一次：手机打开「USB 调试」，用数据线连接电脑，在电脑执行 adb tcpip 5555，然后回到这里点「连接并启动」。首次连接请在手机弹窗里允许调试授权；手机重启后需要重新执行一次电脑命令。</string>
+    <string name="access_hint_adb_local">先用电脑开启一次：手机打开「USB 调试」，用数据线连接电脑，在电脑执行 adb tcpip 5555，然后回到这里点「连接并启动」。连接时手机会弹出「允许 USB 调试」，点允许即可；手机重启后需要重新执行一次电脑命令。</string>
     <string name="access_error_local_endpoint_invalid">主机或端口不正确</string>
     <string name="access_error_local_connect_failed">连不上本地 ADB，请确认已开启 USB 调试并执行过 adb tcpip 5555</string>
-    <string name="access_error_local_auth_required">请在手机弹窗里允许 USB 调试授权，然后重试</string>
+    <string name="access_error_local_auth_required">没有完成调试授权：连接时请在手机上点「允许」；没看到弹窗时再点一次「连接并启动」</string>
+    <string name="access_status_adb_local_authorizing">连接中，请在手机上允许调试授权</string>
 </resources>

@@ -207,17 +207,16 @@ class AdbBootstrap(context: Context) {
     private suspend fun connectLocalAndStartDaemon() {
         val host = mutableState.value.localHost
         val port = mutableState.value.localPort
-        try {
+        manager.prepareLocalConnect()
+        val connected = try {
             manager.connect(host, port)
-        } catch (authRequired: AdbAuthenticationFailedException) {
-            runCatching { manager.disconnect() }
-            throw AdbBridgeException(AdbBridgeError.LOCAL_AUTH_REQUIRED, authRequired)
-        } catch (pairingRequired: AdbPairingRequiredException) {
-            runCatching { manager.disconnect() }
-            throw AdbBridgeException(AdbBridgeError.LOCAL_AUTH_REQUIRED, pairingRequired)
         } catch (failure: Exception) {
             runCatching { manager.disconnect() }
-            throw AdbBridgeException(AdbBridgeError.LOCAL_CONNECT_FAILED, failure)
+            throw AdbBridgeException(localConnectError(failure), failure)
+        }
+        if (!connected) {
+            runCatching { manager.disconnect() }
+            throw AdbBridgeException(AdbBridgeError.LOCAL_AUTH_REQUIRED)
         }
         runDaemonAndWait()
     }
@@ -239,6 +238,7 @@ class AdbBootstrap(context: Context) {
     }
 
     private suspend fun connectToServer() {
+        manager.prepareWirelessConnect()
         var unauthorized: AdbPairingRequiredException? = null
         var lastFailure: Exception? = null
         suspend fun tryEndpoint(endpoint: AdbEndpoint): Boolean {
@@ -305,7 +305,12 @@ class AdbBootstrap(context: Context) {
     }
 
     private fun failWith(failure: Throwable): Result<Unit> {
-        val error = (failure as? AdbBridgeException)?.error ?: AdbBridgeError.CONNECT_FAILED
+        val fallback = if (mutableState.value.mode == AdbConnectMode.LOCAL) {
+            AdbBridgeError.LOCAL_CONNECT_FAILED
+        } else {
+            AdbBridgeError.CONNECT_FAILED
+        }
+        val error = (failure as? AdbBridgeException)?.error ?: fallback
         Log.w(TAG, "adb bridge error: $error", failure)
         if (error == AdbBridgeError.NOT_PAIRED) {
             markPaired(false)
@@ -410,6 +415,14 @@ class AdbBootstrap(context: Context) {
         val PAIRING_CODE_PATTERN = Regex("\\d{6}")
         val EXIT_PATTERN = Regex("\\[EXIT=(-?\\d+)]\\s*$")
     }
+}
+
+internal fun localConnectError(failure: Throwable): AdbBridgeError = when (failure) {
+    is AdbAuthenticationFailedException,
+    is AdbPairingRequiredException,
+    -> AdbBridgeError.LOCAL_AUTH_REQUIRED
+
+    else -> AdbBridgeError.LOCAL_CONNECT_FAILED
 }
 
 internal fun takeUtf8(text: String, limitBytes: Int): String {

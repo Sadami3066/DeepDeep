@@ -282,6 +282,21 @@ fun SystemAccessScreen(
                                     onClick = { onAdbConnectLocal(localHost, localPort) },
                                     testTag = "access_adb_local_connect",
                                 )
+                                if (adb.busy) {
+                                    Text(
+                                        text = stringResource(R.string.access_status_adb_local_authorizing),
+                                        modifier = Modifier.padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs),
+                                        style = DdType.bodySmall,
+                                        color = colors.inkTertiary,
+                                    )
+                                } else if (adb.error != null) {
+                                    Text(
+                                        text = adbErrorLabel(adb.error),
+                                        modifier = Modifier.padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs),
+                                        style = DdType.bodySmall,
+                                        color = colors.danger,
+                                    )
+                                }
                                 DdHairline()
                                 AdbAction(
                                     title = stringResource(R.string.access_action_adb_settings),
