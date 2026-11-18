@@ -18,11 +18,11 @@
     <string name="workspace_directory_invalid">只能选择手机存储里的目录</string>
 
     <string name="project_skills_title">专属技能</string>
-    <string name="project_skills_note">Bot 技能保存后生效；全局技能开关立即保存。</string>
+    <string name="project_skills_note">这里只列出未全局启用的技能；全局技能在「继承技能」里管理，保存后生效。</string>
     <string name="project_skills_save">保存</string>
     <string name="project_skills_save_failed">保存失败，请重试。</string>
     <string name="project_skills_load_failed">读取技能失败。</string>
-    <string name="project_skills_empty_title">还没有可用的技能</string>
+    <string name="project_skills_empty_title">没有可以单独启用的技能</string>
     <string name="project_skills_empty_action">去安装技能</string>
     <string name="project_skills_global_hint">全局技能，仅对本 Bot 关闭 · %1$s</string>
 

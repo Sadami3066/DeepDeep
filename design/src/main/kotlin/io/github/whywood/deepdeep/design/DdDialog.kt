@@ -4,6 +4,8 @@ import android.view.WindowManager
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,7 +93,9 @@ fun DdDialog(
                     )
                     Spacer(Modifier.height(16.dp))
                 }
-                content()
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                    content()
+                }
                 Spacer(Modifier.height(24.dp))
                 Row(
                     Modifier.fillMaxWidth(),

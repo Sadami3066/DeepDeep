@@ -55,10 +55,9 @@
     <string name="drawer_session_has_job">有后台任务</string>
     <string name="bot_create">新建 Bot</string>
     <string name="bot_avatar">头像</string>
-    <string name="bot_avatar_default_hint">默认使用 DeepDeep 图标</string>
     <string name="bot_avatar_choose">选择图片</string>
     <string name="bot_avatar_change">更换图片</string>
-    <string name="bot_avatar_use_default">使用默认图标</string>
+    <string name="bot_avatar_use_default">恢复默认头像</string>
     <string name="bot_intro">简介</string>
     <string name="bot_intro_placeholder">一句话介绍它擅长什么</string>
     <string name="bot_default_badge">默认 Bot</string>

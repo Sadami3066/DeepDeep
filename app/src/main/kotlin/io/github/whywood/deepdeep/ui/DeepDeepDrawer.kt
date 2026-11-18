@@ -511,7 +511,7 @@ private fun DrawerWorkspaceRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 52.dp)
+                .heightIn(min = 48.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.ink.copy(alpha = wash))
                 .pointerInput(workspace.id) {
@@ -542,16 +542,6 @@ private fun DrawerWorkspaceRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val intro = workspace.intro?.trim().orEmpty()
-                if (intro.isNotEmpty()) {
-                    Text(
-                        text = intro,
-                        style = DdType.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-                        color = colors.inkTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
             DdIconButton(
                 icon = DdIcons.More,

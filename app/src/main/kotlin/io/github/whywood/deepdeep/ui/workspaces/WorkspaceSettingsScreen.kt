@@ -92,9 +92,7 @@ fun WorkspaceSettingsScreen(
         skillsLoadFailed = skills.isFailure
         agentsDocSet = agentDocStore.read(workspace.cwd) != null
         val policy = workspaceToolPolicies.policyForCwd(workspace.cwd)
-        projectSkillCount = skills.getOrNull()?.count {
-            (it.globalEnabled && it.name !in policy.skills) || it.id in enabledIds
-        }
+        projectSkillCount = enabledIds.size
         val globalSkills = skills.getOrNull()?.count { it.globalEnabled } ?: 0
         inheritedSkillsValue = if (globalSkills == 0 || policy.skills.isEmpty()) null
             else "${policy.skills.size}"
@@ -169,11 +167,9 @@ fun WorkspaceSettingsScreen(
                     DdListRow(
                         icon = DdIcons.Image,
                         title = stringResource(R.string.bot_avatar),
-                        value = if (workspace.avatar.isNullOrBlank()) {
-                            stringResource(R.string.bot_avatar_default_hint)
-                        } else {
-                            stringResource(R.string.bot_avatar_change)
-                        },
+                        value = workspace.avatar
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { stringResource(R.string.bot_avatar_change) },
                         onClick = { showAvatarSheet = true },
                         showChevron = true,
                         modifier = Modifier.testTag("bot_settings_avatar"),
@@ -267,7 +263,6 @@ fun WorkspaceSettingsScreen(
         ProjectSkillsSheet(
             workspace = workspace,
             skillRepository = skillRepository,
-            workspaceToolPolicies = workspaceToolPolicies,
             onOpenSkills = {
                 showProjectSkills = false
                 onOpenSkills()

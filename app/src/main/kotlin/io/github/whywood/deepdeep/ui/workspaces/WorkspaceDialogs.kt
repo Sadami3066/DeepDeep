@@ -12,8 +12,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -108,7 +106,7 @@ fun WorkspaceCreateDialog(
         modifier = Modifier.testTag("workspace_create_dialog"),
         title = stringResource(R.string.bot_create),
         content = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column {
                 WorkspaceNameField(
                     value = name,
                     onValueChange = { name = it },
@@ -212,35 +210,21 @@ private fun BotAvatarField(
     onChoose: () -> Unit,
     onUseDefault: () -> Unit,
 ) {
-    val colors = deepDeepColors()
     Column {
         DdSectionLabel(stringResource(R.string.bot_avatar))
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             UriAvatarPreview(uri = avatarUri, size = 44.dp)
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = if (avatarUri == null) {
-                        stringResource(R.string.bot_avatar_default_hint)
-                    } else {
-                        stringResource(R.string.bot_avatar_choose)
-                    },
-                    style = DdType.bodySmall,
-                    color = colors.inkTertiary,
-                )
-                Spacer(Modifier.height(2.dp))
-                DdTextAction(
-                    text = stringResource(if (avatarUri == null) R.string.bot_avatar_choose else R.string.bot_avatar_change),
-                    onClick = onChoose,
-                    modifier = Modifier.testTag("bot_avatar_choose"),
-                )
-            }
+            DdTextAction(
+                text = stringResource(if (avatarUri == null) R.string.bot_avatar_choose else R.string.bot_avatar_change),
+                onClick = onChoose,
+                modifier = Modifier.weight(1f).testTag("bot_avatar_choose"),
+            )
             if (avatarUri != null) {
                 DdTextAction(
                     text = stringResource(R.string.bot_avatar_use_default),
                     onClick = onUseDefault,
-                    color = colors.inkSecondary,
                     modifier = Modifier.testTag("bot_avatar_use_default"),
                 )
             }
