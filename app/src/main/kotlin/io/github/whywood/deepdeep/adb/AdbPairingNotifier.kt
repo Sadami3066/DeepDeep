@@ -140,7 +140,11 @@ class AdbPairingNotifier(private val context: Context) {
             AdbBridgeError.PAIRING_FAILED -> R.string.adb_error_pairing_failed
             AdbBridgeError.NOT_PAIRED -> R.string.adb_error_not_paired
             AdbBridgeError.CONNECT_FAILED -> R.string.adb_error_connect_failed
-            AdbBridgeError.DAEMON_START_FAILED -> R.string.adb_error_daemon_start_failed
+            AdbBridgeError.DAEMON_START_FAILED,
+            AdbBridgeError.LOCAL_ENDPOINT_INVALID,
+            AdbBridgeError.LOCAL_CONNECT_FAILED,
+            AdbBridgeError.LOCAL_AUTH_REQUIRED,
+            -> R.string.adb_error_connect_failed
         },
     )
 

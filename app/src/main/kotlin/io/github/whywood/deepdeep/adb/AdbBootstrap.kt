@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.util.Log
+import io.github.muntashirakon.adb.AdbAuthenticationFailedException
 import io.github.muntashirakon.adb.AdbPairingRequiredException
 import io.github.muntashirakon.adb.AdbStream
 import io.github.muntashirakon.adb.android.AdbMdns
@@ -33,7 +34,15 @@ class AdbBootstrap(context: Context) {
     private val manager by lazy { LocalAdbManager(appContext) }
     private val shell by lazy { ShellClient(daemonPort, token) }
     private val mutableState =
-        MutableStateFlow(AdbBridgeState(paired = preferences.getBoolean(KEY_PAIRED, false)))
+        MutableStateFlow(
+            AdbBridgeState(
+                paired = preferences.getBoolean(KEY_PAIRED, false),
+                mode = readMode(),
+                localHost = preferences.getString(KEY_LOCAL_HOST, AdbLocalEndpoint.DEFAULT_HOST)
+                    ?: AdbLocalEndpoint.DEFAULT_HOST,
+                localPort = preferences.getInt(KEY_LOCAL_PORT, AdbLocalEndpoint.DEFAULT_PORT),
+            ),
+        )
 
     val state: StateFlow<AdbBridgeState> = mutableState.asStateFlow()
 
@@ -51,8 +60,33 @@ class AdbBootstrap(context: Context) {
 
     suspend fun refreshState() {
         val alive = isDaemonAlive()
-        if (alive) markPaired(true)
+        if (alive && mutableState.value.mode == AdbConnectMode.WIRELESS) markPaired(true)
         mutableState.update { it.refreshed(alive) }
+    }
+
+    suspend fun selectMode(mode: AdbConnectMode): Result<Unit> = withContext(Dispatchers.IO) {
+        operationLock.withLock {
+            preferences.edit().putString(KEY_MODE, modeOf(mode)).apply()
+            mutableState.update { it.withMode(mode) }
+            Result.success(Unit)
+        }
+    }
+
+    suspend fun connectLocalAndStart(host: String, port: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val endpoint = AdbLocalEndpoint.parse(host, port)
+            ?: return@withContext failNow(AdbBridgeError.LOCAL_ENDPOINT_INVALID)
+        preferences.edit()
+            .putString(KEY_MODE, modeOf(AdbConnectMode.LOCAL))
+            .putString(KEY_LOCAL_HOST, endpoint.host)
+            .putInt(KEY_LOCAL_PORT, endpoint.port)
+            .apply()
+        mutableState.update {
+            it.withMode(AdbConnectMode.LOCAL).withLocalEndpoint(endpoint.host, endpoint.port)
+        }
+        operationLock.withLock {
+            mutableState.update { it.working() }
+            ensureDaemonUnderLock()
+        }
     }
 
     suspend fun startPairing(): Result<Unit> = withContext(Dispatchers.IO) {
@@ -73,7 +107,8 @@ class AdbBootstrap(context: Context) {
                 requireWirelessDebugging()
                 pairKey(normalized)
                 markPaired(true)
-                mutableState.update { it.pairingSucceeded() }
+                preferences.edit().putString(KEY_MODE, modeOf(AdbConnectMode.WIRELESS)).apply()
+                mutableState.update { it.pairingSucceeded().withMode(AdbConnectMode.WIRELESS) }
             }.fold(
                 onSuccess = { ensureDaemonUnderLock() },
                 onFailure = { failWith(it) },
@@ -139,16 +174,22 @@ class AdbBootstrap(context: Context) {
     }
 
     private suspend fun ensureDaemonUnderLock(): Result<Unit> {
+        val mode = mutableState.value.mode
         if (shell.isAlive()) {
-            markPaired(true)
+            if (mode == AdbConnectMode.WIRELESS) markPaired(true)
             mutableState.update { it.daemonStarted() }
             return Result.success(Unit)
         }
         mutableState.update { it.working() }
         return runCatching {
-            requireWirelessDebugging()
-            connectAndStartDaemon()
-            markPaired(true)
+            when (mode) {
+                AdbConnectMode.WIRELESS -> {
+                    requireWirelessDebugging()
+                    connectWirelessAndStartDaemon()
+                    markPaired(true)
+                }
+                AdbConnectMode.LOCAL -> connectLocalAndStartDaemon()
+            }
         }.fold(
             onSuccess = {
                 mutableState.update { it.daemonStarted() }
@@ -158,8 +199,30 @@ class AdbBootstrap(context: Context) {
         )
     }
 
-    private suspend fun connectAndStartDaemon() {
+    private suspend fun connectWirelessAndStartDaemon() {
         connectToServer()
+        runDaemonAndWait()
+    }
+
+    private suspend fun connectLocalAndStartDaemon() {
+        val host = mutableState.value.localHost
+        val port = mutableState.value.localPort
+        try {
+            manager.connect(host, port)
+        } catch (authRequired: AdbAuthenticationFailedException) {
+            runCatching { manager.disconnect() }
+            throw AdbBridgeException(AdbBridgeError.LOCAL_AUTH_REQUIRED, authRequired)
+        } catch (pairingRequired: AdbPairingRequiredException) {
+            runCatching { manager.disconnect() }
+            throw AdbBridgeException(AdbBridgeError.LOCAL_AUTH_REQUIRED, pairingRequired)
+        } catch (failure: Exception) {
+            runCatching { manager.disconnect() }
+            throw AdbBridgeException(AdbBridgeError.LOCAL_CONNECT_FAILED, failure)
+        }
+        runDaemonAndWait()
+    }
+
+    private suspend fun runDaemonAndWait() {
         try {
             startDaemon()
         } finally {
@@ -257,6 +320,12 @@ class AdbBootstrap(context: Context) {
         preferences.edit().putBoolean(KEY_PAIRED, value).apply()
     }
 
+    private fun readMode(): AdbConnectMode =
+        if (preferences.getString(KEY_MODE, null) == MODE_LOCAL) AdbConnectMode.LOCAL else AdbConnectMode.WIRELESS
+
+    private fun modeOf(mode: AdbConnectMode): String =
+        if (mode == AdbConnectMode.LOCAL) MODE_LOCAL else MODE_WIRELESS
+
     private fun openDevelopmentSettings() {
         val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -328,6 +397,11 @@ class AdbBootstrap(context: Context) {
         const val CONNECT_DISCOVERY_TIMEOUT_MS = 8000L
         const val CONNECT_DISCOVERY_ATTEMPTS = 3
         const val KEY_CONNECT_PORT = "connect_port"
+        const val KEY_MODE = "connect_mode"
+        const val KEY_LOCAL_HOST = "local_host"
+        const val KEY_LOCAL_PORT = "local_port"
+        const val MODE_WIRELESS = "wireless"
+        const val MODE_LOCAL = "local"
         const val DAEMON_START_WAIT_MS = 1500L
         const val DAEMON_HEALTH_ATTEMPTS = 24
         const val DAEMON_HEALTH_INTERVAL_MS = 250L

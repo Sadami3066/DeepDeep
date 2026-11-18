@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.adb.AdbBridgeError
 import io.github.whywood.deepdeep.adb.AdbBridgeState
+import io.github.whywood.deepdeep.adb.AdbConnectMode
 import io.github.whywood.deepdeep.data.DevBundle
 import io.github.whywood.deepdeep.data.DevPackagesState
 import io.github.whywood.deepdeep.data.StorageMount
@@ -48,6 +49,7 @@ import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdTextField
@@ -77,6 +79,8 @@ fun SystemAccessScreen(
     onPair: () -> Unit,
     onPairingCode: (String) -> Unit,
     onConnect: () -> Unit,
+    onAdbModeChange: (AdbConnectMode) -> Unit,
+    onAdbConnectLocal: (String, String) -> Unit,
     onOpenWirelessDebugging: () -> Unit,
     onRetryRootfs: () -> Unit,
     onRebuildRootfs: () -> Unit,
@@ -94,6 +98,8 @@ fun SystemAccessScreen(
     val colors = deepDeepColors()
     var showPairingDialog by remember { mutableStateOf(false) }
     var showRebuildDialog by remember { mutableStateOf(false) }
+    var localHost by remember(adb.localHost) { mutableStateOf(adb.localHost) }
+    var localPort by remember(adb.localPort) { mutableStateOf(adb.localPort.toString()) }
     LifecycleResumeEffect(Unit) {
         onRefresh()
         onPauseOrDispose {}
@@ -233,61 +239,118 @@ fun SystemAccessScreen(
                 else -> {
                     if (state.selected == HostAccess.ADB) {
                         DdGroupCard {
-                            when {
-                                adb.busy -> DdListRow(
-                                    icon = DdIcons.Refresh,
-                                    title = stringResource(R.string.access_status_adb_connecting),
-                                    enabled = false,
+                            DdSegmented(
+                                options = listOf(
+                                    stringResource(R.string.access_adb_mode_wireless),
+                                    stringResource(R.string.access_adb_mode_local),
+                                ),
+                                selectedIndex = if (adb.mode == AdbConnectMode.LOCAL) 1 else 0,
+                                onSelect = { index ->
+                                    onAdbModeChange(
+                                        if (index == 1) AdbConnectMode.LOCAL else AdbConnectMode.WIRELESS,
+                                    )
+                                },
+                                modifier = Modifier.padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Sm),
+                                testTags = listOf("access_adb_mode_wireless", "access_adb_mode_local"),
+                            )
+                            DdHairline()
+                            if (adb.mode == AdbConnectMode.LOCAL) {
+                                Column(Modifier.padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Sm)) {
+                                    DdTextField(
+                                        value = localHost,
+                                        onValueChange = { localHost = it },
+                                        placeholder = stringResource(R.string.access_adb_local_host),
+                                        testTag = "access_adb_local_host",
+                                    )
+                                    Spacer(Modifier.height(DdSpacing.Sm))
+                                    DdTextField(
+                                        value = localPort,
+                                        onValueChange = { localPort = it.filter(Char::isDigit).take(5) },
+                                        placeholder = stringResource(R.string.access_adb_local_port),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        testTag = "access_adb_local_port",
+                                    )
+                                }
+                                AdbAction(
+                                    title = stringResource(
+                                        when {
+                                            adb.busy -> R.string.access_status_adb_connecting
+                                            adb.daemon -> R.string.access_action_adb_restart
+                                            else -> R.string.access_action_adb_local_connect
+                                        },
+                                    ),
+                                    onClick = { onAdbConnectLocal(localHost, localPort) },
+                                    testTag = "access_adb_local_connect",
                                 )
-
-                                !adb.paired -> AdbAction(
-                                    title = stringResource(R.string.access_action_adb_pair),
-                                    onClick = {
-                                        showPairingDialog = true
-                                        onPair()
-                                    },
-                                    testTag = "access_adb_pair",
-                                )
-
-                                adb.error != null -> AdbAction(
-                                    title = stringResource(R.string.access_action_adb_retry),
-                                    onClick = onConnect,
-                                    testTag = "access_adb_retry",
-                                )
-
-                                !adb.daemon -> AdbAction(
-                                    title = stringResource(R.string.access_action_adb_connect),
-                                    onClick = onConnect,
-                                    testTag = "access_adb_connect",
-                                )
-
-                                else -> AdbAction(
-                                    title = stringResource(R.string.access_action_adb_restart),
-                                    onClick = onConnect,
-                                    testTag = "access_adb_restart",
-                                )
-                            }
-                            if (adb.paired || adb.daemon) {
                                 DdHairline()
                                 AdbAction(
-                                    title = stringResource(R.string.access_action_adb_repair),
-                                    onClick = {
-                                        showPairingDialog = true
-                                        onPair()
-                                    },
-                                    testTag = "access_adb_repair",
+                                    title = stringResource(R.string.access_action_adb_settings),
+                                    onClick = onOpenWirelessDebugging,
+                                    testTag = "access_adb_settings",
+                                )
+                            } else {
+                                when {
+                                    adb.busy -> DdListRow(
+                                        icon = DdIcons.Refresh,
+                                        title = stringResource(R.string.access_status_adb_connecting),
+                                        enabled = false,
+                                    )
+
+                                    !adb.paired -> AdbAction(
+                                        title = stringResource(R.string.access_action_adb_pair),
+                                        onClick = {
+                                            showPairingDialog = true
+                                            onPair()
+                                        },
+                                        testTag = "access_adb_pair",
+                                    )
+
+                                    adb.error != null -> AdbAction(
+                                        title = stringResource(R.string.access_action_adb_retry),
+                                        onClick = onConnect,
+                                        testTag = "access_adb_retry",
+                                    )
+
+                                    !adb.daemon -> AdbAction(
+                                        title = stringResource(R.string.access_action_adb_connect),
+                                        onClick = onConnect,
+                                        testTag = "access_adb_connect",
+                                    )
+
+                                    else -> AdbAction(
+                                        title = stringResource(R.string.access_action_adb_restart),
+                                        onClick = onConnect,
+                                        testTag = "access_adb_restart",
+                                    )
+                                }
+                                if (adb.paired || adb.daemon) {
+                                    DdHairline()
+                                    AdbAction(
+                                        title = stringResource(R.string.access_action_adb_repair),
+                                        onClick = {
+                                            showPairingDialog = true
+                                            onPair()
+                                        },
+                                        testTag = "access_adb_repair",
+                                    )
+                                }
+                                DdHairline()
+                                AdbAction(
+                                    title = stringResource(R.string.access_action_adb_settings),
+                                    onClick = onOpenWirelessDebugging,
+                                    testTag = "access_adb_settings",
                                 )
                             }
-                            DdHairline()
-                            AdbAction(
-                                title = stringResource(R.string.access_action_adb_settings),
-                                onClick = onOpenWirelessDebugging,
-                                testTag = "access_adb_settings",
-                            )
                         }
                         Spacer(Modifier.height(DdSpacing.Md))
                         Text(
-                            text = stringResource(R.string.access_hint_adb),
+                            text = stringResource(
+                                if (adb.mode == AdbConnectMode.LOCAL) {
+                                    R.string.access_hint_adb_local
+                                } else {
+                                    R.string.access_hint_adb
+                                },
+                            ),
                             style = DdType.bodySmall,
                             color = colors.inkTertiary,
                         )
@@ -475,6 +538,7 @@ private fun adbStatusText(adb: AdbBridgeState): String = when {
     adb.busy -> stringResource(R.string.access_status_adb_connecting)
     adb.daemon -> stringResource(R.string.access_status_adb_running)
     adb.error != null -> stringResource(R.string.access_status_adb_error, adbErrorLabel(adb.error))
+    adb.mode == AdbConnectMode.LOCAL -> stringResource(R.string.access_status_adb_local_idle)
     adb.paired -> stringResource(R.string.access_status_adb_paired)
     else -> stringResource(R.string.access_status_adb_unpaired)
 }
@@ -489,6 +553,9 @@ private fun adbErrorLabel(error: AdbBridgeError): String = stringResource(
         AdbBridgeError.NOT_PAIRED -> R.string.access_error_not_paired
         AdbBridgeError.CONNECT_FAILED -> R.string.access_error_connect_failed
         AdbBridgeError.DAEMON_START_FAILED -> R.string.access_error_daemon_start_failed
+        AdbBridgeError.LOCAL_ENDPOINT_INVALID -> R.string.access_error_local_endpoint_invalid
+        AdbBridgeError.LOCAL_CONNECT_FAILED -> R.string.access_error_local_connect_failed
+        AdbBridgeError.LOCAL_AUTH_REQUIRED -> R.string.access_error_local_auth_required
     },
 )
 

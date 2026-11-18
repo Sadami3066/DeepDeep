@@ -44,4 +44,14 @@
     <string name="access_error_not_paired">Not paired</string>
     <string name="access_error_connect_failed">Could not connect to wireless debugging</string>
     <string name="access_error_daemon_start_failed">Connection failed</string>
+    <string name="access_status_adb_local_idle">Not connected</string>
+    <string name="access_adb_mode_wireless">Wireless debugging</string>
+    <string name="access_adb_mode_local">Local ADB</string>
+    <string name="access_adb_local_host">Host (default 127.0.0.1)</string>
+    <string name="access_adb_local_port">Port (default 5555)</string>
+    <string name="access_action_adb_local_connect">Connect and start</string>
+    <string name="access_hint_adb_local">Set it up once from a computer: enable USB debugging on the phone, connect it with a cable, run adb tcpip 5555 on the computer, then tap Connect and start here. Allow the debugging authorization dialog on the first connection; run the computer command again after the phone restarts.</string>
+    <string name="access_error_local_endpoint_invalid">Host or port is invalid</string>
+    <string name="access_error_local_connect_failed">Cannot reach local ADB. Make sure USB debugging is enabled and adb tcpip 5555 has been run.</string>
+    <string name="access_error_local_auth_required">Allow USB debugging on the phone, then retry</string>
 </resources>

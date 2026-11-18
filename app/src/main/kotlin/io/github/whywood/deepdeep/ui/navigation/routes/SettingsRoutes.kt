@@ -228,6 +228,8 @@ internal fun SystemAccessRoute(dependencies: AppDependencies, scope: CoroutineSc
         onPair = { dependencies.hostAccess.startAdbPairing() },
         onPairingCode = { code -> AgentService.applyPairingCode(context, code) },
         onConnect = { scope.launch { dependencies.hostAccess.connectAdb() } },
+        onAdbModeChange = { mode -> scope.launch { adbBridge.selectMode(mode) } },
+        onAdbConnectLocal = { host, port -> scope.launch { adbBridge.connectLocalAndStart(host, port) } },
         onOpenWirelessDebugging = { dependencies.hostAccess.openWirelessDebugging(context) },
         onRetryRootfs = { scope.launch { dependencies.rootfsBootstrap.ensureReady() } },
         onRebuildRootfs = { scope.launch { dependencies.rootfsBootstrap.rebuild() } },
