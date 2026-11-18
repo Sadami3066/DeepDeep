@@ -18,8 +18,8 @@ android {
         applicationId = "io.github.whywood.deepdeep"
         minSdk = 29
         targetSdk = 36
-        versionCode = 10105
-        versionName = "1.4.0"
+        versionCode = 10106
+        versionName = "1.4.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
