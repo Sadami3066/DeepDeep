@@ -111,6 +111,7 @@ class PiSessionEngine(
             else -> shellExecutor
         }
         val binding = SessionBinding(supportsChatDelivery)
+        binding.bind(BoundSession(sessionId = "", sessionFile = null, cwd = cwd.toString()))
         var created: AgentSession? = null
         val allTools = buildTools(activeShell, binding) { created }
         val tools = if (toolsFilter == null) allTools else allTools.filter(toolsFilter)
