@@ -50,7 +50,9 @@ import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.ui.common.BotAvatar
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun WorkspaceSettingsScreen(
@@ -90,17 +92,26 @@ fun WorkspaceSettingsScreen(
     }
 
     LaunchedEffect(workspace.id, reloadKey) {
-        agentsDocSet = agentDocStore.read(workspace.cwd) != null
-        val current = effectivePolicy(workspace, workspaceToolPolicies)
-        policy = current
-        val skills = skillRepository.list().getOrNull().orEmpty()
-        skillCount = current.enabledSkills(skills.mapTo(mutableSetOf()) { it.id }).size
+        val loaded = withContext(Dispatchers.IO) {
+            val current = effectivePolicy(workspace, workspaceToolPolicies)
+            val skills = skillRepository.list().getOrNull().orEmpty()
+            val plugins = pluginManager.state.value.plugins.mapTo(mutableSetOf()) { it.id }
+            val mcpServers = runCatching { mcpConfigStore.load().servers.keys }.getOrDefault(emptySet())
+            SettingsLoad(
+                agentsDocSet = agentDocStore.read(workspace.cwd) != null,
+                policy = current,
+                skillCount = current.enabledSkills(skills.mapTo(mutableSetOf()) { it.id }).size,
+                pluginCount = current.enabledPlugins(plugins).size,
+                mcpCount = current.enabledMcpServers(mcpServers).size,
+            )
+        }
+        policy = loaded.policy
+        agentsDocSet = loaded.agentsDocSet
+        skillCount = loaded.skillCount
+        pluginCount = loaded.pluginCount
+        mcpCount = loaded.mcpCount
         skillsLoaded = true
-        val plugins = pluginManager.state.value.plugins.mapTo(mutableSetOf()) { it.id }
-        pluginCount = current.enabledPlugins(plugins).size
         pluginsLoaded = true
-        val mcpServers = runCatching { mcpConfigStore.load().servers.keys }.getOrDefault(emptySet())
-        mcpCount = current.enabledMcpServers(mcpServers).size
         mcpLoaded = true
     }
 
@@ -355,6 +366,14 @@ fun WorkspaceSettingsScreen(
         )
     }
 }
+
+private data class SettingsLoad(
+    val agentsDocSet: Boolean,
+    val policy: WorkspaceToolPolicy,
+    val skillCount: Int,
+    val pluginCount: Int,
+    val mcpCount: Int,
+)
 
 private fun effectivePolicy(workspace: RuntimeWorkspace, store: WorkspaceToolPolicyStore): WorkspaceToolPolicy {
     val stored = store.policyForCwd(workspace.cwd)

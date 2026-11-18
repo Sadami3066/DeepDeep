@@ -498,10 +498,10 @@ private fun PluginRow(
     }
     var menuOpen by remember(snapshot.id) { mutableStateOf(false) }
     DdPressable(
-        onClick = onOpenPage,
+        onClick = { if (snapshot.hasPages) onOpenPage() else onOpenDetail() },
         modifier = Modifier.fillMaxWidth().testTag("plugin_row_${snapshot.id}"),
         shape = DdShapes.Row,
-        enabled = snapshot.hasPages,
+        enabled = true,
     ) {
         Row(
             modifier = Modifier

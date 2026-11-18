@@ -94,11 +94,22 @@ internal fun UriAvatarPreview(
     }
 }
 
+private var cachedAppIcon: ImageBitmap? = null
+
 @Composable
-internal fun rememberAppIcon(context: Context): ImageBitmap? = remember(context) {
-    runCatching {
-        context.packageManager.getApplicationIcon(context.packageName).toBitmap().asImageBitmap()
-    }.getOrNull()
+internal fun rememberAppIcon(context: Context): ImageBitmap? {
+    val icon by produceState(initialValue = cachedAppIcon, context) {
+        if (value == null) {
+            val loaded = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.packageManager.getApplicationIcon(context.packageName).toBitmap().asImageBitmap()
+                }.getOrNull()
+            }
+            cachedAppIcon = loaded
+            value = loaded
+        }
+    }
+    return icon
 }
 
 private suspend fun loadAvatarFile(path: String?): ImageBitmap? {

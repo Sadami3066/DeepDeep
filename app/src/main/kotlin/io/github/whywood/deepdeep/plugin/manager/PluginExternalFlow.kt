@@ -36,6 +36,9 @@ internal class PluginExternalFlow(
 
     suspend fun registerRecords() {
         val runtime = external ?: return
+        runtime.records()
+            .filter { !it.enabled && it.lastError == null }
+            .forEach { runtime.setEnabled(it.id, true) }
         runtime.records().forEach { record ->
             if (gate.contains(record.id)) return@forEach
             registerRecord(record)
