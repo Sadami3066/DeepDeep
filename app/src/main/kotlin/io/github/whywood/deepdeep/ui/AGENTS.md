@@ -24,7 +24,7 @@ Compose 界面层：按功能分子包，每个子包是一个页面/组件域�
 | [remote/](remote/AGENTS.md) | 远程连接页：扫码/粘贴配对、电脑列表与状态、连接页 WebView 与手机端样式注入 |
 | `timers/` | 定时任务页：列表、编辑器、日期/时间选择与 cron 草稿 |
 | [miniapp/](miniapp/AGENTS.md) | 小程序：列表/查看器、WebView 与 bridge |
-| `workspaces/` | Bot 身份与设置：头像（相册选图，存 `files/bot-avatars`）、名字、简介、Bot 技能、继承的全局技能/插件（`WorkspaceInheritedSheet`，关闭后新会话不注入）、Bot 设定编辑与新建/重命名/删除对话框 |
+| `workspaces/` | Bot 身份与设置：头像（相册选图，存 `files/bot-avatars`）、名字、简介；能力页逐项开关技能/插件/连接器（`WorkspaceCapabilitySheet`，默认 Bot 全开、普通 Bot 全关）；工具页的屏幕工具与小程序工具开关；设定编辑与新建/重命名/删除对话框 |
 
 ## 要点
 

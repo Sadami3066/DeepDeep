@@ -1,17 +1,20 @@
 package io.github.whywood.deepdeep.ui.workspaces
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -20,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,26 +32,25 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import io.github.whywood.deepdeep.ui.common.BotAvatar
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.SkillRepository
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicy
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.design.DdHairline
 import io.github.whywood.deepdeep.design.DdIconButton
 import io.github.whywood.deepdeep.design.DdIcons
 import io.github.whywood.deepdeep.design.DdListRow
 import io.github.whywood.deepdeep.design.DdSectionLabel
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.plugin.manager.PluginManagerFacade
 import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
+import io.github.whywood.deepdeep.ui.common.BotAvatar
 import io.github.whywood.deepdeep.ui.settings.SettingsGroup
+import kotlinx.coroutines.launch
 
 @Composable
 fun WorkspaceSettingsScreen(
@@ -58,6 +61,7 @@ fun WorkspaceSettingsScreen(
     pluginManager: PluginManagerFacade,
     mcpConfigStore: McpConfigStore,
     existingNames: List<String>,
+    screenToolsReady: Boolean,
     onRename: (String) -> Unit,
     onAvatarPicked: (Uri?) -> Unit,
     onIntroChange: (String) -> Unit,
@@ -66,38 +70,44 @@ fun WorkspaceSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
-    var showProjectSkills by rememberSaveable(workspace.id) { mutableStateOf(false) }
-    var showAgentsDoc by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var reloadKey by remember(workspace.id) { mutableStateOf(0) }
-    var projectSkillCount by remember(workspace.id) { mutableStateOf<Int?>(null) }
-    var skillsLoadFailed by remember(workspace.id) { mutableStateOf(false) }
-    var agentsDocSet by remember(workspace.id) { mutableStateOf<Boolean?>(null) }
-    var showInheritedSkills by rememberSaveable(workspace.id) { mutableStateOf(false) }
-    var showInheritedPlugins by rememberSaveable(workspace.id) { mutableStateOf(false) }
-    var showInheritedMcp by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var showAgentsDoc by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showAvatarSheet by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showIntroDialog by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showRenameDialog by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var capabilityKind by rememberSaveable(workspace.id) { mutableStateOf<WorkspaceCapabilityKind?>(null) }
+    var agentsDocSet by remember(workspace.id) { mutableStateOf<Boolean?>(null) }
+    var policy by remember(workspace.id) { mutableStateOf(effectivePolicy(workspace, workspaceToolPolicies)) }
+    var skillCount by remember(workspace.id) { mutableStateOf<Int?>(null) }
+    var pluginCount by remember(workspace.id) { mutableStateOf<Int?>(null) }
+    var mcpCount by remember(workspace.id) { mutableStateOf<Int?>(null) }
+    var skillsLoaded by remember(workspace.id) { mutableStateOf(false) }
+    var pluginsLoaded by remember(workspace.id) { mutableStateOf(false) }
+    var mcpLoaded by remember(workspace.id) { mutableStateOf(false) }
     val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) onAvatarPicked(uri)
     }
-    var inheritedSkillsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
-    var inheritedPluginsValue by remember(workspace.id) { mutableStateOf<String?>(null) }
-    var inheritedMcpValue by remember(workspace.id) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(workspace.id, reloadKey) {
-        skillsLoadFailed = false
-        val skills = skillRepository.list()
-        val enabledIds = skillRepository.projectEnabledIds(workspace.cwd)
-        skillsLoadFailed = skills.isFailure
         agentsDocSet = agentDocStore.read(workspace.cwd) != null
-        val policy = workspaceToolPolicies.policyForCwd(workspace.cwd)
-        projectSkillCount = enabledIds.size
-        val globalSkills = skills.getOrNull()?.count { it.globalEnabled } ?: 0
-        inheritedSkillsValue = if (globalSkills == 0 || policy.skills.isEmpty()) null
-            else "${policy.skills.size}"
-        inheritedPluginsValue = if (policy.plugins.isEmpty()) null else "${policy.plugins.size}"
-        inheritedMcpValue = if (policy.mcpServers.isEmpty()) null else "${policy.mcpServers.size}"
+        val current = effectivePolicy(workspace, workspaceToolPolicies)
+        policy = current
+        val skills = skillRepository.list().getOrNull().orEmpty()
+        skillCount = current.enabledSkills(skills.mapTo(mutableSetOf()) { it.id }).size
+        skillsLoaded = true
+        val plugins = pluginManager.state.value.plugins.mapTo(mutableSetOf()) { it.id }
+        pluginCount = current.enabledPlugins(plugins).size
+        pluginsLoaded = true
+        val mcpServers = runCatching { mcpConfigStore.load().servers.keys }.getOrDefault(emptySet())
+        mcpCount = current.enabledMcpServers(mcpServers).size
+        mcpLoaded = true
+    }
+
+    fun updatePolicy(block: (WorkspaceToolPolicy) -> WorkspaceToolPolicy) {
+        val next = block(policy)
+        policy = next
+        scope.launch { workspaceToolPolicies.update(workspace.cwd, next) }
     }
 
     Column(
@@ -196,119 +206,91 @@ fun WorkspaceSettingsScreen(
                 }
             }
             Spacer(Modifier.height(20.dp))
-            val skillCount = projectSkillCount
+            DdSectionLabel(stringResource(R.string.bot_capabilities))
+            Spacer(Modifier.height(8.dp))
             SettingsGroup {
                 DdListRow(
                     icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.workspace_settings_skills),
-                    value = when {
-                        skillsLoadFailed -> stringResource(R.string.workspace_settings_skills_failed)
-                        skillCount == null -> stringResource(R.string.workspace_settings_loading)
-                        skillCount == 0 -> stringResource(R.string.workspace_settings_skills_none)
-                        else -> stringResource(R.string.workspace_settings_skills_count, skillCount)
-                    },
-                    onClick = { showProjectSkills = true },
+                    title = stringResource(R.string.bot_capabilities_skills),
+                    value = capabilityValue(skillCount, skillsLoaded),
+                    onClick = { capabilityKind = WorkspaceCapabilityKind.Skills },
                     showChevron = true,
-                    modifier = Modifier.testTag("workspace_settings_skills"),
-                )
-                DdHairline()
-                DdListRow(
-                    icon = DdIcons.Sparkles,
-                    title = stringResource(R.string.workspace_inherit_skills),
-                    value = inheritedSkillsValue?.let { stringResource(R.string.workspace_inherit_disabled_count, it) }
-                        ?: stringResource(R.string.workspace_inherit_all),
-                    onClick = { showInheritedSkills = true },
-                    showChevron = true,
-                    modifier = Modifier.testTag("workspace_settings_inherit_skills"),
+                    modifier = Modifier.testTag("bot_capabilities_skills"),
                 )
                 DdHairline()
                 DdListRow(
                     icon = DdIcons.Puzzle,
-                    title = stringResource(R.string.workspace_inherit_plugins),
-                    value = inheritedPluginsValue?.let { stringResource(R.string.workspace_inherit_disabled_count, it) }
-                        ?: stringResource(R.string.workspace_inherit_all),
-                    onClick = { showInheritedPlugins = true },
+                    title = stringResource(R.string.bot_capabilities_plugins),
+                    value = capabilityValue(pluginCount, pluginsLoaded),
+                    onClick = { capabilityKind = WorkspaceCapabilityKind.Plugins },
                     showChevron = true,
-                    modifier = Modifier.testTag("workspace_settings_inherit_plugins"),
+                    modifier = Modifier.testTag("bot_capabilities_plugins"),
                 )
                 DdHairline()
                 DdListRow(
                     icon = DdIcons.Plug,
-                    title = stringResource(R.string.workspace_inherit_mcp),
-                    value = inheritedMcpValue?.let { stringResource(R.string.workspace_inherit_disabled_count, it) }
-                        ?: stringResource(R.string.workspace_inherit_all),
-                    onClick = { showInheritedMcp = true },
+                    title = stringResource(R.string.bot_capabilities_mcp),
+                    value = capabilityValue(mcpCount, mcpLoaded),
+                    onClick = { capabilityKind = WorkspaceCapabilityKind.Mcp },
                     showChevron = true,
-                    modifier = Modifier.testTag("workspace_settings_inherit_mcp"),
+                    modifier = Modifier.testTag("bot_capabilities_mcp"),
                 )
+            }
+            Spacer(Modifier.height(20.dp))
+            DdSectionLabel(stringResource(R.string.bot_tools))
+            Spacer(Modifier.height(8.dp))
+            SettingsGroup {
+                DdListRow(
+                    icon = DdIcons.Desktop,
+                    title = stringResource(R.string.bot_tools_screen),
+                    onClick = { updatePolicy { it.copy(screenTools = !it.screenTools) } },
+                    modifier = Modifier.testTag("bot_tools_screen"),
+                    trailing = {
+                        DdSwitch(
+                            checked = policy.screenTools,
+                            onCheckedChange = { checked -> updatePolicy { it.copy(screenTools = checked) } },
+                        )
+                    },
+                )
+                if (policy.screenTools && !screenToolsReady) {
+                    Text(
+                        text = stringResource(R.string.bot_tools_screen_permission),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = DdType.bodySmall,
+                        color = colors.danger,
+                    )
+                }
                 DdHairline()
                 DdListRow(
+                    icon = DdIcons.Apps,
+                    title = stringResource(R.string.bot_tools_miniapp),
+                    onClick = { updatePolicy { it.copy(miniappTools = !it.miniappTools) } },
+                    modifier = Modifier.testTag("bot_tools_miniapp"),
+                    trailing = {
+                        DdSwitch(
+                            checked = policy.miniappTools,
+                            onCheckedChange = { checked -> updatePolicy { it.copy(miniappTools = checked) } },
+                        )
+                    },
+                )
+            }
+            Spacer(Modifier.height(20.dp))
+            SettingsGroup {
+                DdListRow(
                     icon = DdIcons.File,
-                    title = stringResource(R.string.workspace_settings_agents_doc),
+                    title = stringResource(R.string.bot_instructions),
                     value = when (val set = agentsDocSet) {
                         null -> stringResource(R.string.workspace_settings_loading)
                         true -> stringResource(R.string.workspace_settings_agents_set)
-                        false -> stringResource(R.string.workspace_settings_agents_unset)
+                        else -> stringResource(R.string.workspace_settings_agents_unset)
                     },
                     onClick = { showAgentsDoc = true },
                     showChevron = true,
-                    modifier = Modifier.testTag("workspace_settings_agents"),
+                    modifier = Modifier.testTag("bot_settings_agents"),
                 )
             }
             Spacer(Modifier.height(40.dp))
         }
-    }
-
-    if (showProjectSkills) {
-        ProjectSkillsSheet(
-            workspace = workspace,
-            skillRepository = skillRepository,
-            onOpenSkills = {
-                showProjectSkills = false
-                onOpenSkills()
-            },
-            onSaved = { reloadKey += 1 },
-            onDismiss = { showProjectSkills = false },
-        )
-    }
-
-    if (showInheritedSkills) {
-        WorkspaceInheritedSheet(
-            workspaceCwd = workspace.cwd,
-            kind = WorkspaceInheritedKind.Skills,
-            store = workspaceToolPolicies,
-            skillRepository = skillRepository,
-            pluginManager = pluginManager,
-            mcpConfigStore = mcpConfigStore,
-            onSaved = { reloadKey += 1 },
-            onDismiss = { showInheritedSkills = false },
-        )
-    }
-
-    if (showInheritedPlugins) {
-        WorkspaceInheritedSheet(
-            workspaceCwd = workspace.cwd,
-            kind = WorkspaceInheritedKind.Plugins,
-            store = workspaceToolPolicies,
-            skillRepository = skillRepository,
-            pluginManager = pluginManager,
-            mcpConfigStore = mcpConfigStore,
-            onSaved = { reloadKey += 1 },
-            onDismiss = { showInheritedPlugins = false },
-        )
-    }
-
-    if (showInheritedMcp) {
-        WorkspaceInheritedSheet(
-            workspaceCwd = workspace.cwd,
-            kind = WorkspaceInheritedKind.Mcp,
-            store = workspaceToolPolicies,
-            skillRepository = skillRepository,
-            pluginManager = pluginManager,
-            mcpConfigStore = mcpConfigStore,
-            onSaved = { reloadKey += 1 },
-            onDismiss = { showInheritedMcp = false },
-        )
     }
 
     if (showAgentsDoc) {
@@ -317,6 +299,21 @@ fun WorkspaceSettingsScreen(
             agentDocStore = agentDocStore,
             onSaved = { reloadKey += 1 },
             onDismiss = { showAgentsDoc = false },
+        )
+    }
+
+    capabilityKind?.let { kind ->
+        WorkspaceCapabilitySheet(
+            workspace = workspace,
+            kind = kind,
+            store = workspaceToolPolicies,
+            skillRepository = skillRepository,
+            pluginManager = pluginManager,
+            mcpConfigStore = mcpConfigStore,
+            onDismiss = {
+                capabilityKind = null
+                reloadKey += 1
+            },
         )
     }
 
@@ -356,5 +353,20 @@ fun WorkspaceSettingsScreen(
             },
             onDismiss = { showRenameDialog = false },
         )
+    }
+}
+
+private fun effectivePolicy(workspace: RuntimeWorkspace, store: WorkspaceToolPolicyStore): WorkspaceToolPolicy {
+    val stored = store.policyForCwd(workspace.cwd)
+    return if (workspace.isHome) stored.copy(allCapabilities = true) else stored
+}
+
+@Composable
+private fun capabilityValue(count: Int?, loaded: Boolean): String {
+    if (!loaded || count == null) return stringResource(R.string.workspace_settings_loading)
+    return if (count == 0) {
+        stringResource(R.string.bot_capabilities_none)
+    } else {
+        stringResource(R.string.bot_capabilities_count, count)
     }
 }

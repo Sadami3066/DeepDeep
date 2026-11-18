@@ -62,14 +62,6 @@ class SkillsStateHolderTest {
             return 0
         }
 
-        override suspend fun setGlobalEnabled(id: String, enabled: Boolean): Boolean {
-            enabledCalls += id to enabled
-            if (!enabledResult) return false
-            items = items.map { if (it.id == id) it.copy(globalEnabled = enabled) else it }
-            changes.value += 1
-            return true
-        }
-
         override suspend fun delete(id: String): Boolean {
             deletedIds += id
             if (!deleteResult) return false
@@ -165,31 +157,6 @@ class SkillsStateHolderTest {
 
         assertEquals(listOf("beta"), holder.state.value.items.map { it.id })
         assertNull(holder.state.value.error)
-    }
-
-    @Test
-    fun setEnabledTogglesItemAndClearsBusy() = runTest {
-        val fake = source()
-        val holder = holder(fake)
-        holder.setEnabled(alpha, true)
-        advanceUntilIdle()
-
-        assertEquals(listOf("alpha" to true), fake.enabledCalls)
-        assertTrue(holder.state.value.items.first { it.id == "alpha" }.globalEnabled)
-        assertTrue(holder.state.value.togglingIds.isEmpty())
-        assertFalse(holder.state.value.busy)
-    }
-
-    @Test
-    fun setEnabledFailureSetsError() = runTest {
-        val fake = source()
-        fake.enabledResult = false
-        val holder = holder(fake)
-        holder.setEnabled(beta, false)
-        advanceUntilIdle()
-
-        assertNotNull(holder.state.value.error)
-        assertTrue(holder.state.value.togglingIds.isEmpty())
     }
 
     @Test

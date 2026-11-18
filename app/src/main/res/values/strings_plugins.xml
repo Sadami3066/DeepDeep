@@ -4,8 +4,6 @@
     <string name="plugins_search_placeholder">搜索插件</string>
     <string name="plugins_empty">还没有安装插件</string>
     <string name="plugins_empty_action">去市场</string>
-    <string name="plugins_enable">已启用</string>
-    <string name="plugins_disable">已关闭</string>
     <string name="plugins_close">关闭</string>
     <string name="plugins_cancel">取消</string>
     <string name="plugins_menu_more">更多操作</string>

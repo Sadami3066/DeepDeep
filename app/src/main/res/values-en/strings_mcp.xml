@@ -16,7 +16,6 @@
     <string name="mcp_status_untested">Not checked</string>
     <string name="mcp_status_disabled">Disabled</string>
     <string name="mcp_status_unsupported">Unsupported on Android</string>
-    <string name="mcp_state_enabled">Enabled</string>
 
     <string name="mcp_close">Close</string>
     <string name="mcp_save">Save</string>

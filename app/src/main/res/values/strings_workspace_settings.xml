@@ -1,11 +1,6 @@
 <resources>
     <string name="workspace_settings_label">Bot 设置</string>
     <string name="workspace_settings_back">返回</string>
-    <string name="workspace_settings_skills">专属技能</string>
-    <string name="workspace_settings_skills_count">%1$d 个</string>
-    <string name="workspace_settings_skills_none">未启用</string>
-    <string name="workspace_settings_skills_failed">读取失败</string>
-    <string name="workspace_settings_agents_doc">Bot 设定</string>
     <string name="workspace_settings_agents_set">已设置</string>
     <string name="workspace_settings_agents_unset">未设置</string>
     <string name="workspace_settings_loading">…</string>
@@ -17,17 +12,8 @@
     <string name="workspace_directory_permission">需要「所有文件访问权限」</string>
     <string name="workspace_directory_invalid">只能选择手机存储里的目录</string>
 
-    <string name="project_skills_title">专属技能</string>
-    <string name="project_skills_note">这里只列出未全局启用的技能；全局技能在「继承技能」里管理，保存后生效。</string>
-    <string name="project_skills_save">保存</string>
-    <string name="project_skills_save_failed">保存失败，请重试。</string>
-    <string name="project_skills_load_failed">读取技能失败。</string>
-    <string name="project_skills_empty_title">没有可以单独启用的技能</string>
-    <string name="project_skills_empty_action">去安装技能</string>
-    <string name="project_skills_global_hint">全局技能，仅对本 Bot 关闭 · %1$s</string>
-
-    <string name="agents_doc_title">Bot 设定</string>
-    <string name="agents_doc_default_file">Bot 设定</string>
+    <string name="agents_doc_title">设定</string>
+    <string name="agents_doc_default_file">设定</string>
     <string name="agents_doc_placeholder">为当前 Bot 编写设定…</string>
     <string name="agents_doc_counter">%1$d 字</string>
     <string name="agents_doc_note">保存后，新会话生效。</string>
@@ -36,28 +22,10 @@
     <string name="agents_doc_cancel">取消</string>
     <string name="agents_doc_too_large">内容超过 64 KB 上限。</string>
     <string name="agents_doc_save_failed">保存失败，请重试。</string>
-    <string name="agents_doc_delete_title">删除 Bot 设定？</string>
+    <string name="agents_doc_delete_title">删除设定？</string>
     <string name="agents_doc_delete_message">将删除当前 Bot 的设定。</string>
     <string name="agents_doc_delete_confirm">删除</string>
     <string name="agents_doc_discard_title">放弃修改？</string>
     <string name="agents_doc_discard_message">当前编辑内容尚未保存。</string>
     <string name="agents_doc_discard_confirm">放弃</string>
-    <string name="workspace_inherit_skills">继承技能</string>
-    <string name="workspace_inherit_plugins">继承插件</string>
-    <string name="workspace_inherit_mcp">继承 MCP</string>
-    <string name="workspace_inherit_all">全部启用</string>
-    <string name="workspace_inherit_disabled_count">%1$s 项关闭</string>
-    <string name="workspace_inherit_skills_title">技能</string>
-    <string name="workspace_inherit_plugins_title">插件</string>
-    <string name="workspace_inherit_mcp_title">MCP</string>
-    <string name="workspace_inherit_note">关闭后，本 Bot 的新会话不会注入对应工具与提示词。</string>
-    <string name="workspace_inherit_mcp_note">关闭后，本 Bot 的新会话不会连接该 MCP 服务器。</string>
-    <string name="workspace_inherit_skills_empty">还没有全局启用的技能</string>
-    <string name="workspace_inherit_plugins_empty">还没有安装插件</string>
-    <string name="workspace_inherit_mcp_empty">还没有配置 MCP 服务器</string>
-    <string name="workspace_inherit_load_failed">读取失败，请重试。</string>
-    <string name="workspace_inherit_retry">重试</string>
-    <string name="workspace_inherit_enabled">已启用</string>
-    <string name="workspace_inherit_disabled">已关闭</string>
-    <string name="workspace_inherit_save_failed">保存失败，请重试。</string>
 </resources>

@@ -10,7 +10,7 @@
 | `ChatHistoryNav.kt` | 历史折叠与导航窗口的纯逻辑：初始可见窗口、每次展开步长、当前消息的 tick 槽位、自动跟随时的窗口顶槽、消息与列表项下标换算 |
 | `MessageNavBar.kt` | 右侧消息导航条：每条用户消息一个短横 tick 的可上下滑动 5 行窗口（当前消息 accent 高亮），窗口随聊天滚动逐条跟随，单击 tick 直达 |
 | `ChatViewModel.kt` | 观察 ConversationStore 产出 ChatUiState，驱动发送/停止/切换/重试 |
-| `ChatTopBar.kt` | 顶栏：菜单、定时/任务/用量/文件入口；当前会话属于非默认 Bot 时，居中显示 Bot 头像与名字，否则显示 DeepDeep 字标 |
+| `ChatTopBar.kt` | 顶栏：菜单、定时/任务/用量/文件入口；居中显示当前 Bot 的头像与名字 |
 | `UsageSheet.kt` | 会话用量统计 sheet |
 | `ContextMeter.kt`、`JobsMeter.kt` | 输入卡上下文 token 环与顶栏后台任务计数 |
 | `SlashPalette.kt` | `/` 命令与技能补全列表 |

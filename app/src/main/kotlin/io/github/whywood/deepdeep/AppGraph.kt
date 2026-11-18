@@ -11,7 +11,6 @@ import io.github.whywood.deepdeep.conversation.nextMessageId
 import io.github.whywood.deepdeep.data.AppLanguage
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.BundledSkills
-import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.AttachmentStore
 import io.github.whywood.deepdeep.data.AgentDocStore
@@ -47,7 +46,6 @@ import io.github.whywood.deepdeep.graph.RuntimeGraph
 import io.github.whywood.deepdeep.graph.RuntimeGraphDeps
 import io.github.whywood.deepdeep.graph.ServiceGraph
 import io.github.whywood.deepdeep.graph.ServiceGraphDeps
-import io.github.whywood.deepdeep.graph.isScreenOpsActive
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
 import io.github.whywood.deepdeep.runtime.host.HostAccessController
@@ -158,7 +156,6 @@ class AppGraph(context: Context) : AppDependencies {
     override val mcpOAuthService: McpOAuthService get() = dataGraph.mcpOAuthService
     override val skillRepository: SkillRepository get() = dataGraph.skillRepository
     override val agentDocStore: AgentDocStore get() = dataGraph.agentDocStore
-    override val capabilitySettingsStore: CapabilitySettingsStore get() = dataGraph.capabilitySettingsStore
     override val webSearchSettings: io.github.whywood.deepdeep.data.WebSearchSettingsStore get() = dataGraph.webSearchSettings
     override val miniappStore: MiniappStore get() = dataGraph.miniappStore
     override val skillCatalog: SkillCatalog get() = dataGraph.skillCatalog
@@ -266,12 +263,6 @@ class AppGraph(context: Context) : AppDependencies {
             }
         }
         scope.launch {
-            capabilitySettingsStore.screenOps.drop(1).collect {
-                syncBundledSkills()
-                host.reconfigure()
-            }
-        }
-        scope.launch {
             host.events.collect { event ->
                 pluginManager.onRuntimeEvent(event)
                 when (event.event) {
@@ -322,6 +313,8 @@ class AppGraph(context: Context) : AppDependencies {
         linuxSettings = dataGraph.linuxSettings,
         storageMountStore = dataGraph.storageMountStore,
         workspaceToolPolicies = dataGraph.workspaceToolPolicies,
+        skillRepository = dataGraph.skillRepository,
+        mcpConfigStore = dataGraph.mcpConfigStore,
         questionCenter = dataGraph.questionCenter,
         goalService = dataGraph.goalService,
         miniappStore = dataGraph.miniappStore,
@@ -331,7 +324,6 @@ class AppGraph(context: Context) : AppDependencies {
         decorateInterrupted = ::decorateInterrupted,
         timerService = { serviceGraph.timerService },
         jobRegistry = { serviceGraph.jobRegistry },
-        capabilitySettingsStore = dataGraph.capabilitySettingsStore,
         appPreferences = dataGraph.appPreferences,
         apiKeyProvider = {
             dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
@@ -423,18 +415,11 @@ class AppGraph(context: Context) : AppDependencies {
 
     private suspend fun syncBundledSkills() {
         runCatching {
-            dataGraph.bundledSkills.sync { id ->
-                id != BundledSkills.SCREEN_OPS_SKILL || screenOpsActive()
-            }
+            dataGraph.bundledSkills.sync()
         }.onFailure {
             Diagnostics.log(appContext, "app: bundled skill sync failed", it)
         }
     }
-
-    private fun screenOpsActive(): Boolean = isScreenOpsActive(
-        screenOps = capabilitySettingsStore.screenOps.value,
-        capabilities = hostEnvironmentProvider.current().capabilities,
-    )
 
     private suspend fun decorateInterrupted(state: ConversationState, sessionId: String): ConversationState {
         var next = state

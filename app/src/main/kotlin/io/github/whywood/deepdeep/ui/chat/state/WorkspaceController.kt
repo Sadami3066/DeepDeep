@@ -28,6 +28,7 @@ internal class WorkspaceController(
         directory: String? = null,
         avatar: String? = null,
         intro: String? = null,
+        onCreated: () -> Unit = {},
     ) {
         scope.launch {
             try {
@@ -37,6 +38,7 @@ internal class WorkspaceController(
                 val workspaces = withContext(ioDispatcher) { queries.workspaces() }
                 update { it.copy(workspaces = workspaces) }
                 selectWorkspace(workspace.id)
+                onCreated()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {

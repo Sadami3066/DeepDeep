@@ -18,14 +18,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
@@ -36,7 +32,6 @@ import io.github.whywood.deepdeep.design.DdMenuItem
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdType
-import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.RuntimeWorkspace
 import io.github.whywood.deepdeep.runtime.SessionUsage
@@ -60,10 +55,7 @@ data class ChatTopBarActions(
 )
 
 private val TopBarEdge = 6.dp
-private val TopBarGap = 4.dp
 private val TopBarIconButtonSize = 42.dp
-private val WordmarkMaxSize = 27f
-private val WordmarkMinSize = 18f
 
 @Composable
 internal fun ChatTopBar(
@@ -81,12 +73,6 @@ internal fun ChatTopBar(
     ) {
         val compact = maxWidth < 370.dp || LocalDensity.current.fontScale > 1.15f
         val crowded = state.jobCount > 0 || state.reminderCount > 0
-        val density = LocalDensity.current
-        var leadingWidthPx by remember { mutableStateOf(0) }
-        var trailingWidthPx by remember { mutableStateOf(0) }
-        val leadingWidth = with(density) { leadingWidthPx.toDp() }
-        val trailingWidth = with(density) { trailingWidthPx.toDp() }
-        val wordmarkStyle = wordmarkStyle(maxWidth, leadingWidth, trailingWidth, compact)
         val botTitleMaxWidth = maxWidth * 0.52f
         Box(Modifier.fillMaxSize()) {
             if (activeBot != null) {
@@ -97,22 +83,15 @@ internal fun ChatTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
-                    BotAvatar(workspace = activeBot, size = 22.dp)
+                    BotAvatar(workspace = activeBot, size = 24.dp)
                     Text(
                         text = activeBot.name,
-                        style = DdType.label.copy(fontSize = 17.sp),
+                        style = DdType.label.copy(fontSize = 16.sp),
                         color = colors.ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-            } else {
-                DdWordmark(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = colors.ink,
-                    dotColor = colors.accent,
-                    style = wordmarkStyle,
-                )
             }
             Row(
                 Modifier
@@ -120,12 +99,7 @@ internal fun ChatTopBar(
                     .padding(horizontal = TopBarEdge),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.onGloballyPositioned { coordinates ->
-                        leadingWidthPx = coordinates.size.width
-                    },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     DdIconButton(
                         icon = DdIcons.Menu,
                         onClick = actions.onMenu,
@@ -152,12 +126,7 @@ internal fun ChatTopBar(
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                Row(
-                    modifier = Modifier.onGloballyPositioned { coordinates ->
-                        trailingWidthPx = coordinates.size.width
-                    },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     if (state.reloading) {
                         DdSpinner(
                             modifier = Modifier.padding(end = DdSpacing.Xs).testTag("assistant_reloading"),
@@ -221,40 +190,5 @@ internal fun ChatTopBar(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun wordmarkStyle(
-    maxWidth: Dp,
-    leadingWidth: Dp,
-    trailingWidth: Dp,
-    compact: Boolean,
-): TextStyle {
-    val density = LocalDensity.current
-    val measurer = rememberTextMeasurer()
-    val baseWidth = with(density) {
-        measurer.measure("deepdeep.", DdType.wordmark).size.width.toDp()
-    }
-    val fontSize = wordmarkFontSize(maxWidth, leadingWidth, trailingWidth, baseWidth, compact)
-    return DdType.wordmark.copy(
-        fontSize = fontSize.sp,
-        lineHeight = (fontSize + 5f).sp,
-    )
-}
-
-internal fun wordmarkFontSize(
-    maxWidth: Dp,
-    leadingWidth: Dp,
-    trailingWidth: Dp,
-    baseWidth: Dp,
-    compact: Boolean,
-): Float {
-    if (compact) return WordmarkMinSize
-    val occupied = maxOf(leadingWidth, trailingWidth)
-    val budget = ((maxWidth / 2 - TopBarEdge - occupied - TopBarGap) * 2).coerceAtLeast(0.dp)
-    return when {
-        baseWidth <= 0.dp || budget >= baseWidth -> WordmarkMaxSize
-        else -> (WordmarkMaxSize * (budget / baseWidth)).coerceAtLeast(WordmarkMinSize)
     }
 }

@@ -11,8 +11,8 @@ class ActiveBotTest {
     private val coder = RuntimeWorkspace(id = "coder", name = "Coder", cwd = "/coder")
 
     @Test
-    fun homeWorkspaceHasNoBotIdentity() {
-        assertNull(activeBotFor(listOf(home, writer), "home", "/home"))
+    fun homeWorkspaceStillHasBotIdentity() {
+        assertEquals(home, activeBotFor(listOf(home, writer), "home", "/home"))
     }
 
     @Test

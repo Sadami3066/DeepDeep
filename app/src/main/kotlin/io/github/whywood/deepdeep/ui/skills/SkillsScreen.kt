@@ -154,7 +154,6 @@ fun SkillsScreen(
         onMarketQueryChange = { marketQuery = it },
         onQueryChange = holder::setQuery,
         onRetry = holder::retry,
-        onToggle = holder::toggle,
         onDelete = holder::remove,
         onInstall = { picker.launch(arrayOf("*/*")) },
         onDismissInstallError = holder::dismissInstallError,
@@ -175,7 +174,6 @@ private fun SkillsContent(
     onMarketQueryChange: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onRetry: () -> Unit,
-    onToggle: (InstalledSkill, Boolean) -> Unit,
     onDelete: (InstalledSkill) -> Unit,
     onInstall: () -> Unit,
     onDismissInstallError: () -> Unit,
@@ -319,7 +317,6 @@ private fun SkillsContent(
                                 last = index == state.visibleItems.lastIndex,
                                 togglingIds = state.togglingIds,
                                 onOpen = { selected = skill },
-                                onToggle = { enabled -> onToggle(skill, enabled) },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -446,7 +443,6 @@ private fun SkillCardRow(
     last: Boolean,
     togglingIds: Set<String>,
     onOpen: () -> Unit,
-    onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = deepDeepColors()
@@ -470,21 +466,6 @@ private fun SkillCardRow(
                     .background(colors.surface)
                     .heightIn(min = 64.dp)
                     .testTag("skill_${skill.id}"),
-                trailing = {
-                    DdSwitch(
-                        checked = skill.globalEnabled,
-                        onCheckedChange = onToggle,
-                        enabled = skill.id !in togglingIds,
-                        stateDescription = stringResource(
-                            if (skill.globalEnabled) {
-                                R.string.skills_global_enabled
-                            } else {
-                                R.string.skills_global_disabled
-                            },
-                        ),
-                        modifier = Modifier.testTag("skill_global_${skill.id}"),
-                    )
-                },
             )
         }
     }
@@ -557,29 +538,6 @@ private fun SkillDetailSheet(
                         color = colors.inkSecondary,
                     )
                     Spacer(Modifier.height(DdSpacing.Lg))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(R.string.skills_detail_status),
-                        style = DdType.label,
-                        color = colors.inkSecondary,
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = stringResource(
-                            if (skill.globalEnabled) {
-                                R.string.skills_detail_enabled
-                            } else {
-                                R.string.skills_detail_disabled
-                            },
-                        ),
-                        style = DdType.bodySmall,
-                        color = if (skill.globalEnabled) colors.accent else colors.inkTertiary,
-                    )
-                    if (skill.disableModelInvocation) {
-                        Spacer(Modifier.width(10.dp))
-                        ManualTag()
-                    }
                 }
                 Spacer(Modifier.height(DdSpacing.Xl))
                 Text(

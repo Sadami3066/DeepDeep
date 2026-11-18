@@ -41,7 +41,7 @@
 | `SkillRepository.kt` | 技能仓库：安装/删除/全局开关与项目级 `.pi/skills` 同步 |
 | `StorageMigration.kt` | 旧目录迁到 home/workspaces 并重写会话 JSONL 的 cwd |
 | `StorageMountStore.kt` | 公共存储挂载目录 `files/storage-mounts.json`：`StorageMount(id,name,description,path)`、最多 20 个、名称≤32/说明≤160、限定 `/storage/emulated/0/`、原子写 |
-| `WorkspaceToolPolicyStore.kt` | 工作区工具策略 `files/workspace-tool-policies.json`：按 canonical cwd 存 `WorkspaceToolPolicy(skills, plugins, mcpServers)`，记录该工作区不继承的全局技能名、插件 id 与 MCP 服务器名；Mutex + 原子写 |
+| `WorkspaceToolPolicyStore.kt` | Bot 能力策略 `files/workspace-tool-policies.json`：按 canonical cwd 存 `WorkspaceToolPolicy(allCapabilities, skills, plugins, mcpServers, screenTools, miniappTools)`；`allCapabilities=true` 时集合是排除项（默认 Bot），否则是启用项（普通 Bot）；Mutex + 原子写 |
 | `ThemePreferences.kt` | 主题选择与已解析调色板缓存（SharedPreferences，冷启动首帧可读；插件主题失效时由 ThemeController 回退 system） |
 | [update/](update/AGENTS.md) | 应用内更新：GitHub 最新 Release 检查、下载校验与系统安装（详见子包文档） |
 | `VoicePreferences.kt` | 语音自动朗读开关 DataStore |

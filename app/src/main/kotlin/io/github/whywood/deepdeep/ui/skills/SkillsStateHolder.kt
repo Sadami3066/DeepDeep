@@ -44,7 +44,6 @@ internal interface SkillsDataSource {
 
     suspend fun syncIfChanged(): Int
 
-    suspend fun setGlobalEnabled(id: String, enabled: Boolean): Boolean
 
     suspend fun delete(id: String): Boolean
 
@@ -63,9 +62,6 @@ internal class SkillRepositorySource(
     override suspend fun syncActiveSkills(): Int = repository.syncActiveSkills()
 
     override suspend fun syncIfChanged(): Int = repository.syncIfChanged()
-
-    override suspend fun setGlobalEnabled(id: String, enabled: Boolean): Boolean =
-        repository.setGlobalEnabled(id, enabled)
 
     override suspend fun delete(id: String): Boolean = repository.delete(id)
 
@@ -100,9 +96,6 @@ class SkillsStateHolder internal constructor(
         scope.launch { onResume() }
     }
 
-    fun toggle(skill: InstalledSkill, enabled: Boolean) {
-        scope.launch { setEnabled(skill, enabled) }
-    }
 
     fun remove(skill: InstalledSkill) {
         scope.launch { delete(skill) }
@@ -151,24 +144,6 @@ class SkillsStateHolder internal constructor(
         retryAction = null
         _state.update { it.copy(error = null) }
         scope.launch { action() }
-    }
-
-    suspend fun setEnabled(skill: InstalledSkill, enabled: Boolean) {
-        if (skill.id in _state.value.togglingIds) return
-        _state.update { it.copy(togglingIds = it.togglingIds + skill.id) }
-        try {
-            val updated = source.setGlobalEnabled(skill.id, enabled)
-            refresh()
-            if (!updated) {
-                setError { setEnabled(skill, enabled) }
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            setError { setEnabled(skill, enabled) }
-        } finally {
-            _state.update { it.copy(togglingIds = it.togglingIds - skill.id) }
-        }
     }
 
     suspend fun delete(skill: InstalledSkill) {

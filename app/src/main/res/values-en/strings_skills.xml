@@ -3,8 +3,6 @@
     <string name="skills_back">Back</string>
     <string name="skills_install">Install skill</string>
     <string name="skills_empty_title">No skills yet</string>
-    <string name="skills_global_enabled">Enabled globally</string>
-    <string name="skills_global_disabled">Not enabled globally</string>
     <string name="skills_manual">Manual</string>
     <string name="skills_install_success">"%1$s" installed</string>
     <string name="skills_install_failed_title">Install failed</string>
@@ -24,9 +22,6 @@
     <string name="skills_delete_confirm">Delete</string>
     <string name="skills_cancel">Cancel</string>
     <string name="skills_close">Close</string>
-    <string name="skills_detail_status">Status</string>
-    <string name="skills_detail_enabled">Enabled</string>
-    <string name="skills_detail_disabled">Disabled</string>
     <string name="skills_detail_content">SKILL.md</string>
     <string name="skills_detail_empty">No content</string>
     <string name="skills_search_placeholder">Search skills</string>

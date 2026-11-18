@@ -1,11 +1,6 @@
 <resources>
     <string name="workspace_settings_label">Bot settings</string>
     <string name="workspace_settings_back">Back</string>
-    <string name="workspace_settings_skills">Bot-only skills</string>
-    <string name="workspace_settings_skills_count">%1$d</string>
-    <string name="workspace_settings_skills_none">None enabled</string>
-    <string name="workspace_settings_skills_failed">Failed to load</string>
-    <string name="workspace_settings_agents_doc">Bot instructions</string>
     <string name="workspace_settings_agents_set">Set</string>
     <string name="workspace_settings_agents_unset">Not set</string>
     <string name="workspace_settings_loading">…</string>
@@ -17,17 +12,8 @@
     <string name="workspace_directory_permission">Needs all-files access</string>
     <string name="workspace_directory_invalid">Only folders in shared storage can be used</string>
 
-    <string name="project_skills_title">Bot-only skills</string>
-    <string name="project_skills_note">Only skills that are not enabled globally are listed here. Manage global skills under Inherited skills; changes apply on save.</string>
-    <string name="project_skills_save">Save</string>
-    <string name="project_skills_save_failed">Save failed. Try again.</string>
-    <string name="project_skills_load_failed">Could not load skills.</string>
-    <string name="project_skills_empty_title">No extra skills to enable</string>
-    <string name="project_skills_empty_action">Install skills</string>
-    <string name="project_skills_global_hint">Global skill, off only for this bot · %1$s</string>
-
-    <string name="agents_doc_title">Bot instructions</string>
-    <string name="agents_doc_default_file">Bot instructions</string>
+    <string name="agents_doc_title">Instructions</string>
+    <string name="agents_doc_default_file">Instructions</string>
     <string name="agents_doc_placeholder">Describe what this bot should do…</string>
     <string name="agents_doc_counter">%1$d chars</string>
     <string name="agents_doc_note">Changes apply to new sessions.</string>
@@ -36,28 +22,10 @@
     <string name="agents_doc_cancel">Cancel</string>
     <string name="agents_doc_too_large">Content exceeds the 64 KB limit.</string>
     <string name="agents_doc_save_failed">Save failed. Try again.</string>
-    <string name="agents_doc_delete_title">Delete bot instructions?</string>
+    <string name="agents_doc_delete_title">Delete instructions?</string>
     <string name="agents_doc_delete_message">This deletes the bot instructions.</string>
     <string name="agents_doc_delete_confirm">Delete</string>
     <string name="agents_doc_discard_title">Discard changes?</string>
     <string name="agents_doc_discard_message">Your edits have not been saved.</string>
     <string name="agents_doc_discard_confirm">Discard</string>
-    <string name="workspace_inherit_skills">Inherited skills</string>
-    <string name="workspace_inherit_plugins">Inherited plugins</string>
-    <string name="workspace_inherit_mcp">Inherited MCP</string>
-    <string name="workspace_inherit_all">All enabled</string>
-    <string name="workspace_inherit_disabled_count">%1$s off</string>
-    <string name="workspace_inherit_skills_title">Skills</string>
-    <string name="workspace_inherit_plugins_title">Plugins</string>
-    <string name="workspace_inherit_mcp_title">MCP</string>
-    <string name="workspace_inherit_note">New sessions in this bot won\'t include disabled tools or prompts.</string>
-    <string name="workspace_inherit_mcp_note">New sessions in this bot won\'t connect to this MCP server.</string>
-    <string name="workspace_inherit_skills_empty">No globally enabled skills</string>
-    <string name="workspace_inherit_plugins_empty">No plugins installed</string>
-    <string name="workspace_inherit_mcp_empty">No MCP servers configured</string>
-    <string name="workspace_inherit_load_failed">Could not load. Try again.</string>
-    <string name="workspace_inherit_retry">Retry</string>
-    <string name="workspace_inherit_enabled">Enabled</string>
-    <string name="workspace_inherit_disabled">Off</string>
-    <string name="workspace_inherit_save_failed">Save failed. Try again.</string>
 </resources>

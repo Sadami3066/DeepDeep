@@ -67,7 +67,6 @@ import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
 import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -173,7 +172,6 @@ internal fun PluginsScreen(
         onQueryChange = holder::setQuery,
         onRefresh = holder::refresh,
         onOpenPluginPage = onOpenPluginPage,
-        onToggle = holder::setEnabled,
         onOpenDetail = { snapshot -> detailPluginId = snapshot.id },
         onRetryActivation = { snapshot -> scope.launch { holder.retryActivation(snapshot.id) } },
         onRollback = { snapshot -> scope.launch { holder.rollback(snapshot.id) } },
@@ -277,7 +275,6 @@ private fun PluginsContent(
     onQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onOpenPluginPage: (String, String) -> Unit,
-    onToggle: (String, Boolean) -> Unit,
     onOpenDetail: (PluginSnapshot) -> Unit,
     onRetryActivation: (PluginSnapshot) -> Unit,
     onRollback: (PluginSnapshot) -> Unit,
@@ -421,7 +418,6 @@ private fun PluginsContent(
                                         onOpenPluginPage(snapshot.id, page.id)
                                     }
                                 },
-                                onToggle = { enabled -> onToggle(snapshot.id, enabled) },
                                 onOpenDetail = { onOpenDetail(snapshot) },
                                 onRetryActivation = { onRetryActivation(snapshot) },
                                 onRollback = { onRollback(snapshot) },
@@ -479,7 +475,6 @@ private fun PluginRow(
     hostAccess: HostAccess,
     interactive: Boolean,
     onOpenPage: () -> Unit,
-    onToggle: (Boolean) -> Unit,
     onOpenDetail: () -> Unit,
     onRetryActivation: () -> Unit,
     onRollback: () -> Unit,
@@ -565,19 +560,6 @@ private fun PluginRow(
                     )
                 }
             }
-            Spacer(Modifier.width(DdSpacing.Sm))
-            DdSwitch(
-                checked = snapshot.enabled,
-                onCheckedChange = onToggle,
-                enabled = interactive,
-                stateDescription = stringResource(
-                    if (snapshot.enabled) R.string.plugins_enable else R.string.plugins_disable,
-                ),
-                modifier = Modifier
-                    .testTag("plugin_switch_${snapshot.id}")
-                    .semantics { contentDescription = snapshot.name },
-                activeColor = if (snapshot.enabled && !available) colors.warning else null,
-            )
             Box {
                 DdIconButton(
                     icon = DdIcons.More,

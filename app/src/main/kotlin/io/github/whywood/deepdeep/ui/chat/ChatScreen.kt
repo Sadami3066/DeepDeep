@@ -514,6 +514,7 @@ fun ChatScreen(
         CompositionLocalProvider(LocalSelectionCoordinator provides selectionCoordinator) {
         val activeBot = remember(state.workspaces, state.currentWorkspaceId, state.conversationCwd) {
             activeBotFor(state.workspaces, state.currentWorkspaceId, state.conversationCwd)
+                ?: state.workspaces.firstOrNull { it.isHome }
         }
         ChatTopBar(
             activeBot = activeBot,

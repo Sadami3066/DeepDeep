@@ -5,15 +5,16 @@ import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.conversation.ConversationState
 import io.github.whywood.deepdeep.data.AppPreferences
-import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
 import io.github.whywood.deepdeep.data.StorageMountStore
+import io.github.whywood.deepdeep.data.SkillRepository
 import io.github.whywood.deepdeep.data.WorkspaceToolPolicyStore
 import io.github.whywood.deepdeep.data.PersonalizationStore
 import io.github.whywood.deepdeep.plugin.manager.PluginHostManager
 import io.github.whywood.deepdeep.runtime.GoalService
 import io.github.whywood.deepdeep.runtime.JobRegistry
 import io.github.whywood.deepdeep.runtime.MiniappStore
+import io.github.whywood.deepdeep.runtime.McpConfigStore
 import io.github.whywood.deepdeep.runtime.ModelConfigStore
 import io.github.whywood.deepdeep.runtime.ProviderCatalog
 import io.github.whywood.deepdeep.runtime.QuestionCenter
@@ -44,6 +45,8 @@ internal class RuntimeGraphDeps(
     val storageMountStore: StorageMountStore,
 
     val workspaceToolPolicies: WorkspaceToolPolicyStore,
+    val skillRepository: SkillRepository,
+    val mcpConfigStore: McpConfigStore,
     val questionCenter: QuestionCenter,
     val goalService: GoalService,
     val miniappStore: MiniappStore,
@@ -53,7 +56,6 @@ internal class RuntimeGraphDeps(
     val decorateInterrupted: suspend (ConversationState, String) -> ConversationState,
     val timerService: () -> TimerService,
     val jobRegistry: () -> JobRegistry,
-    val capabilitySettingsStore: CapabilitySettingsStore,
     val appPreferences: AppPreferences,
     val apiKeyProvider: suspend () -> String?,
     val webSearchKeyProvider: suspend (String) -> String?,

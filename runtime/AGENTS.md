@@ -17,7 +17,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `RuntimeWorkspaces.kt` | 工作区列表、增删改、Home 解析与可见 cwd |
 | `RuntimeModels.kt` | 会话模型/思考档、历史、用量与压缩 |
 | `RuntimeSessions.kt` | 会话查询、列表、重命名/置顶/归档与删除 |
-| `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP、系统提示词与 `RuntimeHooks`；Agent 级工具钩子覆盖动态 MCP/tool_search，输入变换在 prompt 前完成；paths 段注入共享存储与挂载目录；构造参数 `excludedSkills`/`excludedMcpServers` 按工作区策略排除技能与 MCP 服务器（技能含被排除插件贡献的 skill id）；`pluginPromptOverrides` 每轮合并插件 prompt override（preamble/rules 单胜者、sections 按 priority、单插件 32KiB/总量 64KiB、冲突与超限记 `PluginPrompt` warn） |
+| `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP、系统提示词与 `RuntimeHooks`；Agent 级工具钩子覆盖动态 MCP/tool_search，输入变换在 prompt 前完成；paths 段注入共享存储与挂载目录；构造参数 `excludedSkills`/`excludedMcpServers` 由 Bot 能力策略换算成排除集合（技能含被排除插件贡献的 skill id）；屏幕工具与小程序工具由 Bot 的工具开关控制；`pluginPromptOverrides` 每轮合并插件 prompt override（preamble/rules 单胜者、sections 按 priority、单插件 32KiB/总量 64KiB、冲突与超限记 `PluginPrompt` warn） |
 | `PluginRuntimeHooks.kt` | `RuntimeHooks` 聚合（prompt/input/tool/会话绑定，`onSessionBound` 传 `SessionBinding`）与 Agent 级工具钩子桥（Block/Rewrite/Replace，保留 SDK 结果归一化） |
 | `ToolResultPostProcessor.kt` | 工具结果统一后处理（在所有插件 hook 之后）：按 `details.deepdeep.raw` 重建模型可见文本（raw 存在时丢弃插件 content、只保留非文本内容）、追加 `details.deepdeep.guidance`、按 `details.deepdeep.card` 追加 `卡片 id：<callId>（标题）`（错误结果不追加），并从 details 删除 raw/guidance、把 SDK 的 `structuredContent` 收进 `details.deepdeep` 供 UI/历史渲染（单条上限 256 KiB，超限只记省略标记）；无插件工具钩子时也挂 after hook，保持 before hook 原状 |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |

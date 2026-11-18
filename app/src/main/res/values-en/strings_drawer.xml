@@ -63,4 +63,19 @@
     <string name="bot_default_badge">Default bot</string>
     <string name="bot_settings">Bot settings</string>
     <string name="bot_identity">Identity</string>
+    <string name="bot_capabilities">Capabilities</string>
+    <string name="bot_capabilities_skills">Skills</string>
+    <string name="bot_capabilities_plugins">Plugins</string>
+    <string name="bot_capabilities_mcp">Connectors</string>
+    <string name="bot_capabilities_none">Off</string>
+    <string name="bot_capabilities_count">%1$d on</string>
+    <string name="bot_capabilities_empty_skills">No skills installed yet</string>
+    <string name="bot_capabilities_empty_plugins">No plugins installed yet</string>
+    <string name="bot_capabilities_empty_mcp">No connectors added yet</string>
+    <string name="bot_tools">Tools</string>
+    <string name="bot_tools_screen">Screen tools</string>
+    <string name="bot_tools_miniapp">Mini app tools</string>
+    <string name="bot_tools_screen_permission">Requires ADB or Root access</string>
+    <string name="bot_instructions">Instructions</string>
+    <string name="bot_created_toast">Created. Capabilities are off by default; turn them on in Bot settings.</string>
 </resources>

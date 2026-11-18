@@ -16,7 +16,6 @@
     <string name="mcp_status_untested">未测试</string>
     <string name="mcp_status_disabled">已停用</string>
     <string name="mcp_status_unsupported">Android 不支持</string>
-    <string name="mcp_state_enabled">已启用</string>
 
     <string name="mcp_close">关闭</string>
     <string name="mcp_save">保存</string>

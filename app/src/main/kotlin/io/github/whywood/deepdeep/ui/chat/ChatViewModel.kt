@@ -589,7 +589,8 @@ class ChatViewModel(
         directory: String? = null,
         avatar: String? = null,
         intro: String? = null,
-    ) = workspaceController.create(name, directory, avatar, intro)
+        onCreated: () -> Unit = {},
+    ) = workspaceController.create(name, directory, avatar, intro, onCreated)
 
     fun renameWorkspace(workspaceId: String, name: String) = workspaceController.rename(workspaceId, name)
 

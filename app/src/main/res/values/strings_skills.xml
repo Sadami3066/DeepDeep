@@ -3,8 +3,6 @@
     <string name="skills_back">返回</string>
     <string name="skills_install">安装技能</string>
     <string name="skills_empty_title">还没有技能</string>
-    <string name="skills_global_enabled">全局启用</string>
-    <string name="skills_global_disabled">全局未启用</string>
     <string name="skills_manual">手动</string>
     <string name="skills_install_success">已安装「%1$s」</string>
     <string name="skills_install_failed_title">安装失败</string>
@@ -24,9 +22,6 @@
     <string name="skills_delete_confirm">删除</string>
     <string name="skills_cancel">取消</string>
     <string name="skills_close">关闭</string>
-    <string name="skills_detail_status">状态</string>
-    <string name="skills_detail_enabled">已启用</string>
-    <string name="skills_detail_disabled">未启用</string>
     <string name="skills_detail_content">SKILL.md</string>
     <string name="skills_detail_empty">暂无内容</string>
     <string name="skills_search_placeholder">搜索技能</string>

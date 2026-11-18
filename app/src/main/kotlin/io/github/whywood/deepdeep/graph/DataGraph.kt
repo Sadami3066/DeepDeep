@@ -8,7 +8,6 @@ import io.github.whywood.deepdeep.data.AgentDocStore
 import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.appHomeDirectory
 import io.github.whywood.deepdeep.data.BundledSkills
-import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.toProviderConfig
 import io.github.whywood.deepdeep.data.FileAttachmentStore
@@ -121,7 +120,6 @@ internal class DataGraph(private val deps: DataGraphDeps) {
         workspacesDir = workspacesDir,
     )
     val agentDocStore = AgentDocStore()
-    val capabilitySettingsStore = CapabilitySettingsStore(File(deps.appContext.filesDir, "capabilities.json"))
     val webSearchSettings = WebSearchSettingsStore(secretStore)
     val bundledSkills = BundledSkills.fromAssets(
         assets = deps.appContext.assets,

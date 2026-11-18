@@ -50,11 +50,7 @@ import io.github.whywood.deepdeep.runtime.ModelOption
 
 @Composable
 fun AgentSettingsScreen(
-    screenOps: Boolean,
-    screenOpsReady: Boolean,
-    onScreenOpsChange: (Boolean) -> Unit,
     onOpenWebSearch: () -> Unit,
-    onOpenAccess: () -> Unit,
     metadataMode: SessionNamingMode,
     metadataModelLabel: String?,
     metadataModels: List<ModelOption>,
@@ -92,35 +88,7 @@ fun AgentSettingsScreen(
             Spacer(Modifier.height(DdSpacing.Xl))
             DdSectionLabel(stringResource(R.string.agent_section_capabilities))
             Spacer(Modifier.height(DdSpacing.Sm))
-            val needsPermission = screenOps && !screenOpsReady
             SettingsGroup {
-                AgentRow(
-                    title = stringResource(R.string.settings_screen_ops),
-                    subtitle = stringResource(R.string.settings_screen_ops_summary),
-                    onClick = { onScreenOpsChange(!screenOps) },
-                    testTag = "agent_screen_ops",
-                    trailing = {
-                        DdSwitch(
-                            checked = screenOps,
-                            onCheckedChange = onScreenOpsChange,
-                            activeColor = if (screenOpsReady) colors.accent else colors.warning,
-                            stateDescription = stringResource(
-                                if (screenOps) R.string.settings_switch_on else R.string.settings_switch_off,
-                            ),
-                        )
-                    },
-                )
-                if (needsPermission) {
-                    Text(
-                        text = stringResource(R.string.agent_screen_ops_permission),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onOpenAccess)
-                            .padding(horizontal = LocalDdRowHorizontalPadding.current, vertical = DdSpacing.Sm),
-                        style = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                        color = colors.danger,
-                    )
-                }
                 DdHairline(Modifier.padding(horizontal = DdSpacing.Lg))
                 AgentRow(
                     title = stringResource(R.string.agent_web_search),

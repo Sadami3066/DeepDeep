@@ -6,6 +6,8 @@ import io.github.whywood.deepdeep.arrange.AndroidArrangeCalendarGateway
 import io.github.whywood.deepdeep.arrange.arrangeTools
 import io.github.whywood.deepdeep.conversation.ConversationStore
 import io.github.whywood.deepdeep.core.SessionTitleService
+import io.github.whywood.deepdeep.data.BundledSkills
+import io.github.whywood.deepdeep.data.WorkspaceToolPolicy
 import io.github.whywood.deepdeep.data.isSharedStorageGranted
 import io.github.whywood.deepdeep.plugin.host.events.PluginHooksDelegate
 import io.github.whywood.deepdeep.runtime.AgentRuntimeHost
@@ -31,7 +33,6 @@ import io.github.whywood.deepdeep.runtime.miniappEditTool
 import io.github.whywood.deepdeep.runtime.miniappLookup
 import io.github.whywood.deepdeep.runtime.miniappTools
 import io.github.whywood.deepdeep.runtime.presentTool
-import io.github.whywood.deepdeep.runtime.host.HostCapabilities
 import io.github.whywood.deepdeep.runtime.systemShellTool
 import io.github.whywood.deepdeep.runtime.timerTools
 import io.github.whywood.deepdeep.service.LinuxJobRunner
@@ -78,16 +79,17 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         AppToolContext(
             questionCenter = deps.questionCenter,
             pluginTools = { binding ->
-                deps.pluginManager().tools(binding, policyFor(binding).plugins)
+                deps.pluginManager().tools(binding, excludedPluginsFor(binding))
             },
             pluginDeferredTools = { binding ->
-                deps.pluginManager().deferredTools(binding, policyFor(binding).plugins)
+                deps.pluginManager().deferredTools(binding, excludedPluginsFor(binding))
             },
             extraToolFactories = listOf({ _, binding -> builtInTools(binding) }),
         )
     }
 
     private fun builtInTools(binding: SessionBinding): List<CodingTool> = buildList {
+        val policy = policyFor(binding)
         add(presentTool(miniappLookup(deps.miniappStore)) { binding.current() })
         add(systemShellTool { deps.hostEnvironment.current().system })
         add(todoWriteTool(
@@ -99,10 +101,12 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         addAll(goalTools(binding, deps.goalService))
         addAll(jobTools(binding, deps.jobRegistry()))
         addAll(timerTools(deps.timerService(), binding))
-        addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
-        add(miniappEditTool(deps.miniappStore))
+        if (policy.miniappTools) {
+            addAll(miniappTools(deps.miniappStore, binding.supportsChatDelivery))
+            add(miniappEditTool(deps.miniappStore))
+        }
         addAll(memoryTools(memoryStore) { binding.current()?.sessionId })
-        if (isScreenOpsActive(deps.capabilitySettingsStore.screenOps.value, deps.hostEnvironment.current().capabilities)) {
+        if (policy.screenTools && deps.hostEnvironment.current().capabilities.hasScreenControl) {
             addAll(deps.screenTools())
             addAll(deps.virtualScreenTools())
         }
@@ -116,7 +120,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             inputHandler = delegate.inputHandler,
             toolHooks = delegate.toolHooks,
             onSessionBound = { binding ->
-                deps.pluginManager().bindSessionHooks(binding, delegate, policyFor(binding).plugins)
+                deps.pluginManager().bindSessionHooks(binding, delegate, excludedPluginsFor(binding))
                 memoryRollup.launchIfDue()
                 memoryRecap.launchRetryPending()
             },
@@ -129,12 +133,36 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             StorageMountInfo(name = mount.name, description = mount.description, path = mount.path)
         }
 
-    private fun policyFor(binding: SessionBinding) =
-        deps.workspaceToolPolicies.policyForCwd(binding.current()?.cwd.orEmpty())
+    private fun policyFor(binding: SessionBinding): WorkspaceToolPolicy =
+        resolvedPolicy(binding.current()?.cwd.orEmpty())
+
+    private fun resolvedPolicy(cwd: String): WorkspaceToolPolicy {
+        val stored = deps.workspaceToolPolicies.policyForCwd(cwd)
+        val home = runCatching { File(cwd).canonicalPath == deps.homeDir.canonicalPath }.getOrDefault(false)
+        return if (home) stored.copy(allCapabilities = true) else stored
+    }
+
+    private fun installedPluginIds(): Set<String> =
+        deps.pluginManager().state.value.plugins.mapTo(mutableSetOf()) { it.id }
+
+    private fun excludedPluginsFor(binding: SessionBinding): Set<String> {
+        val policy = policyFor(binding)
+        return installedPluginIds() - policy.enabledPlugins(installedPluginIds())
+    }
+
+    private suspend fun installedMcpServers(): Set<String> =
+        runCatching { deps.mcpConfigStore.load().servers.keys }.getOrDefault(emptySet())
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
-        val workspacePolicy = deps.workspaceToolPolicies.policyForCwd(cwd.absolutePath)
-        val excludedPluginSkills = workspacePolicy.plugins.flatMap { deps.pluginManager().skillIds(it) }
+        val workspacePolicy = resolvedPolicy(cwd.absolutePath)
+        val allPlugins = installedPluginIds()
+        val allSkills = deps.skillRepository.list().getOrNull().orEmpty().mapTo(mutableSetOf()) { it.id }
+        val allMcp = installedMcpServers()
+        val enabledPlugins = workspacePolicy.enabledPlugins(allPlugins)
+        val excludedPlugins = allPlugins - enabledPlugins
+        val excludedPluginSkills = excludedPlugins.flatMapTo(mutableSetOf()) { deps.pluginManager().skillIds(it) }
+        val enabledSkills = workspacePolicy.enabledSkills(allSkills)
+        val excludedScreenSkill = if (workspacePolicy.screenTools) emptySet() else setOf(BundledSkills.SCREEN_OPS_SKILL)
         PiSessionEngine(
             workspace = cwd,
             agentDir = deps.agentDir,
@@ -145,10 +173,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             personalization = { deps.personalizationStore.read().toRuntime() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             storageMounts = { storageMountInfos() },
-            pluginPromptBody = { deps.pluginManager().promptBody(workspacePolicy.plugins) },
-            pluginPromptOverrides = { deps.pluginManager().promptOverrides(workspacePolicy.plugins) },
-            excludedSkills = workspacePolicy.skills + excludedPluginSkills,
-            excludedMcpServers = workspacePolicy.mcpServers,
+            pluginPromptBody = { deps.pluginManager().promptBody(excludedPlugins) },
+            pluginPromptOverrides = { deps.pluginManager().promptOverrides(excludedPlugins) },
+            excludedSkills = (allSkills - enabledSkills) + excludedPluginSkills + excludedScreenSkill,
+            excludedMcpServers = allMcp - workspacePolicy.enabledMcpServers(allMcp),
             toolContext = appToolContext,
             memory = memoryStore,
             hooks = pluginRuntimeHooks(),
@@ -257,6 +285,3 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         ).also { it.start() }
     }
 }
-
-internal fun isScreenOpsActive(screenOps: Boolean, capabilities: HostCapabilities): Boolean =
-    screenOps && capabilities.hasScreenControl

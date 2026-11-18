@@ -63,4 +63,19 @@
     <string name="bot_default_badge">默认 Bot</string>
     <string name="bot_settings">Bot 设置</string>
     <string name="bot_identity">身份</string>
+    <string name="bot_capabilities">能力</string>
+    <string name="bot_capabilities_skills">技能</string>
+    <string name="bot_capabilities_plugins">插件</string>
+    <string name="bot_capabilities_mcp">连接器</string>
+    <string name="bot_capabilities_none">未开启</string>
+    <string name="bot_capabilities_count">%1$d 项开启</string>
+    <string name="bot_capabilities_empty_skills">还没有安装的技能</string>
+    <string name="bot_capabilities_empty_plugins">还没有安装的插件</string>
+    <string name="bot_capabilities_empty_mcp">还没有添加的连接器</string>
+    <string name="bot_tools">工具</string>
+    <string name="bot_tools_screen">屏幕工具</string>
+    <string name="bot_tools_miniapp">小程序工具</string>
+    <string name="bot_tools_screen_permission">需要系统访问的 ADB 或 Root 档</string>
+    <string name="bot_instructions">设定</string>
+    <string name="bot_created_toast">已创建，能力默认关闭，可在 Bot 设置里打开。</string>
 </resources>

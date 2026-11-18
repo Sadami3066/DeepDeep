@@ -9,7 +9,6 @@ import io.github.whywood.deepdeep.core.AppDependencies
 import io.github.whywood.deepdeep.core.SessionTitleModels
 import io.github.whywood.deepdeep.data.SessionNamingMode
 import io.github.whywood.deepdeep.data.UiPreferences
-import io.github.whywood.deepdeep.runtime.host.HostAccess
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import io.github.whywood.deepdeep.ui.navigation.AppNavigator
 import io.github.whywood.deepdeep.ui.settings.AgentSettingsScreen
@@ -23,13 +22,9 @@ internal fun AgentSettingsRoute(
     onBack: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val screenOps by dependencies.capabilitySettingsStore.screenOps.collectAsStateWithLifecycle(
-        initialValue = false,
-    )
     val preferences by dependencies.appPreferences.preferences.collectAsStateWithLifecycle(
         initialValue = UiPreferences(),
     )
-    val hostState by dependencies.hostAccess.state.collectAsStateWithLifecycle()
     val models = remember(configuredProviderIds) {
         configuredProviderIds.sorted()
             .flatMap { providerId -> dependencies.providerCatalog.models(providerId) }
@@ -39,13 +34,7 @@ internal fun AgentSettingsRoute(
         it.providerId == preferences.metadataProviderId && it.id == preferences.metadataModelId
     }
     AgentSettingsScreen(
-        screenOps = screenOps,
-        screenOpsReady = hostState.effective == HostAccess.ADB || hostState.effective == HostAccess.ROOT,
-        onScreenOpsChange = { enabled ->
-            scope.launch { dependencies.capabilitySettingsStore.setScreenOps(enabled) }
-        },
         onOpenWebSearch = { navigator.push(AppDestination.WebSearch) },
-        onOpenAccess = { navigator.push(AppDestination.SystemAccess) },
         metadataMode = preferences.metadataMode,
         metadataModelLabel = selectedModel?.displayName,
         metadataModels = models,

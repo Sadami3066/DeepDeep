@@ -50,7 +50,6 @@ import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSpacing
-import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
 import io.github.whywood.deepdeep.design.deepDeepColors
@@ -113,11 +112,6 @@ fun McpScreen(
         onQueryChange = holder::setQuery,
         onRefresh = { scope.launch { holder.refresh() } },
         onRetry = holder::retry,
-        onToggle = { entry, enabled ->
-            scope.launch {
-                if (holder.setEnabled(entry.name, enabled)) onReloadSessions()
-            }
-        },
         onOpen = { entry ->
             editorName = entry.name
             editorOpen = true
@@ -190,7 +184,6 @@ private fun McpScreenContent(
     onQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
-    onToggle: (McpServerEntry, Boolean) -> Unit,
     onOpen: (McpServerEntry) -> Unit,
     onAdd: () -> Unit,
     marketRepository: MarketRepository,
@@ -351,11 +344,9 @@ private fun McpScreenContent(
                                 McpServerRow(
                                     entry = entry,
                                     probeResult = state.probes[entry.name],
-                                    switchEnabled = state.toggleEnabled,
                                     marketEntry = marketEntriesByUrl[(entry.config as? McpServerConfig.Http)?.url],
                                     iconLoader = iconLoader,
                                     onOpen = { onOpen(entry) },
-                                    onToggle = { enabled -> onToggle(entry, enabled) },
                                 )
                             }
                         }
@@ -416,11 +407,9 @@ private fun EmptyMcp(onAdd: () -> Unit) {
 private fun McpServerRow(
     entry: McpServerEntry,
     probeResult: McpProbeResult?,
-    switchEnabled: Boolean,
     marketEntry: MarketEntry?,
     iconLoader: MarketIconLoader,
     onOpen: () -> Unit,
-    onToggle: (Boolean) -> Unit,
 ) {
     val colors = deepDeepColors()
     val status = rowStatus(entry, probeResult)
@@ -449,7 +438,7 @@ private fun McpServerRow(
                 Text(
                     text = entry.name,
                     style = DdType.body,
-                    color = if (entry.config.enabled) colors.ink else colors.inkTertiary,
+                    color = colors.ink,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -476,15 +465,6 @@ private fun McpServerRow(
                 modifier = Modifier.widthIn(max = 96.dp),
             )
             Spacer(Modifier.width(DdSpacing.Sm))
-            DdSwitch(
-                checked = entry.config.enabled,
-                onCheckedChange = onToggle,
-                enabled = switchEnabled,
-                stateDescription = stringResource(
-                    if (entry.config.enabled) R.string.mcp_state_enabled else R.string.mcp_status_disabled,
-                ),
-                modifier = Modifier.testTag("mcp_switch_${entry.name}"),
-            )
         }
     }
 }
@@ -493,7 +473,6 @@ private fun McpServerRow(
 private fun rowStatus(entry: McpServerEntry, result: McpProbeResult?): McpRowStatus {
     val colors = deepDeepColors()
     val styled = when {
-        !entry.config.enabled -> stringResource(R.string.mcp_status_disabled) to colors.inkTertiary
         entry.config !is McpServerConfig.Http -> stringResource(R.string.mcp_status_unsupported) to colors.inkTertiary
         result == null -> stringResource(R.string.mcp_status_untested) to colors.inkTertiary
         result.state == McpProbeState.OK -> stringResource(R.string.mcp_row_tools, result.toolCount) to colors.success

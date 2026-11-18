@@ -139,7 +139,9 @@ internal fun AppOverlays(
                 overlays.workspaceCreateOpen = false
                 scope.launch {
                     val avatarPath = avatarUri?.let { botAvatarStore.save(it) }
-                    chatViewModel.createWorkspace(name, directory, avatarPath, intro)
+                    chatViewModel.createWorkspace(name, directory, avatarPath, intro) {
+                        Toast.makeText(context, R.string.bot_created_toast, Toast.LENGTH_LONG).show()
+                    }
                 }
             },
             onDismissWorkspaceCreate = { overlays.workspaceCreateOpen = false },

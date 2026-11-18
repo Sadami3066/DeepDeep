@@ -23,7 +23,7 @@ internal fun activeBotFor(
     workspaceId: String,
     cwd: String,
 ): io.github.whywood.deepdeep.runtime.RuntimeWorkspace? = workspaces.firstOrNull {
-    it.id == workspaceId && it.cwd == cwd && !it.isHome
+    it.id == workspaceId && it.cwd == cwd
 }
 
 data class ChatUiState(

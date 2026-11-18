@@ -6,7 +6,6 @@ import io.github.whywood.deepdeep.data.AppPreferences
 import io.github.whywood.deepdeep.data.CustomProviderStore
 import io.github.whywood.deepdeep.data.crash.CrashLogStore
 import io.github.whywood.deepdeep.data.AttachmentStore
-import io.github.whywood.deepdeep.data.CapabilitySettingsStore
 import io.github.whywood.deepdeep.data.DevPackageManager
 import io.github.whywood.deepdeep.data.HostFiles
 import io.github.whywood.deepdeep.data.LinuxSettingsStore
@@ -105,7 +104,6 @@ interface StorageDependencies {
 
     val agentDocStore: AgentDocStore
 
-    val capabilitySettingsStore: CapabilitySettingsStore
 
     val webSearchSettings: WebSearchSettingsStore
 }

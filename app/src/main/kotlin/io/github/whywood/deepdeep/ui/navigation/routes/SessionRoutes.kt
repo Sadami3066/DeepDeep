@@ -6,6 +6,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import io.github.whywood.deepdeep.data.BotAvatarStore
+import io.github.whywood.deepdeep.runtime.host.HostAccess
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import io.github.whywood.deepdeep.core.AppDependencies
@@ -89,6 +92,8 @@ internal fun WorkspaceSettingsRoute(
     val context = LocalContext.current
     val botAvatars = remember { BotAvatarStore(context) }
     val scope = rememberCoroutineScope()
+    val hostState by dependencies.hostAccess.state.collectAsStateWithLifecycle()
+    val screenToolsReady = hostState.effective == HostAccess.ADB || hostState.effective == HostAccess.ROOT
     if (workspace == null) {
         LaunchedEffect(workspaceId) { navigator.pop() }
         return
@@ -101,6 +106,7 @@ internal fun WorkspaceSettingsRoute(
         pluginManager = dependencies.pluginManager,
         mcpConfigStore = dependencies.mcpConfigStore,
         existingNames = workspaces.filterNot { it.id == workspaceId }.map { it.name },
+        screenToolsReady = screenToolsReady,
         onRename = { name -> onRenameWorkspace(workspaceId, name) },
         onAvatarPicked = { uri ->
             scope.launch {

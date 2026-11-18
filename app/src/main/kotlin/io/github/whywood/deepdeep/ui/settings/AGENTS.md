@@ -9,7 +9,7 @@
 | `SettingsScreen.kt` | 设置首页：账户卡、功能入口（Provider/系统访问/智能体行为/安卓配置）、主题入口/字体/语言、通知、软件更新与开源许可 |
 | `SoftwareUpdateScreen.kt` | 软件更新：当前版本、检查/下载/待安装/失败重试，更新说明用 Markdown 渲染 |
 | `ChatSettingsScreen.kt` | 聊天设置：正文字号、过程折叠、过程详细度（详细/简洁）、运行中发送（插话/排队）、自动重试、后台唤醒、自动朗读 |
-| `AgentSettingsScreen.kt` | 智能体行为：屏幕操作开关与未生效提示（点提示进系统访问页）、元数据命名设置 |
+| `AgentSettingsScreen.kt` | 智能体行为：网络搜索入口与元数据命名设置 |
 | `AndroidSettingsScreen.kt` | 安卓配置：悬浮窗开关与悬浮权限申请/状态、系统助手角色与电源设置 |
 | `ThemeScreen.kt` | 主题选择：内置主题与来自插件的主题分组，行内名称、浅/深标记、色块与选中勾，选中即应用 |
 | `FontScreen.kt` | 英文字体选择与预览（DdFontStyle） |

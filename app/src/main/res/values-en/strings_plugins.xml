@@ -4,8 +4,6 @@
     <string name="plugins_search_placeholder">Search plugins</string>
     <string name="plugins_empty">No plugins installed yet</string>
     <string name="plugins_empty_action">Browse market</string>
-    <string name="plugins_enable">Enabled</string>
-    <string name="plugins_disable">Disabled</string>
     <string name="plugins_close">Close</string>
     <string name="plugins_cancel">Cancel</string>
     <string name="plugins_menu_more">More actions</string>
