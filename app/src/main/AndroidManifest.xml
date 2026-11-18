@@ -151,6 +151,15 @@
         </provider>
 
         <receiver
+            android:name=".ui.miniapp.MiniappReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name=".adb.AdbPairingReceiver"
             android:exported="false" />
 

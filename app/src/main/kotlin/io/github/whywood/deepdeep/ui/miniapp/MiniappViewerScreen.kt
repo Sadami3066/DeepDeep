@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.miniapp
 
+import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -7,13 +8,16 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -25,16 +29,20 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.webkit.WebViewFeature
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdDialog
@@ -52,7 +60,9 @@ import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.SqliteMiniappData
 import io.github.whywood.deepdeep.runtime.MiniappAgentGateway
 import io.github.whywood.deepdeep.runtime.MiniappEntry
+import io.github.whywood.deepdeep.runtime.MiniappSafeArea
 import io.github.whywood.deepdeep.runtime.MiniappStore
+import kotlinx.serialization.json.JsonObject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -81,6 +91,18 @@ fun MiniappViewerScreen(
     var renameName by remember(creationId) { mutableStateOf("") }
     var working by remember { mutableStateOf(false) }
     val webViewState = remember(creationId) { MiniappWebViewState() }
+    val viewerPreferences = remember { MiniappViewerPreferences(context) }
+    var fullscreen by remember(creationId) { mutableStateOf(viewerPreferences.fullscreen(creationId)) }
+    val interactions = remember(creationId) { MiniappInteractions() }
+    val density = LocalDensity.current
+    val statusBarPx = WindowInsets.statusBars.getTop(density)
+    val navigationBarPx = WindowInsets.navigationBars.getBottom(density)
+    val safeArea = MiniappSafeArea(
+        top = if (fullscreen) statusBarPx else 0,
+        bottom = if (fullscreen) navigationBarPx else 0,
+        left = 0,
+        right = 0,
+    )
     val creation = (entry as? MiniappEntry.Valid)?.creation
     val name = creation?.manifest?.name
     val valid = creation != null
@@ -91,7 +113,57 @@ fun MiniappViewerScreen(
         WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
             WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     }
+    val userFilesDir = remember(creationId) { store.userFilesDir(creationId) }
+    val fileStore = remember(creationId) { MiniappFileStore(context.contentResolver, userFilesDir) }
+    val currentSafeArea = rememberUpdatedState(safeArea)
+    val uiHost = remember(creationId) {
+        object : MiniappUiHost {
+            override fun haptic(intensity: String): Boolean {
+                val view = webViewState.webView ?: return false
+                val constant = when (intensity) {
+                    "heavy" -> HapticFeedbackConstants.LONG_PRESS
+                    "medium" -> HapticFeedbackConstants.KEYBOARD_TAP
+                    else -> HapticFeedbackConstants.CLOCK_TICK
+                }
+                view.post { runCatching { view.performHapticFeedback(constant) } }
+                return true
+            }
+
+            override fun keepScreenOn(enabled: Boolean): Boolean {
+                val view = webViewState.webView ?: return false
+                view.post { runCatching { view.keepScreenOn = enabled } }
+                return true
+            }
+        }
+    }
+    val host = remember(creationId, name) {
+        creation?.let {
+            MiniappHostImpl(
+                context = context.applicationContext,
+                appId = creationId,
+                appName = it.manifest.name,
+                fileStore = fileStore,
+                interactions = interactions,
+                uiHost = uiHost,
+                safeArea = { currentSafeArea.value },
+            )
+        }
+    }
+    var openParameters by remember(creationId) { mutableStateOf(MiniappLaunchEvents.consume(creationId)) }
+    LaunchedEffect(creationId) {
+        MiniappLaunchEvents.events.collect { event ->
+            if (event.first == creationId) {
+                MiniappLaunchEvents.clear(creationId)
+                openParameters = event.second
+            }
+        }
+    }
     val actionFailedText = stringResource(R.string.miniapp_action_failed)
+
+    fun applyFullscreen(enabled: Boolean) {
+        fullscreen = enabled
+        viewerPreferences.setFullscreen(creationId, enabled)
+    }
 
     LaunchedEffect(creationId, loadKey) {
         entry = runCatching { store.load(creationId) }.getOrElse { MiniappEntry.Missing }
@@ -106,7 +178,9 @@ fun MiniappViewerScreen(
     DisposableEffect(data) {
         onDispose { data?.close() }
     }
-    BackHandler(enabled = canGoBack) { webViewState.goBack() }
+    BackHandler(enabled = fullscreen || canGoBack) {
+        if (fullscreen) applyFullscreen(false) else webViewState.goBack()
+    }
 
     fun renameCreation() {
         val next = renameName.trim()
@@ -133,6 +207,7 @@ fun MiniappViewerScreen(
             working = false
             if (deleted) {
                 deleteOpen = false
+                MiniappNotificationCenter(context, creationId, name.orEmpty()).clearAllForApp()
                 onBack()
             } else {
                 dialogError = true
@@ -146,10 +221,11 @@ fun MiniappViewerScreen(
         modifier
             .fillMaxSize()
             .background(colors.paper)
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            .then(if (fullscreen) Modifier else Modifier.statusBarsPadding())
+            .then(if (fullscreen) Modifier else Modifier.navigationBarsPadding())
             .testTag("miniapp_viewer"),
     ) {
+        if (!fullscreen) {
         Row(
             modifier = Modifier.fillMaxWidth().height(64.dp).padding(horizontal = DdSpacing.Sm),
             verticalAlignment = Alignment.CenterVertically,
@@ -169,6 +245,14 @@ fun MiniappViewerScreen(
                 color = colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+            DdIconButton(
+                icon = DdIcons.Expand,
+                onClick = { applyFullscreen(true) },
+                contentDescription = stringResource(R.string.miniapp_fullscreen_enter),
+                modifier = Modifier.testTag("miniapp_fullscreen"),
+                tint = colors.ink,
+                iconSize = 20.dp,
             )
             Box {
                 DdIconButton(
@@ -270,6 +354,7 @@ fun MiniappViewerScreen(
                 }
             }
         }
+        }
         Box(Modifier.fillMaxWidth().weight(1f)) {
             when {
                 entry == null -> {
@@ -284,6 +369,11 @@ fun MiniappViewerScreen(
                             creation = creation,
                             data = data,
                             agentGateway = agentGateway,
+                            hostGateway = host,
+                            userFilesDir = userFilesDir,
+                            safeArea = safeArea,
+                            openParameters = openParameters,
+                            onOpenParametersConsumed = { openParameters = null },
                             reloadKey = reloadKey,
                             onFatalError = { message -> fatalError = message },
                             onHistoryChanged = { canGoBack = it },
@@ -313,6 +403,33 @@ fun MiniappViewerScreen(
                     },
                 )
             }
+            if (fullscreen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = with(density) { statusBarPx.toDp() } + DdSpacing.Sm,
+                            end = DdSpacing.Sm,
+                        ),
+                    contentAlignment = Alignment.TopEnd,
+                ) {
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .background(colors.paper.copy(alpha = 0.82f)),
+                    ) {
+                        DdIconButton(
+                            icon = DdIcons.ChevronDown,
+                            onClick = { applyFullscreen(false) },
+                            contentDescription = stringResource(R.string.miniapp_fullscreen_exit),
+                            modifier = Modifier.testTag("miniapp_fullscreen_exit"),
+                            tint = colors.ink,
+                            iconSize = 20.dp,
+                        )
+                    }
+                }
+            }
+            MiniappInteractionOverlay()
         }
     }
 

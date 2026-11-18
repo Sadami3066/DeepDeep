@@ -70,6 +70,44 @@ app.toast("已保存");
 - `alert` 会变成原生 toast；`confirm`/`prompt`/Service Worker 不可用，用页面内 UI。
 - 页面不能调用 App 其他内部函数、不能读写其他小程序或 App 数据。
 
+## 系统能力
+
+页面还可以调用宿主能力（全部返回 Promise；敏感能力首次调用时系统会弹授权）：
+
+```js
+await app.notify.show({ title: "喝水", body: "该喝水了", id: "water" });
+await app.notify.schedule({ id: "daily", title: "背单词", body: "今天还没打卡", at: Date.now() + 3600_000, repeat: "daily" });
+const picked = await app.files.pick({ types: ["text/csv"] });
+await app.files.write("notes/today.txt", "hello");
+const cover = await app.files.url("photos/cover.jpg");
+app.haptic("light");
+app.keepScreenOn(true);
+await app.clipboard.write("已复制");
+await app.share.text("分享内容");
+const code = await app.media.scanQr();
+const heard = await app.speech.listen({ timeoutMs: 10000 });
+await app.calendar.add({ title: "复习", start: Date.now() + 3600_000, end: Date.now() + 7200_000 });
+```
+
+| 接口 | 说明 |
+|---|---|
+| `app.env()` | `bridgeVersion`、`capabilities`（可用方法名）、`locale`、`fontScale`、`safeArea` |
+| `app.on(type, cb)` / `app.off` | 事件：`theme`、`visibility`、`open`（通知或深链打开） |
+| `app.notify.show` / `schedule` / `list` / `cancel` / `cancelAll` | 通知与定时提醒；提醒落盘，页面关闭后仍生效，点击回到小程序；每小程序最多 64 条 |
+| `app.files.pick` / `read` / `write` / `export` / `url` / `list` / `delete` | 小程序文件区（与页面代码目录分开），单文件 ≤16MB、总计 ≤100MB；`encoding` 为 `text`（默认）或 `base64` |
+| `app.share.text` / `share.file` | 系统分享 |
+| `app.clipboard.read` / `write` | 剪贴板 |
+| `app.media.pick` / `capture` / `saveToGallery` / `scanQr` | 相册、相机、保存图片、扫码 |
+| `app.speech.speak` / `stop` / `listen` | 朗读与语音输入 |
+| `app.openUrl(url)` | 用系统打开链接 |
+| `app.location.current()` | 当前位置 |
+| `app.calendar.list` / `add` | 日历读写 |
+| `app.haptic` / `app.keepScreenOn` | 触感与屏幕常亮 |
+
+- 失败时 Promise reject，`error.code` 见参考文档；权限被拒是 `permission_denied`。
+- 通知点击会带 `note` 参数回到小程序：`app.on("open", e => console.log(e.note))`。
+- 查看器提供全屏与返回，页面不需要处理。
+
 ## 页面驱动 Agent
 
 页面 JS 可以直接启动一次性 Agent 完成调查、写作、总结、文件处理等任务，并自己编排。

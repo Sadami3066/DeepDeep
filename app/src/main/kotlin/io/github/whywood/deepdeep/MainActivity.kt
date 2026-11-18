@@ -39,6 +39,7 @@ import io.github.whywood.deepdeep.service.AppVisibility
 import io.github.whywood.deepdeep.service.NotificationCenter
 import io.github.whywood.deepdeep.theme.HostTheme
 import io.github.whywood.deepdeep.ui.common.ProvideHostFiles
+import io.github.whywood.deepdeep.ui.miniapp.MiniappLaunchEvents
 import io.github.whywood.deepdeep.ui.common.chat.ProvidePluginManager
 import io.github.whywood.deepdeep.ui.navigation.AppDestination
 import kotlinx.coroutines.flow.first
@@ -137,7 +138,13 @@ class MainActivity : ComponentActivity() {
         if (intent.action == Intent.ACTION_VIEW) {
             when (val link = DeepLink.parse(intent.dataString.orEmpty())) {
                 is DeepLink.Session -> pendingSessionId.value = link.sessionId
-                is DeepLink.Page -> pendingDeepDestination.value = link.destination
+                is DeepLink.Page -> {
+                    pendingDeepDestination.value = link.destination
+                    val destination = link.destination
+                    if (destination is AppDestination.MiniappDetail) {
+                        MiniappLaunchEvents.record(destination.id, miniappOpenParameters(intent.dataString.orEmpty()))
+                    }
+                }
                 is DeepLink.PluginPath -> dispatchPluginDeepLink(link)
 
                 null -> {
@@ -204,6 +211,16 @@ class MainActivity : ComponentActivity() {
         } else {
             pendingShare.value = payload
             dispatchPluginShare(payload)
+        }
+    }
+
+    private fun miniappOpenParameters(raw: String): kotlinx.serialization.json.JsonObject {
+        val uri = runCatching { Uri.parse(raw) }.getOrNull()
+        val note = uri?.getQueryParameter("note")
+        return kotlinx.serialization.json.buildJsonObject {
+            if (!note.isNullOrBlank()) {
+                put("note", kotlinx.serialization.json.JsonPrimitive(note))
+            }
         }
     }
 

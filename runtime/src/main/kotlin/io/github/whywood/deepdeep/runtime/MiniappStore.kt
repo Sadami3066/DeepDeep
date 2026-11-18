@@ -180,6 +180,8 @@ class MiniappStore(
 
     fun dataFile(id: String): File = File(userdataDir, "$id.db")
 
+    fun userFilesDir(id: String): File = File(userdataDir, "$id.files")
+
     private fun ensureRoot() {
         listOf(rootDir, appsDir, buildDir, userdataDir).forEach { directory ->
             if (!directory.exists() && !directory.mkdirs()) {
@@ -358,6 +360,8 @@ class MiniappStore(
             val file = File(userdataDir, name)
             if (file.isFile) file.delete()
         }
+        val files = File(userdataDir, "$id.files")
+        if (files.isDirectory) files.deleteRecursively()
     }
 
     private fun writeManifest(directory: File, manifest: MiniappManifest) {

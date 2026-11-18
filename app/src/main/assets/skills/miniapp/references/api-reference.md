@@ -69,6 +69,149 @@ app.toast("已保存");
 - 普通 `fetch` 可用；失败要有兜底。
 - `localStorage` 可做缓存，但不要作为唯一数据源；持久数据用 `app.data`。
 
+## 系统能力
+
+除数据、toast 和 Agent 外，页面可调用宿主系统能力。全部返回 Promise，失败时 reject；敏感能力首次调用会弹系统授权。
+
+### app.env()
+
+```js
+const env = await app.env();
+// {
+//   bridgeVersion: 2,
+//   capabilities: ["env", "notify.show", "files.read", ...],
+//   locale: "zh-CN",
+//   fontScale: 1.0,
+//   safeArea: { top: 24, bottom: 48, left: 0, right: 0 }
+// }
+```
+
+`capabilities` 可用于能力探测。`safeArea` 是全屏或手势区占用的像素，需要贴边布局时自行留白。
+
+### app.on / app.off
+
+```js
+const stop = app.on("theme", e => document.body.dataset.dark = String(e.dark));
+app.on("visibility", e => { if (!e.visible) pauseTimers(); });
+app.on("open", e => { if (e.note) showFromNotification(e.note); });
+```
+
+| 事件 | 字段 | 触发 |
+|---|---|---|
+| `theme` | `dark` | 系统深浅色切换 |
+| `visibility` | `visible` | 页面进入/离开前台 |
+| `open` | `note`（可能为空） | 点通知或深链打开本小程序 |
+
+### 通知与提醒
+
+```js
+await app.notify.show({ title: "喝水", body: "该喝水了", id: "water" });
+await app.notify.schedule({ id: "daily", title: "背单词", body: "今天还没打卡", at: Date.now() + 3600_000, repeat: "daily" });
+const reminders = await app.notify.list();
+await app.notify.cancel("water");
+await app.notify.cancelAll();
+```
+
+- `show` 立即发通知，返回 id；省略 `id` 时自动生成。
+- `schedule` 的 `at` 是毫秒时间戳，必须在一小时内到一年内；`repeat: "daily"` 表示每天同一时刻重复。提醒落盘，页面关闭或 App 重启后仍然生效，点通知回到本小程序（`app.on("open")`）。
+- 每个小程序最多 64 条提醒；通知权限被拒时 reject `permission_denied`。
+
+### 文件
+
+```js
+const files = await app.files.pick({ types: ["text/csv", "text/plain"], multiple: true });
+// [{ name, path, size, mimeType }]
+const text = await app.files.read(files[0].path);
+await app.files.write("notes/today.txt", "hello");
+await app.files.write("img/cover.bin", base64, "base64");
+const url = await app.files.url("img/cover.bin");
+const entries = await app.files.list("notes");
+await app.files.export("notes/today.txt");
+await app.files.delete("notes/today.txt");
+```
+
+- `path` 是相对小程序文件区的相对路径，不能是绝对路径或包含 `..`。
+- `read` 默认按 UTF-8 文本返回；二进制用 `encoding: "base64"`，得到 `base64` 字段。`write` 同理。
+- 单文件 ≤16MB、总计 ≤100MB；`url()` 返回可直接用于 `<img>`/`<audio>`/`<video>` 的本地地址。
+- `export` 打开系统保存面板，`pick` 打开系统文件选择器。
+
+### 分享与剪贴板
+
+```js
+await app.share.text("分享内容");
+await app.share.file("notes/today.txt", "text/plain");
+await app.clipboard.write("已复制");
+const pasted = await app.clipboard.read();
+```
+
+### 媒体
+
+```js
+const images = await app.media.pick({ type: "image", multiple: false });
+const photo = await app.media.capture();          // 拍照，返回文件引用
+await app.media.saveToGallery("photos/cover.jpg");
+const text = await app.media.scanQr();            // 扫码，返回文本
+```
+
+- `pick` 的 `type` 为 `image`（默认）、`video` 或 `any`；选中文件会导入小程序文件区。
+- `capture` 打开相机，取消返回 `null`；拍照后可用 `files.url()` 展示。
+- `saveToGallery` 把文件写入系统相册（图片或视频）。
+
+### 语音
+
+```js
+await app.speech.speak("今天的天气不错", "zh");
+await app.speech.stop();
+const heard = await app.speech.listen({ timeoutMs: 10000 }); // { text }
+```
+
+`listen` 首次调用请求麦克风权限，返回识别文本；超时或识别失败会 reject。
+
+### 打开链接与定位
+
+```js
+await app.openUrl("https://example.com");        // http/https/mailto 等，不能是 file/content/javascript
+const location = await app.location.current();   // { latitude, longitude, accuracyM, provider, time }
+```
+
+### 日历
+
+```js
+const events = await app.calendar.list({ from: Date.now(), to: Date.now() + 7 * 86400000, limit: 20 });
+await app.calendar.add({
+  title: "复习",
+  start: Date.now() + 3600_000,
+  end: Date.now() + 7200_000,
+  allDay: false,
+  notes: "线性代数",
+  location: "图书馆"
+});
+```
+
+首次调用请求日历读写权限；事件字段为 `{ id, calendarId, title, start, end, allDay, notes?, location? }`。
+
+### 触感与屏幕
+
+```js
+app.haptic("light");        // light | medium | heavy
+app.keepScreenOn(true);
+```
+
+### 错误
+
+Promise reject，`Error.code` 可能为：
+
+| code | 含义 |
+|---|---|
+| `invalid_params` | 参数不合法（缺少必填、范围超限、路径非法等） |
+| `permission_denied` | 用户拒绝授权或系统权限未开启 |
+| `not_found` | 文件或目录不存在 |
+| `too_large` | 超出单文件、总量、数量和提醒上限 |
+| `cancelled` | 用户取消选择 |
+| `unavailable` | 当前设备或环境不支持该能力 |
+| `host_unavailable` | 宿主未提供对应能力（异常情况） |
+| `failed` | 系统调用失败（通知、保存、语音等） |
+
 ## 页面驱动 Agent
 
 页面 JS 可以启动一次性、无会话的 Agent，自己决定数量、并行/串行和每个 Agent 的参数。生命周期绑定页面：页面关闭会取消正在运行的 Agent；没有后台执行。
@@ -238,4 +381,5 @@ try {
 
 - 页面代码：`files/miniapp/apps/<id>/`
 - 页面数据：`files/miniapp/userdata/<id>.db`（SQLite KV，页面与数据工具共享）
+- 页面文件区：`files/miniapp/userdata/<id>.files/`（`app.files.*` 读写，与代码目录分开）
 - 页面 Agent 的临时会话状态由 App 管理并在结束后清理；默认工作区中的产物保留。并行命令仅本次运行有效，结束或取消时终止并等待收尾。

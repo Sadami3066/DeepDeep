@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.ui.miniapp
 
+import android.net.Uri
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import androidx.webkit.WebViewAssetLoader
@@ -107,8 +108,9 @@ object MiniappAssets {
     }
 }
 
-class MiniappAssetServer(appDir: File, manifest: MiniappManifest) {
+class MiniappAssetServer(appDir: File, manifest: MiniappManifest, userFilesDir: File? = null) {
     private val root: File = appDir.canonicalFile
+    private val userFilesRoot: File? = userFilesDir?.absoluteFile
     private val assetLoader: WebViewAssetLoader = WebViewAssetLoader.Builder()
         .setDomain(manifest.id + ".miniapp.local")
         .addPathHandler("/", object : WebViewAssetLoader.PathHandler {
@@ -122,6 +124,8 @@ class MiniappAssetServer(appDir: File, manifest: MiniappManifest) {
     fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
         val uri = request.url
         if (!uri.host.equals(domain, ignoreCase = true)) return assetLoader.shouldInterceptRequest(uri)
+        val path = uri.path.orEmpty()
+        if (path.startsWith(USER_FILES_PREFIX)) return userFileResponse(request, path)
         val rangeHeader = request.requestHeaders?.entries
             ?.firstOrNull { it.key.equals("Range", ignoreCase = true) }
             ?.value
@@ -131,8 +135,34 @@ class MiniappAssetServer(appDir: File, manifest: MiniappManifest) {
         return assetLoader.shouldInterceptRequest(uri)
     }
 
+    private fun userFileResponse(request: WebResourceRequest, path: String): WebResourceResponse {
+        val relative = Uri.decode(path.removePrefix(USER_FILES_PREFIX))
+        val file = resolveUserFile(relative) ?: return notFound()
+        val rangeHeader = request.requestHeaders?.entries
+            ?.firstOrNull { it.key.equals("Range", ignoreCase = true) }
+            ?.value
+        if (rangeHeader != null) {
+            rangeResponseFor(file, rangeHeader)?.let { return it }
+        }
+        return openResponseFor(file)
+    }
+
+    private fun resolveUserFile(relative: String): File? {
+        val root = userFilesRoot ?: return null
+        if (relative.isEmpty() || relative.contains('\u0000')) return null
+        val canonicalRoot = runCatching { root.canonicalFile }.getOrNull() ?: return null
+        val candidate = runCatching { File(canonicalRoot, relative).canonicalFile }.getOrNull() ?: return null
+        if (!candidate.toPath().startsWith(canonicalRoot.toPath())) return null
+        if (!candidate.isFile) return null
+        return candidate
+    }
+
     private fun openResponse(path: String): WebResourceResponse {
         val file = MiniappAssets.resolveFile(root, path) ?: return notFound()
+        return openResponseFor(file)
+    }
+
+    private fun openResponseFor(file: File): WebResourceResponse {
         val mimeType = MiniappAssets.mimeTypeFor(file.name)
         return try {
             val stream = FileInputStream(file)
@@ -151,6 +181,10 @@ class MiniappAssetServer(appDir: File, manifest: MiniappManifest) {
 
     private fun rangeResponse(path: String, rangeHeader: String): WebResourceResponse? {
         val file = MiniappAssets.resolveFile(root, path) ?: return null
+        return rangeResponseFor(file, rangeHeader)
+    }
+
+    private fun rangeResponseFor(file: File, rangeHeader: String): WebResourceResponse? {
         val length = file.length()
         val range = MiniappAssets.parseRange(rangeHeader, length) ?: return null
         val mimeType = MiniappAssets.mimeTypeFor(file.name)
@@ -187,6 +221,10 @@ class MiniappAssetServer(appDir: File, manifest: MiniappManifest) {
         mutableMapOf("Cache-Control" to MiniappAssets.CACHE_CONTROL),
         ByteArrayInputStream("Not Found".toByteArray()),
     )
+
+    private companion object {
+        const val USER_FILES_PREFIX = "/__files/"
+    }
 
     private class RangeInputStream(
         file: File,

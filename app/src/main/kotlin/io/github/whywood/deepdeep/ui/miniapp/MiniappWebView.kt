@@ -48,11 +48,17 @@ import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.whywood.deepdeep.runtime.MiniappAgentGateway
 import io.github.whywood.deepdeep.runtime.MiniappBridgeRouter
+import io.github.whywood.deepdeep.runtime.MiniappHostGateway
+import io.github.whywood.deepdeep.runtime.MiniappSafeArea
 import io.github.whywood.deepdeep.runtime.MiniappCreation
 import io.github.whywood.deepdeep.runtime.MiniappData
 import io.github.whywood.deepdeep.runtime.MiniappManifest
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -79,6 +85,11 @@ fun MiniappWebView(
     creation: MiniappCreation,
     data: MiniappData,
     agentGateway: MiniappAgentGateway? = null,
+    hostGateway: MiniappHostGateway? = null,
+    userFilesDir: File? = null,
+    safeArea: MiniappSafeArea = MiniappSafeArea(0, 0, 0, 0),
+    openParameters: JsonObject? = null,
+    onOpenParametersConsumed: () -> Unit = {},
     reloadKey: Int,
     onFatalError: (String) -> Unit,
     onHistoryChanged: (Boolean) -> Unit,
@@ -91,14 +102,17 @@ fun MiniappWebView(
     val scope = rememberCoroutineScope()
     val manifest = creation.manifest
     val refs = remember(manifest.id) { MiniappWebViewRefs() }
-    val assetServer = remember(manifest.id) { MiniappAssetServer(creation.directory, manifest) }
+    val assetServer = remember(manifest.id, userFilesDir) {
+        MiniappAssetServer(creation.directory, manifest, userFilesDir)
+    }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
-    val router = remember(manifest.id, agentGateway) {
+    val router = remember(manifest.id, agentGateway, hostGateway) {
         MiniappBridgeRouter(
             manifest = manifest,
             data = data,
             toast = { text -> mainHandler.post { Toast.makeText(context, text, Toast.LENGTH_SHORT).show() } },
             agent = agentGateway,
+            host = hostGateway,
         )
     }
     val sdkSource = remember {
@@ -106,10 +120,14 @@ fun MiniappWebView(
             context.assets.open("miniapp/bridge.js").bufferedReader().use { it.readText() }
         }.getOrDefault("")
     }
-    val envJson = remember(manifest.id) { buildEnvJson(manifest, colors) }
+    val envJson = remember(manifest.id, safeArea) { buildEnvJson(manifest, colors, safeArea) }
     val themeJson = remember(colors.dark, colors.paper, colors.ink, colors.inkSecondary, colors.accent, colors.hairline) {
         themeObject(colors).toString()
     }
+    val safeAreaJson = remember(safeArea) { safeAreaObject(safeArea).toString() }
+    val applyJson = remember(themeJson, safeAreaJson) { "{theme:$themeJson,safeArea:$safeAreaJson}" }
+    val currentApplyJson = rememberUpdatedState(applyJson)
+    val currentDark = rememberUpdatedState(colors.dark)
     val currentHistory = rememberUpdatedState(onHistoryChanged)
     val currentCrash = rememberUpdatedState(onRenderCrash)
     val currentFatalError = rememberUpdatedState(onFatalError)
@@ -120,8 +138,32 @@ fun MiniappWebView(
     LaunchedEffect(reloadKey) {
         if (reloadKey > 0) refs.webView?.reload()
     }
-    LaunchedEffect(themeJson) {
-        refs.webView?.evaluateJavascript(themeApplyScript(themeJson), null)
+    LaunchedEffect(applyJson) {
+        refs.webView?.evaluateJavascript(applyScript(currentApplyJson.value), null)
+        refs.bridge?.push("theme", buildJsonObject { put("dark", currentDark.value) })
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, _ ->
+            val visible = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            refs.bridge?.push("visibility", buildJsonObject { put("visible", visible) })
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        refs.bridge?.push(
+            "visibility",
+            buildJsonObject {
+                put("visible", lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+            },
+        )
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    var lastOpened by remember(manifest.id) { mutableStateOf<JsonObject?>(null) }
+    LaunchedEffect(loading, openParameters) {
+        val params = openParameters ?: return@LaunchedEffect
+        if (loading || lastOpened === params) return@LaunchedEffect
+        refs.bridge?.push("open", params)
+        lastOpened = params
+        onOpenParametersConsumed()
     }
     DisposableEffect(manifest.id) {
         onDispose {
@@ -157,7 +199,8 @@ fun MiniappWebView(
                             crashKey++
                         },
                         onFatalError = { message -> currentFatalError.value(message) },
-                        themeJson = { currentThemeJson.value },
+                        applyJson = { currentApplyJson.value },
+                        dark = { currentDark.value },
                     )
                 },
                 modifier = Modifier.fillMaxSize(),
@@ -199,7 +242,8 @@ private fun createMiniappWebView(
     onHistoryChanged: (Boolean) -> Unit,
     onRenderCrash: () -> Unit,
     onFatalError: (String) -> Unit,
-    themeJson: () -> String,
+    applyJson: () -> String,
+    dark: () -> Boolean,
 ): View {
     val webView = WebView(context)
     if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
@@ -249,7 +293,8 @@ private fun createMiniappWebView(
             if (!isMiniappUrl(url, assetServer.origin)) return
             onLoadingChanged(false)
             onHistoryChanged(view.canGoBack())
-            view.evaluateJavascript(themeApplyScript(themeJson()), null)
+            view.evaluateJavascript(applyScript(applyJson()), null)
+            refs.bridge?.push("theme", buildJsonObject { put("dark", dark()) })
         }
 
         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -305,7 +350,7 @@ private fun destroyWebView(view: WebView) {
     runCatching { view.destroy() }
 }
 
-private fun buildEnvJson(manifest: MiniappManifest, colors: DeepDeepColors): String = buildJsonObject {
+private fun buildEnvJson(manifest: MiniappManifest, colors: DeepDeepColors, safeArea: MiniappSafeArea): String = buildJsonObject {
     putJsonObject("app") {
         put("id", manifest.id)
         put("name", manifest.name)
@@ -313,6 +358,7 @@ private fun buildEnvJson(manifest: MiniappManifest, colors: DeepDeepColors): Str
         put("version", manifest.version)
     }
     put("theme", themeObject(colors))
+    put("safeArea", safeAreaObject(safeArea))
 }.toString()
 
 private fun themeObject(colors: DeepDeepColors): JsonObject = buildJsonObject {
@@ -329,5 +375,14 @@ private fun hexColor(color: Color): String = String.format("#%06X", color.toArgb
 private fun isMiniappUrl(url: String?, origin: String): Boolean =
     url != null && (url == origin || url.startsWith(origin + "/"))
 
-private fun themeApplyScript(themeJson: String): String =
-    "if (typeof window.__deepdeepApplyTheme === 'function') { window.__deepdeepApplyTheme($themeJson) }"
+private fun safeAreaObject(area: MiniappSafeArea): JsonObject = buildJsonObject {
+    put("top", area.top)
+    put("bottom", area.bottom)
+    put("left", area.left)
+    put("right", area.right)
+}
+
+private fun applyScript(payload: String): String =
+    "var __ddApply = $payload; " +
+        "if (typeof window.__deepdeepApplyTheme === 'function') { window.__deepdeepApplyTheme(__ddApply.theme) }; " +
+        "if (typeof window.__deepdeepApplySafeArea === 'function') { window.__deepdeepApplySafeArea(__ddApply.safeArea) }"

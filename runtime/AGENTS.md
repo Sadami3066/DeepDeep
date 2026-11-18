@@ -110,7 +110,8 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `MiniappStore.kt` | 小程序目录：扫描、草稿装载、删除与数据文件 |
 | `MiniappDataStore.kt` | 每个小程序的 SQLite 键值数据层 |
 | `MiniappTools.kt` | 建草稿/装载/列出/删除/改数据的小程序工具 |
-| `MiniappBridge.kt` | 页面与 App 的 JS bridge 方法路由 |
+| `MiniappBridge.kt` | 页面与 App 的 JS bridge 方法路由：数据、toast、触感/常亮、env、通知提醒、文件、分享、剪贴板、媒体、语音、链接、定位、日历与 agent；宿主能力经 `MiniappHostGateway` 注入 |
+| `MiniappHost.kt` | 小程序宿主能力契约：`MiniappHostGateway`、请求/结果模型、错误码、`MINIAPP_CAPABILITIES` 与 bridge 版本 |
 | `MiniappAgentService.kt` | 页面发起的一次性 Agent：临时引擎、工具裁剪与 `hooksFactory`（同一套插件钩子/会话绑定） |
 | `MiniappAgentSupport.kt` | 小程序 Agent 的事件映射、请求校验/模型与工具选择、技能复制与资源文件系统 |
 | `MiniappAgent.kt` | 一次性 Agent 的请求、事件与网关模型 |

@@ -29,4 +29,7 @@
     <string name="miniapp_shortcut_hint_message">If the icon doesn\'t appear, allow “Home screen shortcuts” in system settings and try again.</string>
     <string name="miniapp_shortcut_open_settings">Open settings</string>
     <string name="miniapp_missing">This mini app no longer exists</string>
+    <string name="miniapp_fullscreen_enter">Full screen</string>
+    <string name="miniapp_fullscreen_exit">Exit full screen</string>
+    <string name="miniapp_notifications_channel">Miniapp reminders</string>
 </resources>

@@ -22,6 +22,7 @@ private const val TAG = "DeepDeepMiniapp"
 const val MINIAPP_JS_OBJECT = "DeepDeepNative"
 private const val BRIDGE_DISPATCH = "window.__deepdeepBridge.dispatch"
 private const val BRIDGE_DISPATCH_EVENT = "window.__deepdeepBridge.dispatchEvent"
+private const val BRIDGE_DISPATCH_PUSH = "window.__deepdeepBridge.dispatchPush"
 private const val EVENT_TEXT_DELTA = "text_delta"
 private const val EVENT_THINKING_DELTA = "thinking_delta"
 private const val EVENT_BATCH_MS = 40L
@@ -79,6 +80,14 @@ class MiniappBridgeHost(
             flushScheduled = false
         }
         runCatching { WebViewCompat.removeWebMessageListener(webView, MINIAPP_JS_OBJECT) }
+    }
+
+    fun push(type: String, payload: JsonObject = JsonObject(emptyMap())) {
+        val message = buildJsonObject {
+            put("type", type)
+            payload.forEach { (key, value) -> if (key != "type") put(key, value) }
+        }
+        postToPage { inject(BRIDGE_DISPATCH_PUSH + "(" + JSONObject.quote(message.toString()) + ")") }
     }
 
     fun documentStartScript(envJson: String, sdkSource: String): String = buildString {
