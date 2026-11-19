@@ -158,14 +158,22 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
     private suspend fun installedSkills(): List<io.github.whywood.deepdeep.data.InstalledSkill> {
         val listed = runCatching { deps.skillRepository.list().getOrNull() }.getOrNull()
-        if (listed != null) cachedSkills = listed
-        return listed ?: cachedSkills.orEmpty()
+        if (listed != null) {
+            cachedSkills = listed
+            return listed
+        }
+        android.util.Log.w("DeepDeepRuntime", "skill list failed; using cached skill exclusions")
+        return cachedSkills.orEmpty()
     }
 
     private suspend fun installedMcpServers(): Set<String> {
         val loaded = runCatching { deps.mcpConfigStore.load().servers.keys }.getOrNull()
-        if (loaded != null) cachedMcpServers = loaded
-        return loaded ?: cachedMcpServers.orEmpty()
+        if (loaded != null) {
+            cachedMcpServers = loaded
+            return loaded
+        }
+        android.util.Log.w("DeepDeepRuntime", "mcp config read failed; using cached mcp exclusions")
+        return cachedMcpServers.orEmpty()
     }
 
     private suspend fun exclusionsFor(cwd: String): BotPolicyExclusions {

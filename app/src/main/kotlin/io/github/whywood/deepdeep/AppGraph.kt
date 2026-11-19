@@ -88,6 +88,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -232,12 +233,10 @@ class AppGraph(context: Context) : AppDependencies {
     init {
         scope.launch { StorageMigration.migrate(appContext.filesDir) }
         scope.launch {
-            dataGraph.workspaceToolPolicies.changes.debounce(200).collect {
-                runCatching { host.reconfigure() }
-            }
-        }
-        scope.launch {
-            dataGraph.skillRepository.changes.debounce(400).collect {
+            merge(
+                dataGraph.workspaceToolPolicies.changes.drop(1),
+                dataGraph.skillRepository.changes.drop(1),
+            ).debounce(300).collect {
                 runCatching { host.reconfigure() }
             }
         }

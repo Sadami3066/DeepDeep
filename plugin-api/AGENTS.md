@@ -15,7 +15,7 @@
 | `Contributions.kt` | `Contributions`、`PluginTool`、`PluginToolCall`、`PluginRunSignal`、`PluginToolResult`、`ToolBlock` 与工厂 |
 | `Hooks.kt` | `PluginEvent` 标记接口、观察事件（含通知/后台/分享/深链/应用生命周期）、5 个变换/闸门请求与决策、`PluginHooks`（默认空实现） |
 | `Ui.kt` | `SlotIds`、`SlotBinding`、`SlotContent`、`PluginPage`、`ComposerAction`、`PluginUiContributions` 与工厂 |
-| `Cards.kt` | 插件侧卡片交付：`Cards`（details 键、卡片描述符、`present` 指令、`deliver`）、`PluginCard` + `pluginCard`、`pluginResult`；工具结果文案与展示文本由插件 SDK 统一生成 |
+| `Cards.kt` | 插件侧卡片交付：`Cards`（details 键、`descriptor`、`instruction`、`deliver`）；`deliver` 把卡片/raw/guidance 组装成模型文本与展示文本，`PluginTool` 工厂自动调用 |
 | `ToolResultRenderers.kt` | 工具结果渲染器契约：`ToolResultSource`、`ToolResultMatch` + `toolResultMatch`、`ToolResultRenderer` + `toolResultRenderer`、`ToolResultState`、`ToolResultRendererContributor` |
 | `SlotStates.kt` | `SlotState` 标记接口与 `ToolCardSlotState` / `CustomMessageSlotState` 只读接口 |
 | `Services.kt` | 现有宿主服务接口（含 UI/通知/会话/聊天方法，1.2.0 新增 `UiService.openPageSheet`，1.3.0 新增 `McpService.callStructured`，1.3.1 新增 `ImageService`）、`PluginServiceUnavailable`、聊天 DTO 与工厂 |

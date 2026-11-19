@@ -29,7 +29,6 @@ public object Cards {
     }
 
     public fun deliver(callId: String, result: PluginToolResult): PluginToolResult {
-        if (result.blocks.isNotEmpty()) return result
         val details = result.details ?: return result
         val card = details[KEY] as? JsonObject
         val raw = details.text(RAW_KEY)
@@ -58,7 +57,9 @@ public object Cards {
                 display?.let { put(DISPLAY_KEY, JsonPrimitive(it)) }
             },
         )
-        return textResult(body, cleaned, result.isError)
+        if (result.blocks.isEmpty()) return textResult(body, cleaned, result.isError)
+        val blocks = result.blocks + body.takeIf { it.isNotBlank() }?.let { listOf(textBlock(it)) }.orEmpty()
+        return richResult(blocks, cleaned, result.isError)
     }
 
     private fun JsonObject.text(name: String): String? =

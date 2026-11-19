@@ -91,6 +91,7 @@ class SkillRepository(
         try {
             File(repoDir, id).deleteRecursively()
             File(globalSkillsDir, id).deleteRecursively()
+            deleteProjectCopies(id)
             _changes.value += 1
             true
         } catch (cancelled: CancellationException) {
@@ -199,6 +200,13 @@ class SkillRepository(
                 File(directory, SKILL_MD_FILE).isFile
         }
         .orEmpty()
+
+    private fun deleteProjectCopies(id: String) {
+        File(File(homeDir, PROJECT_SKILLS_DIRECTORY), id).deleteRecursively()
+        workspaceDirectories().forEach { workspace ->
+            File(File(workspace, PROJECT_SKILLS_DIRECTORY), id).deleteRecursively()
+        }
+    }
 
     private fun workspaceDirectories(): List<File> = workspacesDir.listFiles()
         ?.filter { it.isDirectory }

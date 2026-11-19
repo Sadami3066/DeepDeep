@@ -92,6 +92,8 @@ class ExternalPluginRecordStoreTest {
 
         assertTrue(store.setEnabled(record.id, false))
         assertEquals(false, store.get(record.id)?.enabled)
+        assertTrue(store.setEnabled(record.id, true))
+        assertEquals(true, store.get(record.id)?.enabled)
         assertFalse(store.setEnabled("missing", true))
     }
 

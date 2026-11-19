@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `RuntimeTypes.kt` | 核心模型、事件流与 AgentRuntime 五个接口 |
-| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime/FileRef）；`ToolResultDetails` 定义 details 保留键 `deepdeep.fileRefs` 的编解码、`deepdeep.card`（插件卡片数据，供 `present` 引用）、`deepdeep.raw`（完整上游返回）与 `deepdeep.guidance`（给模型的短指导，只写下一步/失败原因/约束）与 `deepdeep.structuredContent` 的读取（MCP 结构化结果，供工具卡渲染，超限时省略），`fileRefDisplayText` 给文本回退 |
+| `ToolPayloads.kt` | 结构化工具结果载荷：Text 或 Blocks（Text/Image base64+mime/FileRef）；`ToolResultDetails` 定义 details 保留键 `deepdeep.fileRefs` 的编解码与 `deepdeep.structuredContent` 的读取（MCP 结构化结果，供工具卡渲染，超限时省略）；`deepdeep.card` 常量在 plugin-api 的 `Cards`，raw/guidance 由插件侧 `Cards.deliver` 消费，`fileRefDisplayText` 给文本回退 |
 | `GoalContracts.kt` | 目标阶段、轮次模型与两个驱动接口 |
 | `JobContracts.kt` | 后台任务快照、状态与 JobController |
 | `Notices.kt` | 回合来源、回合提示与三类带外事件 |

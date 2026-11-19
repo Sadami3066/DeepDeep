@@ -6,6 +6,7 @@ import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
 import io.github.whywood.deepdeep.sdk.ai.RunSignal
 import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
 import io.github.whywood.deepdeep.plugin.api.PluginRunSignal
+import io.github.whywood.deepdeep.plugin.api.Cards
 import io.github.whywood.deepdeep.plugin.api.PluginTool
 import io.github.whywood.deepdeep.plugin.api.PluginToolCall
 import io.github.whywood.deepdeep.plugin.api.PluginToolResult
@@ -60,7 +61,7 @@ internal object PluginToolAdapter {
         val pluginSignal = signal?.let(::PluginRunSignalAdapter)
         val resolvedSessionId = sessionId()
         if (onUpdate == null) {
-            runTool {
+            runTool(callId) {
                 tool.execute(HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId, null))
             }
         } else {
@@ -68,7 +69,7 @@ internal object PluginToolAdapter {
             val forward = launch {
                 for (partial in updates) onUpdate(partial.toAgentToolResult())
             }
-            val result = runTool {
+            val result = runTool(callId) {
                 tool.execute(
                     HostPluginToolCall(callId, args, pluginSignal, resolvedSessionId) { partial ->
                         updates.trySend(partial)
@@ -104,9 +105,10 @@ internal object PluginToolAdapter {
     }
 
     private suspend fun runTool(
+        callId: String,
         block: suspend () -> PluginToolResult,
     ): AgentToolResult = try {
-        block().toAgentToolResult()
+        Cards.deliver(callId, block()).toAgentToolResult()
     } catch (error: RequestAbortedException) {
         throw error
     } catch (error: CancellationException) {

@@ -482,11 +482,10 @@ private fun PluginRow(
 ) {
     val colors = deepDeepColors()
     val available = snapshot.availability is PluginAvailabilityUi.Available
-    val failure = snapshot.lastError?.takeIf {
-        snapshot.phase == PluginPhaseUi.FAILED ||
-            snapshot.phase == PluginPhaseUi.DEGRADED ||
-            snapshot.phase == PluginPhaseUi.DISABLED
-    }
+    val retryable = snapshot.phase == PluginPhaseUi.FAILED ||
+        snapshot.phase == PluginPhaseUi.DEGRADED ||
+        snapshot.phase == PluginPhaseUi.DISABLED
+    val failure = snapshot.lastError?.takeIf { retryable }
     val description = when {
         !available -> (snapshot.availability as? PluginAvailabilityUi.Unavailable)?.reason
             ?: snapshot.summary
@@ -535,10 +534,10 @@ private fun PluginRow(
                     }
                 }
                 Spacer(Modifier.height(5.dp))
-                if (failure != null) {
+                if (retryable) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = failure,
+                            text = failure ?: description,
                             modifier = Modifier.weight(1f),
                             style = DdType.bodySmall,
                             color = colors.danger,
@@ -589,7 +588,7 @@ private fun PluginRow(
                         icon = DdIcons.Info,
                         testTag = "plugin_menu_info_${snapshot.id}",
                     )
-                    if (failure != null) {
+                    if (retryable || failure != null) {
                         DdMenuItem(
                             text = stringResource(R.string.plugins_recovery_retry),
                             onClick = {
@@ -638,11 +637,10 @@ private fun PluginDetailSheet(
     val colors = deepDeepColors()
     val context = LocalContext.current
     val publisher = snapshot.publisher
-    val failure = snapshot.lastError?.takeIf {
-        snapshot.phase == PluginPhaseUi.FAILED ||
-            snapshot.phase == PluginPhaseUi.DEGRADED ||
-            snapshot.phase == PluginPhaseUi.DISABLED
-    }
+    val retryable = snapshot.phase == PluginPhaseUi.FAILED ||
+        snapshot.phase == PluginPhaseUi.DEGRADED ||
+        snapshot.phase == PluginPhaseUi.DISABLED
+    val failure = snapshot.lastError?.takeIf { retryable }
     val bodyMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.66f).dp
     DdSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().testTag("plugin_detail")) {

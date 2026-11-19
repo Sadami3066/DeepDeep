@@ -559,20 +559,20 @@ pluginTool(
 
 `isError = true` 表示一次失败的工具结果（模型可重试/解释）；`execute` 抛异常（取消除外）也会转成 error 结果，所以不要用异常传业务错误。
 
-#### 返回三层：raw / guidance / card（1.4.0）
+#### 返回三层：raw / guidance / card（1.4.3）
 
-工具结果给模型和界面的分工固定为三层，全部通过 details 保留键传递：
+插件在结果 details 里写三份数据，`open fun Cards.deliver(callId, result)`（plugin-api 1.4.0，宿主 1.4.3+）负责把它们组装成模型可见文本与展示文本：
 
 | details 键 | 内容 | 谁使用 |
 |---|---|---|
-| `deepdeep.raw` | 上游完整输出（逐字；CLI 结果去掉 ANSI、`[exit: N]` 和宿主提示，不做摘要、不截断） | 宿主把它作为模型可见正文 |
-| `deepdeep.guidance` | 给模型的短指导：下一步、失败原因、必须询问的约束、输出文件路径、分页/登录提示；不写名称/价格/ID 等已在 raw 里的事实 | 宿主追加在 raw 之后 |
-| `deepdeep.card` | `{ "title": "...", "customType": "...", "payload": {...} }`；title 必填，宿主据此追加 `卡片 id：<callId>（标题）` | 模型用 `present` 交付，界面按 payload 渲染 |
+| `deepdeep.raw` | 上游完整输出（逐字；CLI 结果去掉 ANSI、`[exit: N]` 和宿主提示，不做摘要、不截断） | `Cards.deliver` 追加到模型文本的「完整返回」段 |
+| `deepdeep.guidance` | 给模型的短指导：下一步、失败原因、必须询问的约束、输出文件路径、分页/登录提示；不写名称/价格/ID 等已在 raw 里的事实 | `Cards.deliver` 追加到「使用说明」段 |
+| `deepdeep.card` | `{ "customType": "...", "title": "...", "payload": {...} }` | `Cards.deliver` 生成「调用 present 展示这张卡片」指令，并写 `deepdeep.display` 给工具卡展示 |
 
-- `raw` 存在时宿主丢弃 `textResult` 的 text（非文本内容块保留）；`raw` 不存在时 text 必须本身就是完整上游输出（例如邮箱解码文本、未识别的 CLI 命令透传）。
-- 插件自己的“可读摘要”不再进模型上下文；需要解释就写 `guidance`，需要展示就写 `card`。
+- 插件不需要自己拼卡片 id 或 `present` 指令，也不要把它写进卡片 payload；模型文本里的指令由 `Cards.deliver` 统一生成（`pluginTool` 工厂与 `CliToolBridge` 会自动调用，自行实现 `PluginTool` 的插件必须显式调用一次，重复调用幂等）。
+- `textResult` 的 text 只写插件自己的正文（例如邮箱事实列表）；`raw`/`guidance` 不再由宿主拼接。
+- 错误结果（`isError = true`）由 `Cards.deliver` 丢弃卡片与 `present` 指令，只保留正文、完整返回与使用说明。
 - 卡片 payload 必须全量（含原始脏字符串、ID、坐标、图片 URL、状态、分页 token）；裁剪只发生在渲染层的默认预览/展开。
-- 错误结果不追加卡片 id；把可操作说明写进 `guidance`。
 - 图片 URL 用 `host.images().load(url, maxEdgePx)` 取（需 manifest 声明 `images` capability），返回 `RemoteImage.bitmap`；配合 design 0.11.0 的 `DdRemoteImage` 渲染，全屏用 `DdImageViewer(bitmap)`。图片只进宿主内存与私有缓存，不要写共享存储或插件数据目录。
 - `plugin-api 1.3.1` + `design 0.11.0`：使用 `host.images()` 的插件写 `minHostVersion: "1.4.0"`；`plugin-api 1.3.1` 仍是 level 6 内的加法。
 

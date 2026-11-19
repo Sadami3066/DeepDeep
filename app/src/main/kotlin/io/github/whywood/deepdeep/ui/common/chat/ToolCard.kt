@@ -357,9 +357,9 @@ private fun formatToolArguments(raw: JsonObject?, legacy: Map<String, String>): 
 private fun JsonElement.displayValue(): String = if (this is JsonPrimitive && isString) content else toString()
 
 private fun ToolTrace.resultText(): String? =
-    displayText()
+    error?.takeIf { it.isNotBlank() }
+        ?: displayText()
         ?: resultPayload?.text()?.takeIf { it.isNotBlank() }
-        ?: error?.takeIf { it.isNotBlank() }
         ?: output?.takeIf { it.isNotBlank() }
 
 private fun ToolTrace.displayText(): String? =

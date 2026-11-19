@@ -85,9 +85,14 @@ class ChrootExecutor internal constructor(
         val directory = logDir ?: return null
         return runCatching {
             if (!directory.isDirectory) directory.mkdirs()
-            File(directory, "command-${java.util.UUID.randomUUID()}.log").apply {
-                writeText(text)
-            }
+            val file = File(directory, "command-${java.util.UUID.randomUUID()}.log")
+            file.writeText(if (text.length > MAX_LOG_CHARS) text.take(MAX_LOG_CHARS) else text)
+            directory.listFiles()
+                ?.filter { it.isFile && it != file }
+                ?.sortedByDescending { it.lastModified() }
+                ?.drop(MAX_LOG_FILES - 1)
+                ?.forEach { it.delete() }
+            file
         }.getOrNull()
     }
 
@@ -101,6 +106,9 @@ class ChrootExecutor internal constructor(
     }
 
     internal companion object {
+        private const val MAX_LOG_CHARS = 4 * 1024 * 1024
+        private const val MAX_LOG_FILES = 20
+
         const val RUN_SCRIPT_NAME = "run.sh"
         private const val NO_EXIT_CODE = -1
         private const val USER_PATH_PREFIX = "/data/user/0/"

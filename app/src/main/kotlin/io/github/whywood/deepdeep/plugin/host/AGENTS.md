@@ -11,7 +11,7 @@
 | `PluginRegistry.kt` | 内存插件表：`PluginDescriptor`（manifest + 派生相位 + error + 物化贡献 + 主题来源）、线程安全 `PluginRegistrySnapshot`（递增 version、tools/skills/promptSections/ui/hooks/bindings/pages/composerActions/themeSources 聚合、重复 id 拒绝、跨插件冲突记录） |
 | `PluginHostImpl.kt` | `PluginHost` 实现：服务访问器委托给 `PluginServices` 持有的实现，未提供抛 `PluginServiceUnavailable`；保留旧签名 `text` |
 | `PluginTextResolver.kt` | `LocalizedText` 解析：values 按语言标签取、缺省回退 `default`；`String.format` 参数（插件 API 已无资源 id） |
-| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` 接口 → pi SDK `CodingTool`：元数据直传，`execute(call)` 经宿主 `PluginToolCall` 实现传入，sessionId 在 execute 时解析，Text/Rich 结果（`text/blocks`）映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError；不追加卡片提示（raw 与 `卡片 id` 由 runtime `ToolResultPostProcessor` 在插件 hook 之后统一追加） |
+| `PluginToolAdapter.kt` | `plugin-api` 的 `PluginTool` 接口 → pi SDK `CodingTool`：元数据直传，`execute(call)` 经宿主 `PluginToolCall` 实现传入，sessionId 在 execute 时解析，结果先经 `Cards.deliver(callId, …)` 生成模型文本与展示文本（覆盖自行实现 `PluginTool` 的插件），再映射 `TextContent`/`ImageContent`/FileRef 文本回退 + details 保留键，`partial` 桥接为 `AgentToolUpdateCallback`，异常转 isError |
 | `external/` | 外部 `.ddp` 管道：包读取、ddp-1 签名校验、TOFU 信任库、记录 v4、安装器、主题包安装校验、DEX 装载（见目录内 AGENTS.md） |
 | `events/` | 插件事件总线、变换/闸门派发、runtime hooks 适配（见目录内 AGENTS.md） |
 | `ui/` | 插件 UI 槽位：Slot 注册与解析、Compose 槽宿主 |

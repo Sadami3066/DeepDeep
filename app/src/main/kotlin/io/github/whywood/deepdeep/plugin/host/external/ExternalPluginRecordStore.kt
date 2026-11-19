@@ -104,6 +104,7 @@ internal class ExternalPluginRecordStore(
         val installPath = json.string("installPath") ?: return null
         val activeBundleSha256 = json.string("activeBundleSha256") ?: return null
         val publisherKeyId = json.string("publisherKeyId") ?: return null
+        val lastError = json.string("lastError")
         return ExternalPluginRecord(
             id = id,
             version = version,
@@ -116,7 +117,7 @@ internal class ExternalPluginRecordStore(
             publisherKeyId = publisherKeyId,
             apiLevel = json.int("apiLevel") ?: PLUGIN_API_LEVEL,
             uiApiLevel = json.int("uiApiLevel") ?: HOST_UI_API_LEVEL,
-            lastError = json.string("lastError"),
+            lastError = lastError,
             pendingVersion = json.string("pendingVersion"),
             pendingBundleSha256 = json.string("pendingBundleSha256"),
             previousVersion = json.string("previousVersion"),
