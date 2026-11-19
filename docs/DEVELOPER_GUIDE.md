@@ -46,7 +46,7 @@ Docs-only changes do not need a build.
 | Module | Responsibility |
 |---|---|
 | `app/` | Compose UI, chat, files, settings, plugin pages, mini app container and page assembly |
-| `runtime/` | Agent runtime: sessions, tools, memory, tasks, timers, plugin loading |
+| `runtime/` | Agent runtime: sessions, tools, memory, tasks, timers, plugin hooks and prompt contributions |
 | `runtime-api/` | Pure JVM contracts, decoupling the runtime from the host |
 | `shell/` | proot and ADB/Root system access backends |
 | `design/` | Theme, icons, shared components and design tokens |
