@@ -1,6 +1,6 @@
-# Contributing to DeepDeep
+# Contributing to Super PI Agent
 
-Thanks for your interest in DeepDeep. This repository contains the Android app, agent runtime, shell bridge, design system, and plugin API. Official plugins live in [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins).
+Thanks for your interest in Super PI Agent. This repository contains the Android app, agent runtime, shell bridge, design system, and plugin API. Official plugins live in [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins).
 
 ## Before opening an issue
 

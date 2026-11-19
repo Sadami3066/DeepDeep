@@ -19,3 +19,5 @@ assets/**/*.png
 assets/**/*.jpg
 assets/**/*.webp
 rs.html
+
+AGENTS.md

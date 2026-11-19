@@ -1,25 +1,25 @@
-# Milo Modern Icons — 200 修正版
+# Milo Modern Icons — 200 revised
 
-保留原来 200 个图形、状态与英文文件名，重新处理透明留白、线条粗细与颜色。
+Keeps the original 200 glyphs, states and English file names, and reworks the transparent padding, stroke weight and color.
 
-## 选择一档使用
+## Pick one weight
 
-- `regular/`：推荐日常界面使用，200 张透明 PNG。24dp 容器里的目标线宽约 1.75dp。
-- `semibold/`：更醒目的版本，200 张透明 PNG。24dp 容器里的目标线宽约 2.15dp。
-- 两个目录是同一套图标的不同字重，总计 200 个图形、400 张 PNG。保持同一区域使用同一档。
-- `comparison.png`：相同 24dp 容器下的旧版、标准版、加粗版对比，按 3 倍像素渲染。
-- `preview_regular.png`、`preview_semibold.png`：全部图标预览。
-- `icon_names.csv`、`icon_names.json`：中英文名称与文件名。
-- `state_families.json`：状态分类。
+- `regular/`: recommended for everyday UI, 200 transparent PNGs. Target stroke width is about 1.75dp in a 24dp container.
+- `semibold/`: a more prominent version, 200 transparent PNGs. Target stroke width is about 2.15dp in a 24dp container.
+- The two directories are the same icon set at different weights: 200 glyphs, 400 PNGs in total. Keep one weight within a given area.
+- `comparison.png`: old, standard and bold versions in the same 24dp container, rendered at 3x.
+- `preview_regular.png`, `preview_semibold.png`: previews of every icon.
+- `icon_names.csv`, `icon_names.json`: Chinese and English names with file names.
+- `state_families.json`: state categories.
 
-## 修正内容
+## What changed
 
-每张图都是 256×256 RGBA 透明 PNG。根据原图轮廓做等向加粗，保留圆角，清理抗锯齿边缘，并增大图形在画布中的占比。图形最长边约占画布 85%，颜色调整为 #273140。保留既有形状细节；复杂交汇位置的局部线宽会变化。
+Every image is a 256×256 RGBA transparent PNG. Outlines are thickened evenly from the original, corners stay round, anti-aliased edges are cleaned, and the glyph takes up more of the canvas. The longest edge of a glyph covers about 85% of the canvas, and the color is #273140. Existing shape details are preserved; local stroke width varies where lines meet.
 
-## Android / Compose 使用
+## Android / Compose
 
-选 regular 或 semibold 中的一套 PNG 放进 `res/drawable-nodpi/`，保持原来的 `ic_milo_*.png` 文件名。新版已经减少透明留白，可直接使用 24dp 的图标容器；如果需要更明显，可以用 26dp。外层点击区域可保持 48dp。
+Pick one set of PNGs from regular or semibold, put them in `res/drawable-nodpi/` and keep the original `ic_milo_*.png` file names. The new versions trim transparent padding, so the 24dp icon container works as is; use 26dp if you need more presence. The outer touch target can stay 48dp.
 
-用全不透明颜色显示：普通图标建议 #273140 或 #374151，选中项建议使用应用主蓝色。检查父级是否应用了较低 alpha；若组件使用 tint 或 ColorFilter，最终颜色由该值决定。已选择一个颜色处理入口即可。
+Display icons at full opacity: #273140 or #374151 for regular icons, the app's primary blue for selected items. Check whether a parent applies lower alpha; if the component uses a tint or ColorFilter, that value decides the final color. Pick one color entry point and stick to it.
 
-PNG 为位图素材，可通过单色 tint 适配深色模式。旧版独立压缩包保留，方便回退。
+The PNGs are bitmap assets that adapt to dark mode through a single-color tint. The old standalone archive is kept for rollback.

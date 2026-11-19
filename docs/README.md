@@ -1,13 +1,18 @@
-# DeepDeep 文档
+# Super PI Agent Documentation
 
-## 使用者
+## Users
 
-- [用户指南](USER_GUIDE.md)：安装、模型、系统访问、屏幕、插件、小程序、远程连接、排错与边界。
+- [User Guide](USER_GUIDE.md): installation, models, system access, screen, plugins, mini apps, remote connection, troubleshooting and limits.
 
-## 开发者
+## Product
 
-- [开发指南](DEVELOPER_GUIDE.md)：环境、构建、模块、运行时、测试、发布与代码约定。
-- [插件开发](PLUGIN_DEV.md)：清单、`.ddp` 格式、签名、生命周期、工具、技能、hooks、UI 扩展与调试。
-- [发布](RELEASE.md)：签名材料、release 构建与换签迁移。
+- [Product Principles](PRODUCT.md): product, interaction and design constraints.
+- [Architecture](ARCHITECTURE.md): modules, runtime, plugins, themes and updates.
 
-产品介绍见仓库根目录的 [README](../README.md)，变更记录见 [CHANGELOG](../CHANGELOG.md)。
+## Developers
+
+- [Developer Guide](DEVELOPER_GUIDE.md): environment, builds, modules, runtime, tests, release and code conventions.
+- [Plugin Development](PLUGIN_DEV.md): manifest, `.ddp` format, signing, lifecycle, tools, skills, hooks, UI extensions and debugging.
+- [Release](RELEASE.md): signing material, release builds and re-signing migration.
+
+For the product overview see the repository root [README](../README.md); for changes see [CHANGELOG](../CHANGELOG.md).

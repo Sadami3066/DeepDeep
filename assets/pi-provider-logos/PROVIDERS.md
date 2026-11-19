@@ -1,6 +1,6 @@
-# Provider 与图标对应表
+# Provider and icon mapping
 
-| Provider ID | 显示名称 | 图标源文件 |
+| Provider ID | Display name | Icon source file |
 | --- | --- | --- |
 | `amazon-bedrock` | Amazon Bedrock | `bedrock-color.svg` |
 | `ant-ling` | Ant Ling | `ling-color.svg` |

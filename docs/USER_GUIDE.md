@@ -1,192 +1,192 @@
-# DeepDeep 用户指南
+# Super PI Agent User Guide
 
-适用于当前版本。界面与能力仍会变化，以 App 内实际显示为准。
+Applies to the current version. The interface and capabilities will keep changing; what the app actually shows is authoritative.
 
-## 安装与首次启动
+## Install and first launch
 
-- 系统要求：Android 10 及以上。
-- 安装包从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载；安装后首次进入会走 6 屏引导：欢迎、账号、模型、通知与权限、选择工作环境、系统访问。
-- 引导可以跳过，也可以中途退出；之后在「设置」里逐项补。
-- App 没有账号系统，不需要注册；模型 Key 只存在本机。
+- Requires Android 10 or later.
+- Download the package from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The first launch runs a 6-screen onboarding: welcome, account, models, notifications and permissions, choosing a work environment, system access.
+- You can skip onboarding or leave it midway, then fill in each item later in Settings.
+- The app has no account system and needs no sign-up; model keys stay on this device.
 
-## 更新
+## Updates
 
-- 在「设置 → 关于 → 软件更新」查看当前版本并检查新版本。
-- 打开或回到 App 时会自动检查更新，每天最多一次；检查失败不会打扰你，需要时可以在更新页手动再检查。
-- 有新版本时，「软件更新」行以强调色显示「x.y.z 可用」，抽屉账户行的齿轮旁会出现一个小圆点。
-- 更新页展示新版本的更新说明和安装包大小；点「下载并安装」，按页面提示完成安装。
-- 第一次安装更新时，系统会要求允许 DeepDeep 安装应用；允许后回到 App 会自动继续，之后的更新不再要求这项权限。
-- 更新不会删除本机数据，会话、设置与凭据都会保留。
-- 网络不可用时，可以在更新页点「在浏览器中打开」，前往 Release 页面手动下载安装包。
+- Check the current version and for a new one under Settings → About → Software update.
+- PI checks for updates when you open or return to the app, at most once a day; a failed check stays quiet, and you can check again manually on the update page.
+- When a new version exists, the "Software update" row shows "x.y.z available" in the accent color, and a small dot appears next to the gear on the drawer account row.
+- The update page shows the release notes and package size of the new version; tap "Download and install" and follow the on-screen prompt.
+- The first time you install an update, the system asks you to allow PI to install apps; after you allow it, PI continues automatically, and later updates no longer ask for this permission.
+- Updates do not delete local data: sessions, settings and credentials are kept.
+- Without a network, tap "Open in browser" on the update page to download the package manually from the release page.
 
-## 模型与对话
+## Models and chat
 
-- 支持 42 家 Provider，可用 API Key 或浏览器 OAuth 登录。
-- 也支持自定义服务商：填接口地址与 Key 后，可获取模型列表，并为每个模型配置上下文大小、最大输出、图片输入与思考档位。接口地址一般填 `https://`；本机或局域网里的网关可以用 `http://`，但明文 HTTP 不会加密，不建议填公网地址。
-- 模型和思考档按会话独立，不会因为换会话影响其他对话。
-- 聊天设置里的「聊天过程详细度」可选详细或简洁：简洁时工具与思考只显示一句话概括，点开仍能看到详情。
-- 支持 Markdown、代码块、表格、图片、文件、语音输入与朗读。
-- 附件最多 20 个，单文件上限 1 GB；拍照界面可以同时识别多个二维码。
-- 输入区右上角的圆环是上下文占用；点开可以看输入、输出、缓存与费用。
-- 长会话可以用 `/compact` 压缩；`/goal` 管理目标；`/skill:<name>` 强制加载技能。
+- Supports 42 providers, with API key or browser OAuth sign-in.
+- Custom providers are supported too: enter the endpoint and key, fetch the model list, and configure context size, max output, image input and thinking level for each model. The endpoint is usually `https://`; a gateway on this machine or the LAN may use `http://`, but plain HTTP is not encrypted, so do not use a public address.
+- Models and thinking levels are per session; switching sessions does not affect other conversations.
+- "Chat detail level" in chat settings offers detailed or concise: in concise mode tools and thinking collapse to a one-line summary, and tapping still shows the details.
+- Supports Markdown, code blocks, tables, images, files, voice input and read-aloud.
+- Up to 20 attachments, 1 GB per file; the camera screen can recognize several QR codes at once.
+- The ring at the top right of the input area is context usage; tap it to see input, output, cache and cost.
+- Long sessions can be compacted with `/compact`; `/goal` manages goals; `/skill:<name>` forces a skill to load.
 
-## Bot
+## Bots
 
-- 抽屉里的每一个 Bot 都是一个独立的助手身份：有自己的名字、头像、一句话简介和设定，也有自己的技能、插件、连接器、工具和文件目录。
-- 每个 Bot 下面的会话相互独立，切换 Bot 就是切换一套上下文。
-- 默认 Bot 叫 DeepDeep，使用应用图标，不能改名或删除；它的能力默认全部开启，可以逐项关闭。
-- 新建 Bot：在抽屉的 Bot 区点「新建」，起名、选头像、写简介。新 Bot 默认不启用任何能力，创建后到「Bot 设置」里打开。
-- Bot 设置：
-  - 能力：技能、插件、连接器逐项开关；
-  - 工具：屏幕工具、小程序工具，默认关闭；屏幕工具需要系统访问的 ADB 或 Root 档；
-  - 设定：Bot 的行为说明，保存后对之后的新会话生效。
-- 技能、插件、连接器页面只负责安装、登录、更新和删除，不决定哪个 Bot 使用。
-- 记忆和远程连接收在抽屉的「展开更多」里。
+- Every bot in the drawer is an independent assistant identity: its own name, avatar, one-line summary and instructions, plus its own skills, plugins, connectors, tools and file directory.
+- Sessions under each bot are independent; switching bots switches the whole context.
+- The default bot is PI, uses the app icon, and cannot be renamed or deleted; all its capabilities are on by default and can be turned off one by one.
+- New bot: in the Bot section of the drawer tap "New", then name it, pick an avatar and write a summary. A new bot starts with no capabilities enabled; turn them on in "Bot settings" after creating it.
+- Bot settings:
+  - Capabilities: per-item switches for skills, plugins and connectors;
+  - Tools: screen tools and mini app tools, off by default; screen tools need the ADB or Root system access tier;
+  - Instructions: the bot's behavior description, applied to new sessions after saving.
+- The skills, plugins and connectors pages only install, sign in, update and delete; they do not decide which bot uses what.
+- Memory and remote connection are under "Show more" in the drawer.
 
-## 系统访问
+## System access
 
-系统访问分三档，在「设置 → 系统访问」切换；档位决定 `bash`、文件与系统命令以什么身份执行。
+System access has three tiers, switched under Settings → System access; the tier decides which identity `bash`, file and system commands run as.
 
-| 档位 | 能做什么 | 注意 |
+| Tier | What it can do | Notes |
 |---|---|---|
-| 普通 | `bash` 在 App 内的 Linux 环境里运行，文件、网络、日历等照常可用 | 这个环境不是安全沙箱 |
-| 无线调试 | `bash` 仍在 App 内运行；系统命令改由无线调试身份执行，可操作屏幕、系统设置 | 需要系统「无线调试」配对；重启后要重新打开无线调试并连接 |
-| Root | `bash` 和文件操作以 root 身份执行，可以直接读写系统文件 | 由系统 root 管理器授权；Root 环境首次准备需要等待，失败可在「系统访问」页重试 |
+| Normal | `bash` runs in the Linux environment inside the app; files, network, calendar and so on work as usual | This environment is not a security sandbox |
+| Wireless debugging | `bash` still runs inside the app; system commands run as the wireless debugging identity and can operate the screen and system settings | Needs system "Wireless debugging" pairing; after a reboot, turn wireless debugging on again and connect |
+| Root | `bash` and file operations run as root and can read and write system files directly | Authorized by the system root manager; the first Root setup takes a while, and you can retry on the System access page if it fails |
 
-不再需要单独开启任何 shell：普通命令由当前档位的 `bash` 执行，系统命令也会按同一档位自动使用对应身份。
+You no longer need to enable a separate shell: ordinary commands run through `bash` in the current tier, and system commands automatically use the matching identity for the same tier.
 
-在 Root 档浏览、预览或分享系统文件时，App 会先把文件临时复制到应用缓存再打开，过期后自动清理，不会长期保留副本。
+When browsing, previewing or sharing system files in the Root tier, the app first copies the file to the app cache, opens it there, and clears it when it expires, so no copy is kept long term.
 
-无线调试首次配对：
+Wireless debugging pairing, first time:
 
-1. 打开开发者选项里的「无线调试」。
-2. 在「系统访问」页点「配对无线调试」。
-3. 在系统的「使用配对码配对设备」页面记下 6 位码。
-4. 下拉通知并展开，输入配对码。
+1. Turn on "Wireless debugging" in developer options.
+2. On the System access page tap "Pair wireless debugging".
+3. On the system "Pair device with pairing code" page, note the 6-digit code.
+4. Pull down the notification, expand it and enter the code.
 
-配对成功后 App 会自动启动守护进程。换 Wi-Fi 或重启后无线调试会关闭，重新打开后在「系统访问」页点「连接」即可，不需要重新配对。
+After pairing succeeds the app starts the daemon automatically. Wireless debugging turns off after a Wi-Fi change or a reboot; turn it on again and tap "Connect" on the System access page — no new pairing needed.
 
-## 屏幕操作
+## Screen control
 
-屏幕操作默认关闭，在该 Bot 的「设置 → 工具」打开；还需要在「系统访问」里选无线调试或 Root 档，两档都不可用时开关会提示未生效、Agent 无法操作屏幕。
+Screen control is off by default; turn it on in that bot's Settings → Tools. You also need the wireless debugging or Root tier in System access; when neither is available the switch warns that it is not in effect and the agent cannot operate the screen.
 
-- Agent 默认在**后台虚拟屏**里操作 App，不抢占你正在用的主屏。
-- 需要操作主屏时，必须显式指定 `target=main`。
-- 虚拟屏连续 15 分钟没有 Agent 操作会自动关闭省电。
-- 支付、密码等受保护页面禁止截图，Agent 会把控制权交还给你。
-- 悬浮窗可以看虚拟屏缩略图；长按小鲸鱼展开或收起预览。
+- By default the agent works in a **background virtual screen**, without taking over the main screen you are using.
+- To operate the main screen it must explicitly pass `target=main`.
+- The virtual screen closes after 15 minutes without agent activity, to save power.
+- Protected pages such as payment and password screens cannot be captured; the agent hands control back to you.
+- The floating window shows a thumbnail of the virtual screen; long-press the whale to expand or collapse the preview.
 
-## 系统集成
+## System integration
 
-- **系统助手**：设为默认助手后，长按电源键或助手手势唤起，在任意 App 上直接交代任务。
-- **悬浮窗**：显示运行进度、待处理提问和交付；点开是运行面板。
-- **分享接收**：从其他 App 分享图片、文件或文本，会插入当前会话或预填输入框。
-- **通知**：后台任务、定时任务和插件消息通过通知投递；点开回到对应会话。
+- **System assistant**: set PI as the default assistant, then long-press the power button or use the assistant gesture to give a task from any app.
+- **Floating window**: shows run progress, pending questions and deliverables; tap it for the run panel.
+- **Share receiver**: share images, files or text from other apps and they are inserted into the current session or prefill the input box.
+- **Notifications**: background tasks, scheduled tasks and plugin messages are delivered as notifications; tap one to return to its session.
 
-## Linux 环境
+## Linux environment
 
-- 默认档位下 Alpine 跑在 proot 里，不需要 root；Root 档不使用 proot，`bash` 直接在系统环境里执行。
-- 首次在「设置 → 系统访问」的「Linux 环境」区初始化；之后可以直接使用 `bash`。
-- 常用命令、Node、Python、数据库客户端、办公套件和编译工具链都可以按需安装。
-- 每个 Bot 有自己的文件目录，工作文件默认放在其中；文件工具必须使用绝对路径。
+- In the default tier Alpine runs in proot and needs no root; the Root tier does not use proot, and `bash` runs directly in the system environment.
+- Initialize it once in the "Linux environment" section of Settings → System access; after that `bash` is ready.
+- Common commands, Node, Python, database clients, office suites and compiler toolchains can all be installed on demand.
+- Each bot has its own file directory, where working files go by default; file tools must use absolute paths.
 
-## 自动化
+## Automation
 
-- **后台任务**：下载、构建、轮询这类长任务可以放到后台运行，过程中能随时查看增量输出，也能停止。
-- **定时任务**：五段 cron，绑定当前会话；到点把结果投回原对话。错过会在下次打开 App 时补投一次；Service 被系统杀掉时不保证投递。
-- **目标**：`/goal <文本>` 创建，自动续跑；只在当前进程内有效，重启会清空。
-- **帮我盯**：让 Agent 起一个后台任务轮询网页或接口，条件满足后自动执行下一步，例如「盯场地，有空位就订」。
+- **Background tasks**: long jobs such as downloads, builds and polling can run in the background, with incremental output visible at any time and a stop action.
+- **Scheduled tasks**: five-field cron, bound to the current session; results are delivered back to that conversation. A missed run is delivered once the next time you open the app; delivery is not guaranteed when the service is killed by the system.
+- **Goals**: create with `/goal <text>` and they keep running automatically; they live only in the current process and are cleared on restart.
+- **Watch for me**: have the agent run a background task that polls a page or API and performs the next step when the condition holds, for example "watch the court and book a slot when one frees up".
 
-## 扩展
+## Extensions
 
-### 插件
+### Plugins
 
-- 插件是签名的 `.ddp` 包，从「插件 → 导入插件」安装。
-- 安装确认页会展示名称、版本、体积、sha256、发布者、能力清单和将提供的工具/技能/页面。
-- 首次安装需要确认信任发布者；之后更新必须使用同一密钥。
-- 插件与 App 同进程、同权限，**没有沙箱**；只安装可信来源。
-- App 不预装插件；卸载会移除插件文件、登录信息与技能。
+- A plugin is a signed `.ddp` package, installed from Plugins → Import plugin.
+- The confirmation page shows name, version, size, sha256, publisher, capability list and the tools, skills and pages it will provide.
+- The first install asks you to trust the publisher; later updates must use the same key.
+- Plugins share the app process and permissions, with **no sandbox**; install only trusted sources.
+- The app ships no plugins; uninstalling removes plugin files, sign-in information and skills.
 
-### 技能
+### Skills
 
-- 技能是带 `SKILL.md` 的 zip 包，安装后可以全局启用，也可以只在某个 Bot 里启用。
-- 输入 `/` 可以看到可用技能；`/skill:<name>` 强制加载。
+- A skill is a zip with `SKILL.md`; once installed it can be enabled globally or in a single bot.
+- Type `/` to see available skills; `/skill:<name>` forces one to load.
 
 ### MCP
 
-- 支持 Streamable HTTP 服务器与 OAuth。
-- 工具通过 `tool_search` 按需加载，不会一次把所有 schema 塞进上下文。
-- 连接失败时先检查地址、授权与网络。
+- Supports Streamable HTTP servers and OAuth.
+- Tools load on demand through `tool_search`, so all schemas do not go into the context at once.
+- If a connection fails, check the address, authorization and network first.
 
-### 市场
+### Marketplace
 
-插件、技能和远程 MCP 可以从 [DeepDeep 市场](https://github.com/Sadami3066/deepdeep-market) 获取。索引经过签名，制品会核对 sha256。
+- Plugins, skills and remote MCP servers are available from the [PI marketplace](https://github.com/Sadami3066/deepdeep-market). The index is signed and artifacts are checked against sha256.
 
-插件条目会标注运行所需权限（普通 / ADB / Root）；当前系统访问档位低于要求时，插件详情会提示部分功能可能不可用。
+Plugin entries list the access they need (Normal / ADB / Root); when the current system access tier is below the requirement, plugin details warn that some features may be unavailable.
 
-系统访问的 ADB 档有两种连接方式：无线调试（配对码）和本地 ADB。系统没有无线调试入口时（例如部分华为/HarmonyOS），可以先用电脑开启本地 ADB：手机打开 USB 调试并用数据线连接电脑，在电脑执行 `adb tcpip 5555`，再到「设置 → 系统访问 → ADB → 本地 ADB」点「连接并启动」，首次连接在手机弹窗里允许调试授权。手机重启后需要重新执行一次电脑命令。
+The ADB tier of system access has two connection modes: wireless debugging (pairing code) and local ADB. When the system has no wireless debugging entry (for example some Huawei/HarmonyOS devices), enable local ADB from a computer first: turn on USB debugging on the phone and connect it with a cable, run `adb tcpip 5555` on the computer, then go to Settings → System access → ADB → Local ADB and tap "Connect and start"; allow the debugging authorization in the phone dialog on the first connection. After a phone reboot, run the computer command once more.
 
-## 小程序
+## Mini apps
 
-小程序是 Agent 按需求现场写的 HTML/CSS/JS 页面：
+Mini apps are HTML/CSS/JS pages the agent writes on the spot for a request:
 
-- 页面通过 bridge 读写自己的 SQLite 数据，按小程序隔离。
-- 页面里可以编排一次性 Agent。
-- 页面可以发通知、设定时提醒、选择文件和分享，也能用相机、语音、日历和定位；这些能力首次使用时会请求系统权限。
-- 做好后可以「添加到桌面」，点图标直接打开。
-- 查看页顶栏可切全屏，系统返回键退出全屏；右上角「⋯」可以编辑、删除或添加到桌面。
+- Pages read and write their own SQLite data through the bridge, isolated per mini app.
+- Pages can run one-off agents.
+- Pages can send notifications, set timed reminders, pick files and share, and use the camera, voice, calendar and location; these request system permissions the first time they are used.
+- Once built, "Add to home screen" puts an icon there that opens it directly.
+- The top bar of the viewer toggles full screen, and the system back key leaves it; "⋯" at top right edits, deletes or adds to the home screen.
 
-适合做课程表、记账、纪念日、抽签和小工具。
+Good for timetables, expense tracking, anniversaries, drawing lots and small utilities.
 
-## 远程连接
+## Remote connection
 
-通过 `dsh-mobile` 连接电脑上的 DSH：
+Connect to DSH on a computer through `dsh-mobile`:
 
-1. 在电脑端安装并启用 `dsh-mobile`，开启局域网或远程访问。
-2. 手机打开「抽屉 → 远程连接」，扫码或粘贴配对链接。
-3. 首次连接会固定电脑证书；证书变化会提示重新配对。
-4. 局域网不通时会自动尝试远程入口；一次只连一台电脑。
+1. Install and enable `dsh-mobile` on the computer, and turn on LAN or remote access.
+2. On the phone open Drawer → Remote connection and scan the code or paste the pairing link.
+3. The first connection pins the computer certificate; a certificate change asks you to pair again.
+4. When the LAN is unreachable it tries the remote entry automatically; one computer at a time.
 
-连接页就是电脑上的 DSH 手机版，会话、消息和 Bot 与电脑一致。
+The connection page is DSH's mobile UI on the computer; sessions, messages and bots match the computer.
 
-## 数据与隐私
+## Data and privacy
 
-- 没有 DeepDeep 账号，也没有中转服务器；对话内容只发给你配置的模型厂商。
-- 会话保存在本机；置顶、归档、重命名只是本地标记。
-- API Key 加密存储；插件登录信息保存在插件自己的数据目录。
-- 更新检查与市场索引访问 GitHub。
-- 完整的用户协议与免责声明在「设置 → 隐私与用户协议」；本项目以 Apache-2.0 许可开源分发。
-- 卸载 App 会删除本机会话、设置与凭据；需要保留时先在聊天顶栏「导出会话」导出备份。
-- 更换签名证书后无法覆盖安装，必须先卸载；卸载会丢数据。
+- There is no PI account and no relay server; conversation content goes only to the model provider you configure.
+- Sessions are stored on this device; pinning, archiving and renaming are local markers only.
+- API keys are stored encrypted; plugin sign-in information lives in the plugin's own data directory.
+- Update checks and marketplace index access go to GitHub.
+- The full user agreement and disclaimers are under Settings → Privacy and user agreement; the project is distributed as open source under Apache-2.0.
+- Uninstalling the app deletes local sessions, settings and credentials; to keep them, export a backup with "Export session" in the chat top bar first.
+- After a signing certificate change you cannot install over the old app; you must uninstall first, which loses data.
 
-## 常见问题
+## FAQ
 
-**无线调试自己关了？**
-换 Wi-Fi 或重启后系统会关闭无线调试。重新打开，在「系统访问」页点「连接」。
+**Wireless debugging turned itself off?**
+The system turns wireless debugging off after a Wi-Fi change or a reboot. Turn it on again and tap "Connect" on the System access page.
 
-**截图失败？**
-支付、密码等受保护页面禁止截图；部分页面需要 Android 11+ 或无障碍/ADB 权限。
+**Screenshot failed?**
+Protected pages such as payment and password screens cannot be captured; some pages need Android 11+ or accessibility/ADB permission.
 
-**插件装不上？**
-先确认 `.ddp` 完整、签名有效、发布者与已安装版本一致；更新换钥会被拒绝。
+**A plugin will not install?**
+First check that the `.ddp` is complete and validly signed, and that the publisher matches the installed version; an update that changes keys is rejected.
 
-**命令找不到？**
-先初始化 Linux 环境，再用包管理器安装；Node、Python 不是默认全部预装。
+**Command not found?**
+Initialize the Linux environment first, then install with the package manager; Node and Python are not all preinstalled.
 
-**定时任务没触发？**
-确认 App 进程还活着；Service 被系统杀掉时不保证投递，错过会在下次打开时补投一次。
+**A scheduled task did not fire?**
+Check that the app process is still alive; delivery is not guaranteed when the service is killed by the system, and a missed run is delivered once the next time you open the app.
 
-**模型报错？**
-检查 Key、余额、网络和 Provider 状态；会话里可以重试，失败不会自动重复执行工具。
+**Model error?**
+Check the key, balance, network and provider status; you can retry in the session, and a failure does not re-run tools automatically.
 
-**文件工具为什么要求绝对路径？**
-Bot 的文件目录只是默认位置，不是访问边界；绝对路径避免歧义，也方便 Linux 与插件复用。
+**Why do file tools require absolute paths?**
+A bot's file directory is only a default location, not an access boundary; absolute paths avoid ambiguity and are easy to reuse from Linux and plugins.
 
-## 边界
+## Limits
 
-- 普通、无线调试档的 Linux 是 proot 用户空间，不是安全沙箱。
-- 插件与 App 同进程、同权限，没有沙箱。
-- 不做二次审批，只分普通 / 无线调试（ADB）/ Root 三档。
-- 目标续跑只在进程内有效。
-- 受保护页面无法截图或自动操作。
-- 目前本地分发，没有上架应用商店。
+- In the Normal and Wireless debugging tiers the Linux environment is a proot user space, not a security sandbox.
+- Plugins share the app process and permissions; there is no sandbox.
+- There is no second approval step, only the Normal / Wireless debugging (ADB) / Root tiers.
+- Goal continuation lives only in the process.
+- Protected pages cannot be captured or automated.
+- Distribution is local for now, with no app store listing.

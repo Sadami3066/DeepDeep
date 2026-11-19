@@ -1,221 +1,221 @@
-# DeepDeep 插件开发
+# Super PI Agent Plugin Development
 
-面向外部插件作者的开发文档：工程搭建、契约、打包签名、安装更新与全部扩展面。官方插件与模板分别在 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) 和 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins)；宿主仓库只保留契约与真机回归脚本。产品能力见 [USER_GUIDE.md](USER_GUIDE.md)，构建与模块见 [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)。
+Development documentation for external plugin authors: project setup, contracts, packaging and signing, install and update, and every extension surface. Official plugins and the template are in [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) and [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins); the host repository keeps only the contract and on-device regression scripts. Product capabilities: [USER_GUIDE.md](USER_GUIDE.md); builds and modules: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).
 
-DeepDeep 插件是 **Kotlin 代码插件**：实现 `plugin-api` 的 `DeepDeepPlugin`，打包成 `.ddp`，由宿主在 App 进程内加载。插件只从 `.ddp` 安装，不存在随包编译的插件。
+PI plugins are **Kotlin code plugins**: implement `DeepDeepPlugin` from `plugin-api`, package as `.ddp`, and the host loads them inside the app process. Plugins install only from `.ddp`; nothing is compiled into the app.
 
-**安全前提**：插件与 App 同进程、同 UID、没有沙箱，安装即信任——插件代码等同 App 代码，能读 App 私有数据、反射宿主内部、让 App 崩溃。只安装自己信任的插件；第三方工具源请走 MCP。
+**Security premise**: plugins share the app process and UID with no sandbox, and installing means trusting — plugin code is equivalent to app code and can read the app's private data, reflect into host internals and crash the app. Install only plugins you trust; use MCP for third-party tool sources.
 
-## 快速开始
+## Quick start
 
-`plugin-api` 是唯一契约工件（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）：当前 `1.3.0`（以 `deepdeep-maven` 最新发布为准），其传递依赖为 `design 0.7.0`，`design 0.8.0`/`0.9.0` 单独发布；`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`、`HOST_UI_API_LEVEL = 2`。
+`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.deepdeep.plugin.api`): the current release is `1.4.0`, whose transitive dependency is `design 0.11.0` (take the latest release in `deepdeep-maven` as authoritative); `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`, `HOST_UI_API_LEVEL = 2`.
 
-`plugin-api 1.3.0` 是 level 6 内的纯加法：已发布、只用 1.0.x/1.1.x/1.2.x 能力的插件不需要重新编译；使用 1.3.0 新能力（工具结果渲染器）的插件要写 `minHostVersion: "1.1.0"`（宿主 1.1.0+）。`plugin-api 1.3.1` / `design 0.11.0` 同样是加法：新增 `host.images()` 与 `DdRemoteImage`，使用它们的插件写 `minHostVersion: "1.4.0"`。契约兼容承诺见 `plugin-api/COMPATIBILITY.md`：同一 `apiLevel` 内只做二进制兼容的加法，删除/改名/改签名/改语义必须升 `apiLevel`；宿主拒绝 `apiLevel` 高于自己的插件，1.0.4 起不再接受 level 5。
+`plugin-api 1.3.0` is purely additive within level 6: published plugins that use only 1.0.x/1.1.x/1.2.x capabilities need no rebuild; plugins using the new 1.3.0 capabilities (tool result renderers) write `minHostVersion: "1.1.0"` (host 1.1.0+). `plugin-api 1.3.1` / `design 0.11.0` are additive too: new `host.images()` and `DdRemoteImage`, and plugins using them write `minHostVersion: "1.4.0"`. The compatibility promise is in `plugin-api/COMPATIBILITY.md`: within one `apiLevel` only binary-compatible additions, and deleting, renaming, changing signatures or changing semantics requires a new `apiLevel`; the host rejects plugins with an `apiLevel` above its own, and level 5 has not been accepted since 1.0.4.
 
-插件工程从 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) 的 `template/` 起步：独立 Gradle Android 工程，包含一个示例工具、一个示例技能、一段提示词与完整的 `.ddp` 打包/签名/验签实现，复制或改名即起点。官方插件实现见 [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)。
+Start a plugin project from `template/` in [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins): a standalone Gradle Android project with an example tool, an example skill, one prompt section and the full `.ddp` packaging/signing/verification implementation. Copy or rename it as a starting point. Official plugin implementations are in [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins).
 
-前置条件：
+Prerequisites:
 
-- JDK 17+ 与 Android SDK；SDK 位置通过 `ANDROID_HOME`/`ANDROID_SDK_ROOT` 环境变量或工程内 `local.properties` 的 `sdk.dir` 指定。
-- 插件依赖公开 Maven 仓库 `https://sadami3066.github.io/deepdeep-maven`（group `io.github.sadami3066.deepdeep`，当前 `plugin-api 1.3.0` / `design 0.10.0`，以仓库最新发布为准），不需要本地 mavenLocal 发布。
+- JDK 17+ and the Android SDK; locate the SDK with the `ANDROID_HOME`/`ANDROID_SDK_ROOT` environment variables or `sdk.dir` in the project's `local.properties`.
+- Plugins depend on the public Maven repository `https://sadami3066.github.io/deepdeep-maven` (group `io.github.sadami3066.deepdeep`, currently `plugin-api 1.3.0` / `design 0.10.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
 
-`plugin-api` 是契约，`design` 是与 App 同源的 UI 设计系统（插件 UI 直接用它，`plugin-api` 通过 `api()` 把它传递进来）。发布新版本：
+`plugin-api` is the contract, and `design` is the UI design system shared with the app (plugin UI uses it directly, and `plugin-api` brings it in through `api()`). Publishing a new version:
 
 ```bash
 ./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository
-# 产物在 app/build/maven-repo/io/github/sadami3066/deepdeep/
+# artifacts land in app/build/maven-repo/io/github/sadami3066/deepdeep/
 ```
 
-把产物同步到 `deepdeep-maven` 仓库对应目录并推送，Pages 会自动更新；SDK 版本升级时同步改各模块 `build.gradle.kts` 的 `compileOnly` 与模板版本。
+Sync the artifacts into the matching directories of the `deepdeep-maven` repository and push; Pages updates automatically. When the SDK version goes up, update `compileOnly` in each module's `build.gradle.kts` and the template version too.
 
-新增插件：
+Adding a plugin:
 
 ```bash
-# 1. 复制模板并改名（在插件工程仓库根目录执行）
+# 1. Copy the template and rename it (run from the plugin repository root)
 cp -R template my-plugin && cd my-plugin
-#    改 settings.gradle.kts 的 rootProject.name（决定 .ddp 文件名）
-#    改 build.gradle.kts 的 namespace/applicationId/versionName
-#    改 src/main/assets/plugin.json 的 id/version/entryClass/name/summary/provides
-#    改 src/main/kotlin 下包名与入口类
+#    Change rootProject.name in settings.gradle.kts (it decides the .ddp file name)
+#    Change namespace/applicationId/versionName in build.gradle.kts
+#    Change id/version/entryClass/name/summary/provides in src/main/assets/plugin.json
+#    Rename the package and entry class under src/main/kotlin
 
-# 2. 打包 + 签名 + 自检
+# 2. Package + sign + self-check
 ./gradlew assemblePlugin
 ./gradlew signPlugin
 ./gradlew verifyPlugin
 
-# 3. 产物
-#    build/plugin/<rootProject.name>.unsigned.ddp   未签名（排障用）
-#    build/plugin/<rootProject.name>.ddp            可安装的签名包
+# 3. Artifacts
+#    build/plugin/<rootProject.name>.unsigned.ddp   unsigned (for troubleshooting)
+#    build/plugin/<rootProject.name>.ddp            installable signed package
 ```
 
-模板工程未改名时 `rootProject.name` 是 `plugin-template`，产物在 `template/build/plugin/plugin-template.ddp`（未签名是 `plugin-template.unsigned.ddp`）；改名后文件名随之变化。模块只编 `debug` 变体，`release` 不开 minify；`.ddp` 由 debug APK 重打包而来。把模板作为多模块工程的一个模块（如 `:template`）时，任务按模块执行，如 `:template:verifyPlugin`，产物在 `<module>/build/plugin/<module>.ddp`。
+With the template unchanged, `rootProject.name` is `plugin-template` and the artifacts are `template/build/plugin/plugin-template.ddp` (unsigned: `plugin-template.unsigned.ddp`); renaming changes the file names too. The module builds only the `debug` variant, `release` runs no minify, and the `.ddp` is repackaged from the debug APK. When the template is one module of a multi-module project (for example `:template`), run tasks per module such as `:template:verifyPlugin`, and artifacts land in `<module>/build/plugin/<module>.ddp`.
 
-安装：把 `.ddp` 传到手机，可以直接在文件管理器里用 DeepDeep 打开、把文件分享给 DeepDeep，或在插件页「导入插件」选择文件。确认页展示名称/版本/体积/整包 sha256/发布者名称与 `keyId`、将提供的工具/技能/页面/提示词覆盖（声明 `prompt` 时）、能力/权限/组件声明；首次导入需确认信任发布者，确认后才写入 TOFU 信任库、解包安装并立即启用（`defaultEnabled` 为 true 时）。之后升级必须用同一发布者密钥签名。
+Installing: transfer the `.ddp` to the phone, then open it with PI from a file manager, share the file to PI, or pick it with "Import plugin" on the Plugins page. The confirmation page shows name/version/size/whole-package sha256/publisher name and `keyId`, the tools/skills/pages/prompt override (when `prompt` is declared) it will provide, and the capability/permission/component declarations; the first import asks you to trust the publisher, and only after confirming does the host write the TOFU trust store, unpack, install and enable immediately (when `defaultEnabled` is true). Later upgrades must be signed with the same publisher key.
 
-设备回归由宿主仓库根目录的脚本驱动（连好设备后执行）：`scripts/plugin-bundles-e2e.sh` 用五个官方插件包回归安装与激活；`scripts/plugin-e2e.sh` 用插件仓库的 `sample` 测试夹具回归安装、运行、停用与升级。脚本用 `adb install` 装 debug 包，把 `.ddp` 推进 App 外部私有目录，不需要 root，普通设备或模拟器都能跑。
+Device regression is driven by scripts at the host repository root (with the device connected): `scripts/plugin-bundles-e2e.sh` regresses install and activation for the five official plugin bundles; `scripts/plugin-e2e.sh` regresses install, run, disable and upgrade with the `sample` test fixture from the plugin repository. The scripts install the debug build with `adb install`, push the `.ddp` into the app's external private directory, need no root, and run on normal devices or emulators.
 
-## 工程与依赖
+## Project and dependencies
 
-插件就是一个普通 Android application 工程，产物只需要 `classes*.dex` 与 `assets/**`（见「`.ddp` 包格式」），APK 的 manifest、资源与签名不参与。
+A plugin is an ordinary Android application project; the artifact only needs `classes*.dex` and `assets/**` (see "`.ddp` package format"), and the APK's manifest, resources and signature do not take part.
 
-| 项 | 值 |
+| Item | Value |
 |---|---|
 | AGP | 9.4.1 |
-| Kotlin（Compose compiler 插件同版本） | 2.4.21 |
+| Kotlin (same version as the Compose compiler plugin) | 2.4.21 |
 | Compose BOM | 2026.03.00 |
 | kotlinx-coroutines | 1.11.0 |
 | kotlinx-serialization-json | 1.12.0 |
 | compileSdk / targetSdk | 36 |
-| minSdk | 29（插件 dex 的 minApi 不能高于宿主） |
+| minSdk | 29 (a plugin dex minApi cannot be higher than the host) |
 | JVM target | 17 |
 
-依赖规则：
+Dependency rules:
 
-- 宿主已提供的库只能 `compileOnly`：`io.github.sadami3066.deepdeep:plugin-api`（版本用 `deepdeep-maven` 最新发布；`api()` 传递配套的 `design:0.7.0`，插件 UI 直接用其中的 Dd 组件）、Compose（`ui`/`foundation`/`material3` + BOM）、`kotlinx-coroutines-core`、`kotlinx-serialization-json`。
-- 宿主 release 对插件的运行时依赖做了 R8 keep（`plugin-api`、`design`、Kotlin、协程、Compose，以及插件 UI 常用的 `androidx.lifecycle`/`androidx.activity`/`androidx.savedstate`），这些库在混淆包里不会缺类。keep 只保 ABI 名字，不等于版本兼容承诺：插件仍需按宿主 SDK 版本重编译，白名单之外的宿主库不保证可用。
-- **禁止** `implementation` 这些库：宿主 parent-first，`plugin-api` 与 Compose 只存在宿主那一份，插件包里重复打包会触发类冲突。
-- 插件可以带自己的第三方库，但必须一起打进 `classes*.dex`，并避开宿主已占用的包/类名。
-- 只暴露 `plugin-api`；不要反射 App 内部实现（升级会坏）。
-- 原生库：`.ddp` 里的 `lib/<abi>/**` 进入签名摘要，但宿主不把它加入 classloader 的库搜索路径，`System.loadLibrary` 不可用。
-- 没有 `res/`、没有 `R`：文案、图标、技能文件都走清单 + assets。
+- Libraries the host already provides can only be `compileOnly`: `io.github.sadami3066.deepdeep:plugin-api` (version from the latest `deepdeep-maven` release; `api()` carries the matching `design:0.7.0`, and plugin UI uses its Dd components directly), Compose (`ui`/`foundation`/`material3` + BOM), `kotlinx-coroutines-core`, `kotlinx-serialization-json`.
+- The host release applies R8 keep to plugin runtime dependencies (`plugin-api`, `design`, Kotlin, coroutines, Compose, plus `androidx.lifecycle`/`androidx.activity`/`androidx.savedstate` commonly used by plugin UI), so these libraries never lose classes in the minified build. Keep preserves ABI names only and is not a version compatibility promise: plugins still need a rebuild for each host SDK version, and host libraries outside the allowlist are not guaranteed to work.
+- **Do not** use `implementation` for these libraries: the host is parent-first, `plugin-api` and Compose exist only in the host, and duplicates packed into the plugin trigger class conflicts.
+- A plugin may bring its own third-party libraries, but they must be packed into `classes*.dex` and must avoid packages and class names the host already occupies.
+- Expose only `plugin-api`; do not reflect into app internals (upgrades will break it).
+- Native libraries: `lib/<abi>/**` in the `.ddp` enters the signature digest, but the host does not add it to the classloader's library search path, so `System.loadLibrary` does not work.
+- No `res/`, no `R`: copy, icons and skill files all go through the manifest and assets.
 
-## plugin.json 清单
+## plugin.json manifest
 
-清单固定放在包内 `assets/plugin.json`，由宿主解析与校验。字段：
+The manifest always lives at `assets/plugin.json` inside the package and is parsed and validated by the host. Fields:
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |---|---|---|---|
-| `id` | string | 是 | 反向域名小写，至少两段，正则 `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`（如 `com.example.myplugin`）；宿主用它做安装目录与唯一标识 |
-| `version` | string | 是 | `major.minor.patch`，可带 `-dev`/`+build` 后缀；宿主记录安装版本、判断更新 |
-| `apiLevel` | int | 否（默认 6） | 插件要求的契约等级；必须在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 6..6）内，否则拒绝装载。不写时按 `BASELINE_API_LEVEL`（6）处理；宿主 1.0.4 起 level 5 插件会被拒绝 |
-| `minHostVersion` | string | 否 | 最低宿主版本。宿主版本取 `BuildConfig.VERSION_NAME`；比较只看 `major.minor.patch`、忽略后缀。只用 1.0.x 已有能力的插件可写 `"1.0.4"`；使用 1.1.0 新能力（含 design 0.7.0 组件）的插件写 `"1.0.6"`；使用 design 0.8.0 组件的插件写 `"1.0.7"`；使用 design 0.9.0 组件或 plugin-api 1.2.0 新能力的插件写 `"1.0.8"`；使用工具结果渲染器等 1.3.0 新能力的插件写 `"1.1.0"`；使用 `host.images()`/`DdRemoteImage` 的插件写 `"1.4.0"` |
-| `entryClass` | string | 是 | 实现 `DeepDeepPlugin` 的类全名，必须有无参构造 |
-| `name` | LocalizedText | 是 | 插件名，至少含 `default` |
-| `summary` | LocalizedText | 是 | 一句话简介，至少含 `default` |
-| `description` | LocalizedText | 否 | 详情说明 |
-| `homepage` | string | 否 | 必须是 `http(s)://` 链接 |
-| `changelog` | string | 否 | 更新说明 |
-| `icon` | string | 否 | 只支持 `asset:<包内相对路径>`，如 `asset:icon.png`；列表按显示尺寸降采样、不染色，缺失或损坏回退占位图标 |
-| `ui` | object | 否 | `{ "apiLevel": 2, "kotlin"?: "2.4", "compose"?: "1.10.5" }`；参与 Compose 槽兼容判定，见「UI 扩展」 |
-| `publisher` | object | 否 | `{ "name": ..., "keyId": ... }`。`name` 是展示名（如 `milous`），导入确认与已安装信息里直接显示；缺失时界面回落到签名 `keyId` 前 12 位。`keyId` 只作说明，发布者身份与信任始终以签名文件 `META-INF/plugin-signature.json` 里的 `keyId` 为准 |
-| `provides` | object | 否 | 贡献预检，见下；必须与实际贡献一致 |
-| `capabilities` | string[] | 是 | 插件需要的宿主服务与能力清单（38 项），见下；缺失或含未知项拒绝装载 |
-| `permissions` | string[] | 否 | 插件会申请的系统权限，取值见「权限声明」；必须与 `capabilities` 成对声明 |
-| `components` | object | 否 | 需要宿主代理的系统组件能力，见「组件声明」；每个开启项都要求对应 capability |
-| `defaultEnabled` | bool | 否（默认 true） | 首次安装后是否默认启用 |
+| `id` | string | Yes | Lowercase reverse domain, at least two segments, regex `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` (e.g. `com.example.myplugin`); the host uses it as the install directory and unique identity |
+| `version` | string | Yes | `major.minor.patch`, optionally with a `-dev`/`+build` suffix; the host records the installed version and decides upgrades |
+| `apiLevel` | int | No (default 6) | Contract level the plugin requires; must be within `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` (currently 6..6), otherwise loading is refused. Omitted means `BASELINE_API_LEVEL` (6); level 5 plugins have been rejected since host 1.0.4 |
+| `minHostVersion` | string | No | Minimum host version. The host version comes from `BuildConfig.VERSION_NAME`; comparison looks only at `major.minor.patch` and ignores suffixes. Plugins using only capabilities that existed in 1.0.x can write `"1.0.4"`; plugins using 1.1.0 capabilities (including design 0.7.0 components) write `"1.0.6"`; plugins using design 0.8.0 components write `"1.0.7"`; plugins using design 0.9.0 components or plugin-api 1.2.0 capabilities write `"1.0.8"`; plugins using tool result renderers or other 1.3.0 capabilities write `"1.1.0"`; plugins using `host.images()`/`DdRemoteImage` write `"1.4.0"` |
+| `entryClass` | string | Yes | Fully qualified name of the class implementing `DeepDeepPlugin`; it must have a no-arg constructor |
+| `name` | LocalizedText | Yes | Plugin name, with at least `default` |
+| `summary` | LocalizedText | Yes | One-line description, with at least `default` |
+| `description` | LocalizedText | No | Detail text |
+| `homepage` | string | No | Must be an `http(s)://` link |
+| `changelog` | string | No | Release notes |
+| `icon` | string | No | Only `asset:<path inside package>` is supported, e.g. `asset:icon.png`; the list downsamples to display size and does not tint; a missing or broken icon falls back to a placeholder |
+| `ui` | object | No | `{ "apiLevel": 2, "kotlin"?: "2.4", "compose"?: "1.10.5" }`; part of Compose slot compatibility, see "UI extensions" |
+| `publisher` | object | No | `{ "name": ..., "keyId": ... }`. `name` is the display name (e.g. `milous`), shown directly in the import confirmation and installed info; when missing the UI falls back to the first 12 characters of the signing `keyId`. `keyId` is descriptive only: publisher identity and trust always come from the `keyId` in the signature file `META-INF/plugin-signature.json` |
+| `provides` | object | No | Pre-install check of contributions, see below; must match the actual contributions |
+| `capabilities` | string[] | Yes | Host services and capabilities the plugin needs (38 items), see below; missing or unknown entries refuse loading |
+| `permissions` | string[] | No | System permissions the plugin will request, values in "Permission declarations"; must be declared in pairs with `capabilities` |
+| `components` | object | No | System component abilities proxied by the host, see "Component declarations"; every enabled item requires the matching capability |
+| `defaultEnabled` | bool | No (default true) | Whether the plugin is enabled by default after the first install |
 
-清单不支持 `source`/`installable`/`sizeLabel`/`tintIcon` 等字段：来源固定按外部 `.ddp` 处理，体积由宿主按包体展示，图标统一用 asset 图片。未知字段忽略，错误的标量类型退化为默认值后交给校验报错。
+The manifest does not support fields such as `source`/`installable`/`sizeLabel`/`tintIcon`: the source is always treated as an external `.ddp`, the size is shown by the host from the package, and icons always use asset images. Unknown fields are ignored, and a wrong scalar type degrades to the default before validation reports the error.
 
-`provides` 用于安装前的能力预检与确认页展示：
+`provides` is used for the pre-install capability check and the confirmation page:
 
-| 键 | 内容 |
+| Key | Contents |
 |---|---|
-| `tools` | 工具名列表，小写 `snake_case`，如 `template_echo`；不能与宿主保留工具名冲突 |
-| `skills` | 技能 id 列表，如 `template-skill` |
-| `uiSlots` | 注册的槽位 id，如 `tool.card.content:template_echo`、`chat.message:card`；插件页面不走槽位，见 `pages` |
-| `pages` | 插件页面 id 列表 |
-| `themes` | 主题 id 列表；与 `assets/themes.json` 中的 `id` 一一对应，见「主题包」 |
+| `tools` | Tool name list, lowercase `snake_case`, e.g. `template_echo`; must not conflict with host reserved tool names |
+| `skills` | Skill id list, e.g. `template-skill` |
+| `uiSlots` | Registered slot ids, e.g. `tool.card.content:template_echo`, `chat.message:card`; plugin pages do not use slots, see `pages` |
+| `pages` | Plugin page id list |
+| `themes` | Theme id list; one-to-one with `id` in `assets/themes.json`, see "Theme packs" |
 
-`capabilities` 声明插件实际使用的宿主服务与能力；安装确认页与插件详情会展示，宿主只注入声明过的服务。**未声明的服务访问器在运行时抛 `PluginServiceUnavailable`**（不是返回 null）。1.3.0 共 38 项，分四组；标「实验」的访问器需要 `@OptIn(PluginExperimentalApi::class)`。
+`capabilities` declares the host services and capabilities the plugin actually uses; the install confirmation and plugin details show them, and the host injects only the declared services. **An undeclared service accessor throws `PluginServiceUnavailable` at runtime** (it does not return null). 1.3.0 has 38 items in four groups; accessors marked "experimental" need `@OptIn(PluginExperimentalApi::class)`.
 
-**基础能力（1.0 起）**
+**Base capabilities (since 1.0)**
 
-| wire 名 | 访问器 | 能做什么 | 不可用时 |
+| wire name | Accessor | What it does | When unavailable |
 |---|---|---|---|
-| `linux` | `host.linux()` | Linux 环境命令执行与流式输出 | `available=false`；Root 档准备中/失败时抛 `IllegalStateException` |
-| `screen` | `host.screen()` | 屏幕观测、截图、点击/滑动/输入与虚拟屏 | 能力字段标记不可用，调用抛异常 |
-| `notifications` | `host.notifications()` | 发布/更新/取消通知；通知监听与动作 | `enabled=false` 时通知被静默忽略；监听未授权时相关方法返回空/false |
-| `secrets` | `host.secrets()` | 按插件 id 隔离的加密键值存储 | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `network` | `host.network()` | HTTP 请求、下载与 `get`/`post` 扩展 | 网络错误抛异常；响应体 2 MB、下载 512 MB 上限 |
-| `files` | `host.files()` | 插件数据目录与工作区文件读写 | 相对路径以 `dataDir` 为根；绝对路径随档位变化 |
-| `sessions` | `host.sessions()` | 会话列表/历史/提示/停止/新建/重命名/删除/归档 | 无活动会话时 `active=null`、`prompt` 返回 false |
-| `jobs` | `host.jobs()` | 后台任务启动、读取与终止 | 无会话时 `start` 返回 null |
-| `timers` | `host.timers()` | 一次性/Cron 定时提醒 | 参数非法返回 null |
-| `goals` | `host.goals()` | 目标创建、编辑、暂停/恢复/完成/清理 | 非法状态返回 null |
-| `miniapp` | `host.miniapp()` | 小程序扫描、加载、创建、编辑、运行、删除 | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `mcp` | `host.mcp()` | MCP 服务器探测、工具列表与调用 | 服务器不存在时返回错误结果 |
-| `ui` | `host.ui()` | 打开 URL/分享/页面、交互选择器、Snackbar、主题 | 未接线时抛 `PluginServiceUnavailable("ui.xxx")` |
-| `app` | `host.app()` | App 版本、语言、设备等只读信息；App 前后台事件 | 始终可用 |
-| `bus` | `host.bus()` | 插件间轻量事件总线 | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `logs` | `host.logs()` | 写入宿主日志 | 始终可用 |
-| `chat` | `host.chat()` | 向会话投递消息/卡片/附件 | 未知会话抛异常；投递失败返回 false |
-| `prompt` | 无访问器 | 启用 `PromptOverridePlugin` 提示词覆盖（实验） | 未声明时不调用 `promptOverride()` |
+| `linux` | `host.linux()` | Linux environment command execution and streaming output | `available=false`; throws `IllegalStateException` while the Root tier is preparing or after preparation fails |
+| `screen` | `host.screen()` | Screen observation, screenshots, tap/swipe/type and virtual screens | capability fields marked unavailable, calls throw |
+| `notifications` | `host.notifications()` | Post/update/cancel notifications; notification listening and actions | with `enabled=false` notifications are silently ignored; listener methods return empty/false while listening is unauthorized |
+| `secrets` | `host.secrets()` | Encrypted key-value storage isolated by plugin id | throws `PluginServiceUnavailable` when the host does not provide it |
+| `network` | `host.network()` | HTTP requests, downloads and `get`/`post` extensions | network errors throw; response body capped at 2 MB, downloads at 512 MB |
+| `files` | `host.files()` | Plugin data directory and workspace file access | relative paths root at `dataDir`; absolute paths change with the tier |
+| `sessions` | `host.sessions()` | Session list/history/prompt/stop/create/rename/delete/archive | with no active session `active=null` and `prompt` returns false |
+| `jobs` | `host.jobs()` | Start, read and kill background tasks | `start` returns null when there is no session |
+| `timers` | `host.timers()` | One-shot and cron reminders | invalid parameters return null |
+| `goals` | `host.goals()` | Goal create, edit, pause/resume/complete/clear | invalid state returns null |
+| `miniapp` | `host.miniapp()` | Mini app scan, load, create, edit, run, delete | throws `PluginServiceUnavailable` when the host does not provide it |
+| `mcp` | `host.mcp()` | MCP server probing, tool list and calls | returns an error result when the server does not exist |
+| `ui` | `host.ui()` | Open URL/share/pages, interactive pickers, Snackbar, theme | throws `PluginServiceUnavailable("ui.xxx")` when not wired |
+| `app` | `host.app()` | Read-only app version, language, device info; app foreground/background events | always available |
+| `bus` | `host.bus()` | Lightweight event bus between plugins | throws `PluginServiceUnavailable` when the host does not provide it |
+| `logs` | `host.logs()` | Write to the host log | always available |
+| `chat` | `host.chat()` | Deliver messages/cards/attachments to a session | unknown sessions throw; a failed delivery returns false |
+| `prompt` | no accessor | Enables `PromptOverridePlugin` prompt override (experimental) | `promptOverride()` is not called when undeclared |
 
-**设备与系统（1.1.0 新增）**
+**Devices and system (new in 1.1.0)**
 
-| wire 名 | 访问器 | 能做什么 | 不可用时 |
+| wire name | Accessor | What it does | When unavailable |
 |---|---|---|---|
-| `settings` | `host.settings()` | 插件级键值/JSON 设置持久化与变更流 | 始终可用（宿主存储） |
-| `device` | `host.device()` | 设备信息、电量/网络/屏幕状态流、振动、跳系统设置页 | `observe` 在状态不可得时发默认快照；跳转失败返回 false |
-| `clipboard` | `host.clipboard()` | 读写剪贴板文本与 URI | 后台访问受限时返回 null 或忽略写入 |
-| `permissions` | `host.permissions()` | 查询/申请运行时权限，查询特殊授权状态并跳系统设置 | `request` 返回各权限是否授予；特殊授权未开时 `granted=false` |
-| `packages` | `host.packages()` | 应用列表/详情、安装/卸载 APK、启动、打开应用信息、读取图标 | 包名不存在返回 null；静默安装需 Root/ADB 档，否则返回待用户确认 |
-| `privilege` | `host.privilege()` | 当前档位与 Root/ADB 状态、指定档位执行命令、静默装卸、无线调试配对 | 档位不足时 `exec` 返回非 0/错误，配对接口返回失败原因 |
-| `intents` | `host.intents()` | 任意 Intent 启动、广播、服务、解析与查询 | 无匹配返回 false/null；后台启动 Activity 受系统限制 |
-| `components` | `host.components()`（实验） | 打开宿主代理的独立插件窗口、注册动态广播接收 | 未声明 components 时不注入；窗口/接收失败返回 false |
-| `background` | `host.background()` | WorkManager/Alarm 后台任务、开机回调、前台服务、电池优化 | `schedule` 返回 false 表示被系统拒绝；任务触发受 Doze 影响 |
-| `location` | `host.location()` | 最后位置、单次定位、位置更新流、地理编码 | `available=false` 或权限未授予时返回 null |
-| `contacts` | `host.contacts()` | 联系人查询、搜索、创建、修改、删除 | 权限未授予时抛 `SecurityException`；`permissionGranted=false` |
-| `sms` | `host.sms()` | 短信线程/消息读取、发送、标记已读、删除 | `canRead`/`canSend` 为 false 时对应操作返回 false 或抛异常 |
-| `calendar` | `host.calendar()` | 日历与事件读写 | 权限未授予时抛 `SecurityException`；`permissionGranted=false` |
-| `media` | `host.media()` | 保存到下载/相册、扫描、打开、分享、预览、图片读取、URI 导入 | 路径不可读返回 null/false；需要所有文件访问时另申请 `manage-storage` |
-| `speech` | `host.speech()` | TTS 朗读与语音识别 | `speakAvailable`/`recognizeAvailable` 为 false 时返回 false/错误结果 |
-| `web` | `host.web()` | 宿主网页搜索与正文抓取 | `available=false` 时返回空列表/null |
-| `credentials` | `host.credentials()`（实验） | 读取宿主服务商与 MCP 的凭据信息 | 宿主未配置时返回空列表/null；只能读、不能改 |
-| `accessibility` | `host.accessibility()`（实验） | 无障碍事件流与全局动作 | `enabled=false` 时事件流为空、动作返回 false |
-| `share` | 无访问器 | 接收系统分享（配合 `components.share`） | 未声明组件时不会派发 `shareReceived` |
-| `deeplink` | 无访问器 | 接收深链路径（配合 `components.deeplinks`） | 路径不匹配或未声明时不会派发 `deepLinkReceived` |
+| `settings` | `host.settings()` | Plugin-level key-value/JSON settings persistence and change stream | always available (host storage) |
+| `device` | `host.device()` | Device info, battery/network/screen state streams, vibration, jump to system settings pages | `observe` emits a default snapshot when state is unavailable; jumps return false when they fail |
+| `clipboard` | `host.clipboard()` | Read and write clipboard text and URIs | returns null or ignores writes when background access is restricted |
+| `permissions` | `host.permissions()` | Query/request runtime permissions, query special grant state and jump to system settings | `request` returns whether each permission was granted; `granted=false` while a special grant is off |
+| `packages` | `host.packages()` | App list/details, install/uninstall APKs, launch, open app info, read icons | returns null for a missing package; silent install needs the Root/ADB tier, otherwise it returns waiting for user confirmation |
+| `privilege` | `host.privilege()` | Current tier and Root/ADB state, run commands at a given tier, silent install/uninstall, wireless debugging pairing | `exec` returns non-zero/error when the tier is insufficient, and pairing interfaces return the failure reason |
+| `intents` | `host.intents()` | Start any Intent, broadcast, service, resolve and query | returns false/null when nothing matches; background Activity starts are limited by the system |
+| `components` | `host.components()` (experimental) | Open the host-proxied dedicated plugin window, register dynamic broadcast receivers | not injected when components is undeclared; failed windows/receivers return false |
+| `background` | `host.background()` | WorkManager/Alarm background tasks, boot callbacks, foreground services, battery optimization | `schedule` returning false means the system refused; task firing is affected by Doze |
+| `location` | `host.location()` | Last location, single fix, location update stream, geocoding | returns null when `available=false` or permission is not granted |
+| `contacts` | `host.contacts()` | Query, search, create, update, delete contacts | throws `SecurityException` when permission is not granted; `permissionGranted=false` |
+| `sms` | `host.sms()` | SMS thread/message read, send, mark read, delete | operations return false or throw when `canRead`/`canSend` is false |
+| `calendar` | `host.calendar()` | Calendar and event read/write | throws `SecurityException` when permission is not granted; `permissionGranted=false` |
+| `media` | `host.media()` | Save to Downloads/gallery, scan, open, share, preview, image read, URI import | returns null/false for unreadable paths; request `manage-storage` separately for all-files access |
+| `speech` | `host.speech()` | TTS read-aloud and speech recognition | returns false/error results when `speakAvailable`/`recognizeAvailable` is false |
+| `web` | `host.web()` | Host web search and body fetch | returns an empty list/null when `available=false` |
+| `credentials` | `host.credentials()` (experimental) | Read host provider and MCP credential information | returns an empty list/null when the host is not configured; read-only, no writes |
+| `accessibility` | `host.accessibility()` (experimental) | Accessibility event stream and global actions | with `enabled=false` the stream is empty and actions return false |
+| `share` | no accessor | Receive system shares (with `components.share`) | `shareReceived` is not dispatched when the component is undeclared |
+| `deeplink` | no accessor | Receive deep link paths (with `components.deeplinks`) | `deepLinkReceived` is not dispatched when the path does not match or is undeclared |
 
-`capabilities` 是**可用性边界，不是安全沙箱**：插件仍与宿主同进程、同 UID，可以通过 `host.context` 或反射绕过；它用于让插件声明意图、让用户在安装前看清会用到哪些能力，不能阻止恶意代码。至少声明一项；空数组合法但插件几乎无法工作。
+`capabilities` is an **availability boundary, not a security sandbox**: plugins still share the process and UID with the host and can bypass it through `host.context` or reflection; it exists so plugins declare intent and users see which capabilities will be used before installing, and cannot stop malicious code. Declare at least one; an empty array is legal but the plugin can barely work.
 
-`tools`/`skills`/`pages` 的 id 统一匹配 `^[a-z][A-Za-z0-9_-]*$`，**不能包含点号**（技能 id 写 `template-guide`，不是 `template.guide`）；`uiSlots` 的槽位 id 规则见后文。
+`tools`/`skills`/`pages` ids all match `^[a-z][A-Za-z0-9_-]*$` and **cannot contain dots** (a skill id is `template-guide`, not `template.guide`); the slot id rules for `uiSlots` come later.
 
-### 权限声明（`permissions`）
+### Permission declarations (`permissions`)
 
-`permissions` 列出插件会申请的系统权限，取值为 `PluginPermission` 常量（都是字符串）。安装期校验权限与 capability 的对应关系：任何权限都必须有对应 capability，否则报 `PERMISSION_WITHOUT_CAPABILITY`；未知或重复的取值报 `INVALID_PERMISSION`。安装确认页会展示权限清单。
+`permissions` lists the system permissions a plugin will request, with values from the `PluginPermission` constants (all strings). Install-time validation checks that permissions and capabilities agree: any permission needs the matching capability, otherwise `PERMISSION_WITHOUT_CAPABILITY`; unknown or duplicate values report `INVALID_PERMISSION`. The install confirmation page shows the permission list.
 
-**运行时权限**（`permissions().request(...)` 弹系统授权框）：
+**Runtime permissions** (`permissions().request(...)` shows the system grant dialog):
 
-| wire 名 | 对应权限 | 用途 | 需要 capability |
+| wire name | Permission | Purpose | Capability needed |
 |---|---|---|---|
-| `location.coarse` | `ACCESS_COARSE_LOCATION` | 大致位置 | `location` |
-| `location.fine` | `ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION` | 精确位置 | `location` |
-| `contacts.read` | `READ_CONTACTS` | 读取联系人 | `contacts` |
-| `contacts.write` | `READ_CONTACTS` + `WRITE_CONTACTS` | 修改联系人 | `contacts` |
-| `sms.read` | `READ_SMS` | 读取短信 | `sms` |
-| `sms.send` | `SEND_SMS` | 发送短信 | `sms` |
-| `calendar.read` | `READ_CALENDAR` | 读取日历 | `calendar` |
-| `calendar.write` | `READ_CALENDAR` + `WRITE_CALENDAR` | 修改日历 | `calendar` |
-| `camera` | `CAMERA` | 拍照（图片选择器） | `ui` |
-| `microphone` | `RECORD_AUDIO` | 语音识别 | `ui` |
-| `notifications.post` | `POST_NOTIFICATIONS` | 发布通知 | `notifications` |
+| `location.coarse` | `ACCESS_COARSE_LOCATION` | Approximate location | `location` |
+| `location.fine` | `ACCESS_FINE_LOCATION` + `ACCESS_COARSE_LOCATION` | Precise location | `location` |
+| `contacts.read` | `READ_CONTACTS` | Read contacts | `contacts` |
+| `contacts.write` | `READ_CONTACTS` + `WRITE_CONTACTS` | Modify contacts | `contacts` |
+| `sms.read` | `READ_SMS` | Read SMS | `sms` |
+| `sms.send` | `SEND_SMS` | Send SMS | `sms` |
+| `calendar.read` | `READ_CALENDAR` | Read calendars | `calendar` |
+| `calendar.write` | `READ_CALENDAR` + `WRITE_CALENDAR` | Modify calendars | `calendar` |
+| `camera` | `CAMERA` | Take photos (image picker) | `ui` |
+| `microphone` | `RECORD_AUDIO` | Speech recognition | `ui` |
+| `notifications.post` | `POST_NOTIFICATIONS` | Post notifications | `notifications` |
 
-**特殊授权**（没有运行时弹窗，由用户在系统设置里开启；用 `permissions().special(...)` 查询状态、`openSettings(...)` 跳转）：
+**Special grants** (no runtime dialog; the user enables them in system settings; query state with `permissions().special(...)` and jump with `openSettings(...)`):
 
-| wire 名 | 对应设置 | 用途 | 需要 capability |
+| wire name | Setting | Purpose | Capability needed |
 |---|---|---|---|
-| `notifications.listen` | 通知使用权 | 读取/管理通知（通知监听） | `notifications` |
-| `accessibility` | 无障碍服务 | 读取无障碍事件、执行全局动作 | `accessibility` |
-| `overlay` | 悬浮窗 | 显示悬浮内容 | `permissions` |
-| `usage-stats` | 使用情况访问 | 读取应用使用统计 | `permissions` |
-| `battery-optimization` | 忽略电池优化 | 后台任务不被系统限制 | `permissions` |
-| `install-packages` | 安装未知应用 | 安装/更新 APK | `packages` |
-| `manage-storage` | 所有文件访问权限 | 直接读写共享存储 | `media` |
+| `notifications.listen` | Notification access | Read/manage notifications (notification listening) | `notifications` |
+| `accessibility` | Accessibility service | Read accessibility events, perform global actions | `accessibility` |
+| `overlay` | Display over other apps | Show floating content | `permissions` |
+| `usage-stats` | Usage access | Read app usage statistics | `permissions` |
+| `battery-optimization` | Ignore battery optimizations | Keep background tasks unrestricted by the system | `permissions` |
+| `install-packages` | Install unknown apps | Install/update APKs | `packages` |
+| `manage-storage` | All files access | Read and write shared storage directly | `media` |
 
-### 组件声明（`components`）
+### Component declarations (`components`)
 
-`components` 声明需要宿主静态代理的系统组件能力。插件不能自己注册 Activity/Service/Receiver，宿主用固定的代理组件转接；每个开启项都必须有对应 capability，否则报 `COMPONENT_WITHOUT_CAPABILITY`；结构或布尔类型非法报 `COMPONENT_WITHOUT_CAPABILITY`。
+`components` declares the system component abilities that need a static host proxy. Plugins cannot register Activity/Service/Receiver themselves; the host relays through fixed proxy components. Every enabled item must have the matching capability, otherwise `COMPONENT_WITHOUT_CAPABILITY`; an invalid structure or boolean type also reports `COMPONENT_WITHOUT_CAPABILITY`.
 
-| 字段 | 类型 | 用途 | 需要 capability |
+| Field | Type | Purpose | Capability needed |
 |---|---|---|---|
-| `background` | bool | WorkManager/Alarm 后台任务与开机重注册 | `background` |
-| `foregroundService` | bool | 宿主前台服务代理，展示常驻进度 | `background` |
-| `notificationListener` | bool | 通知监听：`notificationReceived` 回调与 `recent`/`received`/`removed` 查询 | `notifications`（另需 `permissions: ["notifications.listen"]`） |
-| `accessibility` | bool | 无障碍代理：`accessibility()` 事件与全局动作 | `accessibility`（另需 `permissions: ["accessibility"]`） |
-| `share` | bool | 接收系统分享，触发 `shareReceived` | `share` |
-| `deeplinks` | string[] | 接收的深链路径列表，如 `["sync", "sync/start"]`；匹配「路径相等或以 `声明/` 开头」，最长 128 字符，正则 `^[a-z0-9][a-z0-9/._-]*$`，重复/非法报 `INVALID_DEEPLINK` | `deeplink` |
+| `background` | bool | WorkManager/Alarm background tasks and re-registration on boot | `background` |
+| `foregroundService` | bool | Host foreground service proxy, showing ongoing progress | `background` |
+| `notificationListener` | bool | Notification listening: the `notificationReceived` callback and `recent`/`received`/`removed` queries | `notifications` (plus `permissions: ["notifications.listen"]`) |
+| `accessibility` | bool | Accessibility proxy: `accessibility()` events and global actions | `accessibility` (plus `permissions: ["accessibility"]`) |
+| `share` | bool | Receive system shares, firing `shareReceived` | `share` |
+| `deeplinks` | string[] | Deep link paths to receive, e.g. `["sync", "sync/start"]`; matches "equal path or starts with `declared/`", max 128 characters, regex `^[a-z0-9][a-z0-9/._-]*$`, duplicates or invalid values report `INVALID_DEEPLINK` | `deeplink` |
 
-示例：
+Example:
 
 ```json
 "capabilities": ["background", "share", "deeplink", "notifications"],
@@ -228,21 +228,21 @@ cp -R template my-plugin && cd my-plugin
 }
 ```
 
-`LocalizedText` 写法：
+`LocalizedText` format:
 
 ```json
 "name": { "default": "Plugin Template", "zh": "插件模板", "en": "Plugin Template" }
 ```
 
-- `default` 为必填回退；`zh`/`en` 是语言标签，宿主按 App 语言取，缺失回退 `default`。
-- 也可以给字符串简写（`"name": "Plugin Template"`），等价于只有 `default`。
-- `host.text(source, *args)` 支持 `String.format` 占位符（`%s`/`%d`），参数只传字符串/数字（签名保留 `vararg Any`，新代码不要再传其它类型）。
-- `LocalizedText` 与 `IconRef` 是只读接口：文本用 `localizedText(default, zh?, en?)` 构造，图标用 `assetIcon("asset:<路径>")` 构造；level 5 的 `Literal`/`Resource` 等构造在 v6 已删除。
-- 外部插件没有 App 资源，`host.text()` 负责解析与格式化。
+- `default` is the required fallback; `zh`/`en` are language tags, chosen by the app language, falling back to `default` when missing.
+- A plain string shorthand (`"name": "Plugin Template"`) is also allowed and equals `default` only.
+- `host.text(source, *args)` supports `String.format` placeholders (`%s`/`%d`), passing only strings/numbers (the signature keeps `vararg Any`; new code should not pass other types).
+- `LocalizedText` and `IconRef` are read-only interfaces: build text with `localizedText(default, zh?, en?)` and icons with `assetIcon("asset:<path>")`; the level 5 `Literal`/`Resource` constructors were removed in v6.
+- External plugins have no app resources; `host.text()` handles resolution and formatting.
 
-### 主题包（`assets/themes.json`）
+### Theme packs (`assets/themes.json`)
 
-插件可以贡献固定浅色或深色主题，用户在「设置 → 主题」里切换后全局生效。主题包只读取安装目录里的 JSON，不执行插件代码；插件停用或文件缺失时，主题选择回退「跟随系统」。`plugin.json` 的 `provides.themes` 声明主题 id，`assets/themes.json` 给出定义，两边必须完全一致。
+Plugins can contribute fixed light or dark themes; the user switches them under Settings → Theme and they apply globally. Built-in themes are PI (the default, following the system light/dark setting), Follow system, Classic Blue (legacy key `deepdeep`), Santorini and Oceanic. A theme pack only reads JSON from the install directory and never runs plugin code; when the plugin is disabled or the file is missing, the selection falls back to the default PI theme. `provides.themes` in `plugin.json` declares the theme ids and `assets/themes.json` defines them; the two must match exactly.
 
 ```json
 {
@@ -263,19 +263,19 @@ cp -R template my-plugin && cd my-plugin
 }
 ```
 
-| 字段 | 类型 | 必填 | 说明 |
+| Field | Type | Required | Description |
 |---|---|---|---|
-| `schema` | int | 是 | 固定为 `1` |
-| `themes` | array | 是 | 1–24 个主题，id 不能重复 |
-| `id` | string | 是 | 主题 id，正则 `^[a-z][a-z0-9_-]*$`，最长 64 字符；与 `provides.themes` 对应 |
-| `name` | object | 是 | `default` 必填，`zh`/`en` 可选；按 App 语言取，缺失回退 `default`；每项最长 64 字符 |
-| `dark` | bool | 是 | 主题明暗；决定色块标记、状态栏图标与插件的 `ui.isDark` |
-| `base` | string | 是 | `deepdeep`、`santorini` 或 `oceanic`，提供未覆盖 token 的默认色 |
-| `tokens` | object | 是 | 颜色覆盖；键必须在下方白名单内，值只能是 `#RRGGBB` 或 `#AARRGGBB` |
+| `schema` | int | Yes | Fixed at `1` |
+| `themes` | array | Yes | 1–24 themes, ids must not repeat |
+| `id` | string | Yes | Theme id, regex `^[a-z][a-z0-9_-]*$`, max 64 characters; matches `provides.themes` |
+| `name` | object | Yes | `default` is required, `zh`/`en` optional; chosen by app language, falling back to `default`; each entry max 64 characters |
+| `dark` | bool | Yes | Theme light/dark; decides the color marker, status bar icons and the plugin's `ui.isDark` |
+| `base` | string | Yes | `pi`, `deepdeep`, `santorini` or `oceanic`; supplies defaults for tokens not overridden |
+| `tokens` | object | Yes | Color overrides; keys must be in the allowlist below and values must be `#RRGGBB` or `#AARRGGBB` |
 
-`base` 只作为底稿：`deepdeep` 为默认浅色，`santorini` 为浅色，`oceanic` 为深色；`dark` 可以与 `base` 的明暗不同，最终明暗以 `dark` 为准。未写的 token 沿用 `base`。
+`base` is only a starting point: `pi` is the default PI palette, `deepdeep` (Classic Blue) and `santorini` are light, and `oceanic` is dark; `dark` may differ from the `base` light/dark, and the final light/dark comes from `dark`. Tokens you do not write come from `base`. The existing wire keys `deepdeep`, `santorini` and `oceanic` stay valid for third-party theme packs, and `pi` is new.
 
-可用 token：
+Available tokens:
 
 ```
 paper surface raised ink inkSecondary inkTertiary accent accentPressed onAccent
@@ -284,208 +284,208 @@ codeBackground inlineCodeBackground codeKeyword codeString codeComment
 codeNumber codeFunction codeType
 ```
 
-对比度在最终配色上校验：
+Contrast is validated on the final palette:
 
-| 组合 | 最低对比度 |
+| Pair | Minimum contrast |
 |---|---|
 | `ink` / `paper` | 4.5:1 |
 | `ink` / `surface` | 4.5:1 |
 | `inkSecondary` / `paper` | 4.5:1 |
 | `onAccent` / `accent` | 3:1 |
 
-安装时读取并校验主题文件；文件超过 64 KiB、schema 或字段非法、token 未知、颜色格式错误、对比度不足、id 重复、主题数超过 24、`provides.themes` 与文件不一致，都会以 `THEMES_INVALID` 拒绝安装，并在确认页/提示里给出具体原因。主题文件通过校验后随 `assets/**` 解包到安装目录，宿主启动时只读取该文件，不依赖插件运行。
+The theme file is read and validated at install time; a file over 64 KiB, an invalid schema or field, an unknown token, a bad color format, insufficient contrast, duplicate ids, more than 24 themes, or `provides.themes` disagreeing with the file all reject the install with `THEMES_INVALID` and give the specific reason on the confirmation page or in the toast. A theme file that passes validation is unpacked into the install directory with `assets/**`, and the host only reads that file at startup, without running the plugin.
 
-校验错误码（宿主在安装时执行，`PluginValidation`）：
+Validation error codes (run by the host at install time, `PluginValidation`):
 
-| 错误码 | 含义 |
+| Error code | Meaning |
 |---|---|
-| `INVALID_ID` | id 不是反向域名小写格式 |
-| `INVALID_VERSION` | version 不是 `major.minor.patch[后缀]` |
-| `INVALID_MIN_HOST_VERSION` | minHostVersion 解析失败 |
-| `HOST_VERSION_UNSUPPORTED` | 宿主版本低于 minHostVersion |
-| `API_LEVEL_UNSUPPORTED` | apiLevel 不在 `MIN_SUPPORTED_API_LEVEL..宿主等级`（1.0.4 起 level 5 在此被拒） |
-| `UI_API_LEVEL_UNSUPPORTED` | `ui.apiLevel` 与宿主 `HOST_UI_API_LEVEL`（2）不匹配（**警告**：只禁用 Compose 绑定，插件仍可加载） |
-| `ENTRY_CLASS_MISSING` / `INVALID_ENTRY_CLASS` | 缺入口类或类名非法 |
-| `MISSING_TEXT` / `INVALID_TEXT` | name/summary 缺 `default`，或用了资源文本 |
-| `INVALID_ICON` / `INVALID_URL` | 图标路径/主页不合法 |
-| `INVALID_PROVIDES` | provides 条目非法或重复 |
-| `MISSING_CAPABILITIES` | 清单没有 `capabilities` 字段 |
-| `INVALID_CAPABILITY` | capabilities 含未知服务名 |
-| `INVALID_UI_SLOT` | uiSlots 中的槽位 id 未知或缺实例后缀 |
-| `INVALID_SKILL` | 插件返回的技能文件不合法 |
-| `INVALID_PERMISSION` | `permissions` 含未知或重复取值 |
-| `PERMISSION_WITHOUT_CAPABILITY` | 声明的权限没有对应 capability |
-| `COMPONENT_WITHOUT_CAPABILITY` | `components` 结构或字段类型非法 |
-| `COMPONENT_WITHOUT_CAPABILITY` | 开启的组件没有对应 capability |
-| `INVALID_DEEPLINK` | 深链路径格式非法或重复 |
+| `INVALID_ID` | The id is not in lowercase reverse-domain form |
+| `INVALID_VERSION` | The version is not `major.minor.patch[suffix]` |
+| `INVALID_MIN_HOST_VERSION` | minHostVersion cannot be parsed |
+| `HOST_VERSION_UNSUPPORTED` | The host version is below minHostVersion |
+| `API_LEVEL_UNSUPPORTED` | apiLevel is not within `MIN_SUPPORTED_API_LEVEL..host level` (level 5 is rejected here since 1.0.4) |
+| `UI_API_LEVEL_UNSUPPORTED` | `ui.apiLevel` does not match the host `HOST_UI_API_LEVEL` (2) (**warning**: only Compose bindings are disabled, the plugin still loads) |
+| `ENTRY_CLASS_MISSING` / `INVALID_ENTRY_CLASS` | Missing entry class or invalid class name |
+| `MISSING_TEXT` / `INVALID_TEXT` | name/summary lacks `default`, or uses resource text |
+| `INVALID_ICON` / `INVALID_URL` | Icon path or homepage is invalid |
+| `INVALID_PROVIDES` | A provides entry is invalid or duplicated |
+| `MISSING_CAPABILITIES` | The manifest has no `capabilities` field |
+| `INVALID_CAPABILITY` | capabilities contains an unknown service name |
+| `INVALID_UI_SLOT` | A slot id in uiSlots is unknown or lacks an instance suffix |
+| `INVALID_SKILL` | A skill file returned by the plugin is invalid |
+| `INVALID_PERMISSION` | `permissions` contains unknown or duplicate values |
+| `PERMISSION_WITHOUT_CAPABILITY` | A declared permission has no matching capability |
+| `COMPONENT_WITHOUT_CAPABILITY` | The `components` structure or field types are invalid |
+| `COMPONENT_WITHOUT_CAPABILITY` | An enabled component has no matching capability |
+| `INVALID_DEEPLINK` | A deep link path is malformed or duplicated |
 
-## `.ddp` 包格式
+## `.ddp` package format
 
-`.ddp` 就是一个 zip（扩展名不参与判断）：
+A `.ddp` is just a zip (the extension does not take part in detection):
 
 ```
 plugin.ddp
-├── classes.dex                      # 必需，至少一个；多个按 classes.dex, classes2.dex, ... 排序装载
+├── classes.dex                      # required, at least one; several load in order classes.dex, classes2.dex, ...
 ├── classes2.dex
 ├── assets/
-│   ├── plugin.json                  # 必需，且只能在这个路径
-│   ├── icon.png                     # 可选，清单 icon 引用
-│   └── skills/...                   # 可选，技能 markdown 与附加文件
-├── lib/<abi>/*.so                   # 可选；进入签名摘要，当前不加载
-└── META-INF/plugin-signature.json   # 安装必需
+│   ├── plugin.json                  # required, and only at this path
+│   ├── icon.png                     # optional, referenced by the manifest icon
+│   └── skills/...                   # optional, skill markdown and attached files
+├── lib/<abi>/*.so                   # optional; enters the signature digest, not loaded today
+└── META-INF/plugin-signature.json   # required for install
 ```
 
-约束：
+Constraints:
 
-- 只有 dex/assets/lib/签名四类条目；目录条目忽略。
-- 条目名必须用 `/`，不能是绝对路径，不能含 `..`、`\`、`:`、NUL；同名条目拒绝。
-- `assets/plugin.json` 只能是这一个路径。
-- 整包 ≤ 100 MB、解压后总量 ≤ 256 MB；`classes*.dex` 序号不能重复。
-- dex 由 D8/R8 产出（AGP 的 `assembleDebug` 已处理），`minSdk = 29` 保证 dex minApi 不高于宿主。
-- 宿主用内存 ClassLoader 装载 `classes*.dex`；安装时把整包复制到 `files/plugins/<id>/<version>/bundle/`，`assets` 解包到同版本目录。
-- 插件运行数据固定放 `files/plugins/<id>/data`（对应 `host.dataDir`），升级不丢；`host.assetsDir` 是当前版本解包后的只读 assets。
-- 版本目录按版本保留：升级后的上一版本目录作为回滚点，直到下一次成功升级或卸载。
+- Only four kinds of entries: dex/assets/lib/signature; directory entries are ignored.
+- Entry names must use `/`, must not be absolute, and must not contain `..`, `\`, `:`, NUL; duplicate names are rejected.
+- `assets/plugin.json` can only be at that one path.
+- Whole package ≤ 100 MB, unpacked total ≤ 256 MB; `classes*.dex` indices must not repeat.
+- dex comes from D8/R8 (AGP's `assembleDebug` already does this), and `minSdk = 29` guarantees the dex minApi is not higher than the host.
+- The host loads `classes*.dex` with an in-memory ClassLoader; at install it copies the whole package to `files/plugins/<id>/<version>/bundle/` and unpacks `assets` into the same version directory.
+- Plugin runtime data always lives in `files/plugins/<id>/data` (mapped to `host.dataDir`) and survives upgrades; `host.assetsDir` is the read-only assets unpacked for the current version.
+- Version directories are kept per version: after an upgrade the previous version directory serves as a rollback point until the next successful upgrade or an uninstall.
 
-## 构建、签名与更新
+## Build, sign and update
 
-### 打包与签名任务
+### Packaging and signing tasks
 
-模板工程的 `build.gradle.kts` 内置四个打包任务；多模块工程（如官方插件仓）把这部分抽到根 `gradle/plugin-bundle.gradle.kts` 共享。
+The template project's `build.gradle.kts` ships four packaging tasks; multi-module projects (such as the official plugin repository) factor this into a shared root `gradle/plugin-bundle.gradle.kts`.
 
-| 任务 | 作用 |
+| Task | Purpose |
 |---|---|
-| `generateSigningKey` | 生成 `keys/plugin-signing.pem` 与 `.pub`；已存在则报错，不会覆盖 |
-| `assemblePlugin` | 把 `build/outputs/apk/debug/<module>-debug.apk` 重打成 `build/plugin/<module>.unsigned.ddp`，只保留 `classes*.dex`、`assets/**`、`lib/**`，条目时间固定以便复现 |
-| `signPlugin` | 读取 Ed25519 密钥，对 unsigned 包签名并写入 `META-INF/plugin-signature.json`；打印 `publisher keyId`、整包 sha256、entry digest |
-| `verifyPlugin` | 重新按宿主规则验签，输出 `Signature OK` |
+| `generateSigningKey` | Generates `keys/plugin-signing.pem` and `.pub`; fails if they already exist and never overwrites |
+| `assemblePlugin` | Repackages `build/outputs/apk/debug/<module>-debug.apk` into `build/plugin/<module>.unsigned.ddp`, keeping only `classes*.dex`, `assets/**`, `lib/**`, with fixed entry timestamps for reproducibility |
+| `signPlugin` | Reads the Ed25519 key, signs the unsigned package and writes `META-INF/plugin-signature.json`; prints `publisher keyId`, whole-package sha256 and entry digests |
+| `verifyPlugin` | Re-verifies the signature by the host rules and prints `Signature OK` |
 
-密钥默认在工程根 `keys/plugin-signing.pem`/`.pub`，由 `generateSigningKey` 生成（私钥权限收敛为 `600`，`.gitignore` 忽略）；`signPlugin` 只读取密钥，缺失时直接报错并提示生成方式。也可以用 Gradle 属性指定别的前缀（不带扩展名）：
+Keys default to `keys/plugin-signing.pem`/`.pub` in the project root, generated by `generateSigningKey` (private key permissions narrowed to `600`, ignored by `.gitignore`); `signPlugin` only reads keys and fails with a hint on how to generate them when missing. A different prefix (without extension) can also be given through a Gradle property:
 
 ```bash
 ./gradlew -PpluginSigningKey=/secure/keys/my-plugin signPlugin
 ```
 
-- 私钥**不入版本库、不外发**；丢了就无法再发同名更新。
-- 换钥等于换发布者身份，已装用户无法用新钥升级。
-- `keys/` 下的仓库密钥只用于本机开发与官方插件签名。
+- The private key **never goes into version control and is never shared**; losing it means you can no longer publish updates under the same name.
+- Changing the key means changing publisher identity, and installed users cannot upgrade with the new key.
+- Repository keys under `keys/` are only for local development and signing official plugins.
 
-### 签名算法（ddp-1）
+### Signing algorithm (ddp-1)
 
-安装必须带 `META-INF/plugin-signature.json`，算法 Ed25519（宿主优先平台 Provider，旧平台回退 BouncyCastle）。
+Installing requires `META-INF/plugin-signature.json`, algorithm Ed25519 (the host prefers the platform Provider and falls back to BouncyCastle on older platforms).
 
-**canonical entry digest**：把 zip 内所有非目录条目按**条目名的 UTF-8 字节序**升序排列，排除所有以 `META-INF/` 开头的条目；每个条目一行：
+**canonical entry digest**: sort every non-directory entry in the zip by the **UTF-8 byte order of the entry name**, excluding every entry that starts with `META-INF/`; each entry is one line:
 
 ```
 <sha256-hex-lowercase><SP><uncompressed-size-decimal><SP><entry-name>\n
 ```
 
-sha256 对条目的**未压缩内容**计算，行与行直接拼接、最后一行以 `\n` 结尾；整段 UTF-8 字节即待签名消息。宿主验签时用同一算法重算。
+sha256 is computed over the **uncompressed contents** of the entry; lines are concatenated directly and the last line ends with `\n`; the whole UTF-8 byte sequence is the message to sign. The host recomputes it with the same algorithm when verifying.
 
-**签名文件**正好 4 个字段（未知字段忽略）：
+**The signature file** has exactly 4 fields (unknown fields are ignored):
 
 ```json
 {
   "algorithm": "Ed25519",
   "keyId": "ed25519:8bfc1ba034dbf5bc113d469ce1f1a6350bc4c104105aa92b104eda3896fad213",
   "publicKey": "<base64(std) of X.509 SubjectPublicKeyInfo DER>",
-  "signature": "<base64(std) of 64 字节 Ed25519 签名，签 canonical entry digest 字节>"
+  "signature": "<base64(std) of the 64-byte Ed25519 signature over the canonical entry digest bytes>"
 }
 ```
 
-**keyId 必须由公钥派生**：`keyId = "ed25519:" + 小写十六进制(SHA-256(SPKI DER))`。宿主要求签名里的 `keyId` 与公钥重算结果一致；该值同时作为发布者指纹与 TOFU 信任库的键。
+**keyId must be derived from the public key**: `keyId = "ed25519:" + lowercase hex(SHA-256(SPKI DER))`. The host requires the `keyId` in the signature to match the recomputed value; that value is also the publisher fingerprint and the TOFU trust store key.
 
-### 安装、信任与更新
+### Install, trust and update
 
-安装入口只有一个：插件页「导入插件」选择本地 `.ddp`。宿主先做包读取与验签（失败直接拒绝），确认页展示清单与发布者信息；用户确认后写入 TOFU 信任库、解包到版本目录、记录安装并立即装载启用。
+There is exactly one install entry: pick a local `.ddp` through "Import plugin" on the Plugins page. The host first reads the package and verifies the signature (rejecting outright on failure), and the confirmation page shows the manifest and publisher information; after the user confirms, it writes the TOFU trust store, unpacks into the version directory, records the install and loads and enables the plugin immediately.
 
-- 首装是唯一信任决策点：确认页展示发布者名/`keyId`、整包 sha256、体积、将提供的能力，并写明「插件拥有 App 全部权限」。确认后 `keyId → publicKey` 记入 TOFU 信任库。
-- 每次装载前用安装记录里的 `bundleSha256` 复核包体，并重算 canonical digest 验签；不匹配则拒绝并记入插件行的错误文本。
-- **更新必须同钥**：`id` 相同的新版本必须用同一 `keyId` 签名，否则按「发布者不匹配」拒绝。
-- 更新流程：选择新包 → 校验 sha256 + 签名（同钥）→ 暂存到新版本目录；当前没有忙碌会话时立即激活，有忙碌会话时相位保持 `PENDING_RESTART`，等会话全部结束后自动激活（进程重启后也会继续激活）；激活走准备 → 校验 → 提交 → 换装的阶段序列，校验阶段会调用 `onUpgrade(fromVersion)` 并预生成贡献；准备/校验失败会丢弃暂存版本并删除坏版本目录，旧版本继续可用；提交写盘失败保留暂存版本到下次启动重试。
-- 安装记录保留 `previousVersion` 作为回滚点。恢复规则：上次激活中断 → 下次启动跳过自动激活并提示「上次激活中断」；同一版本连续 2 次启动失败 → 自动停用（`enabled=false`），用户手动启用即重新授权。
+- The first install is the only trust decision point: the confirmation page shows the publisher name/`keyId`, whole-package sha256, size and the capabilities it will provide, and states "the plugin has all app permissions". After confirmation `keyId → publicKey` goes into the TOFU trust store.
+- Before every load the `bundleSha256` in the install record re-checks the package, and the canonical digest is recomputed to verify the signature; a mismatch rejects the plugin and puts the error text on its row.
+- **Updates must use the same key**: a new version with the same `id` must be signed with the same `keyId`, otherwise it is rejected as a publisher mismatch.
+- Update flow: pick the new package → verify sha256 + signature (same key) → stage into the new version directory; activate immediately when no session is busy, and when sessions are busy the phase stays `PENDING_RESTART` and activation happens automatically once all sessions finish (it also continues after a process restart); activation runs the prepare → verify → commit → swap sequence, and the verify stage calls `onUpgrade(fromVersion)` and pre-builds contributions; a prepare/verify failure discards the staged version and deletes the broken version directory while the old version stays usable; a commit write failure keeps the staged version for a retry on the next start.
+- The install record keeps `previousVersion` as a rollback point. Recovery rules: an interrupted activation → the next start skips automatic activation and reports "last activation interrupted"; two consecutive failed starts on the same version → disable automatically (`enabled=false`), and the user enabling it manually grants permission again.
 
-### 市场预览图
+### Marketplace previews
 
-市场条目的 `plugin.previews` 字段配置详情页预览图，`plugin.json` 清单本身不含该字段：
+The marketplace entry's `plugin.previews` field configures detail page previews; the `plugin.json` manifest itself does not contain it:
 
-- 竖版 9:20 图片 URL 列表，建议 1080×2400；只接受 `https://`，同一 URL 去重，最多 6 张。
-- 市场详情页以 144×320dp 卡片按 9:20 零裁切展示，可点开全屏左右滑动查看；没有 `previews` 时不展示预览区块。
+- A list of portrait 9:20 image URLs, 1080×2400 recommended; only `https://` is accepted, the same URL is deduplicated, at most 6 images.
+- The marketplace detail page shows them as 144×320dp cards with a 9:20 zero-crop fit; tapping opens full screen with left/right swiping; without `previews` there is no preview block.
 
-### 市场权限标注
+### Marketplace access labels
 
-市场条目的 `plugin.requiredAccess` 字段声明插件运行需要的系统访问档位，`plugin.json` 清单本身不含该字段：
+The marketplace entry's `plugin.requiredAccess` field declares the system access tier the plugin needs to run; the `plugin.json` manifest itself does not contain it:
 
-- 取值 `normal`（缺省）/ `adb` / `root`，对应「启动权限」的普通、ADB、Root 三档。
-- 按插件实际依赖如实标注：只有确实需要 ADB 或 Root 下的系统能力（例如工具依赖 root 才能执行）才标高，不要虚标。
-- 客户端按当前启用档位显示彩色标签（普通绿 / ADB 黄 / Root 红），当前档位低于要求时在市场条目和已安装插件行提示部分功能可能不可用；字段缺失或非枚举值按 `normal` 处理，兼容旧索引。
+- Values `normal` (default) / `adb` / `root`, matching the Normal, ADB and Root tiers.
+- Label according to what the plugin really needs: mark a higher tier only when it truly needs system capabilities under ADB or Root (for example a tool that only runs with root), and never inflate it.
+- The client shows a colored label for the current tier (Normal green / ADB yellow / Root red); when the current tier is below the requirement, the marketplace entry and the installed plugin row warn that some features may be unavailable; a missing field or a non-enum value is treated as `normal` for compatibility with older indexes.
 
-## 生命周期与相位
+## Lifecycle and phases
 
-宿主为每个插件维护相位（插件页与信息弹窗里可见）：
+The host keeps a phase per plugin (visible on the Plugins page and in the info dialog):
 
-| 相位 | 含义 |
+| Phase | Meaning |
 |---|---|
-| `INSTALLED` | 已安装但未装载（例如等待下次启动） |
-| `ACTIVE` | 已启用且运行正常，贡献全部生效 |
-| `DEGRADED` | 已启用但 `availability()` 返回不可用：技能不启用、错误原因可见；工具/提示词/UI/hooks 由插件自己决定是否继续提供 |
-| `FAILED` | 装载/启用/激活失败，原因见错误文本 |
-| `DISABLED` | 用户关闭了插件（「用户选择 ≠ 加载成功」） |
-| `PENDING_RESTART` | 有暂存的新版本，重启后激活 |
+| `INSTALLED` | Installed but not loaded (for example waiting for the next start) |
+| `ACTIVE` | Enabled and running normally, all contributions in effect |
+| `DEGRADED` | Enabled but `availability()` reports unavailable: skills are not enabled and the reason is visible; tools/prompts/UI/hooks remain at the plugin's discretion |
+| `FAILED` | Load/enable/activation failed, reason in the error text |
+| `DISABLED` | The user turned the plugin off ("user choice ≠ load success") |
+| `PENDING_RESTART` | A new version is staged and activates after a restart |
 
-只有已装载运行的插件（`ACTIVE`/`DEGRADED`）会聚合贡献；`availability()` 不可用时会停用技能并显示原因，**但不会自动清空插件的工具/提示词/UI/hooks**——不可用的能力请在 `contributions()`/`ui()` 里按 availability 自行返回空。
+Only loaded, running plugins (`ACTIVE`/`DEGRADED`) aggregate contributions; when `availability()` is unavailable, skills are disabled and the reason shown, **but the plugin's tools/prompts/UI/hooks are not cleared automatically** — unavailable capabilities should return empty from `contributions()`/`ui()` based on availability.
 
-`DeepDeepPlugin` 生命周期方法（`availability()` 必须实现，其余方法都有默认空实现；回调异常由宿主隔离，不会拖垮 App）：
+`DeepDeepPlugin` lifecycle methods (`availability()` must be implemented; the rest have default empty implementations; callback exceptions are isolated by the host and never take the app down):
 
-| 方法 | 调用时机与责任 |
+| Method | When it is called and what it must do |
 |---|---|
-| `availability(host)` | 每次刷新调用；返回 `Unavailable(reason)` 时相位 `DEGRADED`、原因可见，技能停用 |
-| `onEnable(host)` / `onDisable(host)` | 用户启/停插件；启动时对已启用插件也会调用 `onEnable`，停用时先 `onDisable` 再取消插件 scope |
-| `onUpgrade(host, fromVersion)` | 新版本激活的校验阶段调用，`fromVersion` 是当前在用版本 |
-| `skills(host)` | 提供技能；每次刷新调用 |
-| `promptSections(host)` | 追加系统提示词段 |
-| `contributions(host)` | 提供全局工具 + hooks |
-| `contributionsFor(host, session)` | 每会话物化一次：返回该会话生效的工具 + hooks（hooks 按 `pluginId` 覆盖该插件的全局 hooks）；`session` 是 live handle（可空），只用来读会话快照；默认委托 `contributions` |
-| `ui(host)` | 槽位/页面/输入区动作贡献 |
-| `uninstall(host)` | 用户删除插件前，清理插件自己的外部副作用（宿主随后删安装目录、技能覆盖） |
-| `close()` | 停用/卸载/更新/进程退出时调用（宿主先取消插件 scope，最多等 5s）；`close` 之后不要再异步回调 |
+| `availability(host)` | Called on every refresh; returning `Unavailable(reason)` puts the phase in `DEGRADED`, shows the reason and disables skills |
+| `onEnable(host)` / `onDisable(host)` | The user enables or disables the plugin; `onEnable` is also called for enabled plugins at startup, and disabling calls `onDisable` first and then cancels the plugin scope |
+| `onUpgrade(host, fromVersion)` | Called in the verify stage of new-version activation; `fromVersion` is the version currently in use |
+| `skills(host)` | Provides skills; called on every refresh |
+| `promptSections(host)` | Appends system prompt sections |
+| `contributions(host)` | Provides global tools + hooks |
+| `contributionsFor(host, session)` | Materialized once per session: returns the tools + hooks in effect for that session (hooks override the plugin's global hooks by `pluginId`); `session` is a live handle (nullable) used only to read session snapshots; defaults to delegating to `contributions` |
+| `ui(host)` | Slot/page/composer action contributions |
+| `uninstall(host)` | Before the user deletes the plugin, clean up the plugin's own external side effects (the host then deletes the install directory and skill overrides) |
+| `close()` | Called on disable/uninstall/update/process exit (the host cancels the plugin scope first and waits up to 5s); do not call back asynchronously after `close` |
 
-实现 `PromptOverridePlugin` 的插件（需在清单声明 `prompt` capability）另有 `promptOverride(host)`：宿主在物化贡献时调用一次，见「提示词覆盖」。
+Plugins implementing `PromptOverridePlugin` (with the `prompt` capability declared in the manifest) also get `promptOverride(host)`: the host calls it once when materializing contributions, see "Prompt override".
 
-插件的登录、CLI 安装、连接状态等全部由插件自己管理：状态写在 `host.dataDir`/`host.secrets()`，界面画在插件页面里；宿主不再提供安装/连接/设置/状态/动作/详情行回调，也没有面向模型的插件连接工具。页面里的操作改变能力后调用 `host.requestContributionsRefresh()`，宿主会重新物化贡献并在安全点重建会话（忙碌会话在本轮结束后生效），工具/技能/提示词/页面随即更新。
+Plugin sign-in, CLI installation, connection state and so on are all managed by the plugin itself: state goes into `host.dataDir`/`host.secrets()` and UI is drawn inside plugin pages; the host no longer provides install/connect/settings/status/action/detail row callbacks, and there is no model-facing plugin connection tool. After an action in a page changes capabilities, call `host.requestContributionsRefresh()`; the host re-materializes contributions and rebuilds sessions at a safe point (busy sessions take effect at the end of the current round), so tools/skills/prompts/pages update right after.
 
-`host` 是插件唯一入口（`PluginHost`）：`manifest`、`context`（宿主注入的 App 上下文）、`dataDir`、`assetsDir`、`scope`、`text`、35 个宿主服务访问器（见「宿主服务」）与 `requestContributionsRefresh()`。`manifest` 等清单类型是宿主构造的只读接口，插件不要自行构造。
+`host` is the plugin's only entry point (`PluginHost`): `manifest`, `context` (the app context injected by the host), `dataDir`, `assetsDir`, `scope`, `text`, 35 host service accessors (see "Host services") and `requestContributionsRefresh()`. Manifest types such as `manifest` are host-constructed read-only interfaces; plugins must not construct them.
 
-### 每插件作用域
+### Per-plugin scope
 
-- 每个插件有独立的 `SupervisorJob` 与 `CoroutineScope`，即 `host.scope`。插件里的后台协程应挂在这个 scope 上（`host.scope.launch { ... }`）。
-- 停用、卸载、更新、进程退出统一走：取消 scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册/清贡献 → 同步技能；任一步异常都会记录并继续完成剩余收尾。
-- 进程被强杀时不保证 `close()` 被调用，需要跨进程存续的状态请及时写进 `host.dataDir`。
-- 重新启用会创建新的 scope 与新的 `PluginHost`，插件对象会重新装载。**不要缓存 host 或 scope 到插件实例字段**，每次回调都以参数为准。
-- 协程里必须处理取消（`CancellationException` 直接向上抛，不要吞）；长循环里用 `isActive` 或在阶段边界检查。
-- 同一会话 run 开始后宿主冻结当时的 hooks 集合（见「事件与 hooks」），本轮内停用插件仍可能收到剩余事件，回调要能容忍状态已变；资源清理写在 `close()`/`onDisable` 里。
+- Each plugin has its own `SupervisorJob` and `CoroutineScope`, that is `host.scope`. Background coroutines in a plugin should hang off this scope (`host.scope.launch { ... }`).
+- Disable, uninstall, update and process exit all follow the same path: cancel the scope → `close()` (5s timeout) → release the install handle → remove registrations/clear contributions → sync skills; an exception in any step is recorded and the remaining cleanup still runs.
+- `close()` is not guaranteed to be called when the process is force-killed; state that must survive the process should be written to `host.dataDir` promptly.
+- Re-enabling creates a new scope and a new `PluginHost`, and the plugin object is loaded again. **Do not cache host or scope in plugin instance fields**; always use the parameter passed to each callback.
+- Coroutines must handle cancellation (`CancellationException` propagates upward, never swallowed); check `isActive` in long loops or at stage boundaries.
+- Once a session run starts, the host freezes the hook set (see "Events and hooks"); a plugin disabled during that round may still receive the remaining events, so callbacks must tolerate changed state; put resource cleanup in `close()`/`onDisable`.
 
-### 一次物化
+### One materialization
 
-宿主每次刷新对每个插件最多调用一次贡献方法，结果聚合成不可变快照；工具装配、提示词、技能同步、UI 槽位、冲突诊断、插件页都消费同一份快照，不会在消费路径重复调用插件。
+The host calls contribution methods at most once per plugin per refresh, aggregating the results into an immutable snapshot; tool assembly, prompts, skill sync, UI slots, conflict diagnostics and the Plugins page all consume the same snapshot and never call the plugin again on consumption paths.
 
-- 每次刷新都会调用 `availability()`、`skills()`；启用且已安装时再调用 `contributions()`、`ui()`、`promptSections()`，声明 `prompt` capability 时还调用 `promptOverride()`。
-- `contributionsFor()` 每个会话只调用一次（同一会话绑定从建立到关闭），该会话的工具与会话 hooks 都从这次结果取用；会话重建后才重新物化。
-- 不要在这些方法里做重 IO 或依赖会变化的外部状态：耗时工作放 `host.scope` 异步做（如 `onEnable` 里启动轮询、`onDisable`/`close` 时靠 scope 取消停止）。
+- Every refresh calls `availability()` and `skills()`; when enabled and installed it also calls `contributions()`, `ui()` and `promptSections()`, and `promptOverride()` when the `prompt` capability is declared.
+- `contributionsFor()` is called once per session (one session binding from establishment to close), and that session's tools and session hooks both come from that result; it is materialized again only after the session is rebuilt.
+- Do not do heavy IO or depend on changing external state in these methods: put slow work on `host.scope` asynchronously (for example start polling in `onEnable` and rely on scope cancellation in `onDisable`/`close`).
 
-### 失败恢复
+### Failure recovery
 
-装载/激活/启用失败时相位为 `FAILED`，`availability()` 不可用时为 `DEGRADED`。插件页的行内错误文本会展示原因；行尾「⋯」菜单按状态提供恢复入口：
+A load/activation/enable failure puts the phase in `FAILED`, and an unavailable `availability()` puts it in `DEGRADED`. The row error text on the Plugins page shows the reason; the "⋯" menu at the end of the row offers recovery entries by state:
 
-| 入口 | 行为 |
+| Entry | Behavior |
 |---|---|
-| 「重试激活」 | 清掉激活中断标记与启动计数后重新执行激活：已装载的插件重新注入服务并调用 `onEnable`，未装载/被自动禁用的插件重新装载并启用；有暂存版本会完整重跑激活序列。成功后刷新并清除错误，失败保留状态并显示新的错误文本 |
-| 「回滚到 <previousVersion>」 | 记录里有上一版本时出现：把安装版本切回上一版本、清空暂存记录并清理失败版本目录 |
-| 启用开关 | 关闭再启用即重新执行 `onEnable`，用于手动恢复被自动停用的插件 |
+| "Retry activation" | Clears the interrupted-activation marker and start counter, then activates again: a loaded plugin gets services injected again and `onEnable` called, an unloaded or auto-disabled plugin is loaded and enabled again; with a staged version the whole activation sequence reruns. On success it refreshes and clears the error; on failure it keeps the state and shows the new error text |
+| "Roll back to <previousVersion>" | Appears when the record has a previous version: switches the installed version back, clears the staged record and deletes the failed version directory |
+| Enable switch | Turning it off and on runs `onEnable` again, for manually recovering an auto-disabled plugin |
 
-- 同一版本连续 2 次启动失败会被自动禁用（相位 `DISABLED`），手动重新启用即重新授权并清空启动计数。
-- 槽位渲染崩溃只禁用对应 Compose 绑定并回退宿主视图，不改变插件相位；升级插件版本后自动重试渲染。装载失败才走上面的重试/回滚/重新启用。
+- Two consecutive failed starts on the same version disable the plugin automatically (phase `DISABLED`), and enabling it manually grants permission again and clears the start counter.
+- A slot render crash only disables the matching Compose binding and falls back to the host view, without changing the plugin phase; rendering retries automatically after a plugin version upgrade. Only load failures go through retry/rollback/re-enable above.
 
-## 工具
+## Tools
 
 ```kotlin
 override fun contributions(host: PluginHost) = contributions(
@@ -510,75 +510,75 @@ override fun contributions(host: PluginHost) = contributions(
 )
 ```
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| `name` | 全局工具名，小写 `snake_case`；不能与宿主保留名冲突（见下），跨插件重名时先注册者保留 |
-| `label` | 工具卡片标题 |
-| `description` | 给模型的工具描述，写清做什么/何时用/边界 |
-| `parameters` | JSON Schema（`{"type":"object","properties":{...},"required":[...]}`），宿主原样交给 SDK |
-| `promptSnippet` | 系统提示里的一句话摘要（可选） |
-| `promptGuidelines` | 追加给模型的工具使用规则（可选） |
-| `exposure` | `PluginToolExposure.DIRECT`（默认，工具常驻并直接可调）或 `DEFERRED`（不进入常驻工具列表，模型先 `tool_search` 找到、再 `tool_execute` 执行） |
+| `name` | Global tool name, lowercase `snake_case`; must not conflict with host reserved names (see below), and when names collide across plugins the first registration wins |
+| `label` | Tool card title |
+| `description` | Tool description for the model; state what it does, when to use it and its boundaries |
+| `parameters` | JSON Schema (`{"type":"object","properties":{...},"required":[...]}`), passed to the SDK as is |
+| `promptSnippet` | One-line summary in the system prompt (optional) |
+| `promptGuidelines` | Additional tool usage rules for the model (optional) |
+| `exposure` | `PluginToolExposure.DIRECT` (default; the tool is resident and directly callable) or `DEFERRED` (the tool stays out of the resident list and the model first finds it with `tool_search`, then runs it with `tool_execute`) |
 | `execute` | `suspend (PluginToolCall) -> PluginToolResult` |
 
-#### 工具暴露方式
+#### Tool exposure
 
-工具默认 `DIRECT`：名称、描述、参数会出现在模型的常驻工具列表里。工具数量多、或只偶尔使用的工具可以声明 `PluginToolExposure.DEFERRED`：
+Tools are `DIRECT` by default: name, description and parameters appear in the model's resident tool list. When you have many tools, or tools used only occasionally, declare `PluginToolExposure.DEFERRED`:
 
 ```kotlin
 pluginTool(
     name = "calendar_sync",
-    label = "同步日历",
-    description = "同步指定时间范围的日历事件",
+    label = "Calendar sync",
+    description = "Sync calendar events in the given time range",
     parameters = syncSchema,
     exposure = PluginToolExposure.DEFERRED,
 ) { call -> ... }
 ```
 
-`DEFERRED` 工具不会常驻系统提示，只出现在宿主 `tool_search` 的目录里。模型调用 `tool_search(query)` 拿到工具名与参数说明后，再用 `tool_execute(name, arguments)` 执行，宿主不会把工具加载进会话。是否折叠由插件自己决定；插件也可以在页面里提供开关，通过 `requestContributionsRefresh()` 在新会话生效（当前 run 的贡献集合在 run 开始时冻结）。
+`DEFERRED` tools are not resident in the system prompt and only appear in the host's `tool_search` catalog. The model calls `tool_search(query)` to get the tool name and parameter docs, then executes with `tool_execute(name, arguments)`; the host never loads the tool into the session. Whether to fold is up to the plugin; a plugin can also offer a switch in its pages and make it take effect on new sessions through `requestContributionsRefresh()` (the current run's contribution set is frozen when the run starts).
 
-宿主保留的工具名（安装期即拒绝冲突）包括：引擎默认工具 `read`/`write`/`edit`/`bash`；App 自带工具 `ask_user_question`/`present`/`system_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`calendar`/`screen_*`/`virtual_screen`/`todo_write`；宿主按需工具 `tool_search`/`tool_execute` 与 SDK 的 `list_mcp_resources`/`list_mcp_resource_templates`/`read_mcp_resource`；以及所有 `mcp__` 前缀。
+Host reserved tool names (conflicts are rejected at install time): the engine defaults `read`/`write`/`edit`/`bash`; app built-ins `ask_user_question`/`present`/`system_shell`/`get_goal`/`create_goal`/`update_goal`/`job_*`/`timer_*`/`miniapp_*`/`web_search`/`web_fetch`/`calendar`/`screen_*`/`virtual_screen`/`todo_write`; host on-demand tools `tool_search`/`tool_execute` and the SDK's `list_mcp_resources`/`list_mcp_resource_templates`/`read_mcp_resource`; plus every `mcp__` prefix.
 
-`PluginToolCall`：
+`PluginToolCall`:
 
-- `callId`：本次调用 id，只用于日志/关联。
-- `args: JsonObject`：模型传入参数。
-- `sessionId`：宿主在 `execute` 时解析出的当前会话 id；没有活动会话时为空字符串。
-- `signal: PluginRunSignal?`：取消信号；长任务在阶段边界调用 `signal?.throwIfCancelled()`，或用 `signal?.onCancel { ... }` 注册清理，不要吞取消异常。
-- `partial(result)`：流式中间结果，有实时工具卡时展示；`execute` 的返回值才是最终结果。
+- `callId`: the call id, for logs and correlation only.
+- `args: JsonObject`: arguments passed by the model.
+- `sessionId`: the current session id resolved by the host in `execute`; an empty string when there is no active session.
+- `signal: PluginRunSignal?`: cancellation signal; long tasks call `signal?.throwIfCancelled()` at stage boundaries, or register cleanup with `signal?.onCancel { ... }`; do not swallow cancellation exceptions.
+- `partial(result)`: streaming intermediate result, shown when a live tool card exists; the return value of `execute` is the final result.
 
-`PluginToolResult`：
+`PluginToolResult`:
 
-| 构造 | 用途 |
+| Constructor | Purpose |
 |---|---|
-| `textResult(text, details?, isError?)` | 普通文本结果；`details` 是宿主侧结构化元数据（给工具卡/日志用，不进模型上下文），其中 `deepdeep.fileRefs` 是宿主保留键，插件不要读写 |
-| `richResult(blocks, details?, isError?)` | 多块结果：`textBlock(text)`、`imageBlock(data, mimeType)`（base64 进模型图片内容）、`fileRefBlock(path, mimeType?)`（content 保留一行 `file: <path> (<mime>)` 文本供模型读取，宿主同时把 `{path, mimeType}` 写入 details 保留键 `deepdeep.fileRefs`，工具卡与历史消息渲染为可点击的文件行，重开会话仍可还原） |
-| 结果字段 | `PluginToolResult` 是只读接口（`text`/`blocks`/`details`/`isError`），用上面两个工厂构造；旧的 `PluginToolResult.Text`/`Rich` 构造已移除 |
+| `textResult(text, details?, isError?)` | Plain text result; `details` is host-side structured metadata (for tool cards and logs, not model context), where `deepdeep.fileRefs` is a host reserved key that plugins must not read or write |
+| `richResult(blocks, details?, isError?)` | Multi-block result: `textBlock(text)`, `imageBlock(data, mimeType)` (base64 goes into model image content), `fileRefBlock(path, mimeType?)` (content keeps one `file: <path> (<mime>)` text line for the model to read, and the host also writes `{path, mimeType}` into the reserved details key `deepdeep.fileRefs`; tool cards and history render a clickable file row that survives reopening the session) |
+| Result fields | `PluginToolResult` is a read-only interface (`text`/`blocks`/`details`/`isError`), constructed with the two factories above; the old `PluginToolResult.Text`/`Rich` constructors were removed |
 
-`details` 里除 `deepdeep.fileRefs` 外由你写入的字段原样透传给工具卡与自定义消息卡；`deepdeep.fileRefs` 由宿主按 `richResult(...)` 里的 `fileRefBlock(...)` 生成，插件不要覆盖它。
+Fields you write into `details` other than `deepdeep.fileRefs` are passed through to the tool card and the custom message card as is; `deepdeep.fileRefs` is generated by the host from `fileRefBlock(...)` in `richResult(...)`, and plugins must not overwrite it.
 
-`isError = true` 表示一次失败的工具结果（模型可重试/解释）；`execute` 抛异常（取消除外）也会转成 error 结果，所以不要用异常传业务错误。
+`isError = true` marks a failed tool result (the model can retry or explain it); an exception thrown from `execute` (other than cancellation) also becomes an error result, so do not use exceptions to convey business errors.
 
-#### 工具结果三层：raw / guidance / card（1.4.3，仅插件工具）
+#### Three layers of tool results: raw / guidance / card (1.4.3, plugin tools only)
 
-卡片只属于插件工具：`PluginTool` 的结果可以带卡片，宿主回答区按 `deepdeep.card` 渲染。通过 bash 运行 CLI 的插件（如中山大学、飞书、企业微信）不产出卡片，也不解析 bash 命令，结果保持 CLI 文本，由模型自己读取作答；宿主对 bash 结果不做任何卡片处理。
+Cards belong to plugin tools only: a `PluginTool` result may carry a card, and the host renders it in the answer area by `deepdeep.card`. Plugins that run a CLI through bash (such as Sun Yat-sen University, Feishu, WeCom) produce no cards and do not parse bash commands; their results stay CLI text that the model reads and answers from, and the host does no card handling for bash results at all.
 
-工具在结果 details 里写三份数据，`open fun Cards.deliver(callId, result)`（plugin-api 1.4.0，宿主 1.4.3+）负责把它们组装成模型可见文本与展示文本：
+The tool writes three pieces of data into the result details, and `open fun Cards.deliver(callId, result)` (plugin-api 1.4.0, host 1.4.3+) assembles them into model-visible text and display text:
 
-| details 键 | 内容 | 谁使用 |
+| details key | Contents | Who uses it |
 |---|---|---|
-| `deepdeep.raw` | 上游完整输出（逐字；CLI 结果去掉 ANSI、`[exit: N]` 和宿主提示，不做摘要、不截断） | `Cards.deliver` 追加到模型文本的「完整返回」段 |
-| `deepdeep.guidance` | 给模型的短指导：下一步、失败原因、必须询问的约束、输出文件路径、分页/登录提示；不写名称/价格/ID 等已在 raw 里的事实 | `Cards.deliver` 追加到「使用说明」段 |
-| `deepdeep.card` | `{ "customType": "...", "title": "...", "payload": {...} }` | `Cards.deliver` 生成「调用 present 展示这张卡片」指令，并写 `deepdeep.display` 给工具卡展示 |
+| `deepdeep.raw` | The full upstream output (verbatim; CLI results drop ANSI, `[exit: N]` and host hints, with no summarization or truncation) | `Cards.deliver` appends it to the "full return" section of the model text |
+| `deepdeep.guidance` | Short guidance for the model: next step, failure reason, constraints that must be asked about, output file paths, pagination/login hints; do not restate facts already in raw such as names, prices or IDs | `Cards.deliver` appends it to the "usage instructions" section |
+| `deepdeep.card` | `{ "customType": "...", "title": "...", "payload": {...} }` | `Cards.deliver` generates the "call present to show this card" instruction and writes `deepdeep.display` for the tool card to display |
 
-- 插件不需要自己拼卡片 id 或 `present` 指令，也不要把它写进卡片 payload；模型文本里的指令由 `Cards.deliver` 统一生成（`pluginTool` 工厂会自动调用，自行实现 `PluginTool` 的插件必须显式调用一次，重复调用幂等）。
-- `textResult` 的 text 只写插件自己的正文（例如邮箱事实列表）；`raw`/`guidance` 不再由宿主拼接。
-- 错误结果（`isError = true`）由 `Cards.deliver` 丢弃卡片与 `present` 指令，只保留正文、完整返回与使用说明。
-- 卡片 payload 必须全量（含原始脏字符串、ID、坐标、图片 URL、状态、分页 token）；裁剪只发生在渲染层的默认预览/展开。
-- 图片 URL 用 `host.images().load(url, maxEdgePx)` 取（需 manifest 声明 `images` capability），返回 `RemoteImage.bitmap`；配合 design 0.11.0 的 `DdRemoteImage` 渲染，全屏用 `DdImageViewer(bitmap)`。图片只进宿主内存与私有缓存，不要写共享存储或插件数据目录。
-- `plugin-api 1.3.1` + `design 0.11.0`：使用 `host.images()` 的插件写 `minHostVersion: "1.4.0"`；`plugin-api 1.3.1` 仍是 level 6 内的加法。
+- Plugins do not assemble card ids or the `present` instruction themselves, and must not put it into the card payload; the instruction in the model text is generated uniformly by `Cards.deliver` (the `pluginTool` factory calls it automatically, while plugins that implement `PluginTool` themselves must call it explicitly once; repeated calls are idempotent).
+- The text of `textResult` contains only the plugin's own body (for example a list of mailbox facts); `raw`/`guidance` are no longer assembled by the host.
+- For error results (`isError = true`), `Cards.deliver` drops the card and the `present` instruction, keeping only the body, the full return and the usage instructions.
+- The card payload must be complete (including raw dirty strings, IDs, coordinates, image URLs, state, pagination tokens); trimming happens only in the default preview/expand of the rendering layer.
+- Fetch image URLs with `host.images().load(url, maxEdgePx)` (the manifest must declare the `images` capability), which returns `RemoteImage.bitmap`; render it with `DdRemoteImage` from design 0.11.0, and use `DdImageViewer(bitmap)` for full screen. Images only go into host memory and the private cache; do not write them to shared storage or the plugin data directory.
+- `plugin-api 1.3.1` + `design 0.11.0`: plugins using `host.images()` write `minHostVersion: "1.4.0"`; `plugin-api 1.3.1` is still additive within level 6.
 
-工具默认随启用插件进入会话；需要会话信息时用 `contributionsFor` 的 live handle：
+Tools enter the session with enabled plugins by default; when you need session information, use the live handle from `contributionsFor`:
 
 ```kotlin
 override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = contributions(
@@ -600,147 +600,147 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = c
 )
 ```
 
-- `contributionsFor` 的 `session` 是**会话 live handle**：不要缓存/拷贝字段，也不要假设调用时已有活动会话。
-- 在工具 `execute` 里调用 `session?.snapshot()` 取最新的 `PluginSessionSnapshot(sessionId, file, cwd)`；没有活动会话时返回 `null`。
-- `session.supportsChatDelivery` 表示该会话是否支持投递自定义卡片（小程序一次性 Agent 等场景不支持）。
+- `session` in `contributionsFor` is a **live session handle**: do not cache or copy its fields, and do not assume an active session exists when it is called.
+- Inside a tool's `execute`, call `session?.snapshot()` for the latest `PluginSessionSnapshot(sessionId, file, cwd)`; it returns `null` when there is no active session.
+- `session.supportsChatDelivery` says whether the session supports delivering custom cards (mini app one-off agents and similar scenarios do not).
 
-## 技能与提示词段
+## Skills and prompt sections
 
-`pluginSkill(id, markdown, files)`：
+`pluginSkill(id, markdown, files)`:
 
-- `id`：小写 `[a-z][a-z0-9_-]*`；全局技能 id 冲突时先注册者保留。
-- `markdown`：完整 SKILL.md 内容，必须带 YAML frontmatter（`name`、`description`），正文写给模型用。
-- `files`：附加文件，用 `pluginSkillFile(path, content?, assetPath?)` 构造 —— `path` 是技能目录内相对路径，`content`（内联字符串）与 `assetPath`（包内 `assets/<path>`）二选一；`assetPath` 会在宿主侧读成文本。
-- 宿主在插件可贡献时把技能物化到 Agent 技能目录，并用归属标记在停用/卸载时清理；不要在 `skills()` 里自己写文件。
+- `id`: lowercase `[a-z][a-z0-9_-]*`; when global skill ids collide the first registration wins.
+- `markdown`: the full SKILL.md content, which must have YAML frontmatter (`name`, `description`); the body is written for the model.
+- `files`: attached files, built with `pluginSkillFile(path, content?, assetPath?)` — `path` is a relative path inside the skill directory, and `content` (inline string) and `assetPath` (`assets/<path>` inside the package) are mutually exclusive; `assetPath` is read as text on the host side.
+- When the plugin can contribute, the host materializes skills into the agent skill directory and cleans them up on disable/uninstall using an ownership marker; do not write files yourself in `skills()`.
 
-`promptSections(host)` 返回 `promptSection(id, body, priority)` 列表，追加到系统提示词；按 `priority` 升序拼接（小的在前），**同一插件内 id 需唯一**。
+`promptSections(host)` returns a list of `promptSection(id, body, priority)` appended to the system prompt; sorted by `priority` ascending (smaller first), **ids must be unique within one plugin**.
 
-### 提示词覆盖（`PromptOverridePlugin`，实验）
+### Prompt override (`PromptOverridePlugin`, experimental)
 
-v6 新增的实验能力：插件在清单声明 `prompt` capability 后实现 `PromptOverridePlugin`，可以覆盖 Agent 系统提示词的 preamble 与 rules，而不只是追加段落。API 标 `@PluginExperimentalApi`，需要显式 opt-in，实验期间可能调整。
+The experimental capability added in v6: after declaring the `prompt` capability in the manifest and implementing `PromptOverridePlugin`, a plugin can override the preamble and rules of the agent system prompt, not just append sections. The API is marked `@PluginExperimentalApi`, needs an explicit opt-in, and may change while experimental.
 
 ```kotlin
 import io.github.whywood.deepdeep.plugin.api.promptOverride as promptOverrideOf
 
 class MyPlugin : DeepDeepPlugin, PromptOverridePlugin {
     override fun promptOverride(host: PluginHost): PromptOverride = promptOverrideOf(
-        preamble = "你是一个同步助手。",
-        rules = "- 同步前先确认目标目录。",
-        sections = listOf(promptSection("sync", "同步完成后汇报文件数。")),
+        preamble = "You are a sync assistant.",
+        rules = "- Confirm the target directory before syncing.",
+        sections = listOf(promptSection("sync", "Report the file count after syncing completes.")),
         priority = 10,
     )
 }
 ```
 
-- 清单必须声明 `capabilities: ["prompt", ...]`；未声明时宿主不会调用 `promptOverride()`。
-- 合并规则：多个插件按 `priority` 从高到低取 `preamble` / `rules`（高优先级生效，冲突写宿主日志）；`sections` 按 `priority` 升序拼接，与 `promptSections()` 的段落一起进入系统提示词的插件段。
-- 预算：单个插件的 `preamble`、`rules`、`sections` 合计 32 KiB，所有插件合计 64 KiB；超出的插件贡献整条跳过并记日志。
-- 覆盖只作用于 Agent 的 preamble 与 rules；宿主生成的工作区/环境段落不参与覆盖，始终保留。
-- 回调异常由宿主隔离，只记日志，不中断会话。
-- 与 `promptSections()` 的分工：`promptSections()` 只追加段落、任何插件都能用；提示词覆盖需要声明 `prompt` capability，用于替换 Agent 的默认身份与规则。
+- The manifest must declare `capabilities: ["prompt", ...]`; otherwise the host does not call `promptOverride()`.
+- Merge rules: among several plugins, `preamble`/`rules` come from the highest `priority` (conflicts are written to the host log); `sections` are concatenated by `priority` ascending and join the sections from `promptSections()` in the plugin section of the system prompt.
+- Budget: `preamble`, `rules` and `sections` of a single plugin total 32 KiB, and all plugins together 64 KiB; a plugin that exceeds it has its whole contribution skipped and logged.
+- Override applies only to the agent's preamble and rules; the workspace/environment sections generated by the host are not overridable and are always kept.
+- Callback exceptions are isolated by the host, only logged, and never interrupt the session.
+- Division of labor with `promptSections()`: `promptSections()` only appends sections and works for any plugin; prompt override needs the `prompt` capability and replaces the agent's default identity and rules.
 
-## 事件与 hooks
+## Events and hooks
 
-`PluginHooks` 的全部回调都是 `suspend` 函数，且有默认空实现，只覆盖需要的。hooks 在 `contributions(host)`（全局）或 `contributionsFor(host, session)`（会话级）里返回，两者汇入同一条派发管线。观察事件与决策类型都是宿主实现的只读接口，插件不要自行实现或构造。
+Every `PluginHooks` callback is a `suspend` function with a default empty implementation, so implement only what you need. Hooks are returned from `contributions(host)` (global) or `contributionsFor(host, session)` (session level), and both feed the same dispatch pipeline. Observation events and decision types are host-implemented read-only interfaces; plugins must not implement or construct them.
 
-**会话级 hooks**：`contributionsFor(host, session)` 返回的 `Contributions` 是该会话生效的工具 + hooks，其中 hooks 按 `pluginId` 覆盖同一插件的全局 hooks。默认实现委托 `contributions(host)`，所以只在 `contributions()` 里返回 hooks 的插件行为不变（每个插件仍只有一条）；只在 `contributionsFor` 里按会话加工具时，返回 `contributions(tools = ...)` 即可（`hooks` 保持默认 `PluginHooks.None` 时沿用该插件的全局 hooks）。会话贡献返回默认的 `PluginHooks.None`（未显式提供 hooks）时沿用该插件的全局 hooks，不会因为写了 `contributionsFor` 就让 hooks 静默失效。每个会话只物化一次：同一会话绑定从建立到关闭只调用一次 `contributionsFor`，工具与会话 hooks 共用这次结果；插件能力变化（启停/页面动作后刷新）会触发宿主在安全点重建会话，重建后才重新物化。不同会话的物化互不阻塞、可能并发调用，插件实现不要依赖跨会话的共享可变状态。
+**Session-level hooks**: the `Contributions` returned by `contributionsFor(host, session)` are the tools + hooks in effect for that session, where hooks override the global hooks of the same plugin by `pluginId`. The default implementation delegates to `contributions(host)`, so plugins that only return hooks from `contributions()` behave the same (still one set per plugin); when you only add session tools in `contributionsFor`, return `contributions(tools = ...)` (with `hooks` left at the default `PluginHooks.None`, the plugin's global hooks are used). When the session contribution returns the default `PluginHooks.None` (no hooks provided explicitly), the plugin's global hooks are used, so writing `contributionsFor` does not silently disable hooks. Each session is materialized once: one session binding calls `contributionsFor` once from establishment to close, and tools and session hooks share that result; a capability change (enable/disable, or a refresh after a page action) triggers a session rebuild at a safe point, and only then is it materialized again. Materialization for different sessions does not block each other and may run concurrently, so plugin implementations must not rely on shared mutable state across sessions.
 
-**run 级冻结**：每轮 run 开始时（`RunStartedEvent`）宿主冻结当时生效的 hooks 集合，本轮所有观察事件与变换/闸门都走这份集合：冻结后再启停插件、刷新贡献、新增插件都不影响本轮——已冻结的插件即使被停用，本轮剩余事件仍会派发给它；新启用的插件从下一轮开始生效。run 结束（`RunFinishedEvent`；失败结束同样以 `RunFinishedEvent(error)` 到达）并派发完本轮事件后解冻，下一轮按最新插件快照重新冻结。
+**Run-level freeze**: when a run starts (`RunStartedEvent`), the host freezes the hook set in effect, and all observation events and transforms/gates in that run go through it: enabling or disabling plugins, refreshing contributions or adding plugins after the freeze has no effect on this run — a frozen plugin still receives the run's remaining events even if disabled; newly enabled plugins take effect from the next run. After the run ends (`RunFinishedEvent`; a failed run also arrives as `RunFinishedEvent(error)`) and the events of the run are dispatched, hooks unfreeze and the next run freezes the latest plugin snapshot.
 
-注意：冻结期间被停用的插件仍可能收到本轮剩余事件，回调必须能容忍插件已被 `close`/状态已变，不要依赖回调时机做资源清理（清理写在 `close()`/`onDisable` 里）。前提是同一会话同一时刻只有一个活跃 run。
+Note: a plugin disabled during the freeze may still receive the run's remaining events, so callbacks must tolerate the plugin having been closed or state having changed; do not rely on callback timing for resource cleanup (put cleanup in `close()`/`onDisable`). The premise is one active run per session at a time.
 
-小程序的一次性 Agent 复用同一套 prompt/input/工具钩子与会话绑定，但它的会话事件不经过宿主会话观察事件管线，因此 21 个会话观察事件与 run 冻结只覆盖主会话运行路径；另有 6 个系统事件见下。
+A mini app one-off agent reuses the same prompt/input/tool hooks and session binding, but its session events do not go through the host session observation pipeline, so the 21 session observation events and run freezing cover only the main session run path; there are 6 more system events below.
 
-### 观察事件（只通知，不能改变流程）
+### Observation events (notify only, cannot change the flow)
 
-按插件注册顺序串行派发，单个 handler 超时 5s（`PluginHooks.OBSERVE_TIMEOUT_MS`）；超时/异常记录后继续，不影响会话。会话内事件按到达顺序逐条派发，结构化事件优先于流式 delta（delta 过载时丢弃最旧的）。
+Dispatched serially in plugin registration order, with a 5s timeout per handler (`PluginHooks.OBSERVE_TIMEOUT_MS`); timeouts and exceptions are logged and dispatch continues without affecting the session. Session events are dispatched one by one in arrival order, and structured events take precedence over streaming deltas (the oldest deltas are dropped when overloaded).
 
-| 回调（`PluginHooks` 方法） | 事件类型 | 可用字段 | 时机 |
+| Callback (`PluginHooks` method) | Event type | Available fields | When |
 |---|---|---|---|
-| `sessionStarted(event: SessionStartedEvent)` | `SessionStartedEvent` | `sessionId`、`title?`、`workspace?` | 会话创建 |
-| `sessionClosed(event: SessionClosedEvent)` | `SessionClosedEvent` | `sessionId` | 会话关闭 |
-| `runStarted(event: RunStartedEvent)` | `RunStartedEvent` | `sessionId`、`runId` | 一轮 Agent run 开始 |
-| `runFinished(event: RunFinishedEvent)` | `RunFinishedEvent` | `sessionId`、`runId`、`error?`（`succeeded`） | run 结束 |
-| `turnStarted(event: TurnStartedEvent)` | `TurnStartedEvent` | `sessionId`、`turnId` | 模型回合开始 |
-| `turnFinished(event: TurnFinishedEvent)` | `TurnFinishedEvent` | `sessionId`、`turnId`、`failed` | 模型回合结束 |
-| `messageStarted(event: MessageStartedEvent)` | `MessageStartedEvent` | `sessionId`、`messageId`、`role`（`USER/ASSISTANT/TOOL/SYSTEM`） | 消息开始 |
-| `messageDelta(event: MessageDeltaEvent)` | `MessageDeltaEvent` | `sessionId`、`messageId`、`delta` | 流式增量 |
-| `messageFinished(event: MessageFinishedEvent)` | `MessageFinishedEvent` | `sessionId`、`messageId`、`text?` | 消息完成 |
-| `toolExecutionUpdate(event: ToolExecutionUpdateEvent)` | `ToolExecutionUpdateEvent` | `sessionId`、`callId`、`toolName`、`phase`（`STARTED/PARTIAL/FINISHED/FAILED`）、`partial?`（`PluginToolResult`） | 工具执行状态 |
-| `compactionStarted(event: CompactionStartedEvent)` | `CompactionStartedEvent` | `sessionId` | 上下文压缩开始 |
-| `compactionFinished(event: CompactionFinishedEvent)` | `CompactionFinishedEvent` | `sessionId`、`tokensBefore`、`tokensAfter` | 压缩完成 |
-| `compactionFailed(event: CompactionFailedEvent)` | `CompactionFailedEvent` | `sessionId`、`error` | 压缩失败 |
-| `modelChanged(event: ModelChangedEvent)` | `ModelChangedEvent` | `sessionId`、`model`（`provider/model`） | 模型切换 |
-| `thinkingLevelChanged(event: ThinkingLevelChangedEvent)` | `ThinkingLevelChangedEvent` | `sessionId`、`level` | 思考档切换 |
-| `retryScheduled(event: RetryScheduledEvent)` | `RetryScheduledEvent` | `sessionId`、`attempt`、`delayMs`、`reason?` | 安排重试 |
-| `retrySucceeded(event: RetrySucceededEvent)` | `RetrySucceededEvent` | `sessionId`、`attempt` | 重试成功 |
-| `retryExhausted(event: RetryExhaustedEvent)` | `RetryExhaustedEvent` | `sessionId`、`attempts`、`error` | 重试耗尽 |
-| `mcpStatusChanged(event: McpStatusChangedEvent)` | `McpStatusChangedEvent` | `server`、`status`（`OK/AUTH_REQUIRED/FAILED/UNKNOWN`） | MCP 状态变化 |
-| `mcpToolsChanged(event: McpToolsChangedEvent)` | `McpToolsChangedEvent` | `server`、`tools`（`List<String>`） | MCP 工具变化 |
-| `busEvent(event: BusEventReceived)` | `BusEventReceived` | `event`（`PluginBusEvent`：`topic`/`publisher`/`payload`/`publishedAt`） | 插件总线事件 |
+| `sessionStarted(event: SessionStartedEvent)` | `SessionStartedEvent` | `sessionId`, `title?`, `workspace?` | Session created |
+| `sessionClosed(event: SessionClosedEvent)` | `SessionClosedEvent` | `sessionId` | Session closed |
+| `runStarted(event: RunStartedEvent)` | `RunStartedEvent` | `sessionId`, `runId` | An agent run starts |
+| `runFinished(event: RunFinishedEvent)` | `RunFinishedEvent` | `sessionId`, `runId`, `error?` (`succeeded`) | Run finished |
+| `turnStarted(event: TurnStartedEvent)` | `TurnStartedEvent` | `sessionId`, `turnId` | A model turn starts |
+| `turnFinished(event: TurnFinishedEvent)` | `TurnFinishedEvent` | `sessionId`, `turnId`, `failed` | A model turn ends |
+| `messageStarted(event: MessageStartedEvent)` | `MessageStartedEvent` | `sessionId`, `messageId`, `role` (`USER/ASSISTANT/TOOL/SYSTEM`) | A message starts |
+| `messageDelta(event: MessageDeltaEvent)` | `MessageDeltaEvent` | `sessionId`, `messageId`, `delta` | Streaming delta |
+| `messageFinished(event: MessageFinishedEvent)` | `MessageFinishedEvent` | `sessionId`, `messageId`, `text?` | A message completes |
+| `toolExecutionUpdate(event: ToolExecutionUpdateEvent)` | `ToolExecutionUpdateEvent` | `sessionId`, `callId`, `toolName`, `phase` (`STARTED/PARTIAL/FINISHED/FAILED`), `partial?` (`PluginToolResult`) | Tool execution state |
+| `compactionStarted(event: CompactionStartedEvent)` | `CompactionStartedEvent` | `sessionId` | Context compaction starts |
+| `compactionFinished(event: CompactionFinishedEvent)` | `CompactionFinishedEvent` | `sessionId`, `tokensBefore`, `tokensAfter` | Compaction finishes |
+| `compactionFailed(event: CompactionFailedEvent)` | `CompactionFailedEvent` | `sessionId`, `error` | Compaction failed |
+| `modelChanged(event: ModelChangedEvent)` | `ModelChangedEvent` | `sessionId`, `model` (`provider/model`) | Model switched |
+| `thinkingLevelChanged(event: ThinkingLevelChangedEvent)` | `ThinkingLevelChangedEvent` | `sessionId`, `level` | Thinking level switched |
+| `retryScheduled(event: RetryScheduledEvent)` | `RetryScheduledEvent` | `sessionId`, `attempt`, `delayMs`, `reason?` | Retry scheduled |
+| `retrySucceeded(event: RetrySucceededEvent)` | `RetrySucceededEvent` | `sessionId`, `attempt` | Retry succeeded |
+| `retryExhausted(event: RetryExhaustedEvent)` | `RetryExhaustedEvent` | `sessionId`, `attempts`, `error` | Retries exhausted |
+| `mcpStatusChanged(event: McpStatusChangedEvent)` | `McpStatusChangedEvent` | `server`, `status` (`OK/AUTH_REQUIRED/FAILED/UNKNOWN`) | MCP status changed |
+| `mcpToolsChanged(event: McpToolsChangedEvent)` | `McpToolsChangedEvent` | `server`, `tools` (`List<String>`) | MCP tools changed |
+| `busEvent(event: BusEventReceived)` | `BusEventReceived` | `event` (`PluginBusEvent`: `topic`/`publisher`/`payload`/`publishedAt`) | Plugin bus event |
 
-共 21 个会话观察回调。
+21 session observation callbacks in total.
 
-### 系统事件（无会话上下文）
+### System events (no session context)
 
-以下 6 个观察事件由宿主在系统侧事件到达时派发，不绑定会话，也不经过 run 冻结；目标是所有在 `contributions()` 里返回了全局 hooks、且满足门槛的插件。单个 handler 超时同样是 5s，超时/异常记录后继续。
+The 6 observation events below are dispatched by the host when system-side events arrive; they are not bound to a session and do not go through run freezing. The target is every plugin that returned global hooks from `contributions()` and meets the gate. The per-handler timeout is 5s as well; timeouts and exceptions are logged and dispatch continues.
 
-| 回调 | 事件类型 | 字段 | 触发条件与门槛 |
+| Callback | Event type | Fields | Trigger and gate |
 |---|---|---|---|
-| `notificationReceived(event: NotificationReceivedEvent)` | `NotificationReceivedEvent` | `notification`（`PluginNotificationRecord`）、`removed` | 通知监听收到或移除通知；`notifications` + `components.notificationListener` |
-| `notificationAction(event: NotificationActionEvent)` | `NotificationActionEvent` | `notificationId`、`actionId`、`payload` | 用户点击插件自己发出的通知上的动作按钮；只需 `notifications` 能力 |
-| `backgroundTask(event: BackgroundTaskEvent)` | `BackgroundTaskEvent` | `taskId`、`kind`、`firedAtMs` | 插件注册的后台任务到点或开机重放；`background` + `components.background` 或 `components.foregroundService` |
-| `shareReceived(event: ShareReceivedEvent)` | `ShareReceivedEvent` | `text?`、`streams`（`SharedStream`：`path`/`mimeType`/`name`）、`title?` | 用户把内容分享到 DeepDeep；`share` + `components.share` |
-| `deepLinkReceived(event: DeepLinkReceivedEvent)` | `DeepLinkReceivedEvent` | `path`、`arguments` | 收到的深链路径命中 `components.deeplinks` 声明；`deeplink` |
-| `appLifecycle(event: AppLifecycleEvent)` | `AppLifecycleEvent` | `foreground` | App 进入前台/后台；`app` |
+| `notificationReceived(event: NotificationReceivedEvent)` | `NotificationReceivedEvent` | `notification` (`PluginNotificationRecord`), `removed` | The notification listener receives or removes a notification; `notifications` + `components.notificationListener` |
+| `notificationAction(event: NotificationActionEvent)` | `NotificationActionEvent` | `notificationId`, `actionId`, `payload` | The user taps an action button on a notification the plugin itself posted; only the `notifications` capability is needed |
+| `backgroundTask(event: BackgroundTaskEvent)` | `BackgroundTaskEvent` | `taskId`, `kind`, `firedAtMs` | A background task registered by the plugin fires or replays at boot; `background` + `components.background` or `components.foregroundService` |
+| `shareReceived(event: ShareReceivedEvent)` | `ShareReceivedEvent` | `text?`, `streams` (`SharedStream`: `path`/`mimeType`/`name`), `title?` | The user shares content to PI; `share` + `components.share` |
+| `deepLinkReceived(event: DeepLinkReceivedEvent)` | `DeepLinkReceivedEvent` | `path`, `arguments` | A received deep link path matches a `components.deeplinks` declaration; `deeplink` |
+| `appLifecycle(event: AppLifecycleEvent)` | `AppLifecycleEvent` | `foreground` | The app enters the foreground or background; `app` |
 
-- 系统事件只发给全局 hooks（`contributions()` 返回的 `PluginHooks`），会话级 hooks 收不到。
-- 门槛不满足时事件不会派发，也不会报错：通知监听、无障碍、分享、深链、后台任务都还要求用户在系统里授予对应授权或安装时同意组件声明。
+- System events go only to global hooks (the `PluginHooks` returned by `contributions()`); session-level hooks never receive them.
+- When a gate is not met the event is neither dispatched nor reported: notification listening, accessibility, share, deep links and background tasks all additionally require the user to grant the matching access in the system or to agree to the component declaration at install time.
 
-### 变换与闸门（可改变流程）
+### Transforms and gates (can change the flow)
 
-按插件注册顺序串行执行，单个 handler 超时 2s（`PluginHooks.TRANSFORM_TIMEOUT_MS`）；超时/异常按各阶段的失败策略处理：
+Executed serially in plugin registration order with a 2s timeout per handler (`PluginHooks.TRANSFORM_TIMEOUT_MS`); timeouts and exceptions follow the failure policy of each stage:
 
-| 方法 | 输入 → 输出 | 失败策略 |
+| Method | Input → output | Failure policy |
 |---|---|---|
-| `promptTransform(request: PromptRequest): String` | 会话 id + prompt → 新 prompt，链式传递 | fail-open：保留上一个值 |
-| `inputTransform(request: InputRequest): InputDecision` | 输入文本 + 图片路径 → `inputContinue(text, imagePaths)` 继续（链式），`inputHandled()` 短路并丢弃本轮输入 | fail-open：保留当前输入 |
-| `beforeToolCall(request: ToolCallRequest): ToolCallDecision` | 工具调用（含 MCP/动态工具）→ `toolContinue()` / `toolBlock(reason)` / `toolRewrite(args)`（后续插件基于改写后的 args 继续） | **fail-closed**：超时/异常按阻止调用处理并给出原因 |
-| `context(request: PluginContextRequest): String?` | 返回要注入系统提示的检索/记忆文本；多个插件按注册顺序拼接 | fail-open：超时/异常跳过；单插件 8 KiB、总量 32 KiB 截断 |
-| `afterToolExecution(request: ToolExecutionResult): ToolResultDecision` | 工具结果 → `resultKeep()` / `resultReplace(result)`（链式替换） | keep：保留上一个结果 |
+| `promptTransform(request: PromptRequest): String` | Session id + prompt → new prompt, chained | fail-open: keep the previous value |
+| `inputTransform(request: InputRequest): InputDecision` | Input text + image paths → `inputContinue(text, imagePaths)` continues (chained), `inputHandled()` short-circuits and drops this input | fail-open: keep the current input |
+| `beforeToolCall(request: ToolCallRequest): ToolCallDecision` | Tool call (including MCP/dynamic tools) → `toolContinue()` / `toolBlock(reason)` / `toolRewrite(args)` (later plugins continue from the rewritten args) | **fail-closed**: timeout/exception blocks the call with a reason |
+| `context(request: PluginContextRequest): String?` | Returns retrieval/memory text to inject into the system prompt; several plugins concatenate in registration order | fail-open: skipped on timeout/exception; truncated at 8 KiB per plugin and 32 KiB in total |
+| `afterToolExecution(request: ToolExecutionResult): ToolResultDecision` | Tool result → `resultKeep()` / `resultReplace(result)` (chained replacement) | keep: retain the previous result |
 
-注意：
+Notes:
 
-- 这些回调在会话关键路径上，必须快速返回；耗时工作丢到 `host.scope` 异步做，不要在里面做网络/重 IO。
-- 不要在 transform 里阻塞等待用户；需要用户确认的闸门只做同步判定。
-- `inputTransform` 返回的 `imagePaths` 会真正生效：路径对应的图片会被读取并替换/加入本轮输入（无法读取的路径被忽略），无图片时返回空列表。
-- `PluginHooks.None` 可用于占位；事件顺序 = 当前生效集合里的加载/注册顺序（按插件安装注册顺序）。
-- 用户取消导致的 `CancellationException` 会向上传播，不要吞。
+- These callbacks sit on the session critical path and must return fast; move slow work to `host.scope` asynchronously, and do not do network or heavy IO inside them.
+- Do not block a transform waiting for the user; gates that need user confirmation should only make a synchronous decision.
+- The `imagePaths` returned by `inputTransform` really take effect: the images at those paths are read and replace or join this input (unreadable paths are ignored), and an empty list means no images.
+- `PluginHooks.None` can be used as a placeholder; event order = load/registration order in the currently effective set (plugin install registration order).
+- `CancellationException` caused by user cancellation propagates upward; do not swallow it.
 
-## UI 扩展
+## UI extensions
 
-宿主固定主壳/导航/聊天骨架，插件可以注册**插件页面**、向两个槽位挂 Compose 绑定，或者贡献输入区动作；不能替换整页，也不能在清单里注册 Activity/Service。插件页面是插件唯一的自绘界面：默认在当前导航栈内渲染，需要独立窗口时用宿主代理的插件窗口（`components().startActivity`）。
+The host fixes the main shell, navigation and chat skeleton; plugins can register **plugin pages**, attach Compose bindings to two slots, or contribute composer actions; they cannot replace a whole screen or register Activity/Service in the manifest. Plugin pages are the plugin's only self-drawn surface: they render inside the current navigation stack by default, and when a dedicated window is needed use the host-proxied plugin window (`components().startActivity`).
 
-### 槽位目录
+### Slot catalog
 
-| slotId | 场景 |
+| slotId | Scenario |
 |---|---|
-| `tool.card.content:<toolName>` | 指定工具调用卡片的内容区 |
-| `chat.message:<customType>` | 自定义消息类型的内容区 |
+| `tool.card.content:<toolName>` | Content area of the tool call card for the named tool |
+| `chat.message:<customType>` | Content area for a custom message type |
 
-`slotBinding(slotId, priority, content)`：同一槽位只渲染一个绑定——按 `priority` 从大到小取第一个可渲染的（同优先级按插件注册顺序），其余绑定被覆盖；没有可渲染绑定时宿主用默认视图兜底。
+`slotBinding(slotId, priority, content)`: only one binding renders per slot — the first renderable one by descending `priority` (same priority: plugin registration order), and the rest are overridden; when no binding is renderable the host falls back to the default view.
 
-`SlotIds` 提供 helper：
+`SlotIds` provides helpers:
 
 ```kotlin
 SlotIds.toolCard("template_echo")            // "tool.card.content:template_echo"
 SlotIds.chatMessage("card")                  // "chat.message:card"
-SlotIds.matches(slotId)                      // 校验完整槽位 id
+SlotIds.matches(slotId)                      // validates a full slot id
 ```
 
-### 工具结果渲染器（1.3.0）
+### Tool result renderers (1.3.0)
 
-槽位是“按精确工具名注册”，适合插件自己的工具。想让插件卡片渲染 **MCP 工具**或一批不同名字的工具时，用工具结果渲染器：
+Slots are "registered by exact tool name", which suits a plugin's own tools. To render **MCP tools** or a batch of tools with different names with a plugin card, use tool result renderers:
 
 ```kotlin
 class TravelPlugin : DeepDeepPlugin {
@@ -759,7 +759,7 @@ class TravelPlugin : DeepDeepPlugin {
                 ) { state ->
                     val data = state.structuredContent as? JsonObject
                     DdGroupCard {
-                        DdText("路线", style = DdType.heading)
+                        DdText("Route", style = DdType.heading)
                         DdText(data?.get("summary")?.jsonPrimitive?.content ?: state.result?.text.orEmpty())
                     }
                 },
@@ -768,34 +768,34 @@ class TravelPlugin : DeepDeepPlugin {
 }
 ```
 
-匹配规则：
+Match rules:
 
-- `source`：`ToolResultSource.PLUGIN` / `MCP` / `BUILTIN`，为空表示不限；
-- `server`：MCP 服务器名，必须与用户在 MCP 设置里的名字一致；
-- `tool`：工具名精确匹配；`toolPrefix`：工具名前缀；两者可同时使用；
-- 同一工具只渲染一个：`priority` 大者优先，其次匹配条件更具体者，最后按插件注册顺序；
-- 插件禁用、UI 不兼容或渲染器不匹配时，自动回退到默认工具卡；渲染器里不要 `require`。
+- `source`: `ToolResultSource.PLUGIN` / `MCP` / `BUILTIN`; empty means any;
+- `server`: the MCP server name, which must match the name the user gave in MCP settings;
+- `tool`: exact tool name match; `toolPrefix`: tool name prefix; both can be used together;
+- only one renderer per tool: higher `priority` first, then the more specific match, then plugin registration order;
+- when a plugin is disabled, the UI is incompatible or no renderer matches, the default tool card is used automatically; do not `require` inside a renderer.
 
-`ToolResultState` 提供：
+`ToolResultState` provides:
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| `callId` / `toolName` | 调用 id 与内部工具名；`tool_execute` 调用的 MCP 工具会自动还原为真实 MCP 工具名 |
-| `source` / `server` | 工具来源与 MCP 服务器名 |
-| `arguments` | 工具参数；`tool_execute` 包装会还原内部参数 |
-| `result` | 同工具卡槽位的 `PluginToolResult`（文本/图片/文件/错误） |
-| `structuredContent` | 工具返回的 `structuredContent`；MCP 结果会在宿主持久化（上限 256 KiB），重开会话仍可用于渲染；没有时为 null |
+| `callId` / `toolName` | The call id and the inner tool name; MCP tools called through `tool_execute` are restored to the real MCP tool name automatically |
+| `source` / `server` | Tool source and MCP server name |
+| `arguments` | Tool arguments; the `tool_execute` wrapper restores the inner arguments |
+| `result` | The same `PluginToolResult` as the tool card slot (text/images/files/errors) |
+| `structuredContent` | The `structuredContent` returned by the tool; MCP results are persisted by the host (256 KiB limit) and remain available for rendering after reopening the session; null when absent |
 
-- MCP 工具默认通过 `tool_search` + `tool_execute` 调用，渲染器不需要关心这层包装。
-- 结构化内容只用于 UI，不进入模型上下文；不要把图片/大 JSON 塞进 `details` 期望宿主渲染，优先用 `structuredContent`。
-- 渲染器内容同样受插件 UI 兼容性约束（`ui.apiLevel` / `kotlin` / `compose`），版本升级后自动重试；Compose 异常与槽位一样没有崩溃隔离，需自测。
-- 工具结果渲染器需要 `plugin-api 1.3.0+` 与宿主 `1.1.0+`；只使用旧能力的插件不受影响。
+- MCP tools are called through `tool_search` + `tool_execute` by default, and renderers do not need to care about that wrapper.
+- Structured content is for UI only and does not enter the model context; do not stuff images or large JSON into `details` expecting the host to render them — prefer `structuredContent`.
+- Renderer content is subject to the same plugin UI compatibility constraints (`ui.apiLevel` / `kotlin` / `compose`) and retries automatically after a version upgrade; Compose exceptions have no crash isolation, just like slots, so test them yourself.
+- Tool result renderers need `plugin-api 1.3.0+` and host `1.1.0+`; plugins using only older capabilities are unaffected.
 
-页面与输入区动作是贡献，不是槽位：`PluginUiContributions.pages`（用 `pluginPage(id, title, icon?, content)` 构造）声明插件页面并内联页面内容，`PluginUiContributions.composerActions`（用 `composerAction(id, label, icon?)` 构造）声明输入区动作。`PluginUiContributions` 是只读接口，`pages` / `composerActions` 有默认空实现，插件只实现 `bindings`（以及需要的成员）。插件页列表里有 `pages` 的行点整行进入第一个页面；输入区动作 chip 在聊天输入区显示，点击打开该插件页面（动作 id 与页面 id 相同时打开对应页面，否则打开第一个页面）。
+Pages and composer actions are contributions, not slots: `PluginUiContributions.pages` (built with `pluginPage(id, title, icon?, content)`) declares plugin pages with inline page content, and `PluginUiContributions.composerActions` (built with `composerAction(id, label, icon?)`) declares composer actions. `PluginUiContributions` is a read-only interface, `pages` / `composerActions` have default empty implementations, and plugins implement only `bindings` (plus the members they need). In the plugin page list, tapping a row that has `pages` enters the first page; composer action chips appear in the chat composer and open that plugin's page when tapped (the action id opens the matching page when it equals a page id, otherwise the first page).
 
-### 页面与参数
+### Pages and arguments
 
-`pluginPage(id, title, icon?) { ... }` 声明页面。1.1.0 起页面可以带参数打开，并能从页面带结果返回：
+`pluginPage(id, title, icon?) { ... }` declares a page. Since 1.1.0 pages can be opened with arguments and return results:
 
 ```kotlin
 host.ui().openPageWithArguments(
@@ -805,11 +805,12 @@ host.ui().openPageWithArguments(
 )
 ```
 
-- `newTask = true` 时页面在独立的宿主代理窗口（`PluginHostActivity`）打开，适合扫码、拍照、长流程；`false` 在当前导航栈内打开。
-- 页面内用 `host.ui().pageContext()` 或 Compose 的 `LocalPluginPageContext.current` 读取 `PluginPageContext(pageId, arguments)`；不在插件页内调用时返回 null。
-- 关闭页面用 `host.ui().closePage(result)`，`result` 是可选的 JSON；独立窗口关闭后回到宿主界面。
-- 打开别人的页面不行：`openPage(...)`/`openPageWithArguments(...)` 只接受本插件声明的页面 id。
-1.2.0 起还可以把页面作为 sheet 直接叠在聊天上打开，适合“点聊天卡片看详情”这类不该离开当前会话的场景：
+- With `newTask = true` the page opens in a dedicated host-proxied window (`PluginHostActivity`), which suits scanning, photography and long flows; `false` opens it inside the current navigation stack.
+- Inside the page, read `PluginPageContext(pageId, arguments)` through `host.ui().pageContext()` or Compose's `LocalPluginPageContext.current`; it returns null when called outside a plugin page.
+- Close a page with `host.ui().closePage(result)`, where `result` is optional JSON; closing the dedicated window returns to the host UI.
+- You cannot open another plugin's page: `openPage(...)`/`openPageWithArguments(...)` only accept page ids declared by the calling plugin.
+
+Since 1.2.0 a page can also open as a sheet stacked on the chat, for cases like "tap a chat card to see details" that should not leave the current session:
 
 ```kotlin
 host.ui().openPageSheet(
@@ -818,62 +819,61 @@ host.ui().openPageSheet(
 )
 ```
 
-- 宿主用底部 sheet 承载同一个 `PluginPage.content()`，不会 push 导航页；下滑、点遮罩、返回或插件调用 `closePage()` 都会关闭 sheet，回到聊天。
-- 页面内用 `LocalPluginPageContext.current?.presentation == PluginPagePresentation.SHEET` 判断当前呈现方式；`pageContext().presentation` 默认是 `PAGE`，普通页面与独立窗口不受影响。
-- 同一时刻只允许一个插件页 sheet；sheet 内再打开 `DdSheet`（例如写信、选择器）是允许的，关闭顺序由最上层开始。
-- 需要完整页面时仍用 `openPage(...)`/`openPageWithArguments(...)`；插件卡片里常见的做法是「点内容开 sheet，footer 打开完整页面」。
-- `isDark` 跟随宿主当前主题（内置或插件主题），不再只看系统夜间模式。
+- The host carries the same `PluginPage.content()` in a bottom sheet and does not push a navigation page; swiping down, tapping the scrim, pressing back or the plugin calling `closePage()` all close the sheet and return to the chat.
+- Inside the page, check the current presentation with `LocalPluginPageContext.current?.presentation == PluginPagePresentation.SHEET`; `pageContext().presentation` defaults to `PAGE`, and ordinary pages and dedicated windows are unaffected.
+- Only one plugin page sheet is allowed at a time; opening a `DdSheet` inside it (for example a compose form or a picker) is allowed, and sheets close starting from the topmost one.
+- When you need a full page, still use `openPage(...)`/`openPageWithArguments(...)`; a common pattern in plugin cards is "tap the content to open a sheet, open the full page from the footer".
+- `isDark` follows the host's current theme (built-in or plugin theme), not just the system dark mode.
 
+### Interaction and pickers
 
-### 交互与选择器
+`UiService` provides host-style system interactions; plugins should not show their own Material dialogs. These methods need the page in the foreground, and calling them from the background or from tool callbacks may return null/false:
 
-`UiService` 提供宿主风格的系统交互，插件不要自己弹 Material 弹窗；这些方法需要页面在前台，后台或工具回调里调用可能返回 null/false：
-
-| 方法 | 返回 | 说明 |
+| Method | Returns | Description |
 |---|---|---|
-| `confirm(uiConfirmRequest(title, message?, confirmLabel?, cancelLabel?, destructive))` | `Boolean` | 确认弹窗，`destructive` 用危险色 |
-| `prompt(uiPromptRequest(title, message?, initial, placeholder?, multiline))` | `String?` | 文本输入；取消返回 null |
-| `choose(uiChooseRequest(title, listOf(uiChoice(id, label, description?)), message?))` | `String?` | 单选列表，返回所选 `id` |
-| `pickDate(uiDatePickRequest(initialMs?, minMs?, maxMs?))` | `Long?` | 日期选择 |
-| `pickTime(uiTimePickRequest(initialHour?, initialMinute?, is24Hour))` | `Int?` | 时间选择，返回「小时 * 60 + 分钟」 |
-| `pickFiles(uiFilePickRequest(mimeTypes, multiple, maxCount))` | `List<PluginPickedFile>` | 系统文件选择；取消返回空列表 |
-| `pickImage(uiImagePickRequest(source = UiImageSource.GALLERY/CAMERA, frontCamera))` | `PluginPickedFile?` | 相册或拍照；取消返回 null |
-| `scanQr()` | `String?` | 扫码并返回文本 |
-| `pickDirectory()` | `String?` | 选择目录 |
-| `snackbar(message, actionLabel?, action?)` | — | 底部轻提示，可带一个动作 |
-| `shareFiles(paths, mimeType?)` | — | 分享插件自己的文件（走宿主 FileProvider） |
-| `isDark` | `Boolean` | 当前主题是否深色 |
-| `openUrl` / `share(shareRequest(...))` / `toast(message)` | — | 打开链接、分享文本、Toast（只用于轻反馈） |
+| `confirm(uiConfirmRequest(title, message?, confirmLabel?, cancelLabel?, destructive))` | `Boolean` | Confirmation dialog; `destructive` uses the danger color |
+| `prompt(uiPromptRequest(title, message?, initial, placeholder?, multiline))` | `String?` | Text input; cancel returns null |
+| `choose(uiChooseRequest(title, listOf(uiChoice(id, label, description?)), message?))` | `String?` | Single-choice list, returns the selected `id` |
+| `pickDate(uiDatePickRequest(initialMs?, minMs?, maxMs?))` | `Long?` | Date picker |
+| `pickTime(uiTimePickRequest(initialHour?, initialMinute?, is24Hour))` | `Int?` | Time picker, returns `hour * 60 + minute` |
+| `pickFiles(uiFilePickRequest(mimeTypes, multiple, maxCount))` | `List<PluginPickedFile>` | System file picker; cancel returns an empty list |
+| `pickImage(uiImagePickRequest(source = UiImageSource.GALLERY/CAMERA, frontCamera))` | `PluginPickedFile?` | Gallery or camera; cancel returns null |
+| `scanQr()` | `String?` | Scan a code and return the text |
+| `pickDirectory()` | `String?` | Pick a directory |
+| `snackbar(message, actionLabel?, action?)` | — | Bottom light message, with one optional action |
+| `shareFiles(paths, mimeType?)` | — | Share the plugin's own files (through the host FileProvider) |
+| `isDark` | `Boolean` | Whether the current theme is dark |
+| `openUrl` / `share(shareRequest(...))` / `toast(message)` | — | Open a link, share text, Toast (light feedback only) |
 
-`PluginPickedFile` 字段：`path`（宿主可读的本地路径）、`uri`、`name`、`sizeBytes`、`mimeType`。
+`PluginPickedFile` fields: `path` (a local path the host can read), `uri`, `name`, `sizeBytes`, `mimeType`.
 
 ```kotlin
 val picked = host.ui().pickImage(uiImagePickRequest(source = UiImageSource.CAMERA))
-val note = host.ui().prompt(uiPromptRequest(title = "备注", placeholder = "可留空")) ?: return
-host.ui().snackbar("已导入", actionLabel = "查看") { host.ui().openPage("home") }
+val note = host.ui().prompt(uiPromptRequest(title = "Note", placeholder = "Optional")) ?: return
+host.ui().snackbar("Imported", actionLabel = "View") { host.ui().openPage("home") }
 ```
 
-- 拍照/相册/语音的运行时权限由宿主统一申请，插件在清单 `permissions` 里声明 `camera`/`microphone` 即可（capability `ui`）。
-- `shareFiles` 只接受插件自己可读的路径；分享其他应用的文件请先复制到 `host.dataDir`。
+- The host requests runtime permissions for camera/gallery/voice uniformly; plugins only declare `camera`/`microphone` in the manifest `permissions` (capability `ui`).
+- `shareFiles` only accepts paths the plugin itself can read; to share another app's files, copy them into `host.dataDir` first.
 
-### Compose 渲染
+### Compose rendering
 
-`SlotContent` 是只读接口，用 `composeSlot(render)` 工厂构造；`SlotState` 取决于槽位族：
+`SlotContent` is a read-only interface built with the `composeSlot(render)` factory; `SlotState` depends on the slot family:
 
-| 槽位族 | 状态 | 字段 |
+| Slot family | State | Fields |
 |---|---|---|
-| 工具卡 | `ToolCardSlotState` | callId/toolName/args/result（结构化参数与结果） |
-| 自定义消息 | `CustomMessageSlotState` | messageId/customType/payload |
-| 无状态时 | `NoSlotState` | — |
+| Tool card | `ToolCardSlotState` | callId/toolName/args/result (structured arguments and result) |
+| Custom message | `CustomMessageSlotState` | messageId/customType/payload |
+| Stateless | `NoSlotState` | — |
 
-插件页面内容不经过 `SlotState`：`pluginPage(...)` 的 `content` 是普通 Composable（`@Composable () -> Unit`），需要宿主或页面状态直接在闭包里捕获。
+Plugin page content does not go through `SlotState`: the `content` of `pluginPage(...)` is a plain Composable (`@Composable () -> Unit`) that captures host or page state directly in its closure.
 
-兼容判定（任一不满足只禁用该插件的 UI，不拒绝插件本身）：
+Compatibility checks (failing any one disables only that plugin's UI, never the plugin itself):
 
-- 清单 `ui.apiLevel <= HOST_UI_API_LEVEL`（未写 `ui` 块时按宿主等级放行）。
-- 清单若填了 `ui.kotlin`，需与宿主 Kotlin **主次版本**一致（如 `2.4`）。
-- 清单若填了 `ui.compose`，需与宿主 Compose runtime 版本**完全一致**（不是 Compose BOM 版本）；宿主探测不到自己的 Compose 版本时同样禁用 UI。不确定宿主版本时不要填这两个字段，只写 `ui.apiLevel`。
-- UI 被禁用时 `pagesOf` 返回空、槽位不渲染，插件的工具/技能/hooks 仍照常生效。
+- Manifest `ui.apiLevel <= HOST_UI_API_LEVEL` (a missing `ui` block passes at the host level).
+- If the manifest sets `ui.kotlin`, it must match the host Kotlin **major.minor version** (for example `2.4`).
+- If the manifest sets `ui.compose`, it must match the host Compose runtime version **exactly** (not the Compose BOM version); the host also disables UI when it cannot detect its own Compose version. When unsure about the host version, leave both fields out and write only `ui.apiLevel`.
+- When UI is disabled `pagesOf` returns empty and slots do not render, while the plugin's tools/skills/hooks still apply.
 
 ```kotlin
 override fun ui(host: PluginHost) = object : PluginUiContributions {
@@ -892,56 +892,56 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 }
 ```
 
-- 槽位与页面内容都在 Compose 主线程渲染；不要在 composable 里做阻塞 IO，用 `remember` + `LaunchedEffect` 加载数据并处理取消。
-- 槽位与页面没有进程级隔离：Compose 内容抛异常会带崩 App（与工具/回调异常一致），插件作者需自行验证。不兼容的绑定只记录禁用原因并回退宿主视图，不影响插件其它能力。
-- 外部插件不能引用 App 资源；图标用 `assetIcon("asset:<包内路径>")`，页面标题也可以不带图标。
+- Slot and page content render on the Compose main thread; do not do blocking IO inside a composable — load data with `remember` + `LaunchedEffect` and handle cancellation.
+- Slots and pages have no process-level isolation: an exception thrown by Compose content crashes the app (same as tool/callback exceptions), so plugin authors must verify it themselves. An incompatible binding only records the reason and falls back to the host view, leaving the plugin's other capabilities intact.
+- External plugins cannot reference app resources; icons use `assetIcon("asset:<path inside package>")`, and page titles may omit the icon.
 
-### 插件界面只使用 `:design`
+### Plugin UI uses only `:design`
 
-插件 UI 直接使用 App 的设计系统 `io.github.whywood.deepdeep.design`（`plugin-api` 已通过 `api()` 传递 `design 0.7.0`，插件工程不需要再显式声明坐标）。组件与 App 完全同源，禁止自造样式；新增组件见下表第二、三段：
+Plugin UI uses the app's design system `io.github.whywood.deepdeep.design` directly (`plugin-api` already carries `design 0.7.0` through `api()`, so plugin projects do not declare the coordinate again). Components are identical to the app's and inventing styles is forbidden; new components are in the second and third blocks of the table below:
 
-| 组件 | 用途 |
+| Component | Purpose |
 |---|---|
-| `DdGroupCard` | 白色圆角分组卡（20dp 圆角、内边距 16dp、行间发丝线） |
-| `DdListRow` | 卡内列表行（标题/副标题/右侧值/图标/可点/trailing） |
-| `DdSectionLabel` | 区块小标题 |
-| `DdPrimaryButton` | 主按钮（52dp 高、accent 填充，一屏最多一个） |
-| `DdTextAction` | 文字按钮（次要动作用 accent/inkSecondary） |
-| `DdTextField` / `DdTextArea` | 输入框（52dp 高、聚焦 accent 边框） |
-| `DdSwitch` | 开关（52x32、accent 轨道） |
-| `DdChip` | 标签/过滤器 |
-| `DdSheet` + `DdSheetHeader` | 底部弹层与头部 |
-| `DdDialog` | 居中确认弹窗 |
-| `DdMenu` / `DdMenuItem` | 下拉菜单 |
-| `DdEmptyState` / `DdLoadingBlock` / `DdSpinner` | 空态与加载 |
-| `DdHairline` | 分割线 |
-| `DdType` | 字号档：`pageTitle`/`heading`/`body`/`bodySmall`/`label`/`button` |
-| `deepDeepColors()` | 颜色 token：`paper`/`surface`/`raised`/`ink`/`inkSecondary`/`inkTertiary`/`accent`/`accentSoft`/`danger`/`success`/`warning`/`hairline`/`wash` |
+| `DdGroupCard` | White rounded group card (20dp radius, 16dp inner padding, hairline between rows) |
+| `DdListRow` | List row inside a card (title/subtitle/trailing value/icon/clickable/trailing) |
+| `DdSectionLabel` | Section label |
+| `DdPrimaryButton` | Primary button (52dp tall, accent fill, at most one per screen) |
+| `DdTextAction` | Text button (accent/inkSecondary for secondary actions) |
+| `DdTextField` / `DdTextArea` | Text fields (52dp tall, accent border when focused) |
+| `DdSwitch` | Switch (52x32, accent track) |
+| `DdChip` | Tag/filter |
+| `DdSheet` + `DdSheetHeader` | Bottom sheet and header |
+| `DdDialog` | Centered confirmation dialog |
+| `DdMenu` / `DdMenuItem` | Dropdown menu |
+| `DdEmptyState` / `DdLoadingBlock` / `DdSpinner` | Empty and loading states |
+| `DdHairline` | Divider |
+| `DdType` | Type scale: `pageTitle`/`heading`/`body`/`bodySmall`/`label`/`button` |
+| `deepDeepColors()` | Color tokens: `paper`/`surface`/`raised`/`ink`/`inkSecondary`/`inkTertiary`/`accent`/`accentSoft`/`danger`/`success`/`warning`/`hairline`/`wash` |
 
-`design 0.7.0` 新增：
+`design 0.7.0` adds:
 
-| 组件 | 用途 |
+| Component | Purpose |
 |---|---|
-| `DdMarkdown(text, live, onFileClick, onLinkClick, onImage)` | Markdown 渲染（标题/列表/表格/代码/图片/脚注）；`live` 用于流式文本，`onImage` 接管图片点击 |
-| `DdHtmlText(html, onLinkClick?, imageLabel?, style, color, linkColor)` | 受限 HTML 文本 |
-| `DdWebView(url, state = DdWebViewState())` / `DdWebView(DdWebContent.Url/Html, ...)` | 内嵌网页；`state` 提供 `canGoBack`/`goBack`/`reload`/`evaluateJavascript`/`dispose` |
-| `DdImage(path / bytes / bitmap, contentDescription, contentScale, shape, maxLongEdge, failure)` | 本地图片加载，带占位与失败态 |
-| `DdImageViewer(path / bytes / bitmap, onDismiss)` | 全屏图片查看（Dialog） |
-| `DdPullToRefresh(isRefreshing, onRefresh) { ... }` | 下拉刷新容器 |
-| `DdSnackbarHostState` + `DdSnackbarHost(state)` | 页面内轻提示；`showSnackbar(...)` 返回结果 |
-| `DdFileRow(name, subtitle?, icon, onClick?, enabled, trailing)` | 文件/附件行 |
-| `DdDatePicker(selected: LocalDate, onSelect, onDismiss, title, previousMonthLabel, nextMonthLabel)` | 日期选择弹层 |
-| `DdTimePicker(selected: LocalTime, onSelect, onDismiss, title, doneLabel)` | 时间选择弹层 |
+| `DdMarkdown(text, live, onFileClick, onLinkClick, onImage)` | Markdown rendering (headings/lists/tables/code/images/footnotes); `live` for streaming text, `onImage` handles image taps |
+| `DdHtmlText(html, onLinkClick?, imageLabel?, style, color, linkColor)` | Restricted HTML text |
+| `DdWebView(url, state = DdWebViewState())` / `DdWebView(DdWebContent.Url/Html, ...)` | Embedded web page; `state` provides `canGoBack`/`goBack`/`reload`/`evaluateJavascript`/`dispose` |
+| `DdImage(path / bytes / bitmap, contentDescription, contentScale, shape, maxLongEdge, failure)` | Local image loading with placeholder and failure states |
+| `DdImageViewer(path / bytes / bitmap, onDismiss)` | Full-screen image viewer (Dialog) |
+| `DdPullToRefresh(isRefreshing, onRefresh) { ... }` | Pull-to-refresh container |
+| `DdSnackbarHostState` + `DdSnackbarHost(state)` | In-page light messages; `showSnackbar(...)` returns a result |
+| `DdFileRow(name, subtitle?, icon, onClick?, enabled, trailing)` | File/attachment row |
+| `DdDatePicker(selected: LocalDate, onSelect, onDismiss, title, previousMonthLabel, nextMonthLabel)` | Date picker sheet |
+| `DdTimePicker(selected: LocalTime, onSelect, onDismiss, title, doneLabel)` | Time picker sheet |
 
-`design 0.8.0` 新增（需要显式依赖与 `minHostVersion: "1.0.7"`，见下）：
+`design 0.8.0` adds (needs an explicit dependency and `minHostVersion: "1.0.7"`, see below):
 
-| 组件 | 用途 |
+| Component | Purpose |
 |---|---|
-| `DdSheet(onDismiss, fullBleed?, containerColor?, content)` | 重写后的底部弹层：只向下拖拽、遮罩点击/返回均先播完退出动画，高度上限为窗口高减状态栏；内容超长时由内容自己滚动（`verticalScroll`/`LazyColumn`），不要再写 `fillMaxHeight(0.94f)` |
-| `DdSwipeRow(key, actions, openKey, onOpenChange, enabled, content)` + `DdSwipeAction(icon, label, tint, background, onClick)` | 列表行滑动操作：双锚点吸附、同一时刻只展开一行、跨阈值触感；行内容自己负责不透明背景 |
-| `DdHtmlBlocks(html, loader, onLinkClick, onImageClick, imageLabel, ...)` + `DdHtmlImageLoader` | 带图片的 HTML 正文：按 `<img>` 切块，文本块沿用 `DdHtmlText` 的格式支持；loader 返回 `ImageBitmap`，失败显示占位 |
-| `DdInfoTooltip(text, contentDescription?, icon?)` | 行尾 info 图标 + 点击/长按提示，替代常驻说明小字 |
-| `LocalDdMotionEnabled` | 系统「减少动态效果」开关；自定义动画在它为 false 时跳过 |
+| `DdSheet(onDismiss, fullBleed?, containerColor?, content)` | Rewritten bottom sheet: drags down only; scrim taps and back play the exit animation first; max height is the window height minus the status bar; long content scrolls itself (`verticalScroll`/`LazyColumn`), so stop writing `fillMaxHeight(0.94f)` |
+| `DdSwipeRow(key, actions, openKey, onOpenChange, enabled, content)` + `DdSwipeAction(icon, label, tint, background, onClick)` | List row swipe actions: two anchors with snapping, only one row open at a time, haptics past the threshold; the row content provides its own opaque background |
+| `DdHtmlBlocks(html, loader, onLinkClick, onImageClick, imageLabel, ...)` + `DdHtmlImageLoader` | HTML body with images: split by `<img>`, text blocks keep `DdHtmlText` formatting support; the loader returns `ImageBitmap` and shows a placeholder on failure |
+| `DdInfoTooltip(text, contentDescription?, icon?)` | Info icon at the end of a row with a tap/long-press hint, replacing permanent helper text |
+| `LocalDdMotionEnabled` | System "reduce motion" switch; custom animations skip when it is false |
 
 ```kotlin
 compileOnly("io.github.sadami3066.deepdeep:design:0.8.0")
@@ -952,15 +952,15 @@ DdHtmlBlocks(
     html = detail.htmlBody.orEmpty(),
     loader = myImageLoader,
     imageLabel = host.t("含图片", "Image"),
-    onImageClick = { source -> /* 打开查看器 */ },
+    onImageClick = { source -> /* open the viewer */ },
 )
 ```
 
-`design 0.10.0` 新增（需要显式依赖与 `minHostVersion: "1.3.0"`）：
+`design 0.10.0` adds (needs an explicit dependency and `minHostVersion: "1.3.0"`):
 
-| 组件 / API | 用途 |
+| Component / API | Purpose |
 |---|---|
-| `DdExpandToggle(expanded, collapsedLabel, expandedLabel, onToggle)` | 卡片长列表的展开/收起：一行文字 + 旋转 chevron，可点区域 44dp；文案由调用方传入 |
+| `DdExpandToggle(expanded, collapsedLabel, expandedLabel, onToggle)` | Expand/collapse for long card lists: one line of text plus a rotating chevron, 44dp target; copy comes from the caller |
 
 ```kotlin
 if (items.size > PreviewRows) {
@@ -973,32 +973,29 @@ if (items.size > PreviewRows) {
 }
 ```
 
-`design 0.9.0` 新增（需要显式依赖与 `minHostVersion: "1.0.8"`，见下）：
+`design 0.9.0` adds (needs an explicit dependency and `minHostVersion: "1.0.8"`, see below):
 
-| 组件 / API | 用途 |
+| Component / API | Purpose |
 |---|---|
-| `DdStatusRow(label, value, tone, busy)` | 状态摘要行：左侧标签、右侧值，`DdStatusTone` 控制圆点/加载圈颜色；刷新时保留旧值只让该行 busy |
-| `DdNoticeBar(text, tone, actionLabel?, onAction?)` | 页面内联提示：`DdNoticeTone.INFO/SUCCESS/WARNING/DANGER`，适合错误 + 重试、未登录说明、操作结果 |
-| `DdProgressBar(progress: Float?)` | 下载/安装/同步进度；`null` 为不确定进度，确定性进度传 0..1；尊重减少动态效果 |
-| `DeepDeepTheme(colors, fontStyle)` | 用自定义 `DeepDeepColors` 包裹页面（宿主已统一设置，插件通常不需要主动调用） |
-| `DdTheme.lightDeepDeep()` | 默认浅色调色板，可作为主题包 `base` 或自定义配色的起点 |
-| `DdStatusTone` / `DdNoticeTone` | 上面的状态/提示色调 |
+| `DdStatusRow(label, value, tone, busy)` | Status summary row: label on the left, value on the right, `DdStatusTone` controls the dot/spinner color; on refresh keep the old value and mark only that row busy |
+| `DdNoticeBar(text, tone, actionLabel?, onAction?)` | Inline page notice: `DdNoticeTone.INFO/SUCCESS/WARNING/DANGER`, good for errors with retry, sign-in prompts and action results |
+| `DdProgressBar(progress: Float?)` | Download/install/sync progress; `null` is indeterminate, pass 0..1 for determinate progress; respects reduce motion |
+| `DeepDeepTheme(colors, fontStyle)` | Wraps a page in a custom `DeepDeepColors` (the host already sets it, so plugins usually do not call it) |
+| `DdTheme.lightPi()` / `DdTheme.darkPi()` | The default PI light and dark palettes, usable as a theme pack `base` or a starting point for custom colors; `DdTheme.lightDeepDeep()` remains for the legacy Classic Blue palette |
+| `DdStatusTone` / `DdNoticeTone` | The status/notice tones above |
 
 ```kotlin
 DdGroupCard {
-    DdStatusRow("运行环境", if (linuxAvailable) "已就绪" else "不可用", if (linuxAvailable) DdStatusTone.SUCCESS else DdStatusTone.DANGER)
-    DdStatusRow("登录状态", if (connected) "已连接" else "未连接", if (connected) DdStatusTone.SUCCESS else DdStatusTone.NEUTRAL, busy = checking)
+    DdStatusRow("Runtime", if (linuxAvailable) "Ready" else "Unavailable", if (linuxAvailable) DdStatusTone.SUCCESS else DdStatusTone.DANGER)
+    DdStatusRow("Sign-in status", if (connected) "Connected" else "Not connected", if (connected) DdStatusTone.SUCCESS else DdStatusTone.NEUTRAL, busy = checking)
 }
 if (error != null) {
-    DdNoticeBar(error, DdNoticeTone.DANGER, actionLabel = "重试") { retry() }
+    DdNoticeBar(error, DdNoticeTone.DANGER, actionLabel = "Retry") { retry() }
 }
 DdProgressBar(progress = if (downloading) percent else null)
 ```
 
-
-
-
-直接 `import io.github.whywood.deepdeep.design.DdMarkdown` 等组件（或整包 import），不需要额外声明依赖。
+Import components such as `io.github.whywood.deepdeep.design.DdMarkdown` directly (or import the whole package); no extra dependency declaration is needed.
 
 ```kotlin
 DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
@@ -1011,22 +1008,22 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-日期/时间组件使用 `java.time`（`LocalDate`/`LocalTime`）；使用 design 0.7.0 新组件的插件要写 `minHostVersion: "1.0.6"`，使用 design 0.8.0 组件要写 `"1.0.7"` 并在构建脚本显式声明 `design:0.8.0`；使用 design 0.9.0 组件要写 `"1.0.8"` 并声明 `design:0.9.0`；使用 design 0.10.0 组件（`DdExpandToggle`）要写 `"1.3.0"` 并声明 `design:0.10.0`；使用 design 0.11.0 组件（`DdRemoteImage`）要写 `"1.4.0"` 并声明 `design:0.11.0`；使用工具结果渲染器要写 `"1.1.0"` 并依赖 `plugin-api 1.3.0`。
+Date/time components use `java.time` (`LocalDate`/`LocalTime`); plugins using design 0.7.0 components write `minHostVersion: "1.0.6"`, using design 0.8.0 components writes `"1.0.7"` and declares `design:0.8.0` explicitly in the build script; using design 0.9.0 components writes `"1.0.8"` and declares `design:0.9.0`; using design 0.10.0 components (`DdExpandToggle`) writes `"1.3.0"` and declares `design:0.10.0`; using design 0.11.0 components (`DdRemoteImage`) writes `"1.4.0"` and declares `design:0.11.0`; using tool result renderers writes `"1.1.0"` and depends on `plugin-api 1.3.0`.
 
-约定：
+Conventions:
 
-- 不写死颜色与字号，只用 `DdType.*` 与 `deepDeepColors()`；不要直接用 Material3 的 `Card`/`Button`/`OutlinedButton`/`TextButton`/`Switch`/`OutlinedTextField`——它们和 App 的视觉不一致。
-- 页面自己是滚动容器：`Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp))`；不要加顶栏标题（宿主已有 64dp 顶栏），需要底部留白时加 24dp。
-- 状态变化要稳定：初始化时不要把已知值清空成 loading，刷新时保留旧值只标记局部 busy，避免页面闪。
-- 错误就近内联显示（`DdType.bodySmall` + `danger` 色），带上 CLI/接口的最后一段输出；不要只显示退出码，也不要用 Toast。
+- Do not hardcode colors or type sizes; use only `DdType.*` and `deepDeepColors()`; do not use Material3's `Card`/`Button`/`OutlinedButton`/`TextButton`/`Switch`/`OutlinedTextField` directly — they look inconsistent with the app.
+- The page is its own scroll container: `Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp))`; do not add a title bar (the host already has a 64dp top bar), and add 24dp where bottom spacing is needed.
+- State changes must be stable: do not clear known values into loading on init; keep old values while refreshing and mark only the affected area busy, to avoid page flicker.
+- Show errors inline near where they happen (`DdType.bodySmall` + `danger` color) with the last part of the CLI/API output; do not show only an exit code and do not use a Toast.
 
 ```kotlin
 @Composable
 private fun StatusCard(host: PluginHost, status: Status) {
     val colors = deepDeepColors()
     DdGroupCard {
-        DdListRow(title = "运行环境", value = status.runtime)
-        DdListRow(title = "登录状态", value = if (status.authorized) "已连接" else "未连接")
+        DdListRow(title = "Runtime", value = status.runtime)
+        DdListRow(title = "Sign-in status", value = if (status.authorized) "Connected" else "Not connected")
         if (status.cliVersion != null) {
             DdListRow(title = "CLI", value = status.cliVersion)
         }
@@ -1037,185 +1034,184 @@ private fun StatusCard(host: PluginHost, status: Status) {
 }
 ```
 
-### 插件界面规范
+### Plugin UI conventions
 
-同一轮升级里所有官方插件按这套骨架收敛，第三方插件也可以照做：
+All official plugins converge on this skeleton in the same upgrade, and third-party plugins can follow it too:
 
-- 页面骨架：横向 20dp、顶部 12dp、**底部 24dp**、组间 16dp；宿主已有 64dp 顶栏，页面内不再重复标题。
-- 卡片内边距：`DdGroupCard` 只画卡片背景，不替自定义内容做横向留白。直接放 `DdStatusRow`、`DdText`、`Row` 等自定义内容时，先包一层 `Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Card))`（18dp），文字不能贴卡片左右边；`DdListRow` 已通过 `LocalDdRowHorizontalPadding` 自带 18dp，不要再套横向 padding；`DdNoticeBar` 自带内边距。页面最外层已有 20dp，卡片内再 18dp 是正常的双层留白，不要省掉。
+- Page skeleton: 20dp horizontal, 12dp top, **24dp bottom**, 16dp between groups; the host already has a 64dp top bar, so do not repeat the title inside the page.
+- Card inner padding: `DdGroupCard` only draws the card background and does not add horizontal padding for custom content. When placing `DdStatusRow`, `DdText`, `Row` or other custom content directly, wrap it in `Column(Modifier.fillMaxWidth().padding(horizontal = DdSpacing.Card))` (18dp) first so text never touches the card edges; `DdListRow` already carries 18dp through `LocalDdRowHorizontalPadding`, so do not wrap it in horizontal padding again; `DdNoticeBar` has its own padding. The page's outermost 20dp plus 18dp inside the card is normal double padding; do not remove it.
+- Open with status: build a summary from `DdStatusRow` (runtime, component/CLI, account, sign-in status) with human-readable values ("Ready / Update available / Not connected"), never version numbers, paths or booleans; keep old values on refresh and mark only that row busy.
+- Action hierarchy: at most one `DdPrimaryButton` per screen; secondary actions use text buttons or menus; irreversible actions such as sign-out and delete go through `host.ui().confirm(destructive = true)`.
+- Feedback: show errors nearby with `DdNoticeBar` (danger color) plus "Retry", and retry must rerun the action that just failed, not just refresh the page; success/undo can use `snackbar` or a result card, and never report a path with a Toast alone.
+- Progress: operations that take more than a second or two — install, download, sync — get a `DdProgressBar` plus stage text; offer cancel where possible, and stop in a retryable state after cancel.
+- Subflows: sign-in, scanning, verification codes and WebView enter and leave as subpages with a transition, and system back leaves the subpage first; validate forms in place, handle the keyboard, and allow showing/hiding passwords.
+- Motion: durations and curves come from `DdMotion` and respect `LocalDdMotionEnabled`; never cause layout jumps, and never hide state changes behind animation.
+- Copy: Chinese and English in pairs, with no development terms such as CLI, paths, proot or version numbers; drop implementation details that need explaining, and use `InfoTooltip` for the genuinely necessary ones.
+- Icons: use the consistent linear `DdIcons`, never emoji; add no one-off controls, and when `DdGroupCard`/`DdListRow`/`DdTextAction` fit, do not draw your own.
 
-- 首屏先说状态：用 `DdStatusRow` 组成摘要（运行环境、组件/CLI、账号、登录状态），值写人类可读的「已就绪 / 待更新 / 未连接」，不写版本号、路径、布尔值；刷新保留旧值，只有该行显示 busy。
-- 操作层级：每屏最多一个 `DdPrimaryButton`；次要操作放文字按钮或菜单；退出、删除这类不可逆操作走 `host.ui().confirm(destructive = true)`。
-- 反馈：错误就近用 `DdNoticeBar`（危险色）+「重试」，重试要重跑刚才失败的动作，不要只刷新页面；成功/撤销可用 `snackbar` 或结果卡，不要只用 Toast 报路径。
-- 进度：安装、下载、同步这类超过一两秒的操作给 `DdProgressBar` + 阶段文字；可取消的提供取消，取消后停在可重试状态。
-- 子流程：登录、扫码、验证码、WebView 作为子页面进入和退出要有过渡，系统返回要先退子页；表单就地校验、键盘避让、密码可显示/隐藏。
-- 动效：时长与曲线走 `DdMotion`，并尊重 `LocalDdMotionEnabled`；不做布局跳动，不用动画掩盖状态变化。
-- 文案：中英成对，不出现 CLI、路径、proot、版本号等开发用语；需要解释的实现细节删掉，确实必要的用 `InfoTooltip`。
-- 图标：统一线性 `DdIcons`，不用 emoji；不新增一次性控件，能用 `DdGroupCard`/`DdListRow`/`DdTextAction` 就不用自绘。
+### Autonomous capabilities
 
-### 自主能力
+Plugin tools are the agent's autonomous path and pages are the optional path for people; never build a capability only in the UI:
 
-插件工具就是 Agent 的自主路径，页面是给人的可选路径，不要只把能力做在 UI 里：
+- When the user explicitly asks for an action, the agent should be able to call a tool to do it rather than send the user to tap a button on a plugin page; for example a mailbox provides `mail_draft` + `mail_send`, and sending does not need another tap.
+- Tool execution does not need confirmation each time by default; do not add a "wait for the user to tap" gate inside a tool, or scheduled runs, background tasks and goal rounds get stuck. For more sensitive actions, write the consequences into the description/prompt so the model judges before calling, or let the user ask for it explicitly in the conversation.
+- A UI upgrade must not delete or hide tools, and must not turn an existing capability into something only the UI can do; for every page change check "can the agent still do the same thing".
+- Irreversible actions still need a trace: prefer the "create the object first (draft/preview), then execute" tool pairing, so the user can see in the chat history or a card what is about to happen.
 
-- 用户明确要求某个动作时，Agent 应该能直接调用工具完成，而不是要求用户进插件页点按钮；例如邮箱提供 `mail_draft` + `mail_send`，发送不需要用户再点一次。
-- 工具执行默认不需要每次确认；不要在工具里加“等待用户点一下”的闸门，否则定时、后台任务、目标回合会被卡住。需要更谨慎的动作，把后果写进描述/提示词，让模型在调用前自行判断，或由用户在对话里明确要求。
-- UI 升级不能删除或隐藏工具、不能把已有能力改成只有 UI 能做；对每个页面改动检查“Agent 还能不能完成同样的事”。
-- 不可逆操作仍要留痕：优先用「先生成对象（草稿/预览）再执行」的工具组合，让用户能在对话历史或卡片里看到将要发生什么。
+### Custom message cards
 
-### 自定义消息卡
-
-在工具执行里用 `host.chat().sendMessage(...)` 把消息写进当前会话，可选择只显示卡片、插话或起新轮：
+Inside a tool execution, use `host.chat().sendMessage(...)` to write a message into the current session, optionally showing only a card, interrupting, or starting a new round:
 
 ```kotlin
 val result = host.chat().sendMessage(
     sessionId = call.sessionId,
-    text = "同步完成，共 12 个文件",
+    text = "Sync finished, 12 files",
     options = chatMessageOptions(
         triggerTurn = false,
         display = chatDisplay(
             customType = "my.card",
-            payload = buildJsonObject { put("title", "同步完成") },
-            text = "卡片摘要",
+            payload = buildJsonObject { put("title", "Sync finished") },
+            text = "Card summary",
         ),
     ),
 )
 ```
 
-- `sessionId` 用 `PluginToolCall.sessionId`（宿主在 execute 时解析）或 `session.snapshot()?.sessionId`。
-- `options.triggerTurn = true`（默认）：会话空闲时起新轮并把 `text` 作为用户消息；忙碌时按 `options.deliverAs` 插话（`STEER`，默认）或排队（`FOLLOW_UP`），返回 `kind = ChatSendKind.QUEUED` 的结果。
-- `options.display` 非空时先写卡片消息（等价于 `postCustomMessage`），再触发轮次；`triggerTurn = false` 只落卡片。
-- 返回 `ChatSendResult`，`kind` 为 `ChatSendKind.STARTED`/`QUEUED`/`DISPLAYED`；未知会话抛 `IllegalArgumentException`。
-- 卡片写入 pi JSONL 的 `custom_message` 条目，重开会话后仍可还原，由 `chat.message:<customType>` 槽位渲染；`postCustomMessage` 仍保留，适合只落卡片。
-- 卡片在有工具调用进行时投递，会作为该回合的一个节点按发生顺序内联渲染（不会堆到回答末尾）；会话空闲时投递的卡片仍作为独立消息出现在回合边界，重开会话后的顺序与实时一致。
+- `sessionId` comes from `PluginToolCall.sessionId` (resolved by the host during execute) or `session.snapshot()?.sessionId`.
+- `options.triggerTurn = true` (default): when the session is idle, start a new round with `text` as the user message; when busy, interrupt by `options.deliverAs` (`STEER`, default) or queue (`FOLLOW_UP`), returning a result with `kind = ChatSendKind.QUEUED`.
+- When `options.display` is non-null, write the card message first (equivalent to `postCustomMessage`), then trigger the turn; `triggerTurn = false` only writes the card.
+- Returns `ChatSendResult` with `kind` of `ChatSendKind.STARTED`/`QUEUED`/`DISPLAYED`; an unknown session throws `IllegalArgumentException`.
+- The card is written as a `custom_message` entry into the pi JSONL, can be restored after reopening the session, and renders through the `chat.message:<customType>` slot; `postCustomMessage` remains for writing only a card.
+- A card delivered while a tool call is running renders inline as a node of that turn in occurrence order (not stacked at the end of the answer); a card delivered while the session is idle still appears as a standalone message at a turn boundary, and the order after reopening the session matches the live order.
 
-## 宿主服务
+## Host services
 
-`PluginHost` 暴露 35 个服务访问器（1.0 有 17 个，1.1.0 新增 18 个），其中 `components()` / `credentials()` / `accessibility()` 是实验 API，需要显式 opt-in：
+`PluginHost` exposes 35 service accessors (17 in 1.0, 18 added in 1.1.0), of which `components()` / `credentials()` / `accessibility()` are experimental APIs that need an explicit opt-in:
 
 ```kotlin
 @OptIn(PluginExperimentalApi::class)
 val components = host.components()
 ```
 
-宿主没提供该服务时**抛 `PluginServiceUnavailable`**（不是返回 null），插件应 `runCatching` 后降级。服务已装配但当前不可用（如未装 Linux、未授权 ADB、权限被拒绝）时，通常通过 `available`/`enabled`/`permissionGranted` 字段、返回 null/false 或明确异常表达。
+When the host does not provide a service it **throws `PluginServiceUnavailable`** (it does not return null), so plugins should `runCatching` and degrade. When a service is wired but currently unavailable (for example Linux not installed, ADB not authorized, permission denied), it usually says so through `available`/`enabled`/`permissionGranted` fields, by returning null/false, or with an explicit exception.
 
 ```kotlin
 val linux = runCatching { host.linux() }.getOrNull()
 if (linux == null || !linux.available) {
-    return textResult("Linux 环境不可用", isError = true)
+    return textResult("Linux environment unavailable", isError = true)
 }
 ```
 
-| 访问器 | 主要能力 | 不可用/失败时 |
+| Accessor | Main capabilities | When unavailable or failing |
 |---|---|---|
-| `linux()` | `available`、`exec(command, cwd, timeoutMs)`、`stream(command)` → `LinuxResult`/`LinuxChunk` | 未安装/未启用运行环境时 `available=false`；`exec` 记录超时与输出截断；stderr 并入 stdout（`LinuxResult.stderr` 恒为空，失败看 `exitCode` 与输出末尾） |
-| `screen()` | `status`、`startVirtual/stopVirtual`、`observe`、`screenshot`、`apps`、`launch`、`tap/tapNode/swipe/scroll/type/key`、`waitFor` | 未授权时能力标记为不可用，调用抛异常；`status` 是同步快照，首次读取会启动宿主侧后台刷新（无停止接口） |
-| `notifications()` | `enabled`、`notify(...)`、`notifyChecked(...)`、`updateProgress`、`cancel`；通知监听 `listenerGranted`/`recent`/`received`/`removed`/`dismiss`（见「通知与通知监听」） | 通知权限未开时 `enabled=false`：`notify` 静默忽略、`notifyChecked` 返回 null；点击通知打开插件在 manifest 里声明的第一个页面 |
-| `secrets()` | `get/put/remove/clear`，按插件 id 命名空间加密存储 | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `network()` | `request(method,url,headers,body,timeoutMs)`、`download(url,targetPath,expectedSha256,onProgress)`；扩展 `get`/`post` | 网络错误抛异常；响应体上限 2 MB、下载上限 512 MB |
-| `files()` | 插件数据/工作区文件：`rootDir`、`workspaceDir`、`list/readText/writeText/readBytes/writeBytes/delete/exists/resolve` | 相对路径相对插件 `dataDir`；绝对路径按当前档位解析（Root 档为原生文件系统，见「执行身份与环境」） |
-| `sessions()` | `active`、`observe()`（含 busy 变化）、`list()`、`prompt(text, sessionId?)`、`history(sessionId, limit)`、`stop(sessionId)`、`create(title?)`、`rename(sessionId, title)`、`delete(sessionId)`、`open(sessionId)`、`archive(sessionId, archived)` | 无活动会话时 `active=null`、`prompt` 返回 false；非法 id 返回 null/false |
-| `jobs()` | `observe()`、`start(command,label,cwd,sessionId)`、`read(jobId)`、`kill(jobId)` | 无会话/宿主未提供时 `start` 返回 null；没有 `list()`，一次性读取用 `observe().first()` |
-| `timers()` | `schedule(TimerRequest)`（用 `timerRequest(...)` + `timerOnce`/`timerCron` 构造）、`list()`、`cancel(id)` | 参数非法/宿主未提供时返回 null 或抛异常 |
-| `goals()` | `observe()`、`get/create/edit/pause/resume/complete/clear` | 目标状态非法时返回 null |
-| `miniapp()` | 小程序：`scan/load/create/edit/delete/run` | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `mcp()` | `servers()`、`probe(name)`、`tools(server)`、`call(server,tool,arguments)`、`callStructured(server,tool,arguments)` | 服务器不存在时返回错误结果或异常；`callStructured` 同时给出文本 blocks 与结构化结果 |
-| `ui()` | 打开 URL/分享/Toast、页面与参数、交互选择器、Snackbar、`isDark`（见「UI 扩展」） | 单项未接线时抛 `PluginServiceUnavailable("ui.xxx")`；`openPage` 只接受本插件的页面 id，不是 `deepdeep://` 深链 |
-| `app()` | `info: AppInfo`（versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId） | 始终可用 |
-| `bus()` | 插件总线：`publish(event)`（用 `pluginBusEvent(...)` 构造）、`subscribe(topic?)` → `Flow<PluginBusEvent>` | 宿主未提供时抛 `PluginServiceUnavailable` |
-| `logs()` | `log(level, message, error?)` + `debug/info/warn/error` | 始终可用 |
-| `chat()` | `sendMessage(...)`：落卡片、起新轮、插话/排队；`sendMessageWithAttachments(..., attachments = listOf(chatAttachment(path, mimeType, name)))`；`postCustomMessage(...)` 只写卡片 | 未知会话抛异常；投递失败返回 false |
+| `linux()` | `available`, `exec(command, cwd, timeoutMs)`, `stream(command)` → `LinuxResult`/`LinuxChunk` | `available=false` when the runtime is not installed or enabled; `exec` records timeouts and output truncation; stderr merges into stdout (`LinuxResult.stderr` is always empty, so check `exitCode` and the end of the output for failures) |
+| `screen()` | `status`, `startVirtual/stopVirtual`, `observe`, `screenshot`, `apps`, `launch`, `tap/tapNode/swipe/scroll/type/key`, `waitFor` | without permission the capabilities are marked unavailable and calls throw; `status` is a synchronous snapshot, and the first read starts a host-side background refresh (no stop interface) |
+| `notifications()` | `enabled`, `notify(...)`, `notifyChecked(...)`, `updateProgress`, `cancel`; notification listening `listenerGranted`/`recent`/`received`/`removed`/`dismiss` (see "Notifications and notification listening") | with notification permission off, `enabled=false`: `notify` is silently ignored and `notifyChecked` returns null; tapping a notification opens the first page declared in the plugin manifest |
+| `secrets()` | `get/put/remove/clear`, encrypted storage namespaced by plugin id | throws `PluginServiceUnavailable` when the host does not provide it |
+| `network()` | `request(method,url,headers,body,timeoutMs)`, `download(url,targetPath,expectedSha256,onProgress)`; `get`/`post` extensions | network errors throw; response bodies cap at 2 MB and downloads at 512 MB |
+| `files()` | Plugin data/workspace files: `rootDir`, `workspaceDir`, `list/readText/writeText/readBytes/writeBytes/delete/exists/resolve` | relative paths resolve against the plugin `dataDir`; absolute paths resolve per the current tier (the Root tier is the native file system, see "Execution identity and environment") |
+| `sessions()` | `active`, `observe()` (including busy changes), `list()`, `prompt(text, sessionId?)`, `history(sessionId, limit)`, `stop(sessionId)`, `create(title?)`, `rename(sessionId, title)`, `delete(sessionId)`, `open(sessionId)`, `archive(sessionId, archived)` | with no active session `active=null` and `prompt` returns false; invalid ids return null/false |
+| `jobs()` | `observe()`, `start(command,label,cwd,sessionId)`, `read(jobId)`, `kill(jobId)` | with no session or no host support, `start` returns null; there is no `list()`, so read once with `observe().first()` |
+| `timers()` | `schedule(TimerRequest)` (built with `timerRequest(...)` + `timerOnce`/`timerCron`), `list()`, `cancel(id)` | invalid parameters or no host support return null or throw |
+| `goals()` | `observe()`, `get/create/edit/pause/resume/complete/clear` | returns null for invalid goal state |
+| `miniapp()` | Mini apps: `scan/load/create/edit/delete/run` | throws `PluginServiceUnavailable` when the host does not provide it |
+| `mcp()` | `servers()`, `probe(name)`, `tools(server)`, `call(server,tool,arguments)`, `callStructured(server,tool,arguments)` | returns an error result or throws when the server does not exist; `callStructured` gives text blocks and the structured result together |
+| `ui()` | Open URLs/sharing/Toast, pages and arguments, interactive pickers, Snackbar, `isDark` (see "UI extensions") | throws `PluginServiceUnavailable("ui.xxx")` for an individual unwired item; `openPage` only accepts this plugin's page ids, not `deepdeep://` deep links |
+| `app()` | `info: AppInfo` (versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId) | always available |
+| `bus()` | Plugin bus: `publish(event)` (built with `pluginBusEvent(...)`), `subscribe(topic?)` → `Flow<PluginBusEvent>` | throws `PluginServiceUnavailable` when the host does not provide it |
+| `logs()` | `log(level, message, error?)` + `debug/info/warn/error` | always available |
+| `chat()` | `sendMessage(...)`: write cards, start a new round, interrupt/queue; `sendMessageWithAttachments(..., attachments = listOf(chatAttachment(path, mimeType, name)))`; `postCustomMessage(...)` writes only a card | unknown sessions throw; a failed delivery returns false |
 
-会话与聊天的补充模型：`sessions().history(...)` 返回 `PluginMessage(id, role, text, timestampMs, toolName?, images)`；聊天附件用 `chatAttachment(path, mimeType?, name?)` 构造后传给 `sendMessageWithAttachments(...)`。
+Extra models for sessions and chat: `sessions().history(...)` returns `PluginMessage(id, role, text, timestampMs, toolName?, images)`; chat attachments are built with `chatAttachment(path, mimeType?, name?)` and passed to `sendMessageWithAttachments(...)`.
 
-各服务最小用法：
+Minimal usage of each service:
 
 ```kotlin
 host.linux().exec("ls -la", cwd = host.dataDir.absolutePath)
 host.screen().status.virtual.available
-host.notifications().notify(pluginNotification(id = "sync", title = "同步", body = "完成"))
+host.notifications().notify(pluginNotification(id = "sync", title = "Sync", body = "Done"))
 host.secrets().put("token", value)
 host.network().get("https://example.com/api")
 host.files().writeText("state.json", "{}")
-host.sessions().prompt("继续", sessionId)
+host.sessions().prompt("Continue", sessionId)
 host.jobs().start("sleep 5", "demo", cwd = null)
-host.timers().schedule(timerRequest("提醒", "喝水", timerOnce(System.currentTimeMillis() + 60_000)))
+host.timers().schedule(timerRequest("Reminder", "Drink water", timerOnce(System.currentTimeMillis() + 60_000)))
 host.goals().get(sessionId)
 host.miniapp().scan()
 host.mcp().servers()
-host.ui().toast("已复制")
+host.ui().toast("Copied")
 host.app().info.versionName
 host.bus().publish(pluginBusEvent(topic = "demo.sync", payload = buildJsonObject { }))
 host.logs().info("plugin ready")
-host.chat().sendMessage(call.sessionId, "同步完成", chatMessageOptions(triggerTurn = false, display = chatDisplay(customType = "my.card", payload = buildJsonObject { }, text = "卡片摘要")))
+host.chat().sendMessage(call.sessionId, "Sync finished", chatMessageOptions(triggerTurn = false, display = chatDisplay(customType = "my.card", payload = buildJsonObject { }, text = "Card summary")))
 
 host.settings().put("last-sync", "2026-11-13T10:00:00Z")
 host.device().state.batteryPercent
-host.clipboard().setText("已复制")
+host.clipboard().setText("Copied")
 ```
 
-### 通知与通知监听
+### Notifications and notification listening
 
-发布通知用 `pluginNotification` / `pluginNotificationWithActions` 构造；`notifyChecked` 在通知权限关闭时返回 null：
+Build notifications with `pluginNotification` / `pluginNotificationWithActions`; `notifyChecked` returns null when notification permission is off:
 
 ```kotlin
 val handle = host.notifications().notifyChecked(
     pluginNotificationWithActions(
         id = "sync",
-        title = "同步中",
-        body = "已处理 3/12",
+        title = "Syncing",
+        body = "Processed 3/12",
         progress = 25,
         ongoing = true,
-        actions = listOf(notificationAction("pause", "暂停"), notificationAction("cancel", "取消")),
+        actions = listOf(notificationAction("pause", "Pause"), notificationAction("cancel", "Cancel")),
         payload = buildJsonObject { put("task", "sync") },
     ),
 )
-host.notifications().updateProgress("sync", 50, "已处理 6/12")
+host.notifications().updateProgress("sync", 50, "Processed 6/12")
 host.notifications().cancel("sync")
 ```
 
-- `notifyChecked` 返回 `PluginNotificationHandle(id, key)`；`enabled=false` 时返回 null，`notify` 则静默忽略。
-- `actions` 的按钮由宿主通知服务接管；声明 `notifications` 能力的插件会在 `notificationAction` hook 收到 `notificationId`/`actionId`/`payload`，不要求通知监听组件。
-- 通知主体点击会打开插件在 `provides.pages` / `ui()` 里的第一个页面。
+- `notifyChecked` returns `PluginNotificationHandle(id, key)`; it returns null when `enabled=false`, while `notify` is silently ignored.
+- Action buttons are handled by the host notification service; a plugin that declares the `notifications` capability receives `notificationId`/`actionId`/`payload` in the `notificationAction` hook, and does not need the notification listener component.
+- Tapping the notification body opens the plugin's first page in `provides.pages` / `ui()`.
 
-通知监听需要 `permissions: ["notifications.listen"]` + `components.notificationListener`，并由用户在系统「通知使用权」里授予：
+Notification listening needs `permissions: ["notifications.listen"]` + `components.notificationListener`, granted by the user under the system "Notification access" setting:
 
-| 成员 | 说明 |
+| Member | Description |
 |---|---|
-| `listenerGranted` | 通知使用权是否已授予 |
-| `recent(limit = 50)` | 最近的通知记录 |
-| `received()` | 新通知/移除记录的 `Flow<PluginNotificationRecord>` |
-| `removed()` | 被移除通知 key 的 `Flow<String>` |
-| `dismiss(key)` | 请求移除某条通知（系统允许时） |
+| `listenerGranted` | Whether notification access has been granted |
+| `recent(limit = 50)` | Recent notification records |
+| `received()` | `Flow<PluginNotificationRecord>` of new or removed records |
+| `removed()` | `Flow<String>` of removed notification keys |
+| `dismiss(key)` | Requests removal of a notification (where the system allows it) |
 
-`PluginNotificationRecord` 字段：`key`、`packageName`、`appLabel`、`title`、`text`、`bigText`、`subText`、`channelId`、`category`、`postedAtMs`、`ongoing`、`clearable`、`progress`、`actions`。通知内容涉及其他应用的隐私：只申请确实需要的范围，不要持久化与本插件无关的通知内容。
+`PluginNotificationRecord` fields: `key`, `packageName`, `appLabel`, `title`, `text`, `bigText`, `subText`, `channelId`, `category`, `postedAtMs`, `ongoing`, `clearable`, `progress`, `actions`. Notification content touches other apps' privacy: request only the scope you really need, and do not persist notification content unrelated to this plugin.
 
-### 执行身份与环境
+### Execution identity and environment
 
-`host.linux()` 与 `host.files()` 的实际执行身份由用户在「系统访问」页选择的档位决定（普通 / 无线调试（ADB）/ Root），插件不能自行选择或提升：
+The actual execution identity of `host.linux()` and `host.files()` is decided by the tier the user picked on the System access page (Normal / Wireless debugging (ADB) / Root); plugins cannot choose or raise it:
 
-| 档位 | `linux()` | `files()` |
+| Tier | `linux()` | `files()` |
 |---|---|---|
-| 普通（LOCAL） | App 沙箱内的 PRoot Alpine，与 App 同 UID | 插件 `dataDir` 与工作区；绝对路径仍受 Android 沙箱约束 |
-| 无线调试（ADB） | 同上；系统命令改由宿主 `system_shell` 走 ADB | 同上 |
-| Root | 真 root chroot（uid 0），Android 路径是原生路径（`/data`、`/system`、`/sdcard`） | 原生文件系统，绝对路径直接生效 |
+| Normal (LOCAL) | PRoot Alpine inside the app sandbox, same UID as the app | The plugin `dataDir` and workspace; absolute paths are still constrained by the Android sandbox |
+| Wireless debugging (ADB) | Same as above; system commands go through the host `system_shell` over ADB | Same as above |
+| Root | Real root chroot (uid 0); Android paths are native (`/data`, `/system`, `/sdcard`) | Native file system, absolute paths apply directly |
 
-- 代码要能在三档下运行：不要自行提权，也不要假设当前一定是 root；命令退出码非 0、文件读写失败都按普通失败处理并给出可读原因。
-- Root 档启动时可能在「准备中」或「准备失败」，此时调用 `linux()`/`files()` 会抛 `IllegalStateException`（消息含 `Root Linux is being prepared` / `Root Linux preparation failed`）；提示用户稍后重试，不要崩溃。
-- 清单不再声明 `requiresPrivilege`；需要系统能力时只声明对应 `capabilities`（如 `screen`），由宿主在用户选择的档位下注入服务。
-- 插件不能自行提权：`privilege().exec(...)` 也只能在用户当前选定档位内执行（`AUTO` 会自动选当前可用档位，显式要求 `ROOT`/`ADB` 而档位不足时返回失败）；不要在代码里假设某个档位一定可用。
-- 提示词里的环境说明由宿主按档位生成；插件 `promptSections` 不要写死“已获得 root”之类的假设。
+- Code must run in all three tiers: do not escalate by yourself and do not assume the current tier is root; treat a non-zero exit code and failed file reads/writes as ordinary failures with a readable reason.
+- The Root tier may be "preparing" or "preparation failed" at startup, in which case `linux()`/`files()` throw `IllegalStateException` (the message contains `Root Linux is being prepared` / `Root Linux preparation failed`); tell the user to retry later instead of crashing.
+- The manifest no longer declares `requiresPrivilege`; when you need system capabilities, declare only the matching `capabilities` (such as `screen`) and the host injects the service under the tier the user picked.
+- Plugins cannot escalate: `privilege().exec(...)` only runs within the tier the user currently selected (`AUTO` picks the currently available tier, and explicitly asking for `ROOT`/`ADB` when the tier is insufficient returns a failure); do not assume any tier is always available.
+- Environment descriptions in prompts are generated by the host per tier; plugin `promptSections` must not hardcode assumptions such as "root acquired".
 
-### 设置存储
+### Settings storage
 
-`host.settings()` 是按插件 id 隔离的键值存储，适合跨进程保留的小状态；机密信息仍放 `secrets()`：
+`host.settings()` is key-value storage isolated by plugin id, good for small state that must survive across processes; keep secrets in `secrets()`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `get(key)` / `put(key, value)` / `remove(key)` / `clear()` | 字符串键值 |
-| `keys()` / `snapshot()` | 全部键 / 全部键值快照 |
-| `getJson(key)` / `putJson(key, value)` | JSON 对象读写 |
-| `observe(key? = null)` | 设置变化的 `Flow<Map<String, String>>`，`key` 为空时观察全部 |
+| `get(key)` / `put(key, value)` / `remove(key)` / `clear()` | String key-values |
+| `keys()` / `snapshot()` | All keys / a snapshot of all key-values |
+| `getJson(key)` / `putJson(key, value)` | JSON object read and write |
+| `observe(key? = null)` | `Flow<Map<String, String>>` of settings changes; an empty `key` observes everything |
 
 ```kotlin
 host.settings().putJson("state", buildJsonObject { put("lastSync", now) })
@@ -1223,42 +1219,42 @@ val json = host.settings().getJson("state")
 host.settings().observe("state").collect { state -> render(state) }
 ```
 
-始终可用；不要存大对象，也不要把用户凭据写进去（用 `secrets()`）。
+Always available; do not store large objects, and do not put user credentials in it (use `secrets()`).
 
-### 设备与剪贴板
+### Devices and clipboard
 
-`host.device()`：
+`host.device()`:
 
-| 成员 | 说明 |
+| Member | Description |
 |---|---|
-| `info: DeviceInfo` | 厂商/品牌/型号/设备代号/Android 版本/SDK/ABI/是否模拟器/语言/时区/屏幕尺寸与密度/刷新率/内存与存储总量/安装 id |
-| `state: DeviceState` | 电量/充电/省电/网络类型与连接/亮屏/锁屏/语言/时区/开机时长/剩余内存与存储/当前执行档位 |
-| `observe(): Flow<DeviceState>` | 状态变化流 |
-| `vibrate(durationMs = 200)` | 振动一次 |
-| `openSettings(section: DeviceSettings)` | 跳系统设置页，返回是否可跳转 |
+| `info: DeviceInfo` | Vendor/brand/model/device codename/Android version/SDK/ABI/emulator flag/language/time zone/screen size and density/refresh rate/memory and storage totals/installation id |
+| `state: DeviceState` | Battery/charging/power saving/network type and connectivity/screen on/lock state/language/time zone/uptime/free memory and storage/current execution tier |
+| `observe(): Flow<DeviceState>` | State change stream |
+| `vibrate(durationMs = 200)` | Vibrate once |
+| `openSettings(section: DeviceSettings)` | Jump to a system settings page, returns whether the jump is possible |
 
-`DeviceSettings`：`APP` / `NOTIFICATIONS` / `ACCESSIBILITY` / `NOTIFICATION_LISTENER` / `OVERLAY` / `USAGE_STATS` / `BATTERY_OPTIMIZATION` / `INSTALL_PACKAGES` / `STORAGE` / `DEVELOPER` / `WIRELESS_DEBUGGING` / `LOCATION`。
+`DeviceSettings`: `APP` / `NOTIFICATIONS` / `ACCESSIBILITY` / `NOTIFICATION_LISTENER` / `OVERLAY` / `USAGE_STATS` / `BATTERY_OPTIMIZATION` / `INSTALL_PACKAGES` / `STORAGE` / `DEVELOPER` / `WIRELESS_DEBUGGING` / `LOCATION`.
 
-`host.clipboard()`：`text()` / `setText(text)` / `uri()` / `setUri(uri)` / `has()` / `clear()`。Android 10+ 后台读写剪贴板受限，返回 null 或被系统忽略，不要依赖剪贴板做跨应用传输。
+`host.clipboard()`: `text()` / `setText(text)` / `uri()` / `setUri(uri)` / `has()` / `clear()`. Background clipboard access is restricted on Android 10+, so reads return null or are ignored by the system; do not rely on the clipboard for cross-app transfer.
 
 ```kotlin
 host.device().observe().collect { state -> if (state.batteryPercent < 20) warnLowBattery() }
 host.device().vibrate(80)
-host.clipboard().setText("已复制")
+host.clipboard().setText("Copied")
 ```
 
-### 权限与特殊授权
+### Permissions and special grants
 
-`host.permissions()`：
+`host.permissions()`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `granted(permission)` | 查询某个 `PluginPermission` 常量的授权状态 |
-| `suspend request(vararg permissions)` | 申请运行时权限，返回「权限 → 是否授予」 |
-| `special(access)` | 查询特殊授权：`PluginAccessState(granted, available, reason)` |
-| `openSettings(access)` | 跳对应系统设置页，返回是否可跳转 |
+| `granted(permission)` | Queries the grant state of a `PluginPermission` constant |
+| `suspend request(vararg permissions)` | Requests runtime permissions, returns "permission → granted" |
+| `special(access)` | Queries a special grant: `PluginAccessState(granted, available, reason)` |
+| `openSettings(access)` | Jumps to the matching system settings page, returns whether the jump is possible |
 
-`PluginSpecialAccess`：`NOTIFICATION_LISTENER` / `ACCESSIBILITY` / `OVERLAY` / `USAGE_STATS` / `BATTERY_OPTIMIZATION` / `INSTALL_PACKAGES` / `MANAGE_STORAGE`。运行时权限与特殊授权的清单声明见「权限声明」。
+`PluginSpecialAccess`: `NOTIFICATION_LISTENER` / `ACCESSIBILITY` / `OVERLAY` / `USAGE_STATS` / `BATTERY_OPTIMIZATION` / `INSTALL_PACKAGES` / `MANAGE_STORAGE`. The manifest declarations for runtime permissions and special grants are in "Permission declarations".
 
 ```kotlin
 if (!host.permissions().granted(PluginPermission.CAMERA)) {
@@ -1268,46 +1264,46 @@ val overlay = host.permissions().special(PluginSpecialAccess.OVERLAY)
 if (!overlay.granted) host.permissions().openSettings(PluginSpecialAccess.OVERLAY)
 ```
 
-特殊授权没有权限弹窗，只能引导用户去系统设置；不要在启动时反复跳设置。
+Special grants have no permission dialog, so you can only guide the user to system settings; do not repeatedly jump to settings at startup.
 
-### 应用管理
+### App management
 
-`host.packages()`：
+`host.packages()`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `suspend list(includeSystem = false)` | 已安装应用列表 |
-| `suspend get(packageName)` | 单个应用信息，找不到返回 null |
-| `suspend install(apkPath, silent = false)` | 安装 APK；`silent` 需要 Root/ADB 档 |
-| `suspend uninstall(packageName, keepData = false)` | 卸载应用 |
-| `launch(packageName)` / `openAppInfo(packageName)` | 启动应用 / 打开应用信息页 |
-| `suspend icon(packageName, sizePx = 256)` | 读取应用图标 PNG 字节 |
+| `suspend list(includeSystem = false)` | Installed app list |
+| `suspend get(packageName)` | Single app info, null when not found |
+| `suspend install(apkPath, silent = false)` | Install an APK; `silent` needs the Root/ADB tier |
+| `suspend uninstall(packageName, keepData = false)` | Uninstall an app |
+| `launch(packageName)` / `openAppInfo(packageName)` | Launch an app / open its app info page |
+| `suspend icon(packageName, sizePx = 256)` | Read an app icon as PNG bytes |
 
-`PluginPackageInfo`：包名/名称/版本/版本号/是否系统应用/是否启用/安装与更新时间；`PackageInstallResult`：`accepted`、`pendingUserAction`、`error`。
+`PluginPackageInfo`: package name/name/version/version code/system app flag/enabled flag/install and update times; `PackageInstallResult`: `accepted`, `pendingUserAction`, `error`.
 
 ```kotlin
 val apps = host.packages().list()
 val result = host.packages().install(apkPath)
-if (!result.accepted) host.ui().snackbar(result.error ?: "安装失败")
+if (!result.accepted) host.ui().snackbar(result.error ?: "Install failed")
 ```
 
-`silent = true` 只在 Root/ADB 档可用；普通档会走系统安装器并等待用户确认。
+`silent = true` only works in the Root/ADB tier; the Normal tier goes through the system installer and waits for the user to confirm.
 
-### Root / ADB 执行（privilege）
+### Root / ADB execution (privilege)
 
-`host.privilege()` 提供三档内的系统级执行，不会越过用户当前选择的档位：
+`host.privilege()` provides system-level execution within the three tiers and never goes beyond the tier the user currently selected:
 
-| 成员 | 说明 |
+| Member | Description |
 |---|---|
-| `access: HostAccessLevel` | 当前生效档位：`LOCAL` / `ADB` / `ROOT` |
-| `root: RootState` / `adb: AdbState` | Root 是否授权、ADB 是否已配对/连接及错误原因 |
-| `suspend probeRoot()` | 主动探测 Root 状态 |
-| `suspend exec(command, level = AUTO, timeoutMs = 30_000)` | 执行命令，返回 `exitCode`/`stdout`/`stderr`/`timedOut`/`truncated` |
-| `suspend install(apkPath, silent = true)` / `uninstall(packageName)` | 静默装卸（需对应档位） |
-| `openAccessSettings()` / `openWirelessDebugging()` | 跳「系统访问」/无线调试设置 |
-| `suspend startAdbPairing()` / `submitAdbPairingCode(code)` / `connectAdb()` | 无线调试配对与连接 |
+| `access: HostAccessLevel` | The currently effective tier: `LOCAL` / `ADB` / `ROOT` |
+| `root: RootState` / `adb: AdbState` | Whether root is granted, whether ADB is paired/connected, and the error reason |
+| `suspend probeRoot()` | Actively probes the Root state |
+| `suspend exec(command, level = AUTO, timeoutMs = 30_000)` | Runs a command, returns `exitCode`/`stdout`/`stderr`/`timedOut`/`truncated` |
+| `suspend install(apkPath, silent = true)` / `uninstall(packageName)` | Silent install/uninstall (needs the matching tier) |
+| `openAccessSettings()` / `openWirelessDebugging()` | Jump to System access / wireless debugging settings |
+| `suspend startAdbPairing()` / `submitAdbPairingCode(code)` / `connectAdb()` | Wireless debugging pairing and connection |
 
-`PrivilegeLevel`：`AUTO` / `ROOT` / `ADB`。`AUTO` 自动选择当前可用档位；显式要求更高档位而当前不满足时返回失败，不会自动提权。
+`PrivilegeLevel`: `AUTO` / `ROOT` / `ADB`. `AUTO` picks the currently available tier; explicitly asking for a higher tier than currently available returns a failure and never escalates automatically.
 
 ```kotlin
 val root = host.privilege().root
@@ -1317,20 +1313,20 @@ if (root.granted) {
 }
 ```
 
-命令失败看 `exitCode`/`stderr`，不要对输出做字符串匹配；ADB 配对需要用户在系统里开启无线调试并确认配对码。
+Check `exitCode`/`stderr` for command failures instead of string-matching the output; ADB pairing needs the user to turn on wireless debugging in the system and confirm the pairing code.
 
-### Intent 与动态广播
+### Intents and dynamic broadcasts
 
-`host.intents()`：
+`host.intents()`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `startActivity(intent)` / `sendBroadcast(intent)` | 启动 Activity / 发送广播 |
-| `suspend startActivityForResult(intent, timeoutMs = 120_000)` | 等待结果，返回 `PluginActivityResult(resultCode, data, cancelled, timedOut)` |
-| `startService(intent)` / `stopService(intent)` | 启动/停止服务（受系统后台限制） |
-| `canResolve(intent)` / `suspend resolve(intent)` / `suspend queryActivities(intent)` | 解析目标 `ResolvedIntent(packageName, className, label, exported)` |
+| `startActivity(intent)` / `sendBroadcast(intent)` | Start an Activity / send a broadcast |
+| `suspend startActivityForResult(intent, timeoutMs = 120_000)` | Waits for a result, returns `PluginActivityResult(resultCode, data, cancelled, timedOut)` |
+| `startService(intent)` / `stopService(intent)` | Start/stop a service (subject to system background limits) |
+| `canResolve(intent)` / `suspend resolve(intent)` / `suspend queryActivities(intent)` | Resolve the target `ResolvedIntent(packageName, className, label, exported)` |
 
-动态广播用 `host.components().registerReceiver(filter)`（实验 API）：
+Dynamic broadcasts use `host.components().registerReceiver(filter)` (experimental API):
 
 ```kotlin
 @OptIn(PluginExperimentalApi::class)
@@ -1339,13 +1335,13 @@ host.scope.launch { handle.events().collect { intent -> onBattery(intent) } }
 // onDisable()/close(): handle.close()
 ```
 
-- `PluginReceiverHandle`：`id`、`events(): Flow<Intent>`、`close()`；插件停用/退出前必须 `close()`。
-- Android 10+ 限制后台启动 Activity/Service；从页面或前台流程调用，失败返回 false。
-- 只解析/启动用户可见、与插件功能相关的 Intent，不要扫描无关应用。
+- `PluginReceiverHandle`: `id`, `events(): Flow<Intent>`, `close()`; the plugin must `close()` before it is disabled or exits.
+- Android 10+ restricts starting Activities/Services from the background; call them from a page or a foreground flow, and failures return false.
+- Resolve and start only Intents that are visible to the user and relevant to the plugin's function; do not scan unrelated apps.
 
-### 独立窗口与前台服务（实验）
+### Dedicated windows and foreground services (experimental)
 
-插件不能自己注册 Activity/Service；需要独立窗口或长驻服务时用宿主代理：
+Plugins cannot register Activity/Service themselves; when they need a dedicated window or a long-running service, use the host proxy:
 
 ```kotlin
 @OptIn(PluginExperimentalApi::class)
@@ -1354,29 +1350,29 @@ host.components().startActivity(
 )
 ```
 
-- `pluginActivityOptions(pageId, arguments, newTask)` 让宿主在 `PluginHostActivity` 里打开本插件的页面；页面仍是 `ui()` 声明的 `PluginPage`，`pageContext()` 能读到传入参数。
-- 前台服务：`host.background().startForeground(foregroundServiceOptions(id, title, text, ongoing, progress))`、`updateForeground(...)`、`stopForeground(id)`；需要 `components.foregroundService: true` + capability `background`。
-- 代理组件只为插件页面与前台任务服务：不能自定义 Activity 布局、不能替换宿主主题、不能注册清单组件。
+- `pluginActivityOptions(pageId, arguments, newTask)` lets the host open this plugin's page in `PluginHostActivity`; the page is still the `PluginPage` declared in `ui()`, and `pageContext()` can read the passed arguments.
+- Foreground services: `host.background().startForeground(foregroundServiceOptions(id, title, text, ongoing, progress))`, `updateForeground(...)`, `stopForeground(id)`; needs `components.foregroundService: true` + the `background` capability.
+- Proxy components serve plugin pages and foreground tasks only: you cannot customize the Activity layout, replace the host theme or register manifest components.
 
-### 后台任务与开机回调
+### Background tasks and boot callbacks
 
-`host.background()`：
+`host.background()`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `suspend schedule(id, kind, triggerAtMs?, intervalMs?, requiresNetwork = false, requiresCharging = false)` | 注册任务，返回是否成功 |
-| `suspend cancel(id)` / `suspend tasks()` | 取消 / 列出任务 |
-| `startForeground` / `updateForeground` / `stopForeground` | 前台服务 |
-| `batteryOptimizationIgnored` / `requestIgnoreBatteryOptimizations()` / `openBatteryOptimizationSettings()` | 电池优化状态与引导 |
+| `suspend schedule(id, kind, triggerAtMs?, intervalMs?, requiresNetwork = false, requiresCharging = false)` | Registers a task, returns whether it succeeded |
+| `suspend cancel(id)` / `suspend tasks()` | Cancel / list tasks |
+| `startForeground` / `updateForeground` / `stopForeground` | Foreground services |
+| `batteryOptimizationIgnored` / `requestIgnoreBatteryOptimizations()` / `openBatteryOptimizationSettings()` | Battery optimization state and guidance |
 
-`PluginBackgroundKind`：
+`PluginBackgroundKind`:
 
-| 值 | 语义 |
+| Value | Meaning |
 |---|---|
-| `ONCE` | 一次性触发（触发时间或延迟） |
-| `PERIODIC` | 周期任务（WorkManager，系统最小间隔约 15 分钟） |
-| `EXACT` | 精确定时（AlarmManager，受系统省电与精确闹钟权限限制） |
-| `BOOT` | 开机后触发一次，也用于重启后重新注册周期任务 |
+| `ONCE` | One-shot trigger (trigger time or delay) |
+| `PERIODIC` | Periodic task (WorkManager, system minimum interval about 15 minutes) |
+| `EXACT` | Exact timing (AlarmManager, subject to system power saving and the exact alarm permission) |
+| `BOOT` | Runs once after boot, also used to re-register periodic tasks after a restart |
 
 ```kotlin
 host.background().schedule(
@@ -1387,54 +1383,54 @@ host.background().schedule(
 )
 ```
 
-任务触发时派发 `backgroundTask` hook（`taskId`/`kind`/`firedAtMs`），需要 capability `background` 且 `components.background: true`。Doze/省电策略会延后任务；需要稳定执行时引导用户忽略电池优化。
+When a task fires it dispatches the `backgroundTask` hook (`taskId`/`kind`/`firedAtMs`), requiring the `background` capability and `components.background: true`. Doze and power saving delay tasks; for reliable execution guide the user to ignore battery optimizations.
 
-### 定位
+### Location
 
-`host.location()`：`available`、`permissionGranted`、`lastKnown(): PluginLocation?`、`current(timeoutMs = 10_000): PluginLocation?`、`updates(minIntervalMs = 1_000, minDistanceM = 0f): Flow<PluginLocation>`、`geocode(query, limit = 5): List<PluginGeocode>`、`reverseGeocode(location): PluginGeocode?`。
+`host.location()`: `available`, `permissionGranted`, `lastKnown(): PluginLocation?`, `current(timeoutMs = 10_000): PluginLocation?`, `updates(minIntervalMs = 1_000, minDistanceM = 0f): Flow<PluginLocation>`, `geocode(query, limit = 5): List<PluginGeocode>`, `reverseGeocode(location): PluginGeocode?`.
 
-`PluginLocation`：纬度/经度/精度/来源/时间，可选海拔/速度/方向；`PluginGeocode`：经纬度/名称/国家/行政区/城市。需要 capability `location` + `permissions` 里的 `location.coarse`/`location.fine`；未授权时返回 null/空列表。
+`PluginLocation`: latitude/longitude/accuracy/source/time, with optional altitude/speed/bearing; `PluginGeocode`: lat/lon/name/country/administrative area/city. Needs the `location` capability + `location.coarse`/`location.fine` in `permissions`; unauthorized calls return null or an empty list.
 
 ```kotlin
-val here = host.location().current() ?: return textResult("定位不可用", isError = true)
+val here = host.location().current() ?: return textResult("Location unavailable", isError = true)
 val place = host.location().reverseGeocode(here)
 ```
 
-### 联系人
+### Contacts
 
-`host.contacts()`：`permissionGranted`、`suspend list(limit = 0)`、`search(query, limit = 20)`、`get(id)`、`create(draft)`、`update(id, draft)`、`delete(id)`；草稿用 `pluginContactDraft(displayName, phones, emails, organization)` 构造。
+`host.contacts()`: `permissionGranted`, `suspend list(limit = 0)`, `suspend search(query, limit = 20)`, `suspend get(id)`, `suspend create(draft)`, `suspend update(id, draft)`, `suspend delete(id)`; drafts are built with `pluginContactDraft(displayName, phones, emails, organization)`.
 
-`PluginContact`：id/显示名/电话/邮箱/组织/备注/星标；`PluginContactField`：value/label/type。需要 capability `contacts` + `permissions` 里的 `contacts.read`/`contacts.write`；未授权抛 `SecurityException`。
+`PluginContact`: id/display name/phones/emails/organization/note/starred; `PluginContactField`: value/label/type. Needs the `contacts` capability + `contacts.read`/`contacts.write` in `permissions`; unauthorized calls throw `SecurityException`.
 
 ```kotlin
-val contacts = host.contacts().search("张")
-val created = host.contacts().create(pluginContactDraft(displayName = "张三", phones = listOf("13800000000")))
+val contacts = host.contacts().search("Ann")
+val created = host.contacts().create(pluginContactDraft(displayName = "Ann Lee", phones = listOf("13800000000")))
 ```
 
-### 短信
+### SMS
 
-`host.sms()`：`available`、`canRead`、`canSend`、`suspend threads(limit = 20)`、`suspend messages(threadId?, address?, limit = 50)`、`suspend send(address, text, subscriptionId?)`、`suspend markRead(threadId)`、`suspend delete(threadId)`。
+`host.sms()`: `available`, `canRead`, `canSend`, `suspend threads(limit = 20)`, `suspend messages(threadId?, address?, limit = 50)`, `suspend send(address, text, subscriptionId?)`, `suspend markRead(threadId)`, `suspend delete(threadId)`.
 
-`PluginSmsThread`：会话 id/号码/联系人名/摘要/时间/未读数；`PluginSmsMessage`：id/会话 id/号码/正文/时间/是否接收/是否已读。需要 capability `sms` + `permissions` 里的 `sms.read`/`sms.send`。
+`PluginSmsThread`: thread id/number/contact name/summary/time/unread count; `PluginSmsMessage`: id/thread id/number/body/time/received/read. Needs the `sms` capability + `sms.read`/`sms.send` in `permissions`.
 
-- 发送是敏感操作：先在页面里确认内容与号码，失败返回 false 并提示原因（默认短信应用/运营商限制可能阻止发送）。
-- 不要批量读取或删除用户短信；只处理用户明确指定的会话。
+- Sending is sensitive: confirm the content and number in the page first, and on failure return false with the reason (the default SMS app or carrier restrictions may block sending).
+- Do not bulk-read or delete the user's messages; handle only the threads the user explicitly names.
 
 ```kotlin
 val thread = host.sms().threads(limit = 5).firstOrNull() ?: return
 host.sms().messages(threadId = thread.id, limit = 20)
-if (host.sms().canSend) host.sms().send(thread.address, "收到，稍后回复")
+if (host.sms().canSend) host.sms().send(thread.address, "Got it, I will reply later")
 ```
 
-### 日历
+### Calendar
 
-`host.calendar()`：`permissionGranted`、`suspend calendars()`、`suspend events(fromMs, toMs, calendarIds = emptyList(), limit = 200)`、`suspend get(eventId)`、`suspend create(draft)`、`suspend update(eventId, draft)`、`suspend delete(eventId)`；草稿用 `pluginCalendarEventDraft(title, startMs, endMs, allDay = false, description?, location?, calendarId?, timeZone?, reminders = emptyList())` 构造。
+`host.calendar()`: `permissionGranted`, `suspend calendars()`, `suspend events(fromMs, toMs, calendarIds = emptyList(), limit = 200)`, `suspend get(eventId)`, `suspend create(draft)`, `suspend update(eventId, draft)`, `suspend delete(eventId)`; drafts are built with `pluginCalendarEventDraft(title, startMs, endMs, allDay = false, description?, location?, calendarId?, timeZone?, reminders = emptyList())`.
 
-`PluginCalendar`：id/名称/账号/显示名/颜色/可见/默认；`PluginCalendarEvent`：id/日历 id/标题/起止/全天/描述/地点/时区/提醒。需要 capability `calendar` + `permissions` 里的 `calendar.read`/`calendar.write`。
+`PluginCalendar`: id/name/account/display name/color/visible/default; `PluginCalendarEvent`: id/calendar id/title/start and end/all-day/description/location/time zone/reminders. Needs the `calendar` capability + `calendar.read`/`calendar.write` in `permissions`.
 
 ```kotlin
 val draft = pluginCalendarEventDraft(
-    title = "周会",
+    title = "Weekly sync",
     startMs = start,
     endMs = start + 3_600_000,
     reminders = listOf(10),
@@ -1442,60 +1438,60 @@ val draft = pluginCalendarEventDraft(
 host.calendar().create(draft)
 ```
 
-### 媒体
+### Media
 
-`host.media()`：
+`host.media()`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `saveToDownloads(fileName, mimeType, bytes)` | 字节写入下载目录，返回路径 |
-| `saveFileToDownloads(path, fileName?, mimeType?)` | 已有文件复制到下载目录 |
-| `saveImageToGallery(fileName, mimeType, bytes)` | 图片写入系统相册 |
-| `scanFile(path)` | 触发媒体扫描 |
-| `open(path)` / `share(path, mimeType?)` / `preview(path)` | 打开/分享/预览文件 |
-| `readImage(path, maxSizePx = 2_048)` / `thumbnail(path, maxSizePx = 512)` | 图片解码（有尺寸上限） |
-| `importUri(uri, fileName?)` | 把外部 URI 导入插件目录，返回本地路径 |
+| `saveToDownloads(fileName, mimeType, bytes)` | Writes bytes into Downloads, returns the path |
+| `saveFileToDownloads(path, fileName?, mimeType?)` | Copies an existing file into Downloads |
+| `saveImageToGallery(fileName, mimeType, bytes)` | Writes an image into the system gallery |
+| `scanFile(path)` | Triggers a media scan |
+| `open(path)` / `share(path, mimeType?)` / `preview(path)` | Open/share/preview a file |
+| `readImage(path, maxSizePx = 2_048)` / `thumbnail(path, maxSizePx = 512)` | Image decoding (with a size limit) |
+| `importUri(uri, fileName?)` | Imports an external URI into the plugin directory, returns the local path |
 
-需要 capability `media`；是否还需要额外授权取决于宿主实现与系统版本，需要直接访问共享存储时声明 `permissions` 里的 `manage-storage`（用户在系统设置开启「所有文件访问」）。
+Needs the `media` capability; whether extra grants are needed depends on the host implementation and the system version, and declaring `manage-storage` in `permissions` is required to access shared storage directly (the user enables "All files access" in system settings).
 
 ```kotlin
 val saved = host.media().saveToDownloads("report.csv", "text/csv", bytes)
 host.media().share(saved!!, "text/csv")
 ```
 
-### 语音
+### Speech
 
-`host.speech()`：`speakAvailable`、`recognizeAvailable`、`suspend speak(text)`、`stopSpeaking()`、`speaking(): Flow<Boolean>`、`suspend recognize(timeoutMs = 30_000): PluginSpeechResult(text, error)`、`openVoiceSettings()`。
+`host.speech()`: `speakAvailable`, `recognizeAvailable`, `suspend speak(text)`, `stopSpeaking()`, `speaking(): Flow<Boolean>`, `suspend recognize(timeoutMs = 30_000): PluginSpeechResult(text, error)`, `openVoiceSettings()`.
 
-需要 capability `speech`；语音识别另需 `permissions` 里的 `microphone`（capability `ui`）。TTS 引擎或识别服务缺失时对应 `available=false`，返回 false/错误结果。
+Needs the `speech` capability; speech recognition also needs `microphone` in `permissions` (capability `ui`). With no TTS engine or recognition service, the matching `available=false` and calls return false or an error result.
 
 ```kotlin
-if (host.speech().speakAvailable) host.speech().speak("同步完成")
+if (host.speech().speakAvailable) host.speech().speak("Sync finished")
 val heard = host.speech().recognize()
 ```
 
-### 网页
+### Web
 
-`host.web()`：`available`、`suspend search(query, limit = 8): List<PluginWebResult(title, url, snippet?)>`、`suspend fetch(url, maxChars = 20_000): PluginWebPage(url, title?, text, truncated)`。
+`host.web()`: `available`, `suspend search(query, limit = 8): List<PluginWebResult(title, url, snippet?)>`, `suspend fetch(url, maxChars = 20_000): PluginWebPage(url, title?, text, truncated)`.
 
-需要 capability `web`；搜索/抓取走宿主的网页服务与解析，失败返回空列表/null。已经用 `network()` 自己请求时优先用自己的实现（可控超时与解析）。
+Needs the `web` capability; search and fetch use the host's web service and parsing, and failures return an empty list or null. When you already use `network()` to request things yourself, prefer your own implementation (controllable timeouts and parsing).
 
 ```kotlin
-val results = host.web().search("Android 通知监听")
+val results = host.web().search("Android notification listener")
 val page = results.firstOrNull()?.let { host.web().fetch(it.url) }
 ```
 
-### 宿主凭据（实验）
+### Host credentials (experimental)
 
-`host.credentials()`（`@PluginExperimentalApi`）只读宿主里已配置的凭据，供插件在用户知情的前提下复用：
+`host.credentials()` (`@PluginExperimentalApi`) reads credentials already configured in the host, for plugins to reuse with the user's knowledge:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `providers(): List<PluginProviderCredential>` / `provider(id)` | 服务商配置：id/名称/baseUrl/apiKey/authKind |
-| `mcpTokens(): List<PluginMcpToken>` / `mcpToken(server)` | MCP 令牌：server/url/accessToken/refreshToken/tokenType/expiresAtMs |
-| `hostValues(): Map<String, String>` | 宿主通用凭据键值 |
+| `providers(): List<PluginProviderCredential>` / `provider(id)` | Provider configuration: id/name/baseUrl/apiKey/authKind |
+| `mcpTokens(): List<PluginMcpToken>` / `mcpToken(server)` | MCP tokens: server/url/accessToken/refreshToken/tokenType/expiresAtMs |
+| `hostValues(): Map<String, String>` | Generic host credential key-values |
 
-**敏感性**：这些是用户真实凭据。只在执行用户请求时读取，不落盘、不写日志、不发给第三方；安装确认页与插件能力列表会展示该 capability，让用户知道插件会读取宿主凭据。
+**Sensitivity**: these are the user's real credentials. Read them only while performing a user request, never persist them, never log them and never send them to third parties; the install confirmation page and the plugin capability list show this capability so users know the plugin reads host credentials.
 
 ```kotlin
 @OptIn(PluginExperimentalApi::class)
@@ -1503,17 +1499,17 @@ val provider = host.credentials().providers().firstOrNull()
 val mcp = host.credentials().mcpTokens().firstOrNull()
 ```
 
-### 无障碍（实验）
+### Accessibility (experimental)
 
-`host.accessibility()`（`@PluginExperimentalApi`）：
+`host.accessibility()` (`@PluginExperimentalApi`):
 
-| 成员 | 说明 |
+| Member | Description |
 |---|---|
-| `enabled` | 无障碍服务是否已开启 |
-| `events(): Flow<PluginAccessibilityEvent>` | 无障碍事件流：eventType/packageName/className/text/contentDescription/timeMs |
-| `performGlobalAction(action)` | 全局动作：`BACK`/`HOME`/`RECENTS`/`NOTIFICATIONS`/`QUICK_SETTINGS`/`POWER_DIALOG` |
+| `enabled` | Whether the accessibility service is on |
+| `events(): Flow<PluginAccessibilityEvent>` | Accessibility event stream: eventType/packageName/className/text/contentDescription/timeMs |
+| `performGlobalAction(action)` | Global actions: `BACK`/`HOME`/`RECENTS`/`NOTIFICATIONS`/`QUICK_SETTINGS`/`POWER_DIALOG` |
 
-需要 capability `accessibility` + `permissions: ["accessibility"]` + `components.accessibility: true`，并由用户在系统无障碍设置里开启 DeepDeep 的服务。只读取功能必需的事件，不要采集或外发其他应用的文字。
+Needs the `accessibility` capability + `permissions: ["accessibility"]` + `components.accessibility: true`, and the user must enable PI's service in the system accessibility settings. Read only the events the feature needs, and do not collect or send other apps' text.
 
 ```kotlin
 @OptIn(PluginExperimentalApi::class)
@@ -1523,58 +1519,58 @@ if (host.accessibility().enabled) {
 }
 ```
 
-**总线**：`host.bus().publish(pluginBusEvent(topic, payload))` 广播给所有插件（`publisher` 由宿主按插件 id 覆盖）；`subscribe("topic")` 拿 `Flow`，同时 `PluginHooks.busEvent(...)` 观察类回调也能收到。事件只用于插件间协作与轻量通知，不要用它传大载荷或做同步 RPC。
+**Bus**: `host.bus().publish(pluginBusEvent(topic, payload))` broadcasts to all plugins (the host overrides `publisher` with the plugin id); `subscribe("topic")` returns a `Flow`, and the `PluginHooks.busEvent(...)` observation callback receives it too. Use events only for cross-plugin coordination and lightweight notifications, never for large payloads or synchronous RPC.
 
-## 页面与状态
+## Pages and state
 
-插件页面是插件唯一的交互界面，也是插件维护自身状态的地方：
+Plugin pages are the plugin's only interaction surface, and where the plugin keeps its own state:
 
-- 页面由 `PluginUiContributions.pages` 声明，`pluginPage(...)` 的 `content` 就是页面内容（宿主直接渲染，不经过槽位）；列表里点整行进入第一个页面，页面之间用 `host.ui().openPage(...)` / `openPageWithArguments(...)` 切换（只能打开本插件自己的页面）。
-- 需要独立窗口或长流程时用 `openPageWithArguments(..., newTask = true)` 或 `components().startActivity(pluginActivityOptions(...))`：宿主在 `PluginHostActivity` 里渲染同一页面，页面内从 `pageContext()` / `LocalPluginPageContext` 读参数，关闭时 `closePage(result)` 携带 JSON 结果。
-- 插件数据写在 `host.dataDir` 与 `host.settings()`（`host.files()` 相对路径以 `dataDir` 为根），机密凭据写 `host.secrets()`；不要在页面里缓存需要跨进程保留的状态。
-- 页面里做完安装/登录/开关等会影响工具或技能的动作后调用 `host.requestContributionsRefresh()`：宿主重跑一次物化并触发会话重建，贡献在安全点生效。例如插件在页面里装好 CLI 后再返回工具列表，下一次会话就能看到新工具。
-- 页面可以调用所有已声明的宿主服务；交互优先用 `host.ui()` 的确认/输入/选择器（见「交互与选择器」），不要自造 Material 弹窗，与 App 视觉不一致。
-- `PluginPage.content` 不接收 `SlotState`；需要活跃会话时调 `host.sessions().active`，需要页面参数时读 `pageContext()`。
-- `host.requestContributionsRefresh()` 是异步触发、不等待完成；需要在界面上确认结果时用插件自己的状态标记，不要假设返回时就已物化。
-- 页面离开后宿主会取消页面内的 `LaunchedEffect` 等协程；长任务挂 `host.scope`，不要依赖页面生命周期保活。
-- `network().get`/`post`、`PluginAvailability.isReady` 是扩展函数；显式 import 风格下要分别 import `get`/`post`/`isReady`（或整包 `io.github.whywood.deepdeep.plugin.api.*`）。
+- Pages are declared by `PluginUiContributions.pages`, and the `content` of `pluginPage(...)` is the page content (the host renders it directly, without slots); tapping a whole row in the list enters the first page, and pages switch with `host.ui().openPage(...)` / `openPageWithArguments(...)` (only the plugin's own pages can be opened).
+- For a dedicated window or a long flow, use `openPageWithArguments(..., newTask = true)` or `components().startActivity(pluginActivityOptions(...))`: the host renders the same page inside `PluginHostActivity`, the page reads arguments from `pageContext()` / `LocalPluginPageContext`, and `closePage(result)` returns a JSON result when closing.
+- Plugin data goes into `host.dataDir` and `host.settings()` (relative paths in `host.files()` root at `dataDir`), and secrets go into `host.secrets()`; do not cache state that must survive the process in a page.
+- After an action in a page that affects tools or skills (install, sign-in, switches), call `host.requestContributionsRefresh()`: the host materializes again and triggers a session rebuild, and contributions apply at a safe point. For example, after installing a CLI in a page and returning to the tool list, the next session sees the new tools.
+- Pages can call every declared host service; prefer `host.ui()` confirm/input/pickers (see "Interaction and pickers") over rolling your own Material dialogs, which look inconsistent with the app.
+- `PluginPage.content` does not receive a `SlotState`; when you need the active session call `host.sessions().active`, and when you need page arguments read `pageContext()`.
+- `host.requestContributionsRefresh()` is asynchronous and does not wait for completion; when the UI must confirm the result, use the plugin's own state marker and do not assume materialization has happened when it returns.
+- After leaving a page the host cancels its coroutines such as `LaunchedEffect`; long tasks go on `host.scope`, never relying on the page lifecycle to stay alive.
+- `network().get`/`post` and `PluginAvailability.isReady` are extension functions; with explicit imports you must import `get`/`post`/`isReady` separately (or import the whole `io.github.whywood.deepdeep.plugin.api.*` package).
 
-## 兼容与迁移
+## Compatibility and migration
 
-### 1.2.x → 1.3.0（纯加法）
+### 1.2.x → 1.3.0 (purely additive)
 
-`plugin-api 1.3.0` 不升 apiLevel：现有插件不需要改代码或重新编译。需要在 MCP/插件工具结果上出卡片时：依赖升到 `plugin-api 1.3.0`，清单写 `minHostVersion: "1.1.0"`；在 `ui()` 返回对象上同时实现 `ToolResultRendererContributor`，用 `toolResultMatch(source/server/tool/toolPrefix)` 匹配、`toolResultRenderer` 构造。MCP 工具由 Agent 通过 `tool_execute` 调用时，宿主会自动还原内部工具身份，渲染器直接按真实 MCP server/tool 匹配。
+`plugin-api 1.3.0` does not raise the apiLevel: existing plugins need no code change or rebuild. To render cards on MCP/plugin tool results: raise the dependency to `plugin-api 1.3.0` and write `minHostVersion: "1.1.0"` in the manifest; then also implement `ToolResultRendererContributor` on the object returned from `ui()`, matching with `toolResultMatch(source/server/tool/toolPrefix)` and constructing with `toolResultRenderer`. When the agent calls an MCP tool through `tool_execute`, the host restores the inner tool identity automatically, so renderers match on the real MCP server/tool.
 
-`plugin-api 1.3.1` / `design 0.11.0` 也不升 apiLevel：新增 `PluginHost.images()`（返回 `RemoteImage`）与 `DdRemoteImage`，插件的 `plugin.json` capabilities 加 `images` 即可在卡片里加载远程图片；两者都只做加法，旧插件不需要重编译。
+`plugin-api 1.3.1` / `design 0.11.0` do not raise the apiLevel either: new `PluginHost.images()` (returning `RemoteImage`) and `DdRemoteImage`; add `images` to the `plugin.json` capabilities and a plugin can load remote images in cards. Both are additive only, and old plugins need no rebuild.
 
-### 1.1.x → 1.2.0（纯加法）
+### 1.1.x → 1.2.0 (purely additive)
 
-`plugin-api 1.2.0` 不升 apiLevel：现有插件不需要改代码或重新编译。使用新能力（主题包、`openPageSheet`、页面呈现模式、design 0.9.0 组件）时：依赖升到 `plugin-api 1.2.0`/`design 0.9.0`，清单写 `minHostVersion: "1.0.8"`；主题包在 `provides.themes` 声明 id 并放 `assets/themes.json`。
+`plugin-api 1.2.0` does not raise the apiLevel: existing plugins need no code change or rebuild. To use the new capabilities (theme packs, `openPageSheet`, page presentation mode, design 0.9.0 components): raise the dependencies to `plugin-api 1.2.0`/`design 0.9.0` and write `minHostVersion: "1.0.8"`; theme packs declare ids in `provides.themes` and add `assets/themes.json`.
 
-### 1.0.x → 1.1.0（纯加法）
+### 1.0.x → 1.1.0 (purely additive)
 
-`plugin-api 1.1.0` 不升 apiLevel：已发布的 1.0.x 插件不需要改代码或重新编译，在 1.0.4+ 宿主上照常运行。只有使用 1.1.0 新能力（需要宿主 1.0.6+）时才需要迁移：
+`plugin-api 1.1.0` does not raise the apiLevel: published 1.0.x plugins keep running on host 1.0.4+ without code changes or a rebuild. Migration is needed only to use the new 1.1.0 capabilities (which need host 1.0.6+):
 
-1. 依赖升到 `1.1.0`（配套 `design 0.7.0`，经 `plugin-api` 的 `api()` 传递，插件工程仍只需声明 `plugin-api`）。
-2. `minHostVersion` 升到 `"1.0.6"`；只在旧宿主上运行、且不调用 1.1.0 新增 API 的插件可以继续用原来的门槛（如 `"1.0.4"`）。
-3. 在 `capabilities` 里声明新能力；运行时权限写 `permissions`，系统组件写 `components`，并与对应 capability 成对声明（见「权限声明」「组件声明」）。
-4. 使用实验 API（`components()` / `credentials()` / `accessibility()`、`PromptOverridePlugin`）时加 `@OptIn(PluginExperimentalApi::class)`。
-5. 页面参数、交互选择器、通知动作、系统事件按新章节接入；design 0.7.0 组件直接从 `io.github.whywood.deepdeep.design` import。
-6. 升插件版本、重新签名并更新市场条目；运行门槛由 `minHostVersion` 与宿主实际能力保证。
+1. Raise the dependency to `1.1.0` (with `design 0.7.0`, carried through `plugin-api`'s `api()`, so plugin projects still declare only `plugin-api`).
+2. Raise `minHostVersion` to `"1.0.6"`; plugins that only run on older hosts and do not call the new 1.1.0 APIs can keep their previous threshold (such as `"1.0.4"`).
+3. Declare the new capabilities in `capabilities`; runtime permissions go in `permissions` and system components in `components`, declared in pairs with the matching capability (see "Permission declarations" and "Component declarations").
+4. When using experimental APIs (`components()` / `credentials()` / `accessibility()`, `PromptOverridePlugin`), add `@OptIn(PluginExperimentalApi::class)`.
+5. Wire page arguments, interactive pickers, notification actions and system events per the new sections; import design 0.7.0 components directly from `io.github.whywood.deepdeep.design`.
+6. Bump the plugin version, sign again and update the marketplace entry; the runtime threshold is enforced by `minHostVersion` and the host's actual capabilities.
 
-### 从 API level 5 迁移到 level 6
+### Migrating from API level 5 to level 6
 
-`plugin-api 1.0.0` 是破坏性升级：宿主 1.0.4 起只接受 `apiLevel = 6`，level 5 插件在安装时被拒绝并提示更新。迁移按下面的对照改代码，然后重编译并升清单（`apiLevel: 6`、`minHostVersion: "1.0.4"`、`ui.apiLevel: 2`）；用同一发布者密钥重新签名，已装用户才能升级。
+`plugin-api 1.0.0` is a breaking upgrade: since host 1.0.4 only `apiLevel = 6` is accepted, and level 5 plugins are rejected at install with an update prompt. Migrate the code using the mapping below, then rebuild and raise the manifest (`apiLevel: 6`, `minHostVersion: "1.0.4"`, `ui.apiLevel: 2`); sign again with the same publisher key so installed users can upgrade.
 
-| level 5（`0.8.1`）写法 | level 6（`1.0.0`）写法 |
+| Level 5 (`0.8.1`) form | Level 6 (`1.0.0`) form |
 |---|---|
 | `Contributions(...)` | `contributions(...)` |
-| `PluginTool(...)` | `pluginTool(...)`（构造器不再公开） |
+| `PluginTool(...)` | `pluginTool(...)` (the constructor is no longer public) |
 | `PluginToolResult.Text(...)` / `.Rich(...)` | `textResult(...)` / `richResult(...)` |
 | `ToolBlock.Text` / `.Image` / `.FileRef` | `textBlock(...)` / `imageBlock(...)` / `fileRefBlock(...)` |
 | `PluginSkill(...)` / `PluginSkillFile(...)` | `pluginSkill(...)` / `pluginSkillFile(...)` |
 | `PromptSection(...)` | `promptSection(...)` |
-| `LocalizedText.Literal(...)`（或 `literal(...)`） | `localizedText(...)` |
+| `LocalizedText.Literal(...)` (or `literal(...)`) | `localizedText(...)` |
 | `IconRef.Asset(...)` | `assetIcon(...)` |
 | `SlotBinding(...)` / `SlotContent.Compose { }` | `slotBinding(...)` / `composeSlot { }` |
 | `PluginPage(...)` / `ComposerAction(...)` | `pluginPage(...)` / `composerAction(...)` |
@@ -1582,113 +1578,113 @@ if (host.accessibility().enabled) {
 | `TimerRequest(...)` + `TimerTrigger.Once/Cron` | `timerRequest(...)` + `timerOnce(...)` / `timerCron(...)` |
 | `PluginBusEvent(...)` | `pluginBusEvent(...)` |
 | `ChatMessageOptions(...)` / `ChatDisplay(...)` | `chatMessageOptions(...)` / `chatDisplay(...)` |
-| `PluginAvailability` 直接构造 | `available()` / `unavailable(reason)` |
-| `PluginEvent.X`（sealed 子类） | 顶层接口 `XEvent`（如 `SessionStartedEvent`） |
+| Constructing `PluginAvailability` directly | `available()` / `unavailable(reason)` |
+| `PluginEvent.X` (sealed subclass) | Top-level interface `XEvent` (e.g. `SessionStartedEvent`) |
 | `InputDecision.Continue/Handled` | `inputContinue(...)` / `inputHandled()` |
 | `ToolCallDecision.Continue/Block/Rewrite` | `toolContinue()` / `toolBlock(reason)` / `toolRewrite(args)` |
 | `ToolResultDecision.Keep/Replace` | `resultKeep()` / `resultReplace(result)` |
-| `PluginCapability` 枚举成员 | value class 常量（wire 名不变，`plugin.json` 不用改） |
-| `MessageRole` / `ToolPhase` 等枚举 | value class 常量（`USER` / `STARTED` 等名字不变） |
-| `PluginUiContributions` 实现对象 | 接口不变，`bindings` / `pages` 用上面工厂构造 |
-| `host.text(source, *args)` | 不变（`vararg Any` 保留，参数只传字符串/数字） |
+| `PluginCapability` enum members | Value class constants (wire names unchanged, `plugin.json` needs no change) |
+| `MessageRole` / `ToolPhase` and other enums | Value class constants (`USER` / `STARTED` and other names unchanged) |
+| Objects implementing `PluginUiContributions` | Interface unchanged; build `bindings` / `pages` with the factories above |
+| `host.text(source, *args)` | Unchanged (`vararg Any` kept, pass only strings/numbers) |
 
-清单与工程：
+Manifest and project:
 
-- `apiLevel: 6`、`minHostVersion: "1.0.4"`、`ui.apiLevel: 2`；`entryClass` 与入口类无参构造不变。
-- `capabilities` 可选新增 `prompt`（提示词覆盖）；其余 wire 名不变。
-- 依赖改为 `compileOnly("io.github.sadami3066.deepdeep:plugin-api:<版本>")`（`<版本>` 取 `deepdeep-maven` 最新发布），按宿主 Kotlin/Compose 版本重新编译；`.ddp` 内容变化后必须重新签名。
-- manifest 解析、校验与版本比较已移到宿主（宿主仓库 `app/plugin/host/external/`），SDK 里不再有 `PluginManifestCodec` / `PluginValidation` / `PluginVersion`；`PluginManifest` / `Provides` / `UiManifest` / `PublisherInfo` 是宿主构造的只读接口，插件不构造。
-- 兼容承诺从 1.0.0 起生效：level 6 内只做二进制兼容的加法；需要删改公开 API 时升 `apiLevel`（见 `plugin-api/COMPATIBILITY.md`）。
+- `apiLevel: 6`, `minHostVersion: "1.0.4"`, `ui.apiLevel: 2`; `entryClass` and the entry class's no-arg constructor are unchanged.
+- `capabilities` may add `prompt` (prompt override); all other wire names are unchanged.
+- Dependencies become `compileOnly("io.github.sadami3066.deepdeep:plugin-api:<version>")` (`<version>` from the latest `deepdeep-maven` release), rebuilt against the host Kotlin/Compose versions; any change to `.ddp` contents requires a new signature.
+- Manifest parsing, validation and version comparison moved to the host (host repository `app/plugin/host/external/`), and the SDK no longer has `PluginManifestCodec` / `PluginValidation` / `PluginVersion`; `PluginManifest` / `Provides` / `UiManifest` / `PublisherInfo` are host-constructed read-only interfaces that plugins do not construct.
+- The compatibility promise applies from 1.0.0: within level 6 only binary-compatible additions; deleting or changing public APIs requires a new `apiLevel` (see `plugin-api/COMPATIBILITY.md`).
 
-## ABI 与版本
+## ABI and versions
 
-- 当前 `plugin-api 1.1.0` / API level 6：`PLUGIN_API_VERSION = "1.1.0"`、`PLUGIN_API_LEVEL = 6`、`BASELINE_API_LEVEL = 6`、`MIN_SUPPORTED_API_LEVEL = 6`。宿主加载时要求 `plugin.apiLevel` 在 `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL`（当前 6..6）内；未写 `apiLevel` 按 `BASELINE_API_LEVEL`（6）处理。宿主 1.0.4 起拒绝 level 5 插件并提示按新 SDK 重编译。
-- 兼容矩阵：
+- Currently `plugin-api 1.1.0` / API level 6: `PLUGIN_API_VERSION = "1.1.0"`, `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`. At load the host requires `plugin.apiLevel` to be within `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` (currently 6..6); an omitted `apiLevel` is treated as `BASELINE_API_LEVEL` (6). Since 1.0.4 the host rejects level 5 plugins and asks for a rebuild with the new SDK.
+- Compatibility matrix:
 
-| apiLevel | plugin-api / design | 宿主 | 说明 |
+| apiLevel | plugin-api / design | Host | Notes |
 |---|---|---|---|
-| 5 | 0.8.1 / 0.6.1 | ≤1.0.3 | 历史契约，1.0.4 起拒绝 |
-| 6 | 1.0.x / 0.6.1 | 1.0.4+ | 工厂式构造、事件接口、prompt 覆盖实验能力 |
-| 6 | 1.1.x / 0.7.x | 1.0.6+ | 加法：38 项 capability、18 个新服务访问器、permissions/components、通知监听与系统事件、页面参数与交互选择器、design 0.7.0 组件 |
+| 5 | 0.8.1 / 0.6.1 | ≤1.0.3 | Historical contract, rejected from 1.0.4 |
+| 6 | 1.0.x / 0.6.1 | 1.0.4+ | Factory construction, event interfaces, prompt override experimental capability |
+| 6 | 1.1.x / 0.7.x | 1.0.6+ | Additive: 38 capabilities, 18 new service accessors, permissions/components, notification listening and system events, page arguments and interactive pickers, design 0.7.0 components |
 
-- **兼容契约**：同一 `apiLevel` 内只允许二进制兼容的加法（新增可选接口、带默认实现的方法、value class 常量、工厂函数、manifest 可选字段），删除/改名/改签名/改运行时语义必须升 `apiLevel`。完整规则见 `plugin-api/COMPATIBILITY.md`。
-- `minHostVersion` 只比较 `major.minor.patch`、忽略后缀（`1.0.4-dev` 视为 `1.0.4`），避免开发版被自己的门槛卡住；宿主版本号来自 App 的 `BuildConfig.VERSION_NAME`，当前宿主版本为 1.0.6+；旧能力的门槛（如 `1.0.4`）继续有效。
-- 门禁：`./scripts/api-compat.sh` 导出 `plugin-api` 与 `design` 的公开 ABI，与 `plugin-api/compat/`、`design/compat/` 基线比对，删除或签名变化即失败；`--update` 只在升 level 或首次建基线时用。破坏性变更必须同时升 `apiLevel`、更新基线、写 `plugin-api/CHANGELOG.md` 与宿主 release notes。
-- 实验 API 用 `@PluginExperimentalApi`（`@RequiresOptIn`）标记，插件需显式 opt-in；实验期间允许调整，转正时只去注解不改签名。当前实验能力：`PromptOverridePlugin`、`components()`、`credentials()`、`accessibility()`。
-- `design` 与 `plugin-api` 一起受 ABI 门禁保护；使用 design 0.7.0 新组件的插件要按宿主版本写 `minHostVersion`（1.0.6+）。
-- 插件必须 `compileOnly` 依赖宿主库；宿主 parent-first 保证 `plugin-api` 与 Compose 只存在宿主那一份。
-- Compose 没有跨版本二进制 ABI 承诺：插件要按宿主 Kotlin/Compose 版本重新编译；版本不一致只禁用该插件的 UI，不拒绝插件。
+- **Compatibility contract**: within one `apiLevel` only binary-compatible additions (new optional interfaces, methods with default implementations, value class constants, factory functions, optional manifest fields); deleting, renaming, changing signatures or changing runtime semantics requires a new `apiLevel`. Full rules in `plugin-api/COMPATIBILITY.md`.
+- `minHostVersion` compares only `major.minor.patch` and ignores suffixes (`1.0.4-dev` counts as `1.0.4`), so a development build is not blocked by its own threshold; the host version comes from the app's `BuildConfig.VERSION_NAME` and is currently 1.0.6+; thresholds for older capabilities (such as `1.0.4`) stay valid.
+- Gate: `./scripts/api-compat.sh` exports the public ABI of `plugin-api` and `design` and compares it with the `plugin-api/compat/`, `design/compat/` baselines, failing on removals or signature changes; `--update` is only for a level bump or the first baseline. A breaking change requires bumping `apiLevel`, updating the baseline, and writing `plugin-api/CHANGELOG.md` plus the host release notes.
+- Experimental APIs are marked `@PluginExperimentalApi` (`@RequiresOptIn`) and plugins must opt in explicitly; adjustments are allowed while experimental, and graduation only drops the annotation without changing signatures. Current experimental capabilities: `PromptOverridePlugin`, `components()`, `credentials()`, `accessibility()`.
+- `design` is protected by the ABI gate together with `plugin-api`; plugins using design 0.7.0 components write `minHostVersion` according to the host version (1.0.6+).
+- Plugins must depend on host libraries with `compileOnly`; the host being parent-first guarantees `plugin-api` and Compose exist only in the host.
+- Compose makes no cross-version binary ABI promise: plugins must be rebuilt against the host Kotlin/Compose versions; a version mismatch only disables that plugin's UI, never rejects the plugin.
 
-## 安全模型
+## Security model
 
-- **同进程、同 UID、无沙箱**：插件代码与 App 代码同等权限，能读写 App 私有数据、访问宿主已授权的系统能力、反射宿主内部类、起线程、结束进程。同进程没有可信的权限收窄机制；签名、`capabilities`、`permissions`、`components` 都只用于声明、展示与门禁，不是沙箱。
-- **安装即信任**：首装确认页让用户看到发布者、能力、权限与组件声明，并明确「插件拥有 App 全部权限」；签名只解决包是否被篡改、是否同一发布者，不解决作者是否可信。
-- **权限与特殊授权**：运行时权限由宿主统一申请；通知使用权、无障碍、悬浮窗、使用情况、安装未知应用、所有文件访问等特殊授权必须在系统设置里由用户手动开启，插件只能引导跳转，不能静默获得。
-- **凭据（实验）**：`credentials()` 能读到宿主真实的服务商与 MCP 凭据；只在执行用户请求时读取，不落盘、不写日志、不外发。能力页与安装确认会展示该 capability。
-- **适用来源**：可信的第一方/个人插件包；第三方工具源用 MCP，不走 `.ddp`。
-- **完整性**：安装记录钉死整包 sha256，每次装载前复核；canonical digest 验签防篡改；更新必须同 `keyId`；失败保留上一可用版本。
-- **宿主不暴露的东西**：宿主内部加密密钥、ADB 配对私钥、pi SDK 内部类型。插件拿到的是 `PluginHost` 契约与 `host.context`；`host.context` 仍是 App 的 Context，直接调用 Android API 的风险由插件承担。
-- **原生网络**：HTTP 用 `host.network()`；非常规协议（IMAP/SMTP、WebSocket 等）可用 JVM 标准库直连，须在清单声明 `network`，保留 TLS 证书校验，并遵守系统明文 HTTP 策略；不要在页面或工具里阻塞主线程。
-- **插件作者的义务**：不读与本插件无关的用户数据；不把凭据写日志；删除/覆盖用户数据的动作要可逆或在页面里明确确认；不要用 `System.exit`/`Runtime.halt` 结束进程。
-- **崩溃**：工具/回调异常会被宿主隔离成 error/失败记录；但插件在主线程、Compose 槽或工具执行中把进程搞崩仍会带崩 App（没有进程级隔离）。
+- **Same process, same UID, no sandbox**: plugin code has the same permissions as app code and can read and write the app's private data, access system capabilities the host has been granted, reflect into host internals, start threads and kill the process. There is no trustworthy privilege narrowing within a process; signatures, `capabilities`, `permissions` and `components` are declarations, display and gating only, not a sandbox.
+- **Installing means trusting**: the first-install confirmation shows the publisher, capabilities, permissions and component declarations, and states explicitly that "the plugin has all app permissions"; signatures only prove whether the package was tampered with and whether it is the same publisher, not whether the author is trustworthy.
+- **Permissions and special grants**: the host requests runtime permissions uniformly; special grants such as notification access, accessibility, overlay, usage access, install unknown apps and all-files access must be enabled by the user in system settings, and a plugin can only guide the jump, never gain them silently.
+- **Credentials (experimental)**: `credentials()` can read the host's real provider and MCP credentials; read them only while performing a user request, and never persist, log or send them. The capability page and the install confirmation show this capability.
+- **Intended sources**: trusted first-party or personal plugin packages; use MCP for third-party tool sources, not `.ddp`.
+- **Integrity**: the install record pins the whole-package sha256 and re-checks it before every load; the canonical digest verifies the signature against tampering; updates must use the same `keyId`; a failure keeps the last usable version.
+- **What the host does not expose**: host internal encryption keys, the ADB pairing private key, pi SDK internal types. Plugins get the `PluginHost` contract and `host.context`; `host.context` is still the app's Context, and the risk of calling Android APIs directly is the plugin's to bear.
+- **Native networking**: use `host.network()` for HTTP; unconventional protocols (IMAP/SMTP, WebSocket and so on) may connect directly through the JVM standard library, but must declare `network` in the manifest, keep TLS certificate validation and respect the system cleartext HTTP policy; never block the main thread in a page or tool.
+- **Plugin author obligations**: do not read user data unrelated to this plugin; do not write credentials to logs; make actions that delete or overwrite user data reversible or confirm them explicitly in the page; do not end the process with `System.exit`/`Runtime.halt`.
+- **Crashes**: tool/callback exceptions are isolated by the host into error/failure records; but a plugin that crashes the process on the main thread, in a Compose slot or during tool execution still takes the app down (there is no process-level isolation).
 
-## 调试与常见错误
+## Debugging and common errors
 
-构建/打包/签名（模板工程在 DeepDeep-Plugins 的 `template/`，产物 `template/build/plugin/plugin-template.ddp`）：
+Build/package/sign (the template project is `template/` in DeepDeep-Plugins, artifacts in `template/build/plugin/plugin-template.ddp`):
 
 ```bash
 cd template && ./gradlew assemblePlugin signPlugin verifyPlugin
 
-# 官方插件仓（DeepDeep-Official-Plugins 根）
-./scripts/check.sh        # 构建、签名并验签全部五个官方插件
+# Official plugin repository (DeepDeep-Official-Plugins root)
+./scripts/check.sh        # build, sign and verify all five official plugins
 ```
 
-排查路径：
+Troubleshooting paths:
 
-- **安装前自查**（`verifyPlugin` 的 `Signature OK` 只验证签名与 digest 一致，**不代表能被安装**；导入前逐项确认）：
-  - `id` 满足反向域名正则（至少两段，如 `com.example.myplugin`）；
-  - `version` 是 `major.minor.patch[后缀]`；`apiLevel` 为 6（≤ 宿主 `PLUGIN_API_LEVEL`）；`minHostVersion` 不高于宿主版本（1.1.0 新能力写 `1.0.6`，只用旧能力可保持 `1.0.4`）；
-  - `permissions`/`components` 与实际使用一致，且与 `capabilities` 成对（安装期校验）；
-  - `entryClass` 类名合法、类在某个根 `classes*.dex` 里且有无参构造；
-  - `provides` 与实际贡献一致（tools/skills/uiSlots/pages），工具名不与宿主保留名冲突；
-  - `provides.themes` 与 `assets/themes.json` 的 id 完全一致，主题字段/颜色/对比度/体积过校验；
-  - 槽位 id 过 `SlotIds.matches`（`tool.card.content:<tool>`、`chat.message:<customType>`），插件页面 id 过 `pages` 校验；
-  - 包内 `assets/plugin.json` 路径正确、至少一个根 `classes*.dex`。
-- **安装被拒**：确认页/提示会给出原因；常见为清单校验码（`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` 等）、签名错误（包被改动/公钥与 keyId 不匹配/缺签名文件）、发布者不匹配（升级换了密钥）、工具名冲突（`provides.tools` 与宿主或已装插件冲突）、版本冲突（版本不比已装新）、主题包错误（`THEMES_INVALID`：schema/token/颜色/对比度/体积/id 不一致）。
-- **安装被拒（权限/组件）**：`INVALID_PERMISSION` 权限取值未知或重复；`PERMISSION_WITHOUT_CAPABILITY` 权限没有对应 capability；`COMPONENT_WITHOUT_CAPABILITY` components 字段类型/结构非法；`COMPONENT_WITHOUT_CAPABILITY` 开启了组件但 capability 缺失；`INVALID_DEEPLINK` 深链路径格式非法或重复。
-- **调用服务抛 `PluginServiceUnavailable`**：清单 `capabilities` 没有声明该服务访问器；capability 在安装期生效，运行中不能补声明，补上后重新安装。
-- **权限/特殊授权拿不到**：运行时权限用 `permissions().request(...)`；通知使用权、无障碍、悬浮窗等特殊授权只能 `permissions().openSettings(...)` 引导用户在系统设置开启，`special(...).granted` 才会变 true。
-- **通知监听没数据**：需要 `permissions: ["notifications.listen"]`、`components.notificationListener: true` 与 capability `notifications`，并在系统「通知使用权」里授权；`listenerGranted=false` 时 `recent`/`received` 为空。
-- **分享/深链/后台任务不触发**：检查 capability、`components` 开关与 `deeplinks` 路径匹配（相等或以 `声明/` 开头）；系统事件只发给全局 hooks。
-- **后台任务延迟或不动**：WorkManager 周期任务受 Doze 与省电策略影响（最小约 15 分钟）；需要稳定执行时申请忽略电池优化并引导用户。
-- **实验 API 编译报错**：`components()`/`credentials()`/`accessibility()` 与 `PromptOverridePlugin` 需要 `@OptIn(PluginExperimentalApi::class)`。
-- **页面参数读不到**：`pageContext()`/`LocalPluginPageContext` 只在插件页面渲染期间有效，要在页面内容里读取。
-- **用旧 API 编译失败**：`Unresolved reference` 落在 `PluginTool(` / `PluginToolResult.Text` / `PluginEvent.SessionStarted` / `literal(` / `IconRef.Asset` 等旧符号上 → 按「从 API level 5 迁移到 level 6」逐项换工厂与接口。
-- **level 5 插件被拒**：1.0.4 起宿主只接受 `apiLevel = 6`；旧包必须用 `plugin-api 1.0.0` 重新编译、升 `apiLevel` 与 `minHostVersion` 并重新签名。
-- **装载失败**：`ClassNotFoundException` → `entryClass` 写错或被 minify；`NoSuchMethodException` → 缺无参构造；`NoClassDefFoundError` → 宿主版本不一致或把宿主依赖打进了包。
-- **行为不符**：`host.logs()` 会进宿主日志（logcat tag `DeepDeepPlugin/<pluginId>`）；插件抛出的异常宿主会隔离并显示在插件行错误里。
-- **刷新后工具/技能没变**：页面里改完状态要调用 `host.requestContributionsRefresh()`；忙碌会话在本轮结束后才重建，当前轮不会中途变化。
-- **文件行不显示**：`fileRefBlock(...)` 的 path 按插件给出的绝对路径原样使用；文件行由宿主从 details 保留键 `deepdeep.fileRefs` 还原，不要自己写这个键；若在 `afterToolExecution` 里 `resultReplace(...)` 换掉了结果并丢掉 details，文件行会随之消失。
-- **hooks 没生效 / 停用后仍收到事件**：hooks 在 `contributions()` 或 `contributionsFor()` 返回都生效；只写 `contributionsFor` 且返回默认 `PluginHooks.None` 时沿用全局 hooks；会话级贡献每个会话只物化一次，插件启停/刷新在安全点重建会话（本轮结束后）才重新物化；当前 run 内按冻结集合派发，停用/卸载的插件仍会收到本轮剩余事件，属预期行为。
-- **技能没出现**：插件必须启用且 `availability()` 为 `Available`（不可用时技能不启用）；SKILL.md 必须有 frontmatter，`PluginSkill.id` 与 `name` 一致；`files` 路径必须相对且安全。
-- **槽位/页面不显示**：槽位 id 必须过 `SlotIds.matches`；`provides.uiSlots` 与实际绑定一致（运行期以 `ui()` 为准）；页面必须出现在 `PluginUiContributions.pages`；检查清单 `ui` 字段（`ui.apiLevel`/`ui.kotlin`/`ui.compose`）是否与宿主版本匹配；不兼容时整块 UI 被禁用，回退宿主默认视图或显示不可用提示，`host.logs()` 会记录禁用原因。
-- **更新失败**：确认签名 `keyId` 与首装一致、整包 sha256 与记录一致；换密钥只能当新发布者重装。
+- **Pre-install self-check** (`Signature OK` from `verifyPlugin` only proves the signature matches the digest and **does not mean it can be installed**; check each item before importing):
+  - `id` matches the reverse-domain regex (at least two segments, e.g. `com.example.myplugin`);
+  - `version` is `major.minor.patch[suffix]`; `apiLevel` is 6 (≤ the host `PLUGIN_API_LEVEL`); `minHostVersion` is not higher than the host version (write `1.0.6` for 1.1.0 capabilities, keep `1.0.4` when using only older ones);
+  - `permissions`/`components` match actual use and pair with `capabilities` (validated at install);
+  - the `entryClass` class name is valid, the class is in one of the root `classes*.dex` files and has a no-arg constructor;
+  - `provides` matches the actual contributions (tools/skills/uiSlots/pages), and tool names do not conflict with host reserved names;
+  - `provides.themes` matches the ids in `assets/themes.json` exactly, and theme fields/colors/contrast/size pass validation;
+  - slot ids pass `SlotIds.matches` (`tool.card.content:<tool>`, `chat.message:<customType>`), and plugin page ids pass `pages` validation;
+  - `assets/plugin.json` is at the right path in the package and there is at least one root `classes*.dex`.
+- **Install rejected**: the confirmation page or a toast gives the reason; common ones are manifest validation codes (`INVALID_ID`/`INVALID_VERSION`/`INVALID_PROVIDES` and so on), signature errors (tampered package, public key not matching keyId, missing signature file), publisher mismatch (key changed on upgrade), tool name conflict (`provides.tools` conflicting with the host or an installed plugin), version conflict (not newer than the installed version), theme pack errors (`THEMES_INVALID`: schema/token/color/contrast/size/id mismatch).
+- **Install rejected (permissions/components)**: `INVALID_PERMISSION` for unknown or duplicate permission values; `PERMISSION_WITHOUT_CAPABILITY` when a permission has no matching capability; `COMPONENT_WITHOUT_CAPABILITY` when `components` field types or structure are invalid; `COMPONENT_WITHOUT_CAPABILITY` when a component is enabled but its capability is missing; `INVALID_DEEPLINK` for malformed or duplicate deep link paths.
+- **Calling a service throws `PluginServiceUnavailable`**: the manifest `capabilities` does not declare that service accessor; capabilities take effect at install time, cannot be added while running, and need a reinstall after adding.
+- **Permissions or special grants not granted**: request runtime permissions with `permissions().request(...)`; special grants such as notification access, accessibility and overlay can only be guided with `permissions().openSettings(...)` for the user to enable in system settings, and only then does `special(...).granted` become true.
+- **No notification listening data**: needs `permissions: ["notifications.listen"]`, `components.notificationListener: true` and the `notifications` capability, granted under the system "Notification access"; with `listenerGranted=false`, `recent`/`received` are empty.
+- **Share/deep link/background task not firing**: check the capability, the `components` switch and `deeplinks` path matching (equal, or starting with `declared/`); system events go only to global hooks.
+- **Background tasks delayed or not running**: WorkManager periodic tasks are affected by Doze and power saving (minimum about 15 minutes); for reliable execution request a battery optimization exemption and guide the user.
+- **Experimental API compile error**: `components()`/`credentials()`/`accessibility()` and `PromptOverridePlugin` need `@OptIn(PluginExperimentalApi::class)`.
+- **Page arguments unavailable**: `pageContext()`/`LocalPluginPageContext` are only valid while a plugin page renders, so read them inside the page content.
+- **Compile errors with old APIs**: `Unresolved reference` on old symbols such as `PluginTool(` / `PluginToolResult.Text` / `PluginEvent.SessionStarted` / `literal(` / `IconRef.Asset` → replace factories and interfaces item by item per "Migrating from API level 5 to level 6".
+- **Level 5 plugin rejected**: since 1.0.4 the host accepts only `apiLevel = 6`; old packages must be rebuilt with `plugin-api 1.0.0`, raise `apiLevel` and `minHostVersion`, and be signed again.
+- **Load failure**: `ClassNotFoundException` → wrong `entryClass` or minified away; `NoSuchMethodException` → missing no-arg constructor; `NoClassDefFoundError` → host version mismatch or host dependencies packed into the bundle.
+- **Behavior differs**: `host.logs()` goes to the host log (logcat tag `DeepDeepPlugin/<pluginId>`); exceptions thrown by plugins are isolated by the host and shown in the plugin row error.
+- **Tools/skills unchanged after refresh**: after changing state in a page, call `host.requestContributionsRefresh()`; a busy session is rebuilt only after the current round ends, and the current round does not change midway.
+- **File rows not showing**: `fileRefBlock(...)` uses the path exactly as the plugin gives it, absolute; file rows are restored by the host from the reserved details key `deepdeep.fileRefs`, so do not write that key yourself; if `afterToolExecution` swaps the result with `resultReplace(...)` and drops the details, the file rows disappear with it.
+- **Hooks not effective / events still arriving after disable**: hooks apply whether returned from `contributions()` or `contributionsFor()`; when only `contributionsFor` is written and it returns the default `PluginHooks.None`, the global hooks are used; session contributions are materialized once per session, and plugin enable/disable or refresh rebuilds the session at a safe point (after the current round) before materializing again; the current run dispatches by the frozen set, so a disabled or uninstalled plugin still receives the run's remaining events, which is expected.
+- **Skills not appearing**: the plugin must be enabled and `availability()` must be `Available` (skills are not enabled when unavailable); SKILL.md must have frontmatter, `PluginSkill.id` must match `name`, and `files` paths must be relative and safe.
+- **Slots/pages not showing**: the slot id must pass `SlotIds.matches`; `provides.uiSlots` must match the actual bindings (at runtime `ui()` is authoritative); the page must appear in `PluginUiContributions.pages`; check the manifest `ui` fields (`ui.apiLevel`/`ui.kotlin`/`ui.compose`) against the host versions; when incompatible the whole UI block is disabled, falling back to host default views or an unavailable notice, and `host.logs()` records the reason.
+- **Update failed**: confirm the signature `keyId` matches the first install and the whole-package sha256 matches the record; a changed key can only be installed as a new publisher.
 
-## 限制（当前明确不做）
+## Limits (explicitly out of scope for now)
 
-- 不做第三方插件商店/审核/沙箱：同进程插件无隔离，只能靠来源可信 + 安装确认 + 签名/TOFU。
-- 插件不能在清单里注册 Activity/Service/Receiver/权限：平台组件来自宿主静态清单；需要独立窗口用 `PluginHostActivity` 代理，前台服务用 `PluginHostService`，广播用动态 receiver，通知监听/无障碍/分享/深链用宿主代理组件（见「组件声明」）。
-- 插件不能用 `res/` 资源 id；文案/图标/技能都走清单与 assets。
-- 不提供声明式 UI 节点；UI 扩展只有自由 Compose（工具卡/自定义消息两类槽位、`PluginPage` 整页内容、输入区动作）。
-- 原生库不加载（`lib/**` 仅进入摘要与解包）。
-- 不承诺插件崩溃的进程级隔离；进程被系统强杀时不保证 `close()` 与未完成回调被调用。
-- 插件不能自行提权，也不能改变用户选定的执行档位；Root/ADB 只在用户已授权的档位内可用。
-- 系统级限制仍然存在：Android 10+ 后台启动 Activity、Doze/省电对后台任务的延迟、精确闹钟权限、通知/短信/电话等系统授权与默认应用策略。
-- 已知契约限制：`notifications().notify` 没有回执（需要回执用 `notifyChecked`）；`requestContributionsRefresh()` 不返回句柄；`screen().status` 的后台刷新无法由插件停止；`jobs()` 没有 `list()`。这些按当前契约使用即可，刻意不扩接口。
+- No third-party plugin store, review or sandbox: same-process plugins have no isolation, so trust comes only from trusted sources + install confirmation + signature/TOFU.
+- Plugins cannot register Activity/Service/Receiver/permissions in the manifest: platform components come from the host static manifest; for a dedicated window use the `PluginHostActivity` proxy, for foreground services `PluginHostService`, for broadcasts a dynamic receiver, and for notification listening/accessibility/share/deep links the host proxy components (see "Component declarations").
+- Plugins cannot use `res/` resource ids; copy, icons and skills all go through the manifest and assets.
+- No declarative UI nodes are provided; UI extensions are free Compose only (the two slot families for tool cards/custom messages, full `PluginPage` content, composer actions).
+- Native libraries are not loaded (`lib/**` only enters the digest and unpacking).
+- No process-level isolation is promised for plugin crashes; `close()` and unfinished callbacks are not guaranteed to run when the system force-kills the process.
+- Plugins cannot escalate privileges or change the execution tier the user selected; Root/ADB are available only within the tier the user has authorized.
+- System limits still apply: background Activity starts on Android 10+, Doze/power saving delays for background tasks, the exact alarm permission, and system authorization and default app policies for notifications/SMS/phone.
+- Known contract limits: `notifications().notify` has no receipt (use `notifyChecked` when you need one); `requestContributionsRefresh()` returns no handle; background refresh of `screen().status` cannot be stopped by a plugin; `jobs()` has no `list()`. Use the contract as it is; the interface is deliberately not expanded.
 
-## 参考
+## Reference
 
-- 契约源码：宿主仓库 `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/`；兼容契约与变更记录：`plugin-api/COMPATIBILITY.md`、`plugin-api/CHANGELOG.md`；ABI 门禁：`./scripts/api-compat.sh`
-- 设计系统：宿主仓库 `design/`（`design 0.7.0` 组件与用法，插件经 `plugin-api` 传递使用）
-- 插件工程：[DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins)（官方实现）与 [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins)（模板与开发资料）
-- 产品能力：[USER_GUIDE.md](USER_GUIDE.md)；构建与模块：[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+- Contract source: `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/` in the host repository; compatibility contract and changelog: `plugin-api/COMPATIBILITY.md`, `plugin-api/CHANGELOG.md`; ABI gate: `./scripts/api-compat.sh`
+- Design system: `design/` in the host repository (design 0.7.0 components and usage, carried to plugins through `plugin-api`)
+- Plugin projects: [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) (official implementations) and [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) (template and development material)
+- Product capabilities: [USER_GUIDE.md](USER_GUIDE.md); builds and modules: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)

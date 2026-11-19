@@ -1,126 +1,126 @@
-# DeepDeep 开发指南
+# Super PI Agent Developer Guide
 
-面向要修改 App、运行时或构建流程的开发者。插件作者先读 [插件开发](PLUGIN_DEV.md)。
+For developers who will change the app, the runtime or the build flow. Plugin authors should start with [Plugin Development](PLUGIN_DEV.md).
 
-## 环境
+## Environment
 
-- JDK 17；构建固定使用 Java 17（`jvmToolchain` 17）。
-- Android SDK Platform 36、build-tools 36.0.0（约 5.6 GB）。
-- 内存 ≥ 8 GB、空闲磁盘 ≥ 10 GB；冷缓存首次构建约 15–30 分钟（含 JitPack 现场编译 SDK 与依赖下载）。
-- 仓库自带 Gradle wrapper；日常构建走 `scripts/build.sh`，底层统一 `scripts/gradlew-locked`，不要直接跑 `./gradlew`，避免本机并发构建 OOM。内存参数只在 `gradle.properties` 维护，`gradlew-locked` 会忽略命令行覆盖，防止 daemon 增殖。
-- Android SDK 默认位置：macOS `~/Library/Android/sdk`，Linux 常见 `~/Android/Sdk`。可用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 指定。
-- Windows 不原生支持：脚本依赖 bash 与 flock，请在 WSL2、Linux 或 macOS 上构建。
+- JDK 17; builds pin Java 17 (`jvmToolchain` 17).
+- Android SDK Platform 36, build-tools 36.0.0 (about 5.6 GB).
+- At least 8 GB of memory and 10 GB of free disk; a first build with a cold cache takes about 15–30 minutes (including JitPack compiling the SDK and downloading dependencies).
+- The repository ships a Gradle wrapper; day-to-day builds go through `scripts/build.sh`, which sits on `scripts/gradlew-locked`. Do not run `./gradlew` directly, to avoid OOM from concurrent local builds. Memory settings live only in `gradle.properties`, and `gradlew-locked` ignores command-line overrides so daemons do not multiply.
+- Default Android SDK locations: macOS `~/Library/Android/sdk`, Linux usually `~/Android/Sdk`. Use `ANDROID_HOME` or `ANDROID_SDK_ROOT` to override.
+- Windows is not supported natively: the scripts need bash and flock, so build on WSL2, Linux or macOS.
 
-首次环境：
+First-time setup:
 
 ```bash
 ./scripts/dev-setup.sh
 ```
 
-它会检查 `java` 与 `javac`（JDK 17，必须有编译器），按环境变量 → 已有 `local.properties` → 常见路径定位 Android SDK，必要时用 `sdkmanager` 安装 Platform 36 与 build-tools 36.0.0，保留已有 `local.properties`，然后构建 debug APK；不碰签名材料。
+It checks `java` and `javac` (JDK 17, with a compiler), locates the Android SDK from environment variables, then an existing `local.properties`, then common paths, installs Platform 36 and build-tools 36.0.0 with `sdkmanager` when needed, keeps an existing `local.properties`, and then builds the debug APK; it does not touch signing material.
 
-Agent SDK 依赖经 JitPack 获取：`com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android`，版本在 `gradle/libs.versions.toml` 的 `pi`。首次构建可能等待 JitPack 现场编译 SDK（几分钟，也可能超时）；依赖缓存后可以离线构建。断网环境请先在联网环境完整构建一次。
+The Agent SDK comes from JitPack: `com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android`, with the version in `gradle/libs.versions.toml` under `pi`. The first build may wait for JitPack to compile the SDK (a few minutes, and it can time out); once the dependency is cached, builds can run offline. In an offline environment, run one complete build while online first.
 
-## 构建与验证
+## Build and verify
 
 ```bash
-./scripts/build.sh quick        # 日常编译
-./scripts/build.sh test         # 定向单测
-./scripts/build.sh check        # 完整验证（等价 check.sh --full）
-./scripts/build.sh release      # 完整验证后构建 release APK
-./scripts/build.sh stop         # 回收 Gradle/Kotlin daemon 内存
-./scripts/check.sh              # 编译 + 单测 + lint + 模块边界 + APK
-./scripts/check.sh --full       # 交付前：再加插件 SDK ABI 基线
-./scripts/check.sh --device     # 再加覆盖安装到手机并启动
-./scripts/plugin-e2e.sh         # 插件端到端（设备或模拟器，无需 root）
-./scripts/plugin-bundles-e2e.sh # 四个官方插件包回归（需先构建插件仓库）
-./scripts/api-compat.sh         # 校验 plugin-api 与 design 的公开 ABI（--update 重建基线）
+./scripts/build.sh quick        # day-to-day compile
+./scripts/build.sh test         # targeted unit tests
+./scripts/build.sh check        # full verification (same as check.sh --full)
+./scripts/build.sh release      # full verification, then build the release APK
+./scripts/build.sh stop         # reclaim Gradle/Kotlin daemon memory
+./scripts/check.sh              # compile + unit tests + lint + module boundaries + APK
+./scripts/check.sh --full       # before delivery: adds the plugin SDK ABI baseline
+./scripts/check.sh --device     # also installs over the app on a device and launches it
+./scripts/plugin-e2e.sh         # plugin end to end (device or emulator, no root)
+./scripts/plugin-bundles-e2e.sh # regression over the four official plugin bundles (build the plugin repo first)
+./scripts/api-compat.sh         # check the public ABI of plugin-api and design (--update rebuilds the baseline)
 ```
 
-Gradle 与 Kotlin daemon 的内存固定在 `gradle.properties`（Gradle 3g / Kotlin 2g / workers 2）；`gradlew-locked` 用 flock 串行化构建并丢弃 `-Dorg.gradle.jvmargs`、`-Pkotlin.daemon.jvmargs` 覆盖。长时间不构建时用 `build.sh stop` 回收内存。
+Gradle and Kotlin daemon memory is pinned in `gradle.properties` (Gradle 3g / Kotlin 2g / workers 2); `gradlew-locked` serializes builds with flock and drops `-Dorg.gradle.jvmargs` and `-Pkotlin.daemon.jvmargs` overrides. After a long idle period, reclaim memory with `build.sh stop`.
 
-只改文档不需要构建。
+Docs-only changes do not need a build.
 
-## 模块
+## Modules
 
-| 模块 | 职责 |
+| Module | Responsibility |
 |---|---|
-| `app/` | Compose UI、聊天、文件、设置、插件页、小程序容器与各页面装配 |
-| `runtime/` | Agent 运行时：会话、工具、记忆、任务、定时器、插件加载 |
-| `runtime-api/` | 纯 JVM 契约，供 runtime 与宿主解耦 |
-| `shell/` | proot 与 ADB/Root 系统访问后端 |
-| `design/` | 主题、图标、通用组件与设计 token |
-| `plugin-api/` | 插件契约与可发布 SDK |
+| `app/` | Compose UI, chat, files, settings, plugin pages, mini app container and page assembly |
+| `runtime/` | Agent runtime: sessions, tools, memory, tasks, timers, plugin loading |
+| `runtime-api/` | Pure JVM contracts, decoupling the runtime from the host |
+| `shell/` | proot and ADB/Root system access backends |
+| `design/` | Theme, icons, shared components and design tokens |
+| `plugin-api/` | Plugin contracts and the publishable SDK |
 
-## 运行时
+## Runtime
 
-- 会话以 pi JSONL 为唯一权威，保存在 `files/agent/sessions/`；置顶、归档、重命名只是本地元数据。
-- 界面状态是会话事件流的投影；不要另存一份「当前消息」状态。
-- 工具与文件都由当前系统访问环境（`HostEnvironmentProvider`）提供：普通、无线调试档的 `bash` 在 App 沙箱内，Root 档进原生 chroot；不再注册 `adb_shell` / `root_shell`，ADB/Root 档的系统命令统一由常驻的 `system_shell` 执行（执行时解析当前档位，没有系统 Shell 的档位会报错提示）。后台任务与插件 Linux 流优先走 `HostEnvironment.bashStreaming(cwd)`：普通/无线调试档复用 proot 流式输出，Root 档由 chroot 执行器的 su 输出回调逐行推送，环境不支持时回退为结束后一次性输出。
-- 系统访问档位（普通 / 无线调试 / Root）由 `HostAccessController` 维护，只降级不自动升级；运行时只读 `HostEnvironment`，不自行判断 root。
-- 会话不缓存环境快照：`PiSessionEngine` 用 `DynamicShellExecutor` / `DynamicFileSystem` 在每次执行时解析当前环境，会话创建后切换档位，工具与提示词会立即跟随。
-- 目标与后台任务只在进程内存，重启清空。
-- 普通、无线调试档的 Linux 是 proot 用户空间，不是安全沙箱；Root 档直接使用系统 root 环境。
-- 定时任务绑定会话，五段 cron；投递失败或进程被杀时不保证执行。
+- Sessions use pi JSONL as the single authority and live in `files/agent/sessions/`; pinning, archiving and renaming are local metadata only.
+- UI state is a projection of the session event stream; do not store a second "current message" state.
+- Tools and files are both provided by the current system access environment (`HostEnvironmentProvider`): in the Normal and Wireless debugging tiers `bash` runs inside the app sandbox, and the Root tier enters a native chroot. `adb_shell` / `root_shell` are no longer registered; system commands in the ADB and Root tiers all run through the resident `system_shell` (the tier is resolved at execution time, and a tier without a system shell reports an error). Background tasks and plugin Linux streams prefer `HostEnvironment.bashStreaming(cwd)`: the Normal and Wireless debugging tiers reuse proot streaming output, the Root tier pushes lines from the su output callback of the chroot executor, and environments without support fall back to a single output after completion.
+- The system access tier (Normal / Wireless debugging / Root) is maintained by `HostAccessController` and only degrades, never upgrades itself; the runtime reads `HostEnvironment` instead of deciding root on its own.
+- Sessions do not cache environment snapshots: `PiSessionEngine` uses `DynamicShellExecutor` / `DynamicFileSystem` to resolve the current environment at every execution, so switching tiers after a session is created updates tools and prompts immediately.
+- Goals and background tasks live only in process memory and are cleared on restart.
+- In the Normal and Wireless debugging tiers the Linux environment is a proot user space, not a security sandbox; the Root tier uses the system root environment directly.
+- Scheduled tasks are bound to a session with five-field cron; execution is not guaranteed when delivery fails or the process is killed.
 
-## 插件
+## Plugins
 
-- 契约在 `plugin-api/`，发布到公开 Maven 仓库。
-- 插件是签名的 `.ddp`，由宿主在 App 进程内加载；没有沙箱。
-- 新增或修改契约时同步更新 ABI 基线，并跑 `./scripts/check.sh --full`。
-- 完整的清单、签名、生命周期、工具、技能、hooks、UI 扩展与排错见 [PLUGIN_DEV.md](PLUGIN_DEV.md)。
+- The contract lives in `plugin-api/` and is published to a public Maven repository.
+- A plugin is a signed `.ddp` loaded by the host inside the app process; there is no sandbox.
+- When you add or change a contract, update the ABI baseline and run `./scripts/check.sh --full`.
+- The full manifest, signing, lifecycle, tools, skills, hooks, UI extensions and troubleshooting are in [PLUGIN_DEV.md](PLUGIN_DEV.md).
 
-## 设计系统
+## Design system
 
-- 统一使用 `design/` 里的组件、颜色、字号与间距；不要在页面里另造一套。
-- 用户可见文案放在 `app/src/main/res/values*/strings_*.xml`，默认中文，`values-en` 同步；代码里不拼文案。
-- 新增图标先查 `design/icons/` 与素材说明，避免重复绘制。
-- 改 UI 后至少在真机看一遍：边距、对齐、层级、留白和主次关系。
+- Use the components, colors, type sizes and spacing from `design/`; do not build a second set inside a screen.
+- User-facing copy lives in `app/src/main/res/values*/strings_*.xml`, Chinese by default with `values-en` kept in sync; do not concatenate copy in code.
+- Check `design/icons/` and the asset notes before adding an icon, to avoid drawing a duplicate.
+- After a UI change, look at it on a real device at least once: margins, alignment, hierarchy, whitespace and emphasis.
 
-## 测试
+## Testing
 
-- 新行为加测试；不删测试、不改断言凑绿。
-- 单元测试分模块运行；`check.sh` 会跑完整集合。
-- 插件相关改动至少跑一次 `plugin-e2e.sh`；涉及官方插件包时再跑 `plugin-bundles-e2e.sh`。
-- 可能删除真实数据、不可逆迁移、换签名或改变关键产品取舍时，先和用户确认。
+- Add tests for new behavior; do not delete tests or weaken assertions to make them pass.
+- Unit tests run per module; `check.sh` runs the full set.
+- Run `plugin-e2e.sh` at least once for plugin-related changes, and `plugin-bundles-e2e.sh` as well when official plugin bundles are involved.
+- Confirm with the user first before anything that may delete real data, an irreversible migration, a signing change or a change to key product tradeoffs.
 
-**真机与模拟器**
+**Devices and emulators**
 
-- x86_64 AVD 可以完成单测、编译、安装启动、插件 e2e 和绝大多数 UI 检查。
-- 以下必须用 arm64 真机：Linux 环境（内置 rootfs 只有 aarch64）、屏幕操作/虚拟屏与 Root 档系统访问。
-- 插件 e2e 不需要 root：脚本用 `adb install` 装 debug 包，再把 `.ddp` 夹具推进 App 外部私有目录（`/sdcard/Android/data/<pkg>/files/`），普通设备与模拟器都能跑；需要 root 的只是 App 的 Root 档系统访问功能。
-- 模拟器与完整构建不要同时跑：Gradle/Kotlin daemon 加模拟器容易吃满内存导致系统 OOM；跑 `check.sh --full` 前先关模拟器（`adb -s <serial> emu kill`）。
+- An x86_64 AVD covers unit tests, compilation, install and launch, plugin e2e and most UI checks.
+- The following require an arm64 device: the Linux environment (the bundled rootfs is aarch64 only), screen control / virtual screens and Root system access.
+- Plugin e2e needs no root: the script installs the debug build with `adb install` and pushes the `.ddp` fixtures into the app's external private directory (`/sdcard/Android/data/<pkg>/files/`), so it runs on normal devices and emulators; only the app's Root system access feature needs root.
+- Do not run an emulator and a full build at the same time: Gradle/Kotlin daemons plus an emulator easily exhaust memory and OOM the system; shut the emulator down before `check.sh --full` (`adb -s <serial> emu kill`).
 
-**设备脚本**
+**Device scripts**
 
-- 需要 `adb`。多设备在线时用 `ANDROID_SERIAL` 指定；脚本优先用它，其次是唯一在线的设备，多台在线且未指定会报错。
-- 插件 e2e 需要插件仓库：默认在仓库同级或上一级目录找 `plugins` / `DeepDeep-Official-Plugins`（`plugin-e2e.sh` 对应 DeepDeep-Plugins，`plugin-bundles-e2e.sh` 对应官方插件仓库），找不到或换位置时用 `PLUGINS_DIR` 指定。`plugin-e2e.sh` 还需要插件仓库里的 `sample` 测试夹具；缺夹具时脚本会提示用 `E2E_DDP` 指定已签名的包。
-- `check.sh --device` 与两个 e2e 都覆盖安装 debug 包：设备上已有同包名但签名不同的构建（例如 release APK）时会安装失败，debug 与 release 签名不能互换，需先卸载（会清 App 数据）或换设备/模拟器；e2e 失败会以非 0 退出码结束。
-- `api-compat.sh` 需要 `unzip`、`jar`、`javap`；后两者由 JDK 提供，脚本会自检并提示缺什么。
+- `adb` is required. With several devices online, choose one with `ANDROID_SERIAL`; the scripts prefer it, then the only online device, and fail when several are online and none is specified.
+- Plugin e2e needs a plugin repository: by default the scripts look for `plugins` / `DeepDeep-Official-Plugins` next to or one level above the repository (`plugin-e2e.sh` expects DeepDeep-Plugins, `plugin-bundles-e2e.sh` the official plugin repository); set `PLUGINS_DIR` when they live elsewhere. `plugin-e2e.sh` also needs the `sample` test fixture from the plugin repository; without it the script suggests pointing `E2E_DDP` at a signed package.
+- `check.sh --device` and both e2e scripts install the debug build over the app: a build with the same package name but a different signature on the device (for example a release APK) makes the install fail, since debug and release signatures are not interchangeable; uninstall first (which clears app data) or use another device or emulator. A failed e2e exits with a non-zero code.
+- `api-compat.sh` needs `unzip`, `jar` and `javap`; the JDK provides the last two, and the script self-checks and reports anything missing.
 
-## 发布
+## Release
 
-签名材料与换签流程见 [RELEASE.md](RELEASE.md)。
+Signing material and the re-signing flow are in [RELEASE.md](RELEASE.md).
 
-要点：
+Key points:
 
-- `app/release.keystore` 与 `keystore.properties` 不进 git。
-- 换签名后 Android 不允许覆盖安装，必须先卸载；`allowBackup=false`，卸载会丢本机会话与凭据。
-- 正式分发前确认 `applicationId` 一致，并保留旧会话导出。
+- `app/release.keystore` and `keystore.properties` are not committed.
+- After a signing change Android does not allow an overlay install, so uninstall first; `allowBackup=false`, and uninstalling loses local sessions and credentials.
+- Before a public distribution, confirm `applicationId` matches and export old sessions for backup.
 
-## 代码约定
+## Code conventions
 
-- 一次改动只做一件事，一个提交；标题用 `type: 摘要`，能一行 `git revert` 撤回。
-- 重构时直接删除旧实现，不保留兼容层、废弃入口或死代码。
-- 代码文件不写注释；必要信息放在提交、文档或测试名里。
-- 不擅自改模块依赖图、`settings.gradle.kts`、签名配置和 `.gitignore`。
-- 新增第三方依赖前先判断是否必要；引入时记录用途、许可与体积。
-- 目录职责变化时同步更新对应的 `AGENTS.md`。
+- One change does one thing, in one commit; title it `type: summary` so a single `git revert` undoes it.
+- When refactoring, delete the old implementation: keep no compatibility layer, deprecated entry point or dead code.
+- Code files carry no comments; put necessary information in the commit, docs or test names.
+- Do not change the module dependency graph, `settings.gradle.kts`, signing configuration or `.gitignore` on your own.
+- Decide whether a new third-party dependency is necessary first; when adding one, record its purpose, license and size.
+- Public docs live under `docs/`; module architecture is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## 文档
+## Documentation
 
-- [用户指南](USER_GUIDE.md)
-- [插件开发](PLUGIN_DEV.md)
-- [发布](RELEASE.md)
-- [变更记录](../CHANGELOG.md)
-- 内部设计记录（`docs/DECISIONS.md`、`docs/GUIDE.md`）不随仓库分发，托管在私有仓库 `Sadami3066/DeepDeep-Private`；新机器用其中的 `bootstrap.sh` 落位到本地 `docs/`。
+- [User Guide](USER_GUIDE.md)
+- [Plugin Development](PLUGIN_DEV.md)
+- [Release](RELEASE.md)
+- [Changelog](../CHANGELOG.md)
+- Internal design records are kept separately from the public repository and are not required to build or contribute to the app.

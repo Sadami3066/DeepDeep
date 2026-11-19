@@ -1,26 +1,36 @@
-# 品牌与第三方资产
+# Brand assets
 
-## 应用图标
+## App icon
 
-自适应图标资源在 `app/src/main/res/mipmap-*/` 与 `drawable*/`，背景色为 `#1D4ED8`。
+The adaptive launcher icon lives in `app/src/main/res/`:
 
-## 字体
+| File | Purpose |
+|---|---|
+| `mipmap-anydpi-v26/ic_launcher.xml` | Adaptive icon definition: background color, foreground, monochrome layer |
+| `drawable/ic_launcher_foreground.xml` | White PI monogram, drawn inside the adaptive-icon safe zone |
+| `drawable/ic_launcher_monochrome.xml` | Monochrome layer for themed icons on Android 13+ |
+| `drawable/ic_notification.xml` | White silhouette used for notification small icons |
+| `values/colors.xml`, `values-night/colors.xml` | `pi_icon_background` (`#09090B`) and window paper color |
 
-| 字体 | 文件 | 许可 |
+The launcher background is shared by light and dark launchers. Replace the two icon vectors together so the adaptive and monochrome layers keep the same shape.
+
+## Wordmark
+
+The in-app wordmark is rendered in Compose by `DdWordmark` in the `design` module as `PI.`; it uses the current theme's ink and accent colors. There is no separate wordmark image in the app.
+
+## Fonts
+
+| Font | File | License |
 |---|---|---|
 | Lora | `design/src/main/res/font/lora_variable.ttf` | SIL Open Font License 1.1 |
 | Manrope | `design/src/main/res/font/manrope_variable.ttf` | SIL Open Font License 1.1 |
 
-- 上游：<https://github.com/google/fonts/tree/main/ofl/lora>、<https://github.com/google/fonts/tree/main/ofl/manrope>
-- Lora 与 Manrope 与上游文件字节一致，未修改；中文使用系统字体，不随包分发 CJK 字体。
-- 许可全文：`design/src/main/assets/licenses/lora-OFL.txt`、`design/src/main/assets/licenses/manrope-OFL.txt`，随 APK 打包。
+Upstream: <https://github.com/google/fonts/tree/main/ofl/lora>, <https://github.com/google/fonts/tree/main/ofl/manrope>. Lora and Manrope are byte-identical to upstream and unmodified. Chinese text uses the system font; no CJK font is bundled.
 
-## 图标
+License texts: `design/src/main/assets/licenses/lora-OFL.txt` and `manrope-OFL.txt`, packaged in the APK.
 
-- 应用内通用 UI 图标来自 [Milo Modern 图标素材包](../milo-modern-icons-200-revised/README.md)（App 取 regular 档），分类源、命名与生成流程见 `design/icons/`。
-- 无 Milo 对应语义的少数线稿为手绘 vector（源自 [Tabler Icons](https://github.com/tabler/tabler-icons)，MIT，快照 v3.50.0）；许可全文 `design/src/main/assets/licenses/tabler-MIT.txt`，随 APK 打包。
-- 厂商/服务图标素材见 `assets/pi-provider-logos/` 与 `assets/vendor-logos/`，来源与许可见各自 README。
+## Icons
 
-## 许可
-
-第三方组件的完整清单与许可见仓库根目录 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)。
+- UI icons come from the [Milo Modern icon set](../milo-modern-icons-200-revised/README.md) (regular weight), with the catalog in `design/icons/`.
+- A few glyphs without a Milo equivalent are hand-drawn vectors based on [Tabler Icons](https://github.com/tabler/tabler-icons) v3.50.0 (MIT); the license text is packaged from `design/src/main/assets/licenses/tabler-MIT.txt`.
+- Provider and vendor logos live in `assets/pi-provider-logos/` and `assets/vendor-logos/`; see their README files for sources and licenses.
