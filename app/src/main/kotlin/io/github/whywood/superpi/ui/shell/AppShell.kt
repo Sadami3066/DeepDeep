@@ -431,12 +431,6 @@ internal fun AppShell(
     ShellNavigationBackHandler(navigator = navigator, drawerOpen = drawerOpen, onBack = ::back)
     ShellNavigationChrome(navigator = navigator)
 
-    LaunchedEffect(state.ready, state.currentWorkspaceId) {
-        if (state.ready && state.currentWorkspaceId.isNotBlank()) {
-            expandedWorkspaceIds = expandedWorkspaceIds + state.currentWorkspaceId
-        }
-    }
-
     CompositionLocalProvider(LocalHapticsEnabled provides true) {
     Box(Modifier.fillMaxSize().background(colors.paper)) {
         val reminderCount = remember(timers, state.conversationId) {

@@ -3,6 +3,7 @@ package io.github.whywood.superpi.ui
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -41,14 +42,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,7 +73,6 @@ import io.github.whywood.superpi.design.DdShapes
 import io.github.whywood.superpi.design.DdSpacing
 import io.github.whywood.superpi.design.DdSpinner
 import io.github.whywood.superpi.design.DdType
-import io.github.whywood.superpi.design.DdWordmark
 import io.github.whywood.superpi.design.superPiColors
 import io.github.whywood.superpi.runtime.ConversationSummary
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
@@ -227,10 +233,38 @@ fun SuperPIDrawer(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            DdWordmark(
-                style = DdType.wordmark.copy(fontSize = 34.sp, lineHeight = 40.sp, letterSpacing = (-0.5).sp),
+            Box(
+                Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .testTag("drawer_brand"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.v2_wave),
+                    contentDescription = null,
+                    modifier = Modifier.size(27.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = buildAnnotatedString {
+                    append("Super PI")
+                    withStyle(SpanStyle(color = colors.accent)) { append(".") }
+                },
+                modifier = Modifier.weight(1f),
+                style = DdType.wordmark.copy(
+                    fontSize = 30.sp,
+                    lineHeight = 36.sp,
+                    letterSpacing = (-0.4).sp,
+                ),
+                color = colors.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(DdSpacing.Sm))
             DdIconButton(
                 icon = DdIcons.Search,
                 onClick = onOpenSearch,
@@ -467,18 +501,18 @@ private fun DrawerNewChatButton(onClick: () -> Unit) {
             .fillMaxWidth()
             .height(48.dp)
             .clip(DdShapes.Segmented)
-            .background(colors.accentSoft)
+            .background(colors.accent)
             .clickable(onClick = onClick)
             .testTag("drawer_new_chat")
             .padding(horizontal = DdSpacing.Lg),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        DdIcon(icon = DdIcons.Compose, tint = colors.accent, size = 17.dp)
+        DdIcon(icon = DdIcons.Compose, tint = colors.onAccent, size = 17.dp)
         Text(
             text = stringResource(R.string.drawer_new_chat),
             style = DdType.label.copy(fontSize = 15.5.sp),
-            color = colors.accent,
+            color = colors.onAccent,
             maxLines = 1,
         )
     }
