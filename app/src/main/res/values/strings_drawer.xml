@@ -70,7 +70,7 @@
     <string name="bot_capabilities_none">未开启</string>
     <string name="bot_capabilities_count">%1$d 项开启</string>
     <string name="bot_capabilities_empty_skills">还没有安装的技能</string>
-    <string name="bot_capabilities_empty_plugins">还没有安装的插件</string>
+    <string name="bot_capabilities_empty_plugins">没有已开启的插件</string>
     <string name="bot_capabilities_empty_mcp">还没有添加的连接器</string>
     <string name="bot_tools">工具</string>
     <string name="bot_tools_screen">屏幕工具</string>

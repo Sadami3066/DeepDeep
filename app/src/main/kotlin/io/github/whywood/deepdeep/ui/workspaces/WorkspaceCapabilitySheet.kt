@@ -68,6 +68,7 @@ internal fun WorkspaceCapabilitySheet(
                     .orEmpty()
 
                 WorkspaceCapabilityKind.Plugins -> pluginManager.state.value.plugins
+                    .filter { it.enabled }
                     .map { CapabilityItem(it.id, it.name) }
 
                 WorkspaceCapabilityKind.Mcp -> runCatching { mcpConfigStore.load().servers.keys }

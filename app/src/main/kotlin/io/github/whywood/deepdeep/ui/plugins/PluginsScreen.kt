@@ -66,6 +66,7 @@ import io.github.whywood.deepdeep.design.DdSearchField
 import io.github.whywood.deepdeep.design.DdSegmented
 import io.github.whywood.deepdeep.design.DdShapes
 import io.github.whywood.deepdeep.design.DdSheet
+import io.github.whywood.deepdeep.design.DdSwitch
 import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
@@ -173,6 +174,7 @@ internal fun PluginsScreen(
         onRefresh = holder::refresh,
         onOpenPluginPage = onOpenPluginPage,
         onOpenDetail = { snapshot -> detailPluginId = snapshot.id },
+        onSetEnabled = { snapshot, enabled -> holder.setEnabled(snapshot.id, enabled) },
         onRetryActivation = { snapshot -> scope.launch { holder.retryActivation(snapshot.id) } },
         onRollback = { snapshot -> scope.launch { holder.rollback(snapshot.id) } },
         onUninstall = { snapshot -> uninstallTarget = snapshot },
@@ -276,6 +278,7 @@ private fun PluginsContent(
     onRefresh: () -> Unit,
     onOpenPluginPage: (String, String) -> Unit,
     onOpenDetail: (PluginSnapshot) -> Unit,
+    onSetEnabled: (PluginSnapshot, Boolean) -> Unit,
     onRetryActivation: (PluginSnapshot) -> Unit,
     onRollback: (PluginSnapshot) -> Unit,
     onUninstall: (PluginSnapshot) -> Unit,
@@ -419,6 +422,7 @@ private fun PluginsContent(
                                     }
                                 },
                                 onOpenDetail = { onOpenDetail(snapshot) },
+                                onSetEnabled = { enabled -> onSetEnabled(snapshot, enabled) },
                                 onRetryActivation = { onRetryActivation(snapshot) },
                                 onRollback = { onRollback(snapshot) },
                                 onUninstall = { onUninstall(snapshot) },
@@ -476,6 +480,7 @@ private fun PluginRow(
     interactive: Boolean,
     onOpenPage: () -> Unit,
     onOpenDetail: () -> Unit,
+    onSetEnabled: (Boolean) -> Unit,
     onRetryActivation: () -> Unit,
     onRollback: () -> Unit,
     onUninstall: () -> Unit,
@@ -484,8 +489,9 @@ private fun PluginRow(
     val available = snapshot.availability is PluginAvailabilityUi.Available
     val retryable = snapshot.phase == PluginPhaseUi.FAILED ||
         snapshot.phase == PluginPhaseUi.DEGRADED ||
-        snapshot.phase == PluginPhaseUi.DISABLED
+        (snapshot.phase == PluginPhaseUi.DISABLED && snapshot.lastError != null)
     val failure = snapshot.lastError?.takeIf { retryable }
+    val switchDescription = stringResource(R.string.plugins_switch_description, snapshot.name)
     val description = when {
         !available -> (snapshot.availability as? PluginAvailabilityUi.Unavailable)?.reason
             ?: snapshot.summary
@@ -499,7 +505,7 @@ private fun PluginRow(
     }
     var menuOpen by remember(snapshot.id) { mutableStateOf(false) }
     DdPressable(
-        onClick = { if (snapshot.hasPages) onOpenPage() else onOpenDetail() },
+        onClick = { if (snapshot.enabled && snapshot.hasPages) onOpenPage() else onOpenDetail() },
         modifier = Modifier.fillMaxWidth().testTag("plugin_row_${snapshot.id}"),
         shape = DdShapes.Row,
         enabled = true,
@@ -561,6 +567,16 @@ private fun PluginRow(
                     )
                 }
             }
+            Spacer(Modifier.width(DdSpacing.Xs))
+            DdSwitch(
+                checked = snapshot.enabled,
+                onCheckedChange = onSetEnabled,
+                modifier = Modifier
+                    .semantics { contentDescription = switchDescription }
+                    .testTag("plugin_switch_${snapshot.id}"),
+                enabled = interactive,
+            )
+            Spacer(Modifier.width(DdSpacing.Xs))
             Box {
                 DdIconButton(
                     icon = DdIcons.More,

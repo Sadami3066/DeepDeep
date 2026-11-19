@@ -69,6 +69,7 @@
     <string name="plugins_phase_degraded">Limited</string>
     <string name="plugins_phase_failed">Load failed</string>
     <string name="plugins_phase_disabled">Disabled</string>
+    <string name="plugins_switch_description">Enable %1$s</string>
     <string name="plugins_phase_pending_restart">Update ready</string>
     <string name="plugins_size_kb">%1$.0f KB</string>
     <string name="plugins_size_mb">%1$.1f MB</string>

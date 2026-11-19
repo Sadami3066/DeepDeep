@@ -69,6 +69,7 @@
     <string name="plugins_phase_degraded">能力受限</string>
     <string name="plugins_phase_failed">加载失败</string>
     <string name="plugins_phase_disabled">已关闭</string>
+    <string name="plugins_switch_description">启用 %1$s</string>
     <string name="plugins_phase_pending_restart">可更新</string>
     <string name="plugins_size_kb">%1$.0f KB</string>
     <string name="plugins_size_mb">%1$.1f MB</string>

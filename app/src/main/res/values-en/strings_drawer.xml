@@ -70,7 +70,7 @@
     <string name="bot_capabilities_none">Off</string>
     <string name="bot_capabilities_count">%1$d on</string>
     <string name="bot_capabilities_empty_skills">No skills installed yet</string>
-    <string name="bot_capabilities_empty_plugins">No plugins installed yet</string>
+    <string name="bot_capabilities_empty_plugins">No plugins enabled</string>
     <string name="bot_capabilities_empty_mcp">No connectors added yet</string>
     <string name="bot_tools">Tools</string>
     <string name="bot_tools_screen">Screen tools</string>

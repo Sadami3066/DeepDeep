@@ -95,7 +95,7 @@ fun WorkspaceSettingsScreen(
         val loaded = withContext(Dispatchers.IO) {
             val current = effectivePolicy(workspace, workspaceToolPolicies)
             val skills = skillRepository.list().getOrNull().orEmpty()
-            val plugins = pluginManager.state.value.plugins.mapTo(mutableSetOf()) { it.id }
+            val plugins = pluginManager.state.value.plugins.filter { it.enabled }.mapTo(mutableSetOf()) { it.id }
             val mcpServers = runCatching { mcpConfigStore.load().servers.keys }.getOrDefault(emptySet())
             SettingsLoad(
                 agentsDocSet = agentDocStore.read(workspace.cwd) != null,
