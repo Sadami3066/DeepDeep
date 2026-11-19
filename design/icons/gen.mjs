@@ -205,8 +205,7 @@ function buildPreview(catalog, resources) {
   const brandRows = [
     ['Provider 图标', 'assets/pi-provider-logos/', '42 个厂商（31 份不同图形）', '运行时 `provider_*`，位于 app 的 drawable-nodpi 与 drawable-night-nodpi'],
     ['厂商图标', 'assets/vendor-logos/', '10 个厂商（7 份已入库）', '源素材，当前未随包发布'],
-    ['应用标识 / 启动图标', 'assets/branding/', '品牌字母 d', '不走 DdIcon 体系'],
-    ['鲸鱼娘素材', 'assets/ui-kit/whale-flat-v1/', 'mascot_* / whale_*', '动画与表情素材，非通用图标'],
+    ['应用标识 / 启动图标', 'assets/branding/', 'PI 字标', '不走 DdIcon 体系'],
     ['上游 Milo 素材包', 'assets/milo-modern-icons-200-revised/', '200 枚 × regular/semibold', '只读参考，本仓库取 regular 档'],
   ].map(([name, path, scope, status]) => `<tr><td>${escapeHtml(name)}</td><td><a href="../../${escapeHtml(path)}">${escapeHtml(path)}</a></td><td>${escapeHtml(scope)}</td><td>${escapeHtml(status)}</td></tr>`).join('\n');
 

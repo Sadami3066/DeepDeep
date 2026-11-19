@@ -30,7 +30,7 @@ Output: `app/build/outputs/apk/release/app-release.apk`. Release enables R8 code
 
 The version numbers in `app/build.gradle.kts` are edited by hand before a release:
 
-- `versionCode`: incremented on every release, computed as `MAJOR*10000 + MINOR*100 + PATCH` (for example `1.2.3` → `10203`).
+- `versionCode`: incremented by one on every release; it must be greater than the installed version code (for example `1.5.0` → `10109`).
 - `versionName`: `X.Y.Z`, matching the tag.
 
 Version numbers appear only in: `app/build.gradle.kts`, the top section of `CHANGELOG.md`, `release-notes/vX.Y.Z.md`, and git tags. Product docs such as README and USER_GUIDE do not carry versions.
@@ -64,7 +64,7 @@ For release steps and the versioning and update-notes contract, see [Versioning 
 ## Pre-release checks
 
 1. `./scripts/check.sh --full` passes.
-2. Install the **minified release APK** and smoke test: for each of the four official plugins, go through install → enable → open the plugin page, trigger one tool and one UI slot; verify the open and share-import entry points for `.ddp` once each.
+2. Install the **minified release APK** and smoke test: for each official plugin, go through install → enable → open the plugin page, trigger one tool and one UI slot; verify the open and share-import entry points for `.ddp` once each.
 3. Passing on a debug build does not count, and unit tests alone are not enough: R8 problems surface only in the minified release build.
 4. Before releasing, run an in-app update acceptance with the previous version on a real device: the old version detects the new one → downloads → the system installs it. After releasing, upgrade once through in-app update as well.
 

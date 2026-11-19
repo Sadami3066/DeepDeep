@@ -33,7 +33,7 @@ The Agent SDK comes from JitPack: `com.github.Sadami3066.DeepDeep-KotlinSDK:pi-c
 ./scripts/check.sh --full       # before delivery: adds the plugin SDK ABI baseline
 ./scripts/check.sh --device     # also installs over the app on a device and launches it
 ./scripts/plugin-e2e.sh         # plugin end to end (device or emulator, no root)
-./scripts/plugin-bundles-e2e.sh # regression over the four official plugin bundles (build the plugin repo first)
+./scripts/plugin-bundles-e2e.sh # regression over all official plugin bundles (build the plugin repo first)
 ./scripts/api-compat.sh         # check the public ABI of plugin-api and design (--update rebuilds the baseline)
 ```
 

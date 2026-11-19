@@ -58,4 +58,4 @@ Output: `design/src/main/res/drawable-nodpi/ic_<category>_<id>.png|xml`, `design
 
 ## Brand and platform assets
 
-Provider logos (`assets/pi-provider-logos/`), vendor logos (`assets/vendor-logos/`), launcher icons (`assets/branding/`) and whale mascot artwork (`assets/ui-kit/`) each carry their own manifest, source licensing and generation flow, and are reused across directories by the market and notifications, so they stay out of the general icon directory; see `assets/README.md` and the preview page footer for the index.
+Provider logos (`assets/pi-provider-logos/`), vendor logos (`assets/vendor-logos/`) and launcher icons (`assets/branding/`) each carry their own manifest, source licensing and generation flow, and are reused across directories by the market and notifications, so they stay out of the general icon directory; see `assets/README.md` and the preview page footer for the index.

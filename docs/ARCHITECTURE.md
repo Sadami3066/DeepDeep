@@ -7,19 +7,19 @@ Super PI Agent is a Kotlin/Compose Android application built from a small set of
 | Module | Responsibility |
 |---|---|
 | `app/` | Compose UI, single Activity, dependency graph, chat, files, settings, plugin pages, miniapp container |
-| `runtime/` | Agent runtime: sessions, tools, memory, jobs, timers, providers, plugin loading |
+| `runtime/` | Agent runtime: sessions, tools, memory, jobs, timers, providers, plugin hooks and prompt contributions |
 | `runtime-api/` | Pure JVM contracts between the runtime and the host |
 | `shell/` | proot and ADB/root system-access backends |
 | `design/` | Theme, typography, spacing, icons, and shared Compose components; also published as the plugin UI SDK |
 | `plugin-api/` | Plugin contracts and the published plugin SDK |
 
-Dependency direction: `app` → `runtime` → `runtime-api`; `app`/plugins → `design`; plugins → `plugin-api` → `design`.
+Dependency direction: `app` → `runtime` → `runtime-api`, `app` → `shell`, and `app` → `plugin-api` → `design`; plugins also compile against `design`.
 
 ## Runtime
 
 - The pi JSONL session file is the authoritative record of a conversation. UI state, titles, pins, and archives are projections of session events; they do not store a second copy of messages.
 - `HostEnvironmentProvider` resolves the active environment (normal, wireless debugging, or root) at execution time. Shell and file operations go through `HostEnvironment`; the runtime does not cache a capability snapshot at session creation.
-- Tool execution emits events: start, progress, result, failure. The UI maps these events into the process panel and the final answer.
+- Tool execution emits start, finish and failure events. The UI maps these events into the process panel and the final answer.
 - Jobs and timers live in process memory and are bound to a session. They are cleared on restart unless persisted by their owning feature.
 - Model providers are configured per install; sessions choose a model and thinking level independently.
 

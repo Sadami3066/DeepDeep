@@ -17,7 +17,7 @@ Start a plugin project from `template/` in [DeepDeep-Plugins](https://github.com
 Prerequisites:
 
 - JDK 17+ and the Android SDK; locate the SDK with the `ANDROID_HOME`/`ANDROID_SDK_ROOT` environment variables or `sdk.dir` in the project's `local.properties`.
-- Plugins depend on the public Maven repository `https://sadami3066.github.io/deepdeep-maven` (group `io.github.sadami3066.deepdeep`, currently `plugin-api 1.3.0` / `design 0.10.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
+- Plugins depend on the public Maven repository `https://sadami3066.github.io/deepdeep-maven` (group `io.github.sadami3066.deepdeep`, currently `plugin-api 1.4.0` / `design 0.11.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
 
 `plugin-api` is the contract, and `design` is the UI design system shared with the app (plugin UI uses it directly, and `plugin-api` brings it in through `api()`). Publishing a new version:
 

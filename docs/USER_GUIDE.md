@@ -74,7 +74,7 @@ Screen control is off by default; turn it on in that bot's Settings → Tools. Y
 - To operate the main screen it must explicitly pass `target=main`.
 - The virtual screen closes after 15 minutes without agent activity, to save power.
 - Protected pages such as payment and password screens cannot be captured; the agent hands control back to you.
-- The floating window shows a thumbnail of the virtual screen; long-press the whale to expand or collapse the preview.
+- The floating window shows a thumbnail of the virtual screen; long-press PI to expand or collapse the preview.
 
 ## System integration
 

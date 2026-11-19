@@ -51,6 +51,7 @@ This document records the product constraints that all surfaces share. Architect
 - Motion explains change. It runs 150–300 ms and animates opacity and scale; it does not move layout. When the system disables animations, skip it.
 - Light and dark are two complete designs. Dividers, borders, placeholders, disabled states, and images must work in both.
 - One icon language: linear icons, consistent sizes; no emoji as icons, no decorative gradients, shadows, or badges without purpose.
+- Body text uses 1.5–1.7 line height, roughly 35 CJK characters per line. The same component and size cover the same class of action across screens; do not invent a one-off control for a single page.
 - Copy says only what the user needs: one action, one sentence. Supplementary detail goes behind an info control.
 
 ## Quality bar
