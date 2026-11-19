@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.1
+
+- feat: The drawer header becomes a brand mark: the waving PI mascot in a white circle followed by "Super PI."; the new-chat button switches to the solid PI primary style [UI]
+- feat: The floating bubble renders the PI expression set for idle, running, sleepy, waiting, completed and failed states instead of the wordmark, on a white disc that stays legible in both themes [UI] [Floating Window]
+- feat: Fredoka becomes the default font for new installs; saved font choices stay unchanged [Design]
+- fix: Font selection is single-sourced and observed by every surface, so opening the floating panel no longer flips a subset of text to the system font [Design] [Floating Window]
+- feat: The Follow system theme option is removed as a duplicate of PI's light/dark palettes; an existing `system` selection falls back to PI [Design]
+- feat: The active Bot in the chat header opens that Bot's settings; creating a Bot no longer auto-expands the drawer session list [UI]
+- feat: Bot avatars can be cropped and framed when creating a Bot or changing it in Bot settings [UI]
+- feat: New high-resolution launcher icon layers, waving mascot, floating-window expressions and process animation replace the old mascot and welcome GIF assets [UI]
+- docs: User guide, architecture, plugin guide, brand asset notes and the release checklist follow the new theme, font and seed-sync behavior [Docs]
+- chore: app 2.0.1 / versionCode 20001 [Build]
+
 ## 2.0.0
 
 - feat: Product renamed to Super PI Agent with package `io.github.whywood.superpi`, `superpi://` deep links and `SuperPINative` miniapp bridge; old app data and old plugins are not compatible [Build] [Runtime]
