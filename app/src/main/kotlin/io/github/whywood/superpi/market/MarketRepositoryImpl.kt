@@ -2,7 +2,7 @@ package io.github.whywood.superpi.market
 
 import android.content.Context
 import android.util.Log
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
 import io.github.whywood.superpi.data.SkillArchiveResult
 import io.github.whywood.superpi.data.SkillRepository
 import io.github.whywood.superpi.plugin.manager.PluginManagerFacade

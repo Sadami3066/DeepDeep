@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.graph
 
 import android.content.Context
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.superpi.data.LinuxSettingsStore
 import io.github.whywood.superpi.data.StorageMountStore
 import io.github.whywood.superpi.plugin.manager.PluginHostManager

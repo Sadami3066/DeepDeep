@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.data.update
 
-import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
-import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.http.HttpRequest
+import io.github.whywood.superpi.sdk.ai.http.HttpResponse
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
 import java.io.File
 import java.net.ConnectException
 import java.security.MessageDigest

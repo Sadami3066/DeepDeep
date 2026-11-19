@@ -1,21 +1,21 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.Context
-import io.github.whywood.deepdeep.sdk.ai.Model
-import io.github.whywood.deepdeep.sdk.ai.ModelThinkingLevel
-import io.github.whywood.deepdeep.sdk.ai.Models
-import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
-import io.github.whywood.deepdeep.sdk.ai.Provider
-import io.github.whywood.deepdeep.sdk.ai.StreamOptions
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.UserMessage
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.bundledOAuthFlows
-import io.github.whywood.deepdeep.sdk.ai.getSupportedThinkingLevels
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.ai.providers.builtinProviders
-import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
-import io.github.whywood.deepdeep.sdk.coding.models.ProviderComposer
+import io.github.whywood.superpi.sdk.ai.Context
+import io.github.whywood.superpi.sdk.ai.Model
+import io.github.whywood.superpi.sdk.ai.ModelThinkingLevel
+import io.github.whywood.superpi.sdk.ai.Models
+import io.github.whywood.superpi.sdk.ai.PlainTextContent
+import io.github.whywood.superpi.sdk.ai.Provider
+import io.github.whywood.superpi.sdk.ai.StreamOptions
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.UserMessage
+import io.github.whywood.superpi.sdk.ai.auth.CredentialStore
+import io.github.whywood.superpi.sdk.ai.auth.oauth.bundledOAuthFlows
+import io.github.whywood.superpi.sdk.ai.getSupportedThinkingLevels
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.providers.builtinProviders
+import io.github.whywood.superpi.sdk.coding.models.CustomProviderConfig
+import io.github.whywood.superpi.sdk.coding.models.ProviderComposer
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 

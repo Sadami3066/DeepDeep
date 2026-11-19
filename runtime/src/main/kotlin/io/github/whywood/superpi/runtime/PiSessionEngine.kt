@@ -1,31 +1,31 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentMessage
-import io.github.whywood.deepdeep.sdk.ai.Model
-import io.github.whywood.deepdeep.sdk.ai.Provider
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.coding.compaction.buildSessionProjection
-import io.github.whywood.deepdeep.sdk.coding.compaction.estimateProjectedContextTokens
-import io.github.whywood.deepdeep.sdk.coding.AgentSessionOptions
-import io.github.whywood.deepdeep.sdk.coding.createAgentSession
-import io.github.whywood.deepdeep.sdk.coding.mcp.McpConfigLoader
-import io.github.whywood.deepdeep.sdk.coding.mcp.McpOptions
-import io.github.whywood.deepdeep.sdk.coding.paths.AgentPaths
-import io.github.whywood.deepdeep.sdk.coding.prompt.loadPromptResources
-import io.github.whywood.deepdeep.sdk.coding.settings.SettingsManager
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
-import io.github.whywood.deepdeep.sdk.coding.session.AgentSession
-import io.github.whywood.deepdeep.sdk.coding.session.CodingHooks
-import io.github.whywood.deepdeep.sdk.coding.session.CustomEntry
-import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
-import io.github.whywood.deepdeep.sdk.coding.session.SessionInfo
-import io.github.whywood.deepdeep.sdk.coding.session.SessionManager
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
-import io.github.whywood.deepdeep.sdk.coding.tools.FileMutationQueue
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.defaultCodingTools
+import io.github.whywood.superpi.sdk.agent.AgentMessage
+import io.github.whywood.superpi.sdk.ai.Model
+import io.github.whywood.superpi.sdk.ai.Provider
+import io.github.whywood.superpi.sdk.ai.auth.CredentialStore
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.coding.compaction.buildSessionProjection
+import io.github.whywood.superpi.sdk.coding.compaction.estimateProjectedContextTokens
+import io.github.whywood.superpi.sdk.coding.AgentSessionOptions
+import io.github.whywood.superpi.sdk.coding.createAgentSession
+import io.github.whywood.superpi.sdk.coding.mcp.McpConfigLoader
+import io.github.whywood.superpi.sdk.coding.mcp.McpOptions
+import io.github.whywood.superpi.sdk.coding.paths.AgentPaths
+import io.github.whywood.superpi.sdk.coding.prompt.loadPromptResources
+import io.github.whywood.superpi.sdk.coding.settings.SettingsManager
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.coding.session.AgentSession
+import io.github.whywood.superpi.sdk.coding.session.CodingHooks
+import io.github.whywood.superpi.sdk.coding.session.CustomEntry
+import io.github.whywood.superpi.sdk.coding.session.QueueBehavior
+import io.github.whywood.superpi.sdk.coding.session.SessionEvent
+import io.github.whywood.superpi.sdk.coding.session.SessionInfo
+import io.github.whywood.superpi.sdk.coding.session.SessionManager
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.FileMutationQueue
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.defaultCodingTools
 import io.github.whywood.superpi.runtime.memory.MemoryStore
 import kotlinx.coroutines.CancellationException
 import java.io.File
@@ -243,7 +243,7 @@ class PiSessionEngine(
         sessionBindings.remove(sessionId)
     }
 
-    internal fun captureMemory(sessionId: String, sessionFile: String?, entries: List<io.github.whywood.deepdeep.sdk.coding.session.SessionEntry>?) {
+    internal fun captureMemory(sessionId: String, sessionFile: String?, entries: List<io.github.whywood.superpi.sdk.coding.session.SessionEntry>?) {
         memory?.capture(sessionId, sessionFile, entries)
     }
 
@@ -483,7 +483,7 @@ internal class PiSessionHandle(
 
     override suspend fun appendCustomMessage(customType: String, payloadJson: String, text: String, display: Boolean) {
         val details = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(payloadJson) }.getOrNull()
-        session.appendCustomMessage(customType, io.github.whywood.deepdeep.sdk.ai.PlainTextContent(text), display, details)
+        session.appendCustomMessage(customType, io.github.whywood.superpi.sdk.ai.PlainTextContent(text), display, details)
     }
 
     override suspend fun appendCustomEntry(customType: String, dataJson: String) {

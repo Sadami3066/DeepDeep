@@ -9,10 +9,10 @@ import io.github.whywood.superpi.data.update.UpdateInstaller
 import io.github.whywood.superpi.host.AppHostAccessController
 import io.github.whywood.superpi.runtime.ProviderCatalog
 import io.github.whywood.superpi.runtime.SdkCredentialStore
-import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.superpi.shell.RootShell
 import io.github.whywood.superpi.web.WebProvider
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
 import io.github.whywood.superpi.plugin.PluginStrings
 import io.github.whywood.superpi.plugin.host.services.PluginBusImpl
 import io.github.whywood.superpi.vscreen.VirtualScreenFeature

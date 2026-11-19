@@ -3,7 +3,7 @@ package io.github.whywood.superpi.data
 import java.io.File
 import kotlinx.coroutines.test.runTest
 import io.github.whywood.superpi.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.sdk.ai.ModelInputModality
+import io.github.whywood.superpi.sdk.ai.ModelInputModality
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

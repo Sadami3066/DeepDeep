@@ -1,12 +1,12 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthAuth
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthInteraction
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthLoginOptions
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.bundledOAuthFlows
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.loginAndStoreOAuthCredential
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.auth.CredentialStore
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthAuth
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthInteraction
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthLoginOptions
+import io.github.whywood.superpi.sdk.ai.auth.oauth.bundledOAuthFlows
+import io.github.whywood.superpi.sdk.ai.auth.oauth.loginAndStoreOAuthCredential
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
 
 class ProviderOAuthService(
     private val credentials: CredentialStore,

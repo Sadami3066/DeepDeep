@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime.memory
 
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionEntry
 import io.github.whywood.superpi.runtime.logWarn
 
 import java.io.File

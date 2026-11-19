@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.plugin.manager
 
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
 import io.github.whywood.superpi.plugin.api.Contributions
 import io.github.whywood.superpi.plugin.api.contributions
 import io.github.whywood.superpi.plugin.api.PluginEvent
@@ -117,7 +117,7 @@ internal class PluginSessionHooks(
         }
     }
 
-    fun dispatchSessionEvent(sessionId: String, event: io.github.whywood.deepdeep.sdk.coding.session.SessionEvent) {
+    fun dispatchSessionEvent(sessionId: String, event: io.github.whywood.superpi.sdk.coding.session.SessionEvent) {
         if (activeState(sessionId) == null) return
         mapper.mapSessionEvent(sessionId, event).forEach { pluginEvent ->
             pump.submit(sessionId, pluginEvent)

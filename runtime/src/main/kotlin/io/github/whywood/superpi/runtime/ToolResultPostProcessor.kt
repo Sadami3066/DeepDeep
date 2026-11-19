@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.PiJson
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.PiJson
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -50,7 +50,7 @@ internal fun AgentToolResult.withStructuredDetails(structured: JsonElement): Age
 }
 
 private fun AgentToolResult.rebuilt(
-    content: List<io.github.whywood.deepdeep.sdk.ai.Content>,
+    content: List<io.github.whywood.superpi.sdk.ai.Content>,
     details: JsonElement?,
 ): AgentToolResult = AgentToolResult(
     content = content,

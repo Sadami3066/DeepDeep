@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.TextContent
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
@@ -26,7 +26,7 @@ import org.junit.Test
 class MiniappEditToolTest {
     private lateinit var root: File
     private lateinit var store: MiniappStore
-    private lateinit var tool: io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+    private lateinit var tool: io.github.whywood.superpi.sdk.coding.tools.CodingTool
 
     @Before
     fun setUp() {

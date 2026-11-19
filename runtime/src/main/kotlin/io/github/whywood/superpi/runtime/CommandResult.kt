@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 
 data class CommandResult(
     val output: String,

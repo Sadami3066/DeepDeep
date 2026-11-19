@@ -1,15 +1,15 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
-import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
-import io.github.whywood.deepdeep.sdk.ai.StopReason
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.ToolCall
-import io.github.whywood.deepdeep.sdk.ai.UserMessage
-import io.github.whywood.deepdeep.sdk.ai.Usage
-import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
+import io.github.whywood.superpi.sdk.ai.PlainTextContent
+import io.github.whywood.superpi.sdk.ai.AssistantMessage as PiAssistantMessage
+import io.github.whywood.superpi.sdk.ai.StopReason
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.ToolCall
+import io.github.whywood.superpi.sdk.ai.UserMessage
+import io.github.whywood.superpi.sdk.ai.Usage
+import io.github.whywood.superpi.sdk.coding.session.CustomMessageEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionMessageEntry
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -173,7 +173,7 @@ class CustomMessageHistoryTest {
         assertEquals("follow-up answer", turn.text)
     }
 
-    private fun messageEntry(message: io.github.whywood.deepdeep.sdk.ai.Message): SessionEntry = SessionMessageEntry(
+    private fun messageEntry(message: io.github.whywood.superpi.sdk.ai.Message): SessionEntry = SessionMessageEntry(
         id = "e2",
         parentId = "e1",
         timestamp = "2026-01-01T00:00:02Z",

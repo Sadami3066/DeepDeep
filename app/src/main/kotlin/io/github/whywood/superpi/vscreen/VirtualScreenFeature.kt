@@ -1,10 +1,10 @@
 package io.github.whywood.superpi.vscreen
 
 import android.content.Context
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
-import io.github.whywood.deepdeep.sdk.coding.tools.textResult
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.RequestAbortedException
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.textResult
 import io.github.whywood.superpi.adb.AdbBootstrap
 import io.github.whywood.superpi.data.LocalizedContext
 import io.github.whywood.superpi.runtime.host.HostAccessController

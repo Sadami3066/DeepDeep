@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.plugin.manager
 
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
+import io.github.whywood.superpi.sdk.coding.session.SessionEvent
 import io.github.whywood.superpi.plugin.api.Contributions
 import io.github.whywood.superpi.plugin.api.SuperPIPlugin
 import io.github.whywood.superpi.plugin.api.PluginAvailability

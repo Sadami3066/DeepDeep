@@ -94,8 +94,8 @@ check_module() {
 check_module \
   "plugin-api" \
   "plugin-api/build/outputs/aar/plugin-api-release.aar" \
-  "plugin-api/compat/level-6.api" \
-  "plugin-api/compat/level-6.allowlist"
+  "plugin-api/compat/level-7.api" \
+  "plugin-api/compat/level-7.allowlist"
 
 check_module \
   "design" \

@@ -1,24 +1,24 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
-import io.github.whywood.deepdeep.sdk.ai.Content
-import io.github.whywood.deepdeep.sdk.ai.Message
-import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
-import io.github.whywood.deepdeep.sdk.ai.StopReason
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.ToolCall
-import io.github.whywood.deepdeep.sdk.ai.ToolResultMessage
-import io.github.whywood.deepdeep.sdk.ai.Usage
-import io.github.whywood.deepdeep.sdk.ai.UserMessage
-import io.github.whywood.deepdeep.sdk.coding.paths.AgentPaths
-import io.github.whywood.deepdeep.sdk.coding.session.BranchSummaryEntry
-import io.github.whywood.deepdeep.sdk.coding.session.CompactionEntry
-import io.github.whywood.deepdeep.sdk.coding.session.ContextEditEntry
-import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
-import io.github.whywood.deepdeep.sdk.coding.session.ModelChangeEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionManager
-import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
+import io.github.whywood.superpi.sdk.ai.AssistantMessage as PiAssistantMessage
+import io.github.whywood.superpi.sdk.ai.Content
+import io.github.whywood.superpi.sdk.ai.Message
+import io.github.whywood.superpi.sdk.ai.PlainTextContent
+import io.github.whywood.superpi.sdk.ai.StopReason
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.ToolCall
+import io.github.whywood.superpi.sdk.ai.ToolResultMessage
+import io.github.whywood.superpi.sdk.ai.Usage
+import io.github.whywood.superpi.sdk.ai.UserMessage
+import io.github.whywood.superpi.sdk.coding.paths.AgentPaths
+import io.github.whywood.superpi.sdk.coding.session.BranchSummaryEntry
+import io.github.whywood.superpi.sdk.coding.session.CompactionEntry
+import io.github.whywood.superpi.sdk.coding.session.ContextEditEntry
+import io.github.whywood.superpi.sdk.coding.session.CustomMessageEntry
+import io.github.whywood.superpi.sdk.coding.session.ModelChangeEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionManager
+import io.github.whywood.superpi.sdk.coding.session.SessionMessageEntry
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
@@ -321,7 +321,7 @@ class HistoryMapperTest {
                     ToolResultMessage(
                         toolCallId = "call-1",
                         toolName = "screenshot",
-                        content = listOf(TextContent("took one"), io.github.whywood.deepdeep.sdk.ai.ImageContent("aGVsbG8=", "image/png")),
+                        content = listOf(TextContent("took one"), io.github.whywood.superpi.sdk.ai.ImageContent("aGVsbG8=", "image/png")),
                         isError = false,
                         timestamp = 2L,
                     ),

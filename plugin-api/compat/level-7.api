@@ -1,7 +1,7 @@
 public interface io.github.whywood.superpi.plugin.api.AccessibilityServicePlugin {
   public abstract boolean getEnabled();
   public abstract kotlinx.coroutines.flow.Flow<io.github.whywood.superpi.plugin.api.PluginAccessibilityEvent> events();
-  public abstract boolean performGlobalAction-gLe4KJk(java.lang.String);
+  public abstract boolean performGlobalAction-7IZgZfU(java.lang.String);
 }
 public final class io.github.whywood.superpi.plugin.api.AdbPairingResult {
   public static final int $stable;
@@ -74,8 +74,8 @@ public interface io.github.whywood.superpi.plugin.api.AppLifecycleEvent extends 
   public abstract boolean getForeground();
 }
 public interface io.github.whywood.superpi.plugin.api.BackgroundService {
-  public abstract java.lang.Object schedule-M95o5T8(java.lang.String, java.lang.String, java.lang.Long, java.lang.Long, boolean, boolean, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
-  public static java.lang.Object schedule-M95o5T8$default(io.github.whywood.superpi.plugin.api.BackgroundService, java.lang.String, java.lang.String, java.lang.Long, java.lang.Long, boolean, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public abstract java.lang.Object schedule-UvWOdfA(java.lang.String, java.lang.String, java.lang.Long, java.lang.Long, boolean, boolean, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
+  public static java.lang.Object schedule-UvWOdfA$default(io.github.whywood.superpi.plugin.api.BackgroundService, java.lang.String, java.lang.String, java.lang.Long, java.lang.Long, boolean, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
   public abstract java.lang.Object cancel(java.lang.String, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
   public abstract java.lang.Object tasks(kotlin.coroutines.Continuation<? super java.util.List<io.github.whywood.superpi.plugin.api.PluginBackgroundTaskInfo>>);
   public abstract boolean startForeground(io.github.whywood.superpi.plugin.api.ForegroundServiceOptions);
@@ -86,11 +86,11 @@ public interface io.github.whywood.superpi.plugin.api.BackgroundService {
   public abstract boolean openBatteryOptimizationSettings();
 }
 public final class io.github.whywood.superpi.plugin.api.BackgroundService$DefaultImpls {
-  public static java.lang.Object schedule-M95o5T8$default(io.github.whywood.superpi.plugin.api.BackgroundService, java.lang.String, java.lang.String, java.lang.Long, java.lang.Long, boolean, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object schedule-UvWOdfA$default(io.github.whywood.superpi.plugin.api.BackgroundService, java.lang.String, java.lang.String, java.lang.Long, java.lang.Long, boolean, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
 public interface io.github.whywood.superpi.plugin.api.BackgroundTaskEvent extends io.github.whywood.superpi.plugin.api.PluginEvent {
   public abstract java.lang.String getTaskId();
-  public abstract java.lang.String getKind-0KXvVns();
+  public abstract java.lang.String getKind-GlEndyU();
   public abstract long getFiredAtMs();
 }
 public interface io.github.whywood.superpi.plugin.api.BusEventReceived extends io.github.whywood.superpi.plugin.api.PluginEvent {
@@ -205,15 +205,15 @@ public final class io.github.whywood.superpi.plugin.api.ChatSendKind {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.ChatSendKind$Companion {
-  public final java.lang.String getSTARTED-AuWxoIk();
-  public final java.lang.String getQUEUED-AuWxoIk();
-  public final java.lang.String getDISPLAYED-AuWxoIk();
+  public final java.lang.String getSTARTED-N-Q5qOU();
+  public final java.lang.String getQUEUED-N-Q5qOU();
+  public final java.lang.String getDISPLAYED-N-Q5qOU();
   public final java.util.List<io.github.whywood.superpi.plugin.api.ChatSendKind> getALL();
-  public final java.lang.String fromWire-R4ykon0(java.lang.String);
+  public final java.lang.String fromWire-wXbiYlY(java.lang.String);
   public io.github.whywood.superpi.plugin.api.ChatSendKind$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.ChatSendResult {
-  public abstract java.lang.String getKind-AuWxoIk();
+  public abstract java.lang.String getKind-N-Q5qOU();
   public abstract java.lang.String getSessionId();
   public abstract java.lang.String getRunId();
   public abstract io.github.whywood.superpi.plugin.api.ChatDelivery getDelivery();
@@ -340,46 +340,6 @@ public final class io.github.whywood.superpi.plugin.api.DataServicesKt {
   public static final io.github.whywood.superpi.plugin.api.PluginCalendarEventDraft pluginCalendarEventDraft(java.lang.String, long, long, boolean, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.util.List<java.lang.Integer>);
   public static io.github.whywood.superpi.plugin.api.PluginCalendarEventDraft pluginCalendarEventDraft$default(java.lang.String, long, long, boolean, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.util.List, int, java.lang.Object);
 }
-public interface io.github.whywood.superpi.plugin.api.SuperPIPlugin {
-  public abstract java.lang.Object availability(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.PluginAvailability>);
-  public default java.lang.Object uninstall(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object uninstall$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public default java.lang.Object onEnable(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object onEnable$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public default java.lang.Object onDisable(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object onDisable$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public default java.lang.Object onUpgrade(io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object onUpgrade$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public default java.util.List<io.github.whywood.superpi.plugin.api.PluginSkill> skills(io.github.whywood.superpi.plugin.api.PluginHost);
-  public default java.util.List<io.github.whywood.superpi.plugin.api.PromptSection> promptSections(io.github.whywood.superpi.plugin.api.PluginHost);
-  public default io.github.whywood.superpi.plugin.api.Contributions contributions(io.github.whywood.superpi.plugin.api.PluginHost);
-  public default io.github.whywood.superpi.plugin.api.Contributions contributionsFor(io.github.whywood.superpi.plugin.api.PluginHost, io.github.whywood.superpi.plugin.api.PluginSessionInfo);
-  public default io.github.whywood.superpi.plugin.api.PluginUiContributions ui(io.github.whywood.superpi.plugin.api.PluginHost);
-  public default java.lang.Object close(kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object close$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object access$uninstall$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation);
-  public static java.lang.Object access$onEnable$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation);
-  public static java.lang.Object access$onDisable$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation);
-  public static java.lang.Object access$onUpgrade$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation);
-  public static java.util.List access$skills$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static java.util.List access$promptSections$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static io.github.whywood.superpi.plugin.api.Contributions access$contributions$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static io.github.whywood.superpi.plugin.api.Contributions access$contributionsFor$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, io.github.whywood.superpi.plugin.api.PluginSessionInfo);
-  public static io.github.whywood.superpi.plugin.api.PluginUiContributions access$ui$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static java.lang.Object access$close$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, kotlin.coroutines.Continuation);
-}
-public final class io.github.whywood.superpi.plugin.api.SuperPIPlugin$DefaultImpls {
-  public static java.lang.Object uninstall(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object onEnable(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object onDisable(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.lang.Object onUpgrade(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-  public static java.util.List<io.github.whywood.superpi.plugin.api.PluginSkill> skills(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static java.util.List<io.github.whywood.superpi.plugin.api.PromptSection> promptSections(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static io.github.whywood.superpi.plugin.api.Contributions contributions(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static io.github.whywood.superpi.plugin.api.Contributions contributionsFor(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, io.github.whywood.superpi.plugin.api.PluginSessionInfo);
-  public static io.github.whywood.superpi.plugin.api.PluginUiContributions ui(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
-  public static java.lang.Object close(io.github.whywood.superpi.plugin.api.SuperPIPlugin, kotlin.coroutines.Continuation<? super kotlin.Unit>);
-}
 public interface io.github.whywood.superpi.plugin.api.DeepLinkReceivedEvent extends io.github.whywood.superpi.plugin.api.PluginEvent {
   public abstract java.lang.String getPath();
   public abstract kotlinx.serialization.json.JsonObject getArguments();
@@ -479,7 +439,7 @@ public final class io.github.whywood.superpi.plugin.api.DeviceState {
   public final long getUptimeMs();
   public final long getFreeMemoryBytes();
   public final long getFreeStorageBytes();
-  public final java.lang.String getHostAccess-l6OMxeI();
+  public final java.lang.String getHostAccess-2i1sfAw();
   public final int component1();
   public final boolean component2();
   public final boolean component3();
@@ -492,9 +452,9 @@ public final class io.github.whywood.superpi.plugin.api.DeviceState {
   public final long component10();
   public final long component11();
   public final long component12();
-  public final java.lang.String component13-l6OMxeI();
-  public final io.github.whywood.superpi.plugin.api.DeviceState copy-OF41DYM(int, boolean, boolean, java.lang.String, boolean, boolean, boolean, java.lang.String, java.lang.String, long, long, long, java.lang.String);
-  public static io.github.whywood.superpi.plugin.api.DeviceState copy-OF41DYM$default(io.github.whywood.superpi.plugin.api.DeviceState, int, boolean, boolean, java.lang.String, boolean, boolean, boolean, java.lang.String, java.lang.String, long, long, long, java.lang.String, int, java.lang.Object);
+  public final java.lang.String component13-2i1sfAw();
+  public final io.github.whywood.superpi.plugin.api.DeviceState copy-1kHIqD8(int, boolean, boolean, java.lang.String, boolean, boolean, boolean, java.lang.String, java.lang.String, long, long, long, java.lang.String);
+  public static io.github.whywood.superpi.plugin.api.DeviceState copy-1kHIqD8$default(io.github.whywood.superpi.plugin.api.DeviceState, int, boolean, boolean, java.lang.String, boolean, boolean, boolean, java.lang.String, java.lang.String, long, long, long, java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -602,7 +562,7 @@ public final class io.github.whywood.superpi.plugin.api.GoalInfo {
   public final java.lang.String getId();
   public final java.lang.String getSessionId();
   public final java.lang.String getObjective();
-  public final java.lang.String getPhase-_blOyYM();
+  public final java.lang.String getPhase-myHkp5s();
   public final int getRoundsStarted();
   public final int getMaxRounds();
   public final boolean getArmed();
@@ -612,15 +572,15 @@ public final class io.github.whywood.superpi.plugin.api.GoalInfo {
   public final java.lang.String component1();
   public final java.lang.String component2();
   public final java.lang.String component3();
-  public final java.lang.String component4-_blOyYM();
+  public final java.lang.String component4-myHkp5s();
   public final int component5();
   public final int component6();
   public final boolean component7();
   public final java.lang.String component8();
   public final long component9();
   public final long component10();
-  public final io.github.whywood.superpi.plugin.api.GoalInfo copy-ZrG42i4(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, int, boolean, java.lang.String, long, long);
-  public static io.github.whywood.superpi.plugin.api.GoalInfo copy-ZrG42i4$default(io.github.whywood.superpi.plugin.api.GoalInfo, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, int, boolean, java.lang.String, long, long, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.GoalInfo copy-FMoLAf4(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, int, boolean, java.lang.String, long, long);
+  public static io.github.whywood.superpi.plugin.api.GoalInfo copy-FMoLAf4$default(io.github.whywood.superpi.plugin.api.GoalInfo, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, int, boolean, java.lang.String, long, long, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -645,12 +605,12 @@ public final class io.github.whywood.superpi.plugin.api.GoalPhase {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.GoalPhase$Companion {
-  public final java.lang.String getACTIVE-_blOyYM();
-  public final java.lang.String getPAUSED-_blOyYM();
-  public final java.lang.String getBLOCKED-_blOyYM();
-  public final java.lang.String getCOMPLETE-_blOyYM();
+  public final java.lang.String getACTIVE-myHkp5s();
+  public final java.lang.String getPAUSED-myHkp5s();
+  public final java.lang.String getBLOCKED-myHkp5s();
+  public final java.lang.String getCOMPLETE-myHkp5s();
   public final java.util.List<io.github.whywood.superpi.plugin.api.GoalPhase> getALL();
-  public final java.lang.String fromWire-3nTTy8o(java.lang.String);
+  public final java.lang.String fromWire-qOz4kkA(java.lang.String);
   public io.github.whywood.superpi.plugin.api.GoalPhase$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.GoalService {
@@ -695,11 +655,11 @@ public final class io.github.whywood.superpi.plugin.api.HostAccessLevel {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.HostAccessLevel$Companion {
-  public final java.lang.String getLOCAL-l6OMxeI();
-  public final java.lang.String getADB-l6OMxeI();
-  public final java.lang.String getROOT-l6OMxeI();
+  public final java.lang.String getLOCAL-2i1sfAw();
+  public final java.lang.String getADB-2i1sfAw();
+  public final java.lang.String getROOT-2i1sfAw();
   public final java.util.List<io.github.whywood.superpi.plugin.api.HostAccessLevel> getALL();
-  public final java.lang.String fromWire-pz0PhTU(java.lang.String);
+  public final java.lang.String fromWire-m7s8TuE(java.lang.String);
   public io.github.whywood.superpi.plugin.api.HostAccessLevel$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.IconRef {
@@ -806,7 +766,7 @@ public final class io.github.whywood.superpi.plugin.api.JobInfo {
   public final java.lang.String getId();
   public final java.lang.String getLabel();
   public final java.lang.String getCommand();
-  public final java.lang.String getStatus-E3hh9nY();
+  public final java.lang.String getStatus-3bLz_jw();
   public final long getStartedAt();
   public final java.lang.Long getFinishedAt();
   public final java.lang.Integer getExitCode();
@@ -814,13 +774,13 @@ public final class io.github.whywood.superpi.plugin.api.JobInfo {
   public final java.lang.String component1();
   public final java.lang.String component2();
   public final java.lang.String component3();
-  public final java.lang.String component4-E3hh9nY();
+  public final java.lang.String component4-3bLz_jw();
   public final long component5();
   public final java.lang.Long component6();
   public final java.lang.Integer component7();
   public final long component8();
-  public final io.github.whywood.superpi.plugin.api.JobInfo copy-vQm7n7E(java.lang.String, java.lang.String, java.lang.String, java.lang.String, long, java.lang.Long, java.lang.Integer, long);
-  public static io.github.whywood.superpi.plugin.api.JobInfo copy-vQm7n7E$default(io.github.whywood.superpi.plugin.api.JobInfo, java.lang.String, java.lang.String, java.lang.String, java.lang.String, long, java.lang.Long, java.lang.Integer, long, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.JobInfo copy-dPVYFsQ(java.lang.String, java.lang.String, java.lang.String, java.lang.String, long, java.lang.Long, java.lang.Integer, long);
+  public static io.github.whywood.superpi.plugin.api.JobInfo copy-dPVYFsQ$default(io.github.whywood.superpi.plugin.api.JobInfo, java.lang.String, java.lang.String, java.lang.String, java.lang.String, long, java.lang.Long, java.lang.Integer, long, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -830,15 +790,15 @@ public final class io.github.whywood.superpi.plugin.api.JobRead {
   public static final int $stable;
   public io.github.whywood.superpi.plugin.api.JobRead(java.lang.String, java.lang.String, java.lang.Integer, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getOutput();
-  public final java.lang.String getStatus-E3hh9nY();
+  public final java.lang.String getStatus-3bLz_jw();
   public final java.lang.Integer getExitCode();
   public final boolean getDropped();
   public final java.lang.String component1();
-  public final java.lang.String component2-E3hh9nY();
+  public final java.lang.String component2-3bLz_jw();
   public final java.lang.Integer component3();
   public final boolean component4();
-  public final io.github.whywood.superpi.plugin.api.JobRead copy-4mxocF8(java.lang.String, java.lang.String, java.lang.Integer, boolean);
-  public static io.github.whywood.superpi.plugin.api.JobRead copy-4mxocF8$default(io.github.whywood.superpi.plugin.api.JobRead, java.lang.String, java.lang.String, java.lang.Integer, boolean, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.JobRead copy-fnwWb3E(java.lang.String, java.lang.String, java.lang.Integer, boolean);
+  public static io.github.whywood.superpi.plugin.api.JobRead copy-fnwWb3E$default(io.github.whywood.superpi.plugin.api.JobRead, java.lang.String, java.lang.String, java.lang.Integer, boolean, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -874,17 +834,17 @@ public final class io.github.whywood.superpi.plugin.api.JobStatus {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.JobStatus$Companion {
-  public final java.lang.String getRUNNING-E3hh9nY();
-  public final java.lang.String getDONE-E3hh9nY();
-  public final java.lang.String getFAILED-E3hh9nY();
-  public final java.lang.String getKILLED-E3hh9nY();
-  public final java.lang.String getINTERRUPTED-E3hh9nY();
+  public final java.lang.String getRUNNING-3bLz_jw();
+  public final java.lang.String getDONE-3bLz_jw();
+  public final java.lang.String getFAILED-3bLz_jw();
+  public final java.lang.String getKILLED-3bLz_jw();
+  public final java.lang.String getINTERRUPTED-3bLz_jw();
   public final java.util.List<io.github.whywood.superpi.plugin.api.JobStatus> getALL();
-  public final java.lang.String fromWire-W9X8n8M(java.lang.String);
+  public final java.lang.String fromWire-WKI6I_c(java.lang.String);
   public io.github.whywood.superpi.plugin.api.JobStatus$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.LinuxChunk {
-  public abstract java.lang.String getKind-l1wO278();
+  public abstract java.lang.String getKind-0MfRcUs();
   public abstract java.lang.String getText();
   public abstract java.lang.Integer getExitCode();
 }
@@ -906,11 +866,11 @@ public final class io.github.whywood.superpi.plugin.api.LinuxChunkKind {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.LinuxChunkKind$Companion {
-  public final java.lang.String getSTDOUT-l1wO278();
-  public final java.lang.String getSTDERR-l1wO278();
-  public final java.lang.String getEXIT-l1wO278();
+  public final java.lang.String getSTDOUT-0MfRcUs();
+  public final java.lang.String getSTDERR-0MfRcUs();
+  public final java.lang.String getEXIT-0MfRcUs();
   public final java.util.List<io.github.whywood.superpi.plugin.api.LinuxChunkKind> getALL();
-  public final java.lang.String fromWire-ZykRftc(java.lang.String);
+  public final java.lang.String fromWire-lrCXcbk(java.lang.String);
   public io.github.whywood.superpi.plugin.api.LinuxChunkKind$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.LinuxResult {
@@ -1040,16 +1000,16 @@ public final class io.github.whywood.superpi.plugin.api.McpCallResult {
 public final class io.github.whywood.superpi.plugin.api.McpProbe {
   public static final int $stable;
   public io.github.whywood.superpi.plugin.api.McpProbe(java.lang.String, int, java.lang.String, java.lang.String, int, kotlin.jvm.internal.DefaultConstructorMarker);
-  public final java.lang.String getStatus-4mbFk9o();
+  public final java.lang.String getStatus-jV5zDx0();
   public final int getToolCount();
   public final java.lang.String getServerName();
   public final java.lang.String getError();
-  public final java.lang.String component1-4mbFk9o();
+  public final java.lang.String component1-jV5zDx0();
   public final int component2();
   public final java.lang.String component3();
   public final java.lang.String component4();
-  public final io.github.whywood.superpi.plugin.api.McpProbe copy-uvnbGq0(java.lang.String, int, java.lang.String, java.lang.String);
-  public static io.github.whywood.superpi.plugin.api.McpProbe copy-uvnbGq0$default(io.github.whywood.superpi.plugin.api.McpProbe, java.lang.String, int, java.lang.String, java.lang.String, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.McpProbe copy-H7U1AWA(java.lang.String, int, java.lang.String, java.lang.String);
+  public static io.github.whywood.superpi.plugin.api.McpProbe copy-H7U1AWA$default(io.github.whywood.superpi.plugin.api.McpProbe, java.lang.String, int, java.lang.String, java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -1061,15 +1021,15 @@ public final class io.github.whywood.superpi.plugin.api.McpServer {
   public final java.lang.String getName();
   public final java.lang.String getUrl();
   public final boolean getEnabled();
-  public final java.lang.String getStatus-4mbFk9o();
+  public final java.lang.String getStatus-jV5zDx0();
   public final int getToolCount();
   public final java.lang.String component1();
   public final java.lang.String component2();
   public final boolean component3();
-  public final java.lang.String component4-4mbFk9o();
+  public final java.lang.String component4-jV5zDx0();
   public final int component5();
-  public final io.github.whywood.superpi.plugin.api.McpServer copy-LBVw6TU(java.lang.String, java.lang.String, boolean, java.lang.String, int);
-  public static io.github.whywood.superpi.plugin.api.McpServer copy-LBVw6TU$default(io.github.whywood.superpi.plugin.api.McpServer, java.lang.String, java.lang.String, boolean, java.lang.String, int, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.McpServer copy-CA1xnh4(java.lang.String, java.lang.String, boolean, java.lang.String, int);
+  public static io.github.whywood.superpi.plugin.api.McpServer copy-CA1xnh4$default(io.github.whywood.superpi.plugin.api.McpServer, java.lang.String, java.lang.String, boolean, java.lang.String, int, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -1094,12 +1054,12 @@ public final class io.github.whywood.superpi.plugin.api.McpServerStatus {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.McpServerStatus$Companion {
-  public final java.lang.String getOK-4mbFk9o();
-  public final java.lang.String getAUTH_REQUIRED-4mbFk9o();
-  public final java.lang.String getFAILED-4mbFk9o();
-  public final java.lang.String getUNKNOWN-4mbFk9o();
+  public final java.lang.String getOK-jV5zDx0();
+  public final java.lang.String getAUTH_REQUIRED-jV5zDx0();
+  public final java.lang.String getFAILED-jV5zDx0();
+  public final java.lang.String getUNKNOWN-jV5zDx0();
   public final java.util.List<io.github.whywood.superpi.plugin.api.McpServerStatus> getALL();
-  public final java.lang.String fromWire-lYPstCk(java.lang.String);
+  public final java.lang.String fromWire-Zlt26Zg(java.lang.String);
   public io.github.whywood.superpi.plugin.api.McpServerStatus$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.McpService {
@@ -1123,7 +1083,7 @@ final class io.github.whywood.superpi.plugin.api.McpService$callStructured$1 ext
 }
 public interface io.github.whywood.superpi.plugin.api.McpStatusChangedEvent extends io.github.whywood.superpi.plugin.api.PluginEvent {
   public abstract java.lang.String getServer();
-  public abstract java.lang.String getStatus-4mbFk9o();
+  public abstract java.lang.String getStatus-jV5zDx0();
 }
 public interface io.github.whywood.superpi.plugin.api.McpStructuredCallResult {
   public abstract java.util.List<io.github.whywood.superpi.plugin.api.ToolBlock> getBlocks();
@@ -1222,18 +1182,18 @@ public final class io.github.whywood.superpi.plugin.api.MessageRole {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.MessageRole$Companion {
-  public final java.lang.String getUSER-is78xOI();
-  public final java.lang.String getASSISTANT-is78xOI();
-  public final java.lang.String getTOOL-is78xOI();
-  public final java.lang.String getSYSTEM-is78xOI();
+  public final java.lang.String getUSER-RQoX_CI();
+  public final java.lang.String getASSISTANT-RQoX_CI();
+  public final java.lang.String getTOOL-RQoX_CI();
+  public final java.lang.String getSYSTEM-RQoX_CI();
   public final java.util.List<io.github.whywood.superpi.plugin.api.MessageRole> getALL();
-  public final java.lang.String fromWire-vRhMAV4(java.lang.String);
+  public final java.lang.String fromWire-D4QhAzU(java.lang.String);
   public io.github.whywood.superpi.plugin.api.MessageRole$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.MessageStartedEvent extends io.github.whywood.superpi.plugin.api.PluginEvent {
   public abstract java.lang.String getSessionId();
   public abstract java.lang.String getMessageId();
-  public abstract java.lang.String getRole-is78xOI();
+  public abstract java.lang.String getRole-RQoX_CI();
 }
 public final class io.github.whywood.superpi.plugin.api.MiniappApp {
   public static final int $stable;
@@ -1274,7 +1234,7 @@ public final class io.github.whywood.superpi.plugin.api.MiniappCreateRequestImpl
   public boolean equals(java.lang.Object);
 }
 public interface io.github.whywood.superpi.plugin.api.MiniappEntry {
-  public abstract java.lang.String getKind-KwVPsrI();
+  public abstract java.lang.String getKind-Xfd9tpA();
   public abstract io.github.whywood.superpi.plugin.api.MiniappApp getApp();
   public abstract kotlinx.serialization.json.JsonObject getManifest();
   public abstract java.lang.String getId();
@@ -1282,18 +1242,18 @@ public interface io.github.whywood.superpi.plugin.api.MiniappEntry {
 }
 public final class io.github.whywood.superpi.plugin.api.MiniappEntryImpl implements io.github.whywood.superpi.plugin.api.MiniappEntry {
   public static final int $stable;
-  public java.lang.String getKind-KwVPsrI();
+  public java.lang.String getKind-Xfd9tpA();
   public io.github.whywood.superpi.plugin.api.MiniappApp getApp();
   public kotlinx.serialization.json.JsonObject getManifest();
   public java.lang.String getId();
   public java.lang.String getReason();
-  public final java.lang.String component1-KwVPsrI();
+  public final java.lang.String component1-Xfd9tpA();
   public final io.github.whywood.superpi.plugin.api.MiniappApp component2();
   public final kotlinx.serialization.json.JsonObject component3();
   public final java.lang.String component4();
   public final java.lang.String component5();
-  public final io.github.whywood.superpi.plugin.api.MiniappEntryImpl copy--qA_gEM(java.lang.String, io.github.whywood.superpi.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject, java.lang.String, java.lang.String);
-  public static io.github.whywood.superpi.plugin.api.MiniappEntryImpl copy--qA_gEM$default(io.github.whywood.superpi.plugin.api.MiniappEntryImpl, java.lang.String, io.github.whywood.superpi.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject, java.lang.String, java.lang.String, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.MiniappEntryImpl copy-v7la2aI(java.lang.String, io.github.whywood.superpi.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject, java.lang.String, java.lang.String);
+  public static io.github.whywood.superpi.plugin.api.MiniappEntryImpl copy-v7la2aI$default(io.github.whywood.superpi.plugin.api.MiniappEntryImpl, java.lang.String, io.github.whywood.superpi.plugin.api.MiniappApp, kotlinx.serialization.json.JsonObject, java.lang.String, java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -1317,11 +1277,11 @@ public final class io.github.whywood.superpi.plugin.api.MiniappEntryKind {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.MiniappEntryKind$Companion {
-  public final java.lang.String getVALID-KwVPsrI();
-  public final java.lang.String getINVALID-KwVPsrI();
-  public final java.lang.String getMISSING-KwVPsrI();
+  public final java.lang.String getVALID-Xfd9tpA();
+  public final java.lang.String getINVALID-Xfd9tpA();
+  public final java.lang.String getMISSING-Xfd9tpA();
   public final java.util.List<io.github.whywood.superpi.plugin.api.MiniappEntryKind> getALL();
-  public final java.lang.String fromWire-PZ1fvc8(java.lang.String);
+  public final java.lang.String fromWire-4TAknek(java.lang.String);
   public io.github.whywood.superpi.plugin.api.MiniappEntryKind$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.MiniappInvalid {
@@ -1495,8 +1455,8 @@ public final class io.github.whywood.superpi.plugin.api.PackageService$DefaultIm
 public interface io.github.whywood.superpi.plugin.api.PermissionService {
   public abstract boolean granted(java.lang.String);
   public abstract java.lang.Object request(java.lang.String[], kotlin.coroutines.Continuation<? super java.util.Map<java.lang.String, java.lang.Boolean>>);
-  public abstract io.github.whywood.superpi.plugin.api.PluginAccessState special-de0XDms(java.lang.String);
-  public abstract boolean openSettings-de0XDms(java.lang.String);
+  public abstract io.github.whywood.superpi.plugin.api.PluginAccessState special-CR9ud40(java.lang.String);
+  public abstract boolean openSettings-CR9ud40(java.lang.String);
 }
 public final class io.github.whywood.superpi.plugin.api.PluginAccessState {
   public static final int $stable;
@@ -1617,12 +1577,12 @@ public final class io.github.whywood.superpi.plugin.api.PluginBackgroundKind {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.PluginBackgroundKind$Companion {
-  public final java.lang.String getONCE-0KXvVns();
-  public final java.lang.String getPERIODIC-0KXvVns();
-  public final java.lang.String getEXACT-0KXvVns();
-  public final java.lang.String getBOOT-0KXvVns();
+  public final java.lang.String getONCE-GlEndyU();
+  public final java.lang.String getPERIODIC-GlEndyU();
+  public final java.lang.String getEXACT-GlEndyU();
+  public final java.lang.String getBOOT-GlEndyU();
   public final java.util.List<io.github.whywood.superpi.plugin.api.PluginBackgroundKind> getALL();
-  public final java.lang.String fromWire-xyegBMM(java.lang.String);
+  public final java.lang.String fromWire-eXNiuM8(java.lang.String);
   public io.github.whywood.superpi.plugin.api.PluginBackgroundKind$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.PluginBackgroundTaskInfo {
@@ -1822,47 +1782,47 @@ public final class io.github.whywood.superpi.plugin.api.PluginCapability {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.PluginCapability$Companion {
-  public final java.lang.String getLINUX-G6-5-uY();
-  public final java.lang.String getSCREEN-G6-5-uY();
-  public final java.lang.String getNOTIFICATIONS-G6-5-uY();
-  public final java.lang.String getSECRETS-G6-5-uY();
-  public final java.lang.String getNETWORK-G6-5-uY();
-  public final java.lang.String getFILES-G6-5-uY();
-  public final java.lang.String getSESSIONS-G6-5-uY();
-  public final java.lang.String getJOBS-G6-5-uY();
-  public final java.lang.String getTIMERS-G6-5-uY();
-  public final java.lang.String getGOALS-G6-5-uY();
-  public final java.lang.String getMINIAPP-G6-5-uY();
-  public final java.lang.String getMCP-G6-5-uY();
-  public final java.lang.String getUI-G6-5-uY();
-  public final java.lang.String getAPP-G6-5-uY();
-  public final java.lang.String getBUS-G6-5-uY();
-  public final java.lang.String getLOGS-G6-5-uY();
-  public final java.lang.String getCHAT-G6-5-uY();
-  public final java.lang.String getPROMPT-G6-5-uY();
-  public final java.lang.String getSETTINGS-G6-5-uY();
-  public final java.lang.String getDEVICE-G6-5-uY();
-  public final java.lang.String getCLIPBOARD-G6-5-uY();
-  public final java.lang.String getPERMISSIONS-G6-5-uY();
-  public final java.lang.String getPACKAGES-G6-5-uY();
-  public final java.lang.String getPRIVILEGE-G6-5-uY();
-  public final java.lang.String getINTENTS-G6-5-uY();
-  public final java.lang.String getCOMPONENTS-G6-5-uY();
-  public final java.lang.String getBACKGROUND-G6-5-uY();
-  public final java.lang.String getLOCATION-G6-5-uY();
-  public final java.lang.String getCONTACTS-G6-5-uY();
-  public final java.lang.String getSMS-G6-5-uY();
-  public final java.lang.String getCALENDAR-G6-5-uY();
-  public final java.lang.String getMEDIA-G6-5-uY();
-  public final java.lang.String getSPEECH-G6-5-uY();
-  public final java.lang.String getWEB-G6-5-uY();
-  public final java.lang.String getCREDENTIALS-G6-5-uY();
-  public final java.lang.String getACCESSIBILITY-G6-5-uY();
-  public final java.lang.String getSHARE-G6-5-uY();
-  public final java.lang.String getDEEPLINK-G6-5-uY();
-  public final java.lang.String getIMAGES-G6-5-uY();
+  public final java.lang.String getLINUX-q0bnv60();
+  public final java.lang.String getSCREEN-q0bnv60();
+  public final java.lang.String getNOTIFICATIONS-q0bnv60();
+  public final java.lang.String getSECRETS-q0bnv60();
+  public final java.lang.String getNETWORK-q0bnv60();
+  public final java.lang.String getFILES-q0bnv60();
+  public final java.lang.String getSESSIONS-q0bnv60();
+  public final java.lang.String getJOBS-q0bnv60();
+  public final java.lang.String getTIMERS-q0bnv60();
+  public final java.lang.String getGOALS-q0bnv60();
+  public final java.lang.String getMINIAPP-q0bnv60();
+  public final java.lang.String getMCP-q0bnv60();
+  public final java.lang.String getUI-q0bnv60();
+  public final java.lang.String getAPP-q0bnv60();
+  public final java.lang.String getBUS-q0bnv60();
+  public final java.lang.String getLOGS-q0bnv60();
+  public final java.lang.String getCHAT-q0bnv60();
+  public final java.lang.String getPROMPT-q0bnv60();
+  public final java.lang.String getSETTINGS-q0bnv60();
+  public final java.lang.String getDEVICE-q0bnv60();
+  public final java.lang.String getCLIPBOARD-q0bnv60();
+  public final java.lang.String getPERMISSIONS-q0bnv60();
+  public final java.lang.String getPACKAGES-q0bnv60();
+  public final java.lang.String getPRIVILEGE-q0bnv60();
+  public final java.lang.String getINTENTS-q0bnv60();
+  public final java.lang.String getCOMPONENTS-q0bnv60();
+  public final java.lang.String getBACKGROUND-q0bnv60();
+  public final java.lang.String getLOCATION-q0bnv60();
+  public final java.lang.String getCONTACTS-q0bnv60();
+  public final java.lang.String getSMS-q0bnv60();
+  public final java.lang.String getCALENDAR-q0bnv60();
+  public final java.lang.String getMEDIA-q0bnv60();
+  public final java.lang.String getSPEECH-q0bnv60();
+  public final java.lang.String getWEB-q0bnv60();
+  public final java.lang.String getCREDENTIALS-q0bnv60();
+  public final java.lang.String getACCESSIBILITY-q0bnv60();
+  public final java.lang.String getSHARE-q0bnv60();
+  public final java.lang.String getDEEPLINK-q0bnv60();
+  public final java.lang.String getIMAGES-q0bnv60();
   public final java.util.List<io.github.whywood.superpi.plugin.api.PluginCapability> getALL();
-  public final java.lang.String fromWire-e8UcEes(java.lang.String);
+  public final java.lang.String fromWire-dqZ4opA(java.lang.String);
   public io.github.whywood.superpi.plugin.api.PluginCapability$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.PluginComponentDeclaration {
@@ -2001,14 +1961,14 @@ public final class io.github.whywood.superpi.plugin.api.PluginGlobalAction {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.PluginGlobalAction$Companion {
-  public final java.lang.String getBACK-empLlQk();
-  public final java.lang.String getHOME-empLlQk();
-  public final java.lang.String getRECENTS-empLlQk();
-  public final java.lang.String getNOTIFICATIONS-empLlQk();
-  public final java.lang.String getQUICK_SETTINGS-empLlQk();
-  public final java.lang.String getPOWER_DIALOG-empLlQk();
+  public final java.lang.String getBACK-E-YDU3E();
+  public final java.lang.String getHOME-E-YDU3E();
+  public final java.lang.String getRECENTS-E-YDU3E();
+  public final java.lang.String getNOTIFICATIONS-E-YDU3E();
+  public final java.lang.String getQUICK_SETTINGS-E-YDU3E();
+  public final java.lang.String getPOWER_DIALOG-E-YDU3E();
   public final java.util.List<io.github.whywood.superpi.plugin.api.PluginGlobalAction> getALL();
-  public final java.lang.String fromWire---nLl_U(java.lang.String);
+  public final java.lang.String fromWire-ztkp-bs(java.lang.String);
   public io.github.whywood.superpi.plugin.api.PluginGlobalAction$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.PluginHooks {
@@ -2336,19 +2296,19 @@ public final class io.github.whywood.superpi.plugin.api.PluginMessage {
   public static final int $stable;
   public io.github.whywood.superpi.plugin.api.PluginMessage(java.lang.String, java.lang.String, java.lang.String, long, java.lang.String, java.util.List, int, kotlin.jvm.internal.DefaultConstructorMarker);
   public final java.lang.String getId();
-  public final java.lang.String getRole-is78xOI();
+  public final java.lang.String getRole-RQoX_CI();
   public final java.lang.String getText();
   public final long getTimestampMs();
   public final java.lang.String getToolName();
   public final java.util.List<java.lang.String> getImages();
   public final java.lang.String component1();
-  public final java.lang.String component2-is78xOI();
+  public final java.lang.String component2-RQoX_CI();
   public final java.lang.String component3();
   public final long component4();
   public final java.lang.String component5();
   public final java.util.List<java.lang.String> component6();
-  public final io.github.whywood.superpi.plugin.api.PluginMessage copy-SaS-YUU(java.lang.String, java.lang.String, java.lang.String, long, java.lang.String, java.util.List<java.lang.String>);
-  public static io.github.whywood.superpi.plugin.api.PluginMessage copy-SaS-YUU$default(io.github.whywood.superpi.plugin.api.PluginMessage, java.lang.String, java.lang.String, java.lang.String, long, java.lang.String, java.util.List, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.PluginMessage copy-R_EqPck(java.lang.String, java.lang.String, java.lang.String, long, java.lang.String, java.util.List<java.lang.String>);
+  public static io.github.whywood.superpi.plugin.api.PluginMessage copy-R_EqPck$default(io.github.whywood.superpi.plugin.api.PluginMessage, java.lang.String, java.lang.String, java.lang.String, long, java.lang.String, java.util.List, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -2534,11 +2494,11 @@ public interface io.github.whywood.superpi.plugin.api.PluginPage {
 public interface io.github.whywood.superpi.plugin.api.PluginPageContext {
   public abstract java.lang.String getPageId();
   public abstract kotlinx.serialization.json.JsonObject getArguments();
-  public default java.lang.String getPresentation-OyXn79E();
-  public static java.lang.String access$getPresentation-OyXn79E$jd(io.github.whywood.superpi.plugin.api.PluginPageContext);
+  public default java.lang.String getPresentation-0pJ_yIE();
+  public static java.lang.String access$getPresentation-0pJ_yIE$jd(io.github.whywood.superpi.plugin.api.PluginPageContext);
 }
 public final class io.github.whywood.superpi.plugin.api.PluginPageContext$DefaultImpls {
-  public static java.lang.String getPresentation-OyXn79E(io.github.whywood.superpi.plugin.api.PluginPageContext);
+  public static java.lang.String getPresentation-0pJ_yIE(io.github.whywood.superpi.plugin.api.PluginPageContext);
 }
 public final class io.github.whywood.superpi.plugin.api.PluginPagePresentation {
   public static final io.github.whywood.superpi.plugin.api.PluginPagePresentation$Companion Companion;
@@ -2557,10 +2517,10 @@ public final class io.github.whywood.superpi.plugin.api.PluginPagePresentation {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.PluginPagePresentation$Companion {
-  public final java.lang.String getPAGE-OyXn79E();
-  public final java.lang.String getSHEET-OyXn79E();
+  public final java.lang.String getPAGE-0pJ_yIE();
+  public final java.lang.String getSHEET-0pJ_yIE();
   public final java.util.List<io.github.whywood.superpi.plugin.api.PluginPagePresentation> getALL();
-  public final java.lang.String fromWire-VmdHit0(java.lang.String);
+  public final java.lang.String fromWire-9LSNOAs(java.lang.String);
   public io.github.whywood.superpi.plugin.api.PluginPagePresentation$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.PluginPermission {
@@ -2792,15 +2752,15 @@ public final class io.github.whywood.superpi.plugin.api.PluginSpecialAccess {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.PluginSpecialAccess$Companion {
-  public final java.lang.String getNOTIFICATION_LISTENER-LfDypN4();
-  public final java.lang.String getACCESSIBILITY-LfDypN4();
-  public final java.lang.String getOVERLAY-LfDypN4();
-  public final java.lang.String getUSAGE_STATS-LfDypN4();
-  public final java.lang.String getBATTERY_OPTIMIZATION-LfDypN4();
-  public final java.lang.String getINSTALL_PACKAGES-LfDypN4();
-  public final java.lang.String getMANAGE_STORAGE-LfDypN4();
+  public final java.lang.String getNOTIFICATION_LISTENER-hnaseXg();
+  public final java.lang.String getACCESSIBILITY-hnaseXg();
+  public final java.lang.String getOVERLAY-hnaseXg();
+  public final java.lang.String getUSAGE_STATS-hnaseXg();
+  public final java.lang.String getBATTERY_OPTIMIZATION-hnaseXg();
+  public final java.lang.String getINSTALL_PACKAGES-hnaseXg();
+  public final java.lang.String getMANAGE_STORAGE-hnaseXg();
   public final java.util.List<io.github.whywood.superpi.plugin.api.PluginSpecialAccess> getALL();
-  public final java.lang.String fromWire-IMGQ1s0(java.lang.String);
+  public final java.lang.String fromWire-zw3x-2g(java.lang.String);
   public io.github.whywood.superpi.plugin.api.PluginSpecialAccess$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.PluginSpeechResult {
@@ -2951,11 +2911,11 @@ public final class io.github.whywood.superpi.plugin.api.PrivilegeLevel {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.PrivilegeLevel$Companion {
-  public final java.lang.String getAUTO-PgvAdm0();
-  public final java.lang.String getROOT-PgvAdm0();
-  public final java.lang.String getADB-PgvAdm0();
+  public final java.lang.String getAUTO-8NYwy_w();
+  public final java.lang.String getROOT-8NYwy_w();
+  public final java.lang.String getADB-8NYwy_w();
   public final java.util.List<io.github.whywood.superpi.plugin.api.PrivilegeLevel> getALL();
-  public final java.lang.String fromWire-4bWoqdY(java.lang.String);
+  public final java.lang.String fromWire-L7mzCTU(java.lang.String);
   public io.github.whywood.superpi.plugin.api.PrivilegeLevel$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.PrivilegeResult {
@@ -2981,12 +2941,12 @@ public final class io.github.whywood.superpi.plugin.api.PrivilegeResult {
 public interface io.github.whywood.superpi.plugin.api.PrivilegeService {
   public static final io.github.whywood.superpi.plugin.api.PrivilegeService$Companion Companion;
   public static final long DEFAULT_TIMEOUT_MS;
-  public abstract java.lang.String getAccess-l6OMxeI();
+  public abstract java.lang.String getAccess-2i1sfAw();
   public abstract io.github.whywood.superpi.plugin.api.RootState getRoot();
   public abstract io.github.whywood.superpi.plugin.api.AdbState getAdb();
   public abstract java.lang.Object probeRoot(kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.RootState>);
-  public abstract java.lang.Object exec-O4ArtP8(java.lang.String, java.lang.String, long, kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.PrivilegeResult>);
-  public static java.lang.Object exec-O4ArtP8$default(io.github.whywood.superpi.plugin.api.PrivilegeService, java.lang.String, java.lang.String, long, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public abstract java.lang.Object exec-3wsie2c(java.lang.String, java.lang.String, long, kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.PrivilegeResult>);
+  public static java.lang.Object exec-3wsie2c$default(io.github.whywood.superpi.plugin.api.PrivilegeService, java.lang.String, java.lang.String, long, kotlin.coroutines.Continuation, int, java.lang.Object);
   public abstract java.lang.Object install(java.lang.String, boolean, kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.PackageInstallResult>);
   public static java.lang.Object install$default(io.github.whywood.superpi.plugin.api.PrivilegeService, java.lang.String, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
   public abstract java.lang.Object uninstall(java.lang.String, kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.PackageInstallResult>);
@@ -3000,7 +2960,7 @@ public final class io.github.whywood.superpi.plugin.api.PrivilegeService$Compani
   public static final long DEFAULT_TIMEOUT_MS;
 }
 public final class io.github.whywood.superpi.plugin.api.PrivilegeService$DefaultImpls {
-  public static java.lang.Object exec-O4ArtP8$default(io.github.whywood.superpi.plugin.api.PrivilegeService, java.lang.String, java.lang.String, long, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public static java.lang.Object exec-3wsie2c$default(io.github.whywood.superpi.plugin.api.PrivilegeService, java.lang.String, java.lang.String, long, kotlin.coroutines.Continuation, int, java.lang.Object);
   public static java.lang.Object install$default(io.github.whywood.superpi.plugin.api.PrivilegeService, java.lang.String, boolean, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
 public interface io.github.whywood.superpi.plugin.api.PromptOverride {
@@ -3524,6 +3484,46 @@ public final class io.github.whywood.superpi.plugin.api.SpeechService$Companion 
 public final class io.github.whywood.superpi.plugin.api.SpeechService$DefaultImpls {
   public static java.lang.Object recognize$default(io.github.whywood.superpi.plugin.api.SpeechService, long, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
+public interface io.github.whywood.superpi.plugin.api.SuperPIPlugin {
+  public abstract java.lang.Object availability(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super io.github.whywood.superpi.plugin.api.PluginAvailability>);
+  public default java.lang.Object uninstall(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object uninstall$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public default java.lang.Object onEnable(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object onEnable$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public default java.lang.Object onDisable(io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object onDisable$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public default java.lang.Object onUpgrade(io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object onUpgrade$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public default java.util.List<io.github.whywood.superpi.plugin.api.PluginSkill> skills(io.github.whywood.superpi.plugin.api.PluginHost);
+  public default java.util.List<io.github.whywood.superpi.plugin.api.PromptSection> promptSections(io.github.whywood.superpi.plugin.api.PluginHost);
+  public default io.github.whywood.superpi.plugin.api.Contributions contributions(io.github.whywood.superpi.plugin.api.PluginHost);
+  public default io.github.whywood.superpi.plugin.api.Contributions contributionsFor(io.github.whywood.superpi.plugin.api.PluginHost, io.github.whywood.superpi.plugin.api.PluginSessionInfo);
+  public default io.github.whywood.superpi.plugin.api.PluginUiContributions ui(io.github.whywood.superpi.plugin.api.PluginHost);
+  public default java.lang.Object close(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object close$suspendImpl(io.github.whywood.superpi.plugin.api.SuperPIPlugin, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object access$uninstall$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation);
+  public static java.lang.Object access$onEnable$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation);
+  public static java.lang.Object access$onDisable$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation);
+  public static java.lang.Object access$onUpgrade$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation);
+  public static java.util.List access$skills$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static java.util.List access$promptSections$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static io.github.whywood.superpi.plugin.api.Contributions access$contributions$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static io.github.whywood.superpi.plugin.api.Contributions access$contributionsFor$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, io.github.whywood.superpi.plugin.api.PluginSessionInfo);
+  public static io.github.whywood.superpi.plugin.api.PluginUiContributions access$ui$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static java.lang.Object access$close$jd(io.github.whywood.superpi.plugin.api.SuperPIPlugin, kotlin.coroutines.Continuation);
+}
+public final class io.github.whywood.superpi.plugin.api.SuperPIPlugin$DefaultImpls {
+  public static java.lang.Object uninstall(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object onEnable(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object onDisable(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.lang.Object onUpgrade(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, java.lang.String, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public static java.util.List<io.github.whywood.superpi.plugin.api.PluginSkill> skills(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static java.util.List<io.github.whywood.superpi.plugin.api.PromptSection> promptSections(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static io.github.whywood.superpi.plugin.api.Contributions contributions(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static io.github.whywood.superpi.plugin.api.Contributions contributionsFor(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost, io.github.whywood.superpi.plugin.api.PluginSessionInfo);
+  public static io.github.whywood.superpi.plugin.api.PluginUiContributions ui(io.github.whywood.superpi.plugin.api.SuperPIPlugin, io.github.whywood.superpi.plugin.api.PluginHost);
+  public static java.lang.Object close(io.github.whywood.superpi.plugin.api.SuperPIPlugin, kotlin.coroutines.Continuation<? super kotlin.Unit>);
+}
 public interface io.github.whywood.superpi.plugin.api.TextBlock extends io.github.whywood.superpi.plugin.api.ToolBlock {
   public abstract java.lang.String getText();
 }
@@ -3606,20 +3606,20 @@ public interface io.github.whywood.superpi.plugin.api.TimerService {
   public abstract java.lang.Object cancel(java.lang.String, kotlin.coroutines.Continuation<? super java.lang.Boolean>);
 }
 public interface io.github.whywood.superpi.plugin.api.TimerTrigger {
-  public abstract java.lang.String getKind-0zOE3X4();
+  public abstract java.lang.String getKind-Qu0oB4E();
   public abstract java.lang.Long getEpochMillis();
   public abstract java.lang.String getExpression();
 }
 public final class io.github.whywood.superpi.plugin.api.TimerTriggerImpl implements io.github.whywood.superpi.plugin.api.TimerTrigger {
   public static final int $stable;
-  public java.lang.String getKind-0zOE3X4();
+  public java.lang.String getKind-Qu0oB4E();
   public java.lang.Long getEpochMillis();
   public java.lang.String getExpression();
-  public final java.lang.String component1-0zOE3X4();
+  public final java.lang.String component1-Qu0oB4E();
   public final java.lang.Long component2();
   public final java.lang.String component3();
-  public final io.github.whywood.superpi.plugin.api.TimerTriggerImpl copy-hwhlsoA(java.lang.String, java.lang.Long, java.lang.String);
-  public static io.github.whywood.superpi.plugin.api.TimerTriggerImpl copy-hwhlsoA$default(io.github.whywood.superpi.plugin.api.TimerTriggerImpl, java.lang.String, java.lang.Long, java.lang.String, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.TimerTriggerImpl copy-bQwk9bQ(java.lang.String, java.lang.Long, java.lang.String);
+  public static io.github.whywood.superpi.plugin.api.TimerTriggerImpl copy-bQwk9bQ$default(io.github.whywood.superpi.plugin.api.TimerTriggerImpl, java.lang.String, java.lang.Long, java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -3642,10 +3642,10 @@ public final class io.github.whywood.superpi.plugin.api.TimerTriggerKind {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.TimerTriggerKind$Companion {
-  public final java.lang.String getONCE-0zOE3X4();
-  public final java.lang.String getCRON-0zOE3X4();
+  public final java.lang.String getONCE-Qu0oB4E();
+  public final java.lang.String getCRON-Qu0oB4E();
   public final java.util.List<io.github.whywood.superpi.plugin.api.TimerTriggerKind> getALL();
-  public final java.lang.String fromWire-QtyTqv8(java.lang.String);
+  public final java.lang.String fromWire-0_6j-nU(java.lang.String);
   public io.github.whywood.superpi.plugin.api.TimerTriggerKind$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.ToolBlock {
@@ -3668,28 +3668,28 @@ public final class io.github.whywood.superpi.plugin.api.ToolCallAction {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolCallAction$Companion {
-  public final java.lang.String getCONTINUE-KKQ9VB8();
-  public final java.lang.String getBLOCK-KKQ9VB8();
-  public final java.lang.String getREWRITE-KKQ9VB8();
+  public final java.lang.String getCONTINUE-tVNz4Tc();
+  public final java.lang.String getBLOCK-tVNz4Tc();
+  public final java.lang.String getREWRITE-tVNz4Tc();
   public final java.util.List<io.github.whywood.superpi.plugin.api.ToolCallAction> getALL();
-  public final java.lang.String fromWire-My3ok70(java.lang.String);
+  public final java.lang.String fromWire-lRj4VsM(java.lang.String);
   public io.github.whywood.superpi.plugin.api.ToolCallAction$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.ToolCallDecision {
-  public abstract java.lang.String getAction-KKQ9VB8();
+  public abstract java.lang.String getAction-tVNz4Tc();
   public abstract java.lang.String getReason();
   public abstract kotlinx.serialization.json.JsonObject getArgs();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl implements io.github.whywood.superpi.plugin.api.ToolCallDecision {
   public static final int $stable;
-  public java.lang.String getAction-KKQ9VB8();
+  public java.lang.String getAction-tVNz4Tc();
   public java.lang.String getReason();
   public kotlinx.serialization.json.JsonObject getArgs();
-  public final java.lang.String component1-KKQ9VB8();
+  public final java.lang.String component1-tVNz4Tc();
   public final java.lang.String component2();
   public final kotlinx.serialization.json.JsonObject component3();
-  public final io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl copy-FSZ5PLM(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject);
-  public static io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl copy-FSZ5PLM$default(io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl copy-jkzVM9s(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject);
+  public static io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl copy-jkzVM9s$default(io.github.whywood.superpi.plugin.api.ToolCallDecisionImpl, java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -3739,7 +3739,7 @@ public interface io.github.whywood.superpi.plugin.api.ToolExecutionUpdateEvent e
   public abstract java.lang.String getSessionId();
   public abstract java.lang.String getCallId();
   public abstract java.lang.String getToolName();
-  public abstract java.lang.String getPhase-BYGpTMA();
+  public abstract java.lang.String getPhase-6UvtbHM();
   public abstract io.github.whywood.superpi.plugin.api.PluginToolResult getPartial();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolPhase {
@@ -3761,12 +3761,12 @@ public final class io.github.whywood.superpi.plugin.api.ToolPhase {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolPhase$Companion {
-  public final java.lang.String getSTARTED-BYGpTMA();
-  public final java.lang.String getPARTIAL-BYGpTMA();
-  public final java.lang.String getFINISHED-BYGpTMA();
-  public final java.lang.String getFAILED-BYGpTMA();
+  public final java.lang.String getSTARTED-6UvtbHM();
+  public final java.lang.String getPARTIAL-6UvtbHM();
+  public final java.lang.String getFINISHED-6UvtbHM();
+  public final java.lang.String getFAILED-6UvtbHM();
   public final java.util.List<io.github.whywood.superpi.plugin.api.ToolPhase> getALL();
-  public final java.lang.String fromWire-PyyDfcI(java.lang.String);
+  public final java.lang.String fromWire-MLR8n1M(java.lang.String);
   public io.github.whywood.superpi.plugin.api.ToolPhase$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public final class io.github.whywood.superpi.plugin.api.ToolResultAction {
@@ -3786,51 +3786,51 @@ public final class io.github.whywood.superpi.plugin.api.ToolResultAction {
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolResultAction$Companion {
-  public final java.lang.String getKEEP-UqxP5CM();
-  public final java.lang.String getREPLACE-UqxP5CM();
+  public final java.lang.String getKEEP-I7iL_AM();
+  public final java.lang.String getREPLACE-I7iL_AM();
   public final java.util.List<io.github.whywood.superpi.plugin.api.ToolResultAction> getALL();
-  public final java.lang.String fromWire-0kqoCoU(java.lang.String);
+  public final java.lang.String fromWire-tbjf-Ks(java.lang.String);
   public io.github.whywood.superpi.plugin.api.ToolResultAction$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.ToolResultDecision {
-  public abstract java.lang.String getAction-UqxP5CM();
+  public abstract java.lang.String getAction-I7iL_AM();
   public abstract io.github.whywood.superpi.plugin.api.PluginToolResult getResult();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl implements io.github.whywood.superpi.plugin.api.ToolResultDecision {
   public static final int $stable;
-  public java.lang.String getAction-UqxP5CM();
+  public java.lang.String getAction-I7iL_AM();
   public io.github.whywood.superpi.plugin.api.PluginToolResult getResult();
-  public final java.lang.String component1-UqxP5CM();
+  public final java.lang.String component1-I7iL_AM();
   public final io.github.whywood.superpi.plugin.api.PluginToolResult component2();
-  public final io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl copy-XjTDSlA(java.lang.String, io.github.whywood.superpi.plugin.api.PluginToolResult);
-  public static io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl copy-XjTDSlA$default(io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl, java.lang.String, io.github.whywood.superpi.plugin.api.PluginToolResult, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl copy-KkmrIWg(java.lang.String, io.github.whywood.superpi.plugin.api.PluginToolResult);
+  public static io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl copy-KkmrIWg$default(io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl, java.lang.String, io.github.whywood.superpi.plugin.api.PluginToolResult, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
   public io.github.whywood.superpi.plugin.api.ToolResultDecisionImpl(java.lang.String, io.github.whywood.superpi.plugin.api.PluginToolResult, kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.ToolResultMatch {
-  public abstract java.lang.String getSource-S8Ly-YI();
+  public abstract java.lang.String getSource-0WK9KYc();
   public abstract java.lang.String getServer();
   public abstract java.lang.String getTool();
   public abstract java.lang.String getToolPrefix();
-  public abstract boolean matches-syRPFsw(java.lang.String, java.lang.String, java.lang.String);
+  public abstract boolean matches-WyWFtAU(java.lang.String, java.lang.String, java.lang.String);
   public abstract int specificity();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolResultMatchImpl implements io.github.whywood.superpi.plugin.api.ToolResultMatch {
   public static final int $stable;
-  public java.lang.String getSource-S8Ly-YI();
+  public java.lang.String getSource-0WK9KYc();
   public java.lang.String getServer();
   public java.lang.String getTool();
   public java.lang.String getToolPrefix();
-  public boolean matches-syRPFsw(java.lang.String, java.lang.String, java.lang.String);
+  public boolean matches-WyWFtAU(java.lang.String, java.lang.String, java.lang.String);
   public int specificity();
-  public final java.lang.String component1-S8Ly-YI();
+  public final java.lang.String component1-0WK9KYc();
   public final java.lang.String component2();
   public final java.lang.String component3();
   public final java.lang.String component4();
-  public final io.github.whywood.superpi.plugin.api.ToolResultMatchImpl copy-5JVWTcY(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static io.github.whywood.superpi.plugin.api.ToolResultMatchImpl copy-5JVWTcY$default(io.github.whywood.superpi.plugin.api.ToolResultMatchImpl, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public final io.github.whywood.superpi.plugin.api.ToolResultMatchImpl copy-zFlXmgY(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.superpi.plugin.api.ToolResultMatchImpl copy-zFlXmgY$default(io.github.whywood.superpi.plugin.api.ToolResultMatchImpl, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
   public int hashCode();
   public boolean equals(java.lang.Object);
@@ -3850,8 +3850,8 @@ public interface io.github.whywood.superpi.plugin.api.ToolResultRendererContribu
   public abstract java.util.List<io.github.whywood.superpi.plugin.api.ToolResultRenderer> getToolResultRenderers();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolResultRenderersKt {
-  public static final io.github.whywood.superpi.plugin.api.ToolResultMatch toolResultMatch-5JVWTcY(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
-  public static io.github.whywood.superpi.plugin.api.ToolResultMatch toolResultMatch-5JVWTcY$default(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
+  public static final io.github.whywood.superpi.plugin.api.ToolResultMatch toolResultMatch-zFlXmgY(java.lang.String, java.lang.String, java.lang.String, java.lang.String);
+  public static io.github.whywood.superpi.plugin.api.ToolResultMatch toolResultMatch-zFlXmgY$default(java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object);
   public static final io.github.whywood.superpi.plugin.api.ToolResultRenderer toolResultRenderer(java.lang.String, io.github.whywood.superpi.plugin.api.ToolResultMatch, int, kotlin.jvm.functions.Function3<? super io.github.whywood.superpi.plugin.api.ToolResultState, ? super androidx.compose.runtime.Composer, ? super java.lang.Integer, kotlin.Unit>);
   public static io.github.whywood.superpi.plugin.api.ToolResultRenderer toolResultRenderer$default(java.lang.String, io.github.whywood.superpi.plugin.api.ToolResultMatch, int, kotlin.jvm.functions.Function3, int, java.lang.Object);
 }
@@ -3878,15 +3878,15 @@ public final class io.github.whywood.superpi.plugin.api.ToolResultSource {
   public static final java.lang.String access$getBUILTIN$cp();
 }
 public final class io.github.whywood.superpi.plugin.api.ToolResultSource$Companion {
-  public final java.lang.String getPLUGIN-S_NanRE();
-  public final java.lang.String getMCP-S_NanRE();
-  public final java.lang.String getBUILTIN-S_NanRE();
+  public final java.lang.String getPLUGIN-qPVwiDw();
+  public final java.lang.String getMCP-qPVwiDw();
+  public final java.lang.String getBUILTIN-qPVwiDw();
   public io.github.whywood.superpi.plugin.api.ToolResultSource$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
 }
 public interface io.github.whywood.superpi.plugin.api.ToolResultState {
   public abstract java.lang.String getCallId();
   public abstract java.lang.String getToolName();
-  public abstract java.lang.String getSource-S_NanRE();
+  public abstract java.lang.String getSource-qPVwiDw();
   public abstract java.lang.String getServer();
   public abstract kotlinx.serialization.json.JsonObject getArguments();
   public abstract io.github.whywood.superpi.plugin.api.PluginToolResult getResult();

@@ -4,9 +4,9 @@ import io.github.whywood.superpi.runtime.host.HostAccess
 import io.github.whywood.superpi.runtime.host.HostCapabilities
 import io.github.whywood.superpi.runtime.host.HostEnvironment
 import io.github.whywood.superpi.runtime.host.HostEnvironmentProvider
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import java.io.ByteArrayInputStream
 import java.io.File
 import kotlinx.coroutines.runBlocking

@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.service
 
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.RunSignal
 import io.github.whywood.superpi.runtime.CommandResult
 import io.github.whywood.superpi.runtime.DetailedShellExecutor
 import io.github.whywood.superpi.shell.LinuxExecutor

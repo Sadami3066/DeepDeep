@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MarketCompatibilityTest {
-    private fun meta(apiLevel: Int = 6, minHostVersion: String? = null): MarketPluginMeta = MarketPluginMeta(
+    private fun meta(apiLevel: Int = 7, minHostVersion: String? = null): MarketPluginMeta = MarketPluginMeta(
         apiLevel = apiLevel,
         minHostVersion = minHostVersion,
         publisherKeyId = "ed25519:test",
@@ -14,7 +14,7 @@ class MarketCompatibilityTest {
     fun currentApiLevelIsCompatible() {
         assertEquals(
             MarketPluginCompatibility.Compatible,
-            resolvePluginCompatibility(meta(), hostApiLevel = 6, hostVersion = "1.0.4"),
+            resolvePluginCompatibility(meta(), hostApiLevel = 7, hostVersion = "2.0.0"),
         )
     }
 
@@ -22,7 +22,7 @@ class MarketCompatibilityTest {
     fun missingMetaIsCompatible() {
         assertEquals(
             MarketPluginCompatibility.Compatible,
-            resolvePluginCompatibility(null, hostApiLevel = 6, hostVersion = "1.0.4"),
+            resolvePluginCompatibility(null, hostApiLevel = 7, hostVersion = "2.0.0"),
         )
     }
 
@@ -30,7 +30,7 @@ class MarketCompatibilityTest {
     fun retiredApiLevelIsRejected() {
         assertEquals(
             MarketPluginCompatibility.ApiLevelTooOld,
-            resolvePluginCompatibility(meta(apiLevel = 5), hostApiLevel = 6, hostVersion = "1.0.4"),
+            resolvePluginCompatibility(meta(apiLevel = 6), hostApiLevel = 7, hostVersion = "2.0.0"),
         )
     }
 
@@ -38,7 +38,7 @@ class MarketCompatibilityTest {
     fun newerApiLevelRequiresAppUpdate() {
         assertEquals(
             MarketPluginCompatibility.ApiLevelTooNew,
-            resolvePluginCompatibility(meta(apiLevel = 7), hostApiLevel = 6, hostVersion = "1.0.4"),
+            resolvePluginCompatibility(meta(apiLevel = 8), hostApiLevel = 7, hostVersion = "2.0.0"),
         )
     }
 
@@ -46,7 +46,7 @@ class MarketCompatibilityTest {
     fun newerHostVersionRequiresAppUpdate() {
         assertEquals(
             MarketPluginCompatibility.HostTooOld,
-            resolvePluginCompatibility(meta(minHostVersion = "1.0.5"), hostApiLevel = 6, hostVersion = "1.0.4"),
+            resolvePluginCompatibility(meta(minHostVersion = "2.0.1"), hostApiLevel = 7, hostVersion = "2.0.0"),
         )
     }
 
@@ -54,7 +54,7 @@ class MarketCompatibilityTest {
     fun matchingHostVersionIgnoresSuffix() {
         assertEquals(
             MarketPluginCompatibility.Compatible,
-            resolvePluginCompatibility(meta(minHostVersion = "1.0.4"), hostApiLevel = 6, hostVersion = "1.0.4-dev"),
+            resolvePluginCompatibility(meta(minHostVersion = "2.0.0"), hostApiLevel = 7, hostVersion = "2.0.0-dev"),
         )
     }
 
@@ -62,7 +62,7 @@ class MarketCompatibilityTest {
     fun invalidHostVersionFallsBackToCompatible() {
         assertEquals(
             MarketPluginCompatibility.Compatible,
-            resolvePluginCompatibility(meta(minHostVersion = "1.0.5"), hostApiLevel = 6, hostVersion = "dev"),
+            resolvePluginCompatibility(meta(minHostVersion = "2.0.1"), hostApiLevel = 7, hostVersion = "dev"),
         )
     }
 }

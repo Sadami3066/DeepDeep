@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.coding.paths.AgentPaths
+import io.github.whywood.superpi.sdk.coding.paths.AgentPaths
 import java.io.File
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files

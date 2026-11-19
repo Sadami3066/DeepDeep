@@ -35,7 +35,7 @@ interface PluginManagerFacade {
 
     fun refreshIfStale(minIntervalMillis: Long = 120_000L)
 
-    fun tools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<io.github.whywood.deepdeep.sdk.coding.tools.CodingTool>
+    fun tools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<io.github.whywood.superpi.sdk.coding.tools.CodingTool>
 
     fun deferredTools(binding: SessionBinding, excludedPlugins: Set<String> = emptySet()): List<io.github.whywood.superpi.runtime.DeferredTool>
 

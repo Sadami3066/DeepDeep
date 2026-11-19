@@ -33,8 +33,8 @@ class DeepLinkTest {
     @Test
     fun parsesDetailPages() {
         assertEquals(
-            DeepLink.Page(AppDestination.PluginPage("io.github.whywood.deepdeep.sdk.foo", "home")),
-            DeepLink.parse("superpi://plugins/io.github.whywood.deepdeep.sdk.foo/home"),
+            DeepLink.Page(AppDestination.PluginPage("io.github.whywood.superpi.sdk.foo", "home")),
+            DeepLink.parse("superpi://plugins/io.github.whywood.superpi.sdk.foo/home"),
         )
         assertEquals(
             DeepLink.Page(AppDestination.MiniappDetail("abc_def-123")),
@@ -59,8 +59,8 @@ class DeepLinkTest {
     @Test
     fun parsesPluginCustomPath() {
         assertEquals(
-            DeepLink.PluginPath("io.github.whywood.deepdeep.sdk.mail", "thread/123"),
-            DeepLink.parse("superpi://plugins/io.github.whywood.deepdeep.sdk.mail/thread/123"),
+            DeepLink.PluginPath("io.github.whywood.superpi.sdk.mail", "thread/123"),
+            DeepLink.parse("superpi://plugins/io.github.whywood.superpi.sdk.mail/thread/123"),
         )
         val encoded = java.util.Base64.getUrlEncoder().withoutPadding()
             .encodeToString("""{"accountId":"a1","threadId":"t1"}""".toByteArray())
@@ -90,8 +90,8 @@ class DeepLinkTest {
         assertEquals(DeepLink.Page(AppDestination.Settings), DeepLink.parse("superpi://settings/"))
         assertEquals(DeepLink.Page(AppDestination.Plugins), DeepLink.parse("superpi://plugins/"))
         assertEquals(
-            DeepLink.Page(AppDestination.PluginPage("io.github.whywood.deepdeep.sdk.foo", "home")),
-            DeepLink.parse("superpi://plugins/io.github.whywood.deepdeep.sdk.foo/home/"),
+            DeepLink.Page(AppDestination.PluginPage("io.github.whywood.superpi.sdk.foo", "home")),
+            DeepLink.parse("superpi://plugins/io.github.whywood.superpi.sdk.foo/home/"),
         )
         assertEquals(DeepLink.Session("abc"), DeepLink.parse("superpi://chat/abc/"))
     }

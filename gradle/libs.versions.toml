@@ -18,7 +18,7 @@ hiddenapibypass = "6.1"
 bcpkix = "1.86"
 okhttp = "5.4.0"
 work = "2.10.5"
-pi = "v0.6.3"
+pi = "0.7.0"
 junit = "4.13.2"
 json = "20240303"
 androidx-test-runner = "1.7.0"
@@ -56,7 +56,7 @@ compose-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 compose-test = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
-pi-coding-agent-android = { module = "com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android", version.ref = "pi" }
+pi-coding-agent-android = { module = "io.github.whywood.superpi.sdk:pi-coding-agent-android", version.ref = "pi" }
 junit = { module = "junit:junit", version.ref = "junit" }
 json-org = { module = "org.json:json", version.ref = "json" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }

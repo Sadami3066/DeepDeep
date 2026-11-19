@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.plugin.host.services
 
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
 import io.github.whywood.superpi.plugin.api.McpCallResult
 import io.github.whywood.superpi.plugin.api.McpProbe
 import io.github.whywood.superpi.plugin.api.McpServer

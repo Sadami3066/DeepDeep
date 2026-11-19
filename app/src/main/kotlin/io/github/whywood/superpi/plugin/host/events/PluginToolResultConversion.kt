@@ -1,9 +1,9 @@
 package io.github.whywood.superpi.plugin.host.events
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.Content
-import io.github.whywood.deepdeep.sdk.ai.ImageContent
-import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.Content
+import io.github.whywood.superpi.sdk.ai.ImageContent
+import io.github.whywood.superpi.sdk.ai.TextContent
 import io.github.whywood.superpi.plugin.api.FileRefBlock
 import io.github.whywood.superpi.plugin.api.ImageBlock
 import io.github.whywood.superpi.plugin.api.PluginToolResult

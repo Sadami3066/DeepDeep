@@ -77,7 +77,7 @@ class ThemeCatalogTest {
             {
               "schema": 1,
               "themes": [
-                { "id": "$name", "name": { "default": "$name" }, "dark": false, "base": "superpi", "tokens": {} }
+                { "id": "$name", "name": { "default": "$name" }, "dark": false, "base": "classic", "tokens": {} }
               ]
             }
             """.trimIndent(),

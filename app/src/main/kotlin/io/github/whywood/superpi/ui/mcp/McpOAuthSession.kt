@@ -1,10 +1,10 @@
 package io.github.whywood.superpi.ui.mcp
 
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServer
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServerOptions
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.startOAuthCallbackServerOrNull
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthInteraction
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackServer
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackServerOptions
+import io.github.whywood.superpi.sdk.ai.auth.oauth.startOAuthCallbackServerOrNull
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthInteraction
 import java.net.URLEncoder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred

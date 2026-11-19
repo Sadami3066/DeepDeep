@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.coding.prompt.Skill
-import io.github.whywood.deepdeep.sdk.coding.prompt.loadSkills
-import io.github.whywood.deepdeep.sdk.coding.prompt.renderSkillPromptBlock
+import io.github.whywood.superpi.sdk.coding.prompt.Skill
+import io.github.whywood.superpi.sdk.coding.prompt.loadSkills
+import io.github.whywood.superpi.sdk.coding.prompt.renderSkillPromptBlock
 import java.io.File
 import okio.FileSystem
 import okio.Path.Companion.toPath

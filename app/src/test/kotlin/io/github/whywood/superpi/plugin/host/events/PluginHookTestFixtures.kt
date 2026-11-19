@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.plugin.host.events
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.TextContent
 import io.github.whywood.superpi.plugin.api.InputDecision
 import io.github.whywood.superpi.plugin.api.InputRequest
 import io.github.whywood.superpi.plugin.api.McpServerStatus

@@ -5,9 +5,9 @@ import io.github.whywood.superpi.runtime.host.HostAccessUnavailableException
 import io.github.whywood.superpi.runtime.host.HostCapabilities
 import io.github.whywood.superpi.runtime.host.StreamingShellExecutor
 import io.github.whywood.superpi.runtime.host.StreamingShellResult
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import okio.FileSystem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

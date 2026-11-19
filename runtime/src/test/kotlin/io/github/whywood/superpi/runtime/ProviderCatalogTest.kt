@@ -1,13 +1,13 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.auth.Credential
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
-import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
-import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.coding.models.CustomModelConfig
-import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
+import io.github.whywood.superpi.sdk.ai.auth.Credential
+import io.github.whywood.superpi.sdk.ai.auth.CredentialInfo
+import io.github.whywood.superpi.sdk.ai.auth.CredentialStore
+import io.github.whywood.superpi.sdk.ai.http.HttpRequest
+import io.github.whywood.superpi.sdk.ai.http.HttpResponse
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.coding.models.CustomModelConfig
+import io.github.whywood.superpi.sdk.coding.models.CustomProviderConfig
 import kotlinx.serialization.json.JsonElement
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

@@ -1,9 +1,9 @@
 package io.github.whywood.superpi.data
 
 import io.github.whywood.superpi.runtime.ThinkingLevel
-import io.github.whywood.deepdeep.sdk.ai.ModelInputModality
-import io.github.whywood.deepdeep.sdk.coding.models.CustomModelConfig
-import io.github.whywood.deepdeep.sdk.coding.models.CustomProviderConfig
+import io.github.whywood.superpi.sdk.ai.ModelInputModality
+import io.github.whywood.superpi.sdk.coding.models.CustomModelConfig
+import io.github.whywood.superpi.sdk.coding.models.CustomProviderConfig
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers

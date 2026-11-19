@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.RunSignal
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred

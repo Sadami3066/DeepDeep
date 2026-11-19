@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.runtime.host
 
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutionException
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutionException
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import okio.ForwardingFileSystem
 import okio.FileSystem
 import okio.Path.Companion.toPath
@@ -50,7 +50,7 @@ class DynamicHostAccessTest {
     }
 
     private class FakeShell(private val output: String) : ShellExecutor {
-        override suspend fun run(command: String, timeoutSeconds: Long?, signal: io.github.whywood.deepdeep.sdk.ai.RunSignal?): ShellResult =
+        override suspend fun run(command: String, timeoutSeconds: Long?, signal: io.github.whywood.superpi.sdk.ai.RunSignal?): ShellResult =
             ShellResult(output, 0, false)
     }
 

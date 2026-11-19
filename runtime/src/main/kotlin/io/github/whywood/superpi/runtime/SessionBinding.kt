@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.coding.session.AgentSession
+import io.github.whywood.superpi.sdk.coding.session.AgentSession
 
 data class BoundSession(
     val sessionId: String,

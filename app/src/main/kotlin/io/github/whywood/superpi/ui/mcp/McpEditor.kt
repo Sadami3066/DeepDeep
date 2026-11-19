@@ -54,8 +54,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServer
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackServer
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
 import io.github.whywood.superpi.R
 import io.github.whywood.superpi.ui.common.rememberHapticFeedback
 import io.github.whywood.superpi.design.DdDialog

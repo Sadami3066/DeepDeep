@@ -1,11 +1,11 @@
 package io.github.whywood.superpi.runtime.memory
 
-import io.github.whywood.deepdeep.sdk.ai.BlockContent
-import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.UserMessage
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
+import io.github.whywood.superpi.sdk.ai.BlockContent
+import io.github.whywood.superpi.sdk.ai.PlainTextContent
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.UserMessage
+import io.github.whywood.superpi.sdk.coding.session.SessionEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionMessageEntry
 import io.github.whywood.superpi.runtime.AssistantMessage as UiAssistantMessage
 import io.github.whywood.superpi.runtime.AssistantRole
 import io.github.whywood.superpi.runtime.ModelOption
@@ -227,7 +227,7 @@ class MemoryRecap(
                     lines += "User: $text"
                 }
 
-                is io.github.whywood.deepdeep.sdk.ai.AssistantMessage -> {
+                is io.github.whywood.superpi.sdk.ai.AssistantMessage -> {
                     val text = message.content.filterIsInstance<TextContent>().joinToString("\n") { it.text }.trim()
                     if (text.isEmpty()) continue
                     lines += "Assistant: $text"

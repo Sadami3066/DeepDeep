@@ -1,6 +1,7 @@
 package io.github.whywood.superpi.plugin.host.ui
 
 import io.github.whywood.superpi.plugin.api.LocalizedText
+import io.github.whywood.superpi.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.superpi.plugin.api.PluginManifest
 import io.github.whywood.superpi.plugin.api.PluginCapability
 import io.github.whywood.superpi.plugin.host.PluginPhase
@@ -153,10 +154,10 @@ class SlotRegistryTest {
 
     @Test
     fun uiApiLevelMismatchDisablesBindingAndPages() {
-        val registry = registry(descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(apiLevel = 3)))
+        val registry = registry(descriptor("alpha", listOf(binding(slot)), ui = HostUiManifest(apiLevel = HOST_UI_API_LEVEL + 1)))
 
         assertEquals(
-            SlotDisabledReason.UiApiLevelUnsupported(3, 2),
+            SlotDisabledReason.UiApiLevelUnsupported(HOST_UI_API_LEVEL + 1, HOST_UI_API_LEVEL),
             registry.bindings(slot).single().disabledReason,
         )
         assertEquals(false, registry.uiCompatible("alpha"))

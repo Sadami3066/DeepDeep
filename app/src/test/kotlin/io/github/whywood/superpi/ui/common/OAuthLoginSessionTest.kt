@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.ui.common
 
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthSelectOption
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthSelectOption
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch

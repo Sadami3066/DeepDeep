@@ -1,11 +1,11 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentMessage
-import io.github.whywood.deepdeep.sdk.ai.Model
-import io.github.whywood.deepdeep.sdk.ai.Provider
-import io.github.whywood.deepdeep.sdk.coding.session.QueueBehavior
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.agent.AgentMessage
+import io.github.whywood.superpi.sdk.ai.Model
+import io.github.whywood.superpi.sdk.ai.Provider
+import io.github.whywood.superpi.sdk.coding.session.QueueBehavior
+import io.github.whywood.superpi.sdk.coding.session.SessionEvent
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
 
 data class SessionCompaction(val tokensBefore: Long, val estimatedTokensAfter: Long?)
 

@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.screen
 
 import io.github.whywood.superpi.runtime.host.HostEnvironmentProvider
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
 
 interface MainScreenShell {
     val available: Boolean

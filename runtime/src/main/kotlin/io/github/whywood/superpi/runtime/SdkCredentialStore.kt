@@ -1,14 +1,14 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.PiJson
-import io.github.whywood.deepdeep.sdk.ai.auth.ApiKeyCredential
-import io.github.whywood.deepdeep.sdk.ai.auth.Credential
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialInfo
-import io.github.whywood.deepdeep.sdk.ai.auth.CredentialStore
-import io.github.whywood.deepdeep.sdk.ai.auth.OAuthCredential
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCredential as OAuthToken
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.oauthCredentialFromJson
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.toJsonObject
+import io.github.whywood.superpi.sdk.ai.PiJson
+import io.github.whywood.superpi.sdk.ai.auth.ApiKeyCredential
+import io.github.whywood.superpi.sdk.ai.auth.Credential
+import io.github.whywood.superpi.sdk.ai.auth.CredentialInfo
+import io.github.whywood.superpi.sdk.ai.auth.CredentialStore
+import io.github.whywood.superpi.sdk.ai.auth.OAuthCredential
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCredential as OAuthToken
+import io.github.whywood.superpi.sdk.ai.auth.oauth.oauthCredentialFromJson
+import io.github.whywood.superpi.sdk.ai.auth.oauth.toJsonObject
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

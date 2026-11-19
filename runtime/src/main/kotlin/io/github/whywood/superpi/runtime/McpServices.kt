@@ -1,20 +1,20 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.mcp.McpAuthRequiredException
-import io.github.whywood.deepdeep.sdk.mcp.McpClient
-import io.github.whywood.deepdeep.sdk.mcp.McpClientOptions
-import io.github.whywood.deepdeep.sdk.mcp.McpRequestOptions
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
-import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpAuthProvider
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthInteraction
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthOptions
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthProvider
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpTokenStore
-import io.github.whywood.deepdeep.sdk.mcp.transport.StreamableHttpTransport
-import io.github.whywood.deepdeep.sdk.mcp.transport.StreamableHttpTransportOptions
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.mcp.McpAuthRequiredException
+import io.github.whywood.superpi.sdk.mcp.McpClient
+import io.github.whywood.superpi.sdk.mcp.McpClientOptions
+import io.github.whywood.superpi.sdk.mcp.McpRequestOptions
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.superpi.sdk.mcp.oauth.McpAuthProvider
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthInteraction
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthOptions
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthProvider
+import io.github.whywood.superpi.sdk.mcp.oauth.McpTokenStore
+import io.github.whywood.superpi.sdk.mcp.transport.StreamableHttpTransport
+import io.github.whywood.superpi.sdk.mcp.transport.StreamableHttpTransportOptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -91,7 +91,7 @@ class McpPluginBridge(
         name: String,
         config: McpServerConfig,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): List<io.github.whywood.deepdeep.sdk.mcp.protocol.McpTool> = withContext(Dispatchers.IO) {
+    ): List<io.github.whywood.superpi.sdk.mcp.protocol.McpTool> = withContext(Dispatchers.IO) {
         if (config !is McpServerConfig.Http) return@withContext emptyList()
         withClient(name, config, timeoutMs) { client ->
             client.listTools(McpRequestOptions(timeoutMs = timeoutMs))
@@ -104,9 +104,9 @@ class McpPluginBridge(
         tool: String,
         arguments: kotlinx.serialization.json.JsonObject,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult = withContext(Dispatchers.IO) {
+    ): io.github.whywood.superpi.sdk.mcp.protocol.McpCallResult = withContext(Dispatchers.IO) {
         if (config !is McpServerConfig.Http) {
-            return@withContext io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult(emptyList())
+            return@withContext io.github.whywood.superpi.sdk.mcp.protocol.McpCallResult(emptyList())
         }
         withClient(name, config, timeoutMs) { client ->
             client.callTool(tool, arguments, McpRequestOptions(timeoutMs = timeoutMs))

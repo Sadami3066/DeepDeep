@@ -1,5 +1,11 @@
 # Plugin API changelog
 
+## 2.0.0 / API level 7
+
+- Breaking: Kotlin package moves to `io.github.whywood.superpi.plugin.api`; the plugin entry interface is `SuperPIPlugin` and the Maven group is `io.github.sadami3066.superpi`.
+- Breaking: host UI API level moves to 3; plugins must be rebuilt against this SDK and declare `apiLevel: 7`.
+- Compatibility: `plugin-api` 2.0.0 and `design` 1.0.0 are a new contract line; host 2.0.0+.
+
 ## 1.4.0 / API level 6
 
 Additive release, `PLUGIN_API_LEVEL` stays 6: interfaces only grow, published plugins need no rebuild; plugins that use the new capabilities need `minHostVersion >= 1.4.3`.
@@ -55,7 +61,7 @@ Patch release, contract and apiLevel unchanged.
 
 Breaking upgrade, with no level 5 compatibility layer.
 
-- Contract levels: `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`, `HOST_UI_API_LEVEL = 2`; the host rejects level 5 plugins and asks for an update.
+- Contract levels: `PLUGIN_API_LEVEL = 7`, `BASELINE_API_LEVEL = 7`, `MIN_SUPPORTED_API_LEVEL = 7`, `HOST_UI_API_LEVEL = 3`; the host rejects level 5 plugins and asks for an update.
 - Construction: DTOs constructed by plugins became interfaces plus top-level factories (`pluginTool`, `pluginSkill`, `promptSection`, `pluginPage`, `slotBinding`, `contributions`, `textResult`, `localizedText`, `timerRequest` and so on); public data class constructors are gone.
 - Events and hooks: `PluginEvent` became a non-sealed marker interface, and the 21 observation events became host-implemented read-only interfaces; decision types became interfaces plus factories (`inputContinue`, `toolBlock`, `resultReplace` and so on).
 - Enum convergence: `PluginCapability` became a value class; `MessageRole`, `ToolPhase`, `JobStatus`, `GoalPhase`, `McpServerStatus`, `ChatSendKind` and other result states became value class plus constants.

@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.screen
 
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.RequestAbortedException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
@@ -811,12 +811,12 @@ class ScreenToolsTest {
         }
     }
 
-    private suspend fun run(name: String, args: JsonObject): io.github.whywood.deepdeep.sdk.agent.AgentToolResult {
+    private suspend fun run(name: String, args: JsonObject): io.github.whywood.superpi.sdk.agent.AgentToolResult {
         val tool = screenTools(controller, screenshotDir).first { it.name == name }
         return tool.execute("call", args, null, null)
     }
 
-    private fun io.github.whywood.deepdeep.sdk.agent.AgentToolResult.text(): String =
+    private fun io.github.whywood.superpi.sdk.agent.AgentToolResult.text(): String =
         (content.single() as TextContent).text
 
     private fun assertTaskText(label: String, text: String) {

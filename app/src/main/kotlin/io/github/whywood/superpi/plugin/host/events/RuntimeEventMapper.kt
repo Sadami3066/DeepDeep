@@ -1,17 +1,17 @@
 package io.github.whywood.superpi.plugin.host.events
 
-import io.github.whywood.deepdeep.sdk.agent.AgentEvent
-import io.github.whywood.deepdeep.sdk.agent.AgentMessage
-import io.github.whywood.deepdeep.sdk.agent.asAssistantMessage
-import io.github.whywood.deepdeep.sdk.agent.asLlmMessage
-import io.github.whywood.deepdeep.sdk.ai.AssistantMessage
-import io.github.whywood.deepdeep.sdk.ai.StopReason
-import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
-import io.github.whywood.deepdeep.sdk.ai.UserMessage
-import io.github.whywood.deepdeep.sdk.coding.mcp.McpServerState
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
+import io.github.whywood.superpi.sdk.agent.AgentEvent
+import io.github.whywood.superpi.sdk.agent.AgentMessage
+import io.github.whywood.superpi.sdk.agent.asAssistantMessage
+import io.github.whywood.superpi.sdk.agent.asLlmMessage
+import io.github.whywood.superpi.sdk.ai.AssistantMessage
+import io.github.whywood.superpi.sdk.ai.StopReason
+import io.github.whywood.superpi.sdk.ai.TextDeltaEvent
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.ThinkingDeltaEvent
+import io.github.whywood.superpi.sdk.ai.UserMessage
+import io.github.whywood.superpi.sdk.coding.mcp.McpServerState
+import io.github.whywood.superpi.sdk.coding.session.SessionEvent
 import io.github.whywood.superpi.plugin.api.McpServerStatus
 import io.github.whywood.superpi.plugin.api.PluginEvent
 import io.github.whywood.superpi.plugin.api.PluginToolResult
@@ -228,9 +228,9 @@ internal class RuntimeEventMapper(
         else -> null
     }
 
-    private fun io.github.whywood.deepdeep.sdk.ai.MessageContent.asText(): String = when (this) {
-        is io.github.whywood.deepdeep.sdk.ai.PlainTextContent -> text
-        is io.github.whywood.deepdeep.sdk.ai.BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
+    private fun io.github.whywood.superpi.sdk.ai.MessageContent.asText(): String = when (this) {
+        is io.github.whywood.superpi.sdk.ai.PlainTextContent -> text
+        is io.github.whywood.superpi.sdk.ai.BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
     }
 }
 
@@ -252,7 +252,7 @@ internal class PluginEventIds {
         turnCounts.computeIfAbsent(sessionId) { AtomicLong() }.incrementAndGet()
 }
 
-private fun io.github.whywood.deepdeep.sdk.coding.mcp.McpServerStatus.toPluginStatus(): McpServerStatus = when (state) {
+private fun io.github.whywood.superpi.sdk.coding.mcp.McpServerStatus.toPluginStatus(): McpServerStatus = when (state) {
     McpServerState.Connected -> McpServerStatus.OK
     McpServerState.AuthRequired -> McpServerStatus.AUTH_REQUIRED
     McpServerState.Failed -> McpServerStatus.FAILED

@@ -1,13 +1,14 @@
 # Changelog
 
-## 1.5.0
+## 2.0.0
 
-- feat: Product renamed to Super PI Agent: launcher label, onboarding, notifications, assistant name, wordmark, overlay and default remote label now use PI; application id, plugin ids, deep links and storage keys are unchanged [UI]
-- feat: New PI theme, a black-and-white light/dark pair, becomes the default. Built-in themes now include PI (follows system light/dark), Follow system, Classic Blue, Santorini and Oceanic; legacy theme keys and third-party theme packs keep working [Design]
-- feat: New PI launcher icon, monochrome themed-icon layer and notification silhouette replace the whale artwork; onboarding, empty state and floating bubble use the PI wordmark [UI]
-- feat: Release APK asset name is now `PI-<version>.apk`; the updater accepts the new name and keeps the first-APK fallback for older releases [Build]
-- docs: Public technical documentation is English; product principles and architecture are published as `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` [Docs]
-- chore: app 1.5.0 / versionCode 10109 [Build]
+- feat: Product renamed to Super PI Agent with package `io.github.whywood.superpi`, `superpi://` deep links and `SuperPINative` miniapp bridge; old app data and old plugins are not compatible [Build] [Runtime]
+- feat: New PI launcher icon, monochrome themed-icon layer, notification silhouette, robot mascot and welcome animation replace the whale artwork [UI]
+- feat: New PI theme, a black-and-white light/dark pair, becomes the default; Classic Blue, Follow system, Santorini and Oceanic remain selectable [Design]
+- feat: Plugin ids, plugin SDK (`plugin-api 2.0.0`, API level 7) and Maven group move to SuperPI; official plugins and template rebuilt against the new contract [Plugin] [Build]
+- feat: Release APK asset name is `PI-<version>.apk`; the updater still falls back to the first APK asset [Build]
+- docs: Repositories, market and Maven coordinates move to SuperPI-*; public technical documentation is English [Docs]
+- chore: app 2.0.0 / versionCode 20000 [Build]
 
 ## 1.4.3
 

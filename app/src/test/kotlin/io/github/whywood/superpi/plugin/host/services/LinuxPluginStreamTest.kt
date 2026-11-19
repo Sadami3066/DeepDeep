@@ -8,9 +8,9 @@ import io.github.whywood.superpi.runtime.host.HostEnvironment
 import io.github.whywood.superpi.runtime.host.HostEnvironmentProvider
 import io.github.whywood.superpi.runtime.host.StreamingShellExecutor
 import io.github.whywood.superpi.runtime.host.StreamingShellResult
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import io.github.whywood.superpi.shell.LinuxResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay

@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime.host
 
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
 import okio.FileSystem
 
 class HostAccessUnavailableException(message: String) : IllegalStateException(message)

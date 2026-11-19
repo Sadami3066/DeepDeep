@@ -5,14 +5,14 @@ import android.provider.Settings
 import android.os.ParcelFileDescriptor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
-import io.github.whywood.deepdeep.sdk.ai.http.HttpResponse
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.ai.RequestAbortedException
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.http.HttpRequest
+import io.github.whywood.superpi.sdk.ai.http.HttpResponse
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import io.github.whywood.superpi.SuperPIApplication
 import io.github.whywood.superpi.screen.GuiAccessibilityActions
 import io.github.whywood.superpi.runtime.JobRegistry
@@ -68,7 +68,7 @@ class ToolContractDeviceTest {
         shellExecutor = AppShellExecutor(environment),
         providers = graph.providerCatalog as ProviderCatalog,
     ).availableTools().associateBy { it.name }
-    private fun io.github.whywood.deepdeep.sdk.agent.AgentToolResult.text() = content.filterIsInstance<TextContent>().joinToString("\n") { it.text }
+    private fun io.github.whywood.superpi.sdk.agent.AgentToolResult.text() = content.filterIsInstance<TextContent>().joinToString("\n") { it.text }
     private suspend fun run(tool: CodingTool, args: JsonObject = buildJsonObject {}) = tool.execute("device", args, null, null)
     private fun args(path: File) = buildJsonObject { put("path", path.absolutePath) }
 

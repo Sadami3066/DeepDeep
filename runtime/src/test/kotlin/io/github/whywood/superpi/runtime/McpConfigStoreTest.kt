@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest

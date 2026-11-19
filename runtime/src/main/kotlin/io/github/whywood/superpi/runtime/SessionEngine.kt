@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
 
 interface SessionEngine {
     suspend fun create(file: String?, config: ModelConfig): SessionHandle

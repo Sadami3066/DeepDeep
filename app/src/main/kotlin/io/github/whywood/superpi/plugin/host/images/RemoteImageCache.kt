@@ -6,8 +6,8 @@ import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import io.github.whywood.superpi.plugin.api.RemoteImage
-import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.http.HttpRequest
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest

@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.ui.common
 
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthInteraction
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthSelectOption
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthInteraction
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthSelectOption
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

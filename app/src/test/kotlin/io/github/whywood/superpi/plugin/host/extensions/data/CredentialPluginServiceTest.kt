@@ -2,8 +2,8 @@ package io.github.whywood.superpi.plugin.host.extensions.data
 
 import io.github.whywood.superpi.data.CustomProviderEntry
 import io.github.whywood.superpi.runtime.ProviderSummary
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthState
-import io.github.whywood.deepdeep.sdk.mcp.oauth.OAuthTokens
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthState
+import io.github.whywood.superpi.sdk.mcp.oauth.OAuthTokens
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

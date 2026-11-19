@@ -1,10 +1,10 @@
 package io.github.whywood.superpi.plugin.host
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.agent.AgentToolUpdateCallback
-import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.agent.AgentToolUpdateCallback
+import io.github.whywood.superpi.sdk.ai.RequestAbortedException
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
 import io.github.whywood.superpi.plugin.api.PluginRunSignal
 import io.github.whywood.superpi.plugin.api.Cards
 import io.github.whywood.superpi.plugin.api.PluginTool
@@ -118,5 +118,5 @@ internal object PluginToolAdapter {
     }
 
     private fun toolError(message: String): AgentToolResult =
-        AgentToolResult(content = listOf(io.github.whywood.deepdeep.sdk.ai.TextContent(message)), isError = true)
+        AgentToolResult(content = listOf(io.github.whywood.superpi.sdk.ai.TextContent(message)), isError = true)
 }

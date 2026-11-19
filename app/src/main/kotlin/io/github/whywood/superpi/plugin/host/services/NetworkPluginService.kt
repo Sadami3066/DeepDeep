@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.plugin.host.services
 
-import io.github.whywood.deepdeep.sdk.ai.http.HttpRequest
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.http.HttpRequest
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
 import io.github.whywood.superpi.plugin.api.DownloadResult
 import io.github.whywood.superpi.plugin.api.NetworkResponse
 import io.github.whywood.superpi.plugin.api.NetworkService

@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.graph
 
 import android.content.Context
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
 import io.github.whywood.superpi.conversation.ConversationState
 import io.github.whywood.superpi.data.AppPreferences
 import io.github.whywood.superpi.data.LinuxSettingsStore

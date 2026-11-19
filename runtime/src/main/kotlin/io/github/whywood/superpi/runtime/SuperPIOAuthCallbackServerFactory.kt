@@ -1,9 +1,9 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackRequest
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServer
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServerFactory
-import io.github.whywood.deepdeep.sdk.ai.auth.oauth.OAuthCallbackServerOptions
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackRequest
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackServer
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackServerFactory
+import io.github.whywood.superpi.sdk.ai.auth.oauth.OAuthCallbackServerOptions
 import java.io.InputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket

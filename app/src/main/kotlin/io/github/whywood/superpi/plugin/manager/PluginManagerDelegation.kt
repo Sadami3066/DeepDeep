@@ -34,7 +34,7 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     internal abstract val registrySnapshot: PluginRegistrySnapshot
 
-    override fun tools(binding: SessionBinding, excludedPlugins: Set<String>): List<io.github.whywood.deepdeep.sdk.coding.tools.CodingTool> =
+    override fun tools(binding: SessionBinding, excludedPlugins: Set<String>): List<io.github.whywood.superpi.sdk.coding.tools.CodingTool> =
         sessionHooks.tools(binding, excludedPlugins)
 
     override fun deferredTools(binding: SessionBinding, excludedPlugins: Set<String>): List<io.github.whywood.superpi.runtime.DeferredTool> =
@@ -103,6 +103,6 @@ abstract class PluginManagerDelegation internal constructor() : PluginManagerFac
 
     internal fun onRuntimeEvent(event: SessionRuntimeEvent) = sessionHooks.dispatchRuntimeEvent(event)
 
-    internal fun onSessionSdkEvent(sessionId: String, event: io.github.whywood.deepdeep.sdk.coding.session.SessionEvent) =
+    internal fun onSessionSdkEvent(sessionId: String, event: io.github.whywood.superpi.sdk.coding.session.SessionEvent) =
         sessionHooks.dispatchSessionEvent(sessionId, event)
 }

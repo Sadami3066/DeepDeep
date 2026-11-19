@@ -1,9 +1,9 @@
 package io.github.whywood.superpi.plugin.host
 
-import io.github.whywood.deepdeep.sdk.ai.ImageContent
-import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.ImageContent
+import io.github.whywood.superpi.sdk.ai.RequestAbortedException
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.ai.TextContent
 import io.github.whywood.superpi.plugin.api.PluginTool
 import io.github.whywood.superpi.plugin.api.PluginToolResult
 import io.github.whywood.superpi.plugin.api.ToolBlock

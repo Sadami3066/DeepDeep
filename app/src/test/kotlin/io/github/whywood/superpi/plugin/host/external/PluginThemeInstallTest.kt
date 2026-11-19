@@ -138,7 +138,7 @@ class PluginThemeInstallTest {
 
     private fun themePack(ids: List<String>, tokens: String = ""): String {
         val themes = ids.joinToString(",") { id ->
-            """{ "id": "$id", "name": { "default": "$id" }, "dark": false, "base": "superpi", "tokens": { $tokens } }"""
+            """{ "id": "$id", "name": { "default": "$id" }, "dark": false, "base": "classic", "tokens": { $tokens } }"""
         }
         return """{"schema":1,"themes":[$themes]}"""
     }

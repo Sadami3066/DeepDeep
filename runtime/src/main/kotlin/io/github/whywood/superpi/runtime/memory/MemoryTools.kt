@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.runtime.memory
 
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
-import io.github.whywood.deepdeep.sdk.coding.tools.textResult
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.textResult
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

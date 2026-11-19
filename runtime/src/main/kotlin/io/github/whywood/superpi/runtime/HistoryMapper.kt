@@ -1,19 +1,19 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.AssistantMessage as PiAssistantMessage
-import io.github.whywood.deepdeep.sdk.ai.BlockContent
-import io.github.whywood.deepdeep.sdk.ai.PlainTextContent
-import io.github.whywood.deepdeep.sdk.ai.StopReason
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.ThinkingContent
-import io.github.whywood.deepdeep.sdk.ai.ToolCall
-import io.github.whywood.deepdeep.sdk.ai.ToolResultMessage
-import io.github.whywood.deepdeep.sdk.ai.UserMessage
-import io.github.whywood.deepdeep.sdk.coding.session.BranchSummaryEntry
-import io.github.whywood.deepdeep.sdk.coding.session.CompactionEntry
-import io.github.whywood.deepdeep.sdk.coding.session.CustomMessageEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEntry
-import io.github.whywood.deepdeep.sdk.coding.session.SessionMessageEntry
+import io.github.whywood.superpi.sdk.ai.AssistantMessage as PiAssistantMessage
+import io.github.whywood.superpi.sdk.ai.BlockContent
+import io.github.whywood.superpi.sdk.ai.PlainTextContent
+import io.github.whywood.superpi.sdk.ai.StopReason
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.ThinkingContent
+import io.github.whywood.superpi.sdk.ai.ToolCall
+import io.github.whywood.superpi.sdk.ai.ToolResultMessage
+import io.github.whywood.superpi.sdk.ai.UserMessage
+import io.github.whywood.superpi.sdk.coding.session.BranchSummaryEntry
+import io.github.whywood.superpi.sdk.coding.session.CompactionEntry
+import io.github.whywood.superpi.sdk.coding.session.CustomMessageEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionEntry
+import io.github.whywood.superpi.sdk.coding.session.SessionMessageEntry
 import kotlinx.serialization.json.JsonObject
 
 private const val REMINDER_PREFIX = "[定时提醒]"
@@ -307,7 +307,7 @@ object HistoryMapper {
         else -> MessageStatus.DONE
     }
 
-    private fun io.github.whywood.deepdeep.sdk.ai.MessageContent.asText(): String = when (this) {
+    private fun io.github.whywood.superpi.sdk.ai.MessageContent.asText(): String = when (this) {
         is PlainTextContent -> text
         is BlockContent -> blocks.filterIsInstance<TextContent>().joinToString("") { it.text }
     }

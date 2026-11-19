@@ -1687,7 +1687,7 @@ class ChatViewModelTest {
             return ModelConfig(model.providerId, model.id, thinking)
         }
 
-        override fun sdkModel(providerId: String, modelId: String): io.github.whywood.deepdeep.sdk.ai.Model? = null
+        override fun sdkModel(providerId: String, modelId: String): io.github.whywood.superpi.sdk.ai.Model? = null
         override fun modelReference(providerId: String, modelId: String): String = "$providerId/$modelId"
     }
 

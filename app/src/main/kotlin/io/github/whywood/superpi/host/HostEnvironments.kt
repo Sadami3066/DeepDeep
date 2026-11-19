@@ -5,7 +5,7 @@ import io.github.whywood.superpi.runtime.host.HostAccessUnavailableException
 import io.github.whywood.superpi.runtime.host.HostCapabilities
 import io.github.whywood.superpi.runtime.host.HostEnvironment
 import io.github.whywood.superpi.runtime.host.StreamingShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
 import okio.FileSystem
 
 enum class RootBashReadiness {

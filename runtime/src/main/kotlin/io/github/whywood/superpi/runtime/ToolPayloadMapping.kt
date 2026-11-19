@@ -1,10 +1,10 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.Content
-import io.github.whywood.deepdeep.sdk.ai.ImageContent
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.ai.ToolResultMessage
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.Content
+import io.github.whywood.superpi.sdk.ai.ImageContent
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.ToolResultMessage
 import kotlinx.serialization.json.JsonObject
 
 internal fun AgentToolResult.toToolResultPayload(): ToolResultPayload =

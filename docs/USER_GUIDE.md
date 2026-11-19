@@ -5,7 +5,7 @@ Applies to the current version. The interface and capabilities will keep changin
 ## Install and first launch
 
 - Requires Android 10 or later.
-- Download the package from [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases). The first launch runs a 6-screen onboarding: welcome, account, models, notifications and permissions, choosing a work environment, system access.
+- Download the package from [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases). The first launch runs a 6-screen onboarding: welcome, account, models, notifications and permissions, choosing a work environment, system access.
 - You can skip onboarding or leave it midway, then fill in each item later in Settings.
 - The app has no account system and needs no sign-up; model keys stay on this device.
 

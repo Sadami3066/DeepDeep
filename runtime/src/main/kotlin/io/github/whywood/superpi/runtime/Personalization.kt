@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.coding.prompt.DEFAULT_SYSTEM_PROMPT_PREAMBLE
+import io.github.whywood.superpi.sdk.coding.prompt.DEFAULT_SYSTEM_PROMPT_PREAMBLE
 import java.time.OffsetDateTime
 
 enum class InteractionStyle {

@@ -1,12 +1,12 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentEvent
-import io.github.whywood.deepdeep.sdk.agent.AgentMessage
-import io.github.whywood.deepdeep.sdk.ai.TextDeltaEvent
-import io.github.whywood.deepdeep.sdk.ai.ToolCall
-import io.github.whywood.deepdeep.sdk.ai.ToolCallStartEvent
-import io.github.whywood.deepdeep.sdk.ai.ThinkingDeltaEvent
-import io.github.whywood.deepdeep.sdk.coding.session.SessionEvent
+import io.github.whywood.superpi.sdk.agent.AgentEvent
+import io.github.whywood.superpi.sdk.agent.AgentMessage
+import io.github.whywood.superpi.sdk.ai.TextDeltaEvent
+import io.github.whywood.superpi.sdk.ai.ToolCall
+import io.github.whywood.superpi.sdk.ai.ToolCallStartEvent
+import io.github.whywood.superpi.sdk.ai.ThinkingDeltaEvent
+import io.github.whywood.superpi.sdk.coding.session.SessionEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.json.JsonObject
 

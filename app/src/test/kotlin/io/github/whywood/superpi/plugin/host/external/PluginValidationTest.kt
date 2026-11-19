@@ -5,6 +5,7 @@ import io.github.whywood.superpi.plugin.api.LocalizedText
 import io.github.whywood.superpi.plugin.api.MIN_SUPPORTED_API_LEVEL
 import io.github.whywood.superpi.plugin.api.PLUGIN_API_LEVEL
 import io.github.whywood.superpi.plugin.api.PluginCapability
+import io.github.whywood.superpi.plugin.api.HOST_UI_API_LEVEL
 import io.github.whywood.superpi.plugin.api.PluginManifest
 import io.github.whywood.superpi.plugin.api.PluginPermission
 import io.github.whywood.superpi.plugin.api.assetIcon
@@ -90,8 +91,8 @@ class PluginValidationTest {
 
     @Test
     fun validatesApiLevel() {
-        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 7)))
-        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 5)))
+        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = PLUGIN_API_LEVEL + 1)))
+        assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = PLUGIN_API_LEVEL - 2)))
         assertEquals(listOf(PluginValidation.Code.API_LEVEL_UNSUPPORTED), codes(manifest(apiLevel = 0)))
         assertTrue(issues(manifest(apiLevel = MIN_SUPPORTED_API_LEVEL)).isEmpty())
         assertEquals(
@@ -167,7 +168,7 @@ class PluginValidationTest {
 
     @Test
     fun uiApiLevelMismatchIsOnlyWarning() {
-        val result = issues(manifest(ui = HostUiManifest(apiLevel = 3)))
+        val result = issues(manifest(ui = HostUiManifest(apiLevel = HOST_UI_API_LEVEL + 1)))
         assertEquals(listOf(PluginValidation.Code.UI_API_LEVEL_UNSUPPORTED), result.map { it.code })
         assertEquals(PluginValidation.Severity.WARNING, result.single().severity)
     }

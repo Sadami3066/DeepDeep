@@ -13,6 +13,9 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        mavenLocal {
+            content { includeGroup("io.github.whywood.superpi.sdk") }
+        }
         google()
         mavenCentral()
         maven("https://jitpack.io")

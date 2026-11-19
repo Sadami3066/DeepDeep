@@ -1,9 +1,9 @@
 package io.github.whywood.superpi.arrange
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.RequestAbortedException
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
-import io.github.whywood.deepdeep.sdk.coding.tools.textResult
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.RequestAbortedException
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.textResult
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

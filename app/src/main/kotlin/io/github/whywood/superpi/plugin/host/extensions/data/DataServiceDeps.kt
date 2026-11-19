@@ -21,7 +21,7 @@ import io.github.whywood.superpi.plugin.host.interaction.PluginInteraction
 import io.github.whywood.superpi.runtime.McpConfigStore
 import io.github.whywood.superpi.runtime.ProviderCatalog
 import io.github.whywood.superpi.runtime.SdkCredentialStore
-import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.superpi.web.DeepSeekWebProvider
 import io.github.whywood.superpi.web.WebProvider
 import java.io.File

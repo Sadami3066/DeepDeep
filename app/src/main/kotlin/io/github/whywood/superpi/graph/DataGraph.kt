@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.graph
 
-import io.github.whywood.deepdeep.sdk.ai.http.okHttpTransport
-import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
-import io.github.whywood.deepdeep.sdk.mcp.oauth.defaultMcpAuthFile
+import io.github.whywood.superpi.sdk.ai.http.okHttpTransport
+import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.superpi.sdk.mcp.oauth.defaultMcpAuthFile
 import io.github.whywood.superpi.core.ModelSelection
 import io.github.whywood.superpi.data.AgentDocStore
 import io.github.whywood.superpi.data.AppPreferences

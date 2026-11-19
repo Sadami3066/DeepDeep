@@ -30,7 +30,7 @@ Output: `app/build/outputs/apk/release/app-release.apk`. Release enables R8 code
 
 The version numbers in `app/build.gradle.kts` are edited by hand before a release:
 
-- `versionCode`: incremented by one on every release; it must be greater than the installed version code (for example `1.5.0` → `10109`).
+- `versionCode`: incremented by one on every release; it must be greater than the installed version code (for example `2.0.0` → `20000`).
 - `versionName`: `X.Y.Z`, matching the tag.
 
 Version numbers appear only in: `app/build.gradle.kts`, the top section of `CHANGELOG.md`, `release-notes/vX.Y.Z.md`, and git tags. Product docs such as README and USER_GUIDE do not carry versions.

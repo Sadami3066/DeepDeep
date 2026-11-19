@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.coding.prompt.SystemPromptInput
-import io.github.whywood.deepdeep.sdk.coding.prompt.buildSystemPrompt
-import io.github.whywood.deepdeep.sdk.coding.prompt.loadPromptResources
+import io.github.whywood.superpi.sdk.coding.prompt.SystemPromptInput
+import io.github.whywood.superpi.sdk.coding.prompt.buildSystemPrompt
+import io.github.whywood.superpi.sdk.coding.prompt.loadPromptResources
 import okio.FileSystem
 import okio.Path
 

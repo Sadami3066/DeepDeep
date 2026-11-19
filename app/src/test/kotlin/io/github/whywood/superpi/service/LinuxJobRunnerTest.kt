@@ -6,7 +6,7 @@ import io.github.whywood.superpi.runtime.host.HostEnvironment
 import io.github.whywood.superpi.runtime.host.HostEnvironmentProvider
 import io.github.whywood.superpi.runtime.host.StreamingShellExecutor
 import io.github.whywood.superpi.runtime.host.StreamingShellResult
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
 import kotlinx.coroutines.test.runTest
 import okio.FileSystem
 import org.junit.Assert.assertEquals

@@ -11,9 +11,9 @@ import io.github.whywood.superpi.runtime.ProviderAuthKind
 import io.github.whywood.superpi.runtime.ProviderCatalog
 import io.github.whywood.superpi.runtime.ProviderSummary
 import io.github.whywood.superpi.runtime.SdkCredentialStore
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
-import io.github.whywood.deepdeep.sdk.mcp.oauth.FileMcpTokenStore
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthState
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

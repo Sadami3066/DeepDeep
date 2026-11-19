@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-11-19T10:37:30Z",
+  "generatedAt": "2026-11-19T12:57:24Z",
   "keyId": "ec256:db63256431bd66db",
   "entries": [
     {
@@ -33,13 +33,13 @@
       "icon": "icons/amap.png?v=1186c72c5414",
       "version": "1.5.3",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116-5/amap-1.5.3.ddp",
-        "sha256": "e5f065b796697cd074b0f46ffc55def83e396192f5c52ad9d9f63c457254ff29",
-        "size": 1104735
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/amap-1.5.3.ddp",
+        "sha256": "af73873381f16ba5bbb9f163448c82c539662eeda596d2ec32867481d217c94a",
+        "size": 1104633
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.0",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -77,13 +77,13 @@
       },
       "version": "2.7.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261119/feishu-2.7.1.ddp",
-        "sha256": "e590f898690ea85da413980752421eeca8bb2bf91497f03877617a3bd8ac9eb9",
-        "size": 992887
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/feishu-2.7.1.ddp",
+        "sha256": "ade98a305cde346278a8e53f0c63b2bb45e74a22be420ebba09967aeefc6f636",
+        "size": 992926
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.3",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -121,13 +121,13 @@
       "icon": "icons/hotel.png?v=59c14774ffbd",
       "version": "1.4.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/hotel-1.4.1.ddp",
-        "sha256": "2648852624eccaccfaae44d0ad5f710114fa9355cdd4b72483cf795eb14ef891",
-        "size": 1463476
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/hotel-1.4.1.ddp",
+        "sha256": "6fc8489bc42a9685bceaed6a90eb5f7bef40dacbd5cb6a00ce58c65dca968bfc",
+        "size": 1465101
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.0",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -165,13 +165,13 @@
       },
       "version": "1.6.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261118-1/mail-1.6.2.ddp",
-        "sha256": "6f2d5215c800a87c07ced054e06ae3284558d059b8f43c718334e77159d6754a",
-        "size": 1811767
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/mail-1.6.2.ddp",
+        "sha256": "50a62acb8da671234eb1210e37bcbc8a411065273d609ed3da6b9ddcc7682341",
+        "size": 1819332
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.3.0",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -209,63 +209,19 @@
       },
       "version": "2.7.4",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116-3/micloud-2.7.4.ddp",
-        "sha256": "25c0abdd1c27efb3290dc8ec07716d129c253a6799438c153d2d1000a3d46cf6",
-        "size": 1128587
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/micloud-2.7.4.ddp",
+        "sha256": "ff1170e55f104755f4ea7c190dafba6642ce718e2214780d75eda9a4b4645a0f",
+        "size": 1128446
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.0",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
         "version": "2.7.4"
       },
       "category": "office"
-    },
-    {
-      "type": "plugin",
-      "id": "io.github.whywood.superpi.plugin.purge",
-      "name": {
-        "zh": "网络攻防",
-        "en": "NetSec"
-      },
-      "summary": {
-        "zh": "安全作业口径、红队 runbook 与交付纪律",
-        "en": "Security-ops rules, red-team runbooks and delivery discipline"
-      },
-      "description": {
-        "zh": "在会话中注入安全作业口径与红队 runbook，覆盖侦察、漏洞验证、凭据测试、隧道与内网横向。命中安全类请求时附带对应 runbook 原文；模型拒答时补一条可直接执行的内容。仅用于自有或受托资产的授权测试。",
-        "en": "Inject security-ops rules and red-team runbooks into the session, covering recon, vulnerability verification, credential testing, tunnels and lateral movement. Matched requests carry the original runbook; when the model refuses, a directly usable fallback is posted. For authorized testing of owned or entrusted assets only."
-      },
-      "icon": "icons/netsec.png?v=08c512fc15f0",
-      "tags": {
-        "zh": [
-          "安全",
-          "测试",
-          "脚本"
-        ],
-        "en": [
-          "Security",
-          "Testing",
-          "Scripts"
-        ]
-      },
-      "version": "1.0.1",
-      "artifact": {
-        "url": "https://github.com/Sadami3066/DeepDeep-Purge/releases/download/plugins-20261112/purge-1.0.1.ddp",
-        "sha256": "4070fbea6d93f8ee55f36e04e4f6d7d0442e2294a1d80d7af47cfb6db8e999d4",
-        "size": 994737
-      },
-      "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.0.4",
-        "publisherKeyId": "ed25519:898b5a12922251d5b291141142bb2b44dd2c1609016fc0c11050fc5f2d863b19",
-        "publisherName": "milous",
-        "requiredAccess": "normal",
-        "version": "1.0.1"
-      },
-      "category": "dev"
     },
     {
       "type": "plugin",
@@ -295,13 +251,13 @@
       "icon": "icons/rail.png?v=bba1560d8cf3",
       "version": "1.4.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/rail-1.4.0.ddp",
-        "sha256": "83603bb5622100c78cd0125aa05711e4adfd9657e44e3f836067ec3dc82ef978",
-        "size": 1144840
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/rail-1.4.0.ddp",
+        "sha256": "8d32f9293eb7d04305d98de66ac4b29b69ec7589074813070e707df9c4f3dc12",
+        "size": 1144623
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.0",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -339,13 +295,13 @@
       "icon": "icons/ride.png?v=d8c97028398c",
       "version": "1.3.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116-5/ride-1.3.1.ddp",
-        "sha256": "8753e6a0118d98e4f1fa50a35a89a4aa31e4562c3638fa118f0db21019a9fa66",
-        "size": 1015863
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/ride-1.3.1.ddp",
+        "sha256": "ea1b828c20b169b0799a518569c3afbd14cc6d989e451a7a71cf01a101677127",
+        "size": 1015821
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.0",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -381,13 +337,13 @@
       },
       "version": "2.7.3",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261119/sysu-2.7.3.ddp",
-        "sha256": "a5af02bc23e970bc2076c3c15aa44289bafc43ab718a17497140f4dc6586ac9b",
-        "size": 1023648
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/sysu-2.7.3.ddp",
+        "sha256": "c4b51c156a3f2fdb8811660550b4e5b2c609ca4640b4c34ff7c6848b98ffc119",
+        "size": 1023631
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.3",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -429,13 +385,13 @@
       },
       "version": "1.0.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/themes-1.0.1.ddp",
-        "sha256": "6ed1d2c3f074e64df42ec8cb050782ca3c36abd38cb96b2f1d4244fd76624a0e",
-        "size": 815862
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/themes-1.0.1.ddp",
+        "sha256": "4b15a86b2fdfd0b96f993191ab3eeeb48da511a93a8d42bf6e5b41c626319534",
+        "size": 815869
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.0.8",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -473,13 +429,13 @@
       },
       "version": "0.5.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/wechat-0.5.2.ddp",
-        "sha256": "afd2257125820b48e4567a71cca5a41878f0dd23dc405fd97e4e5adb7dee504f",
-        "size": 894528
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/wechat-0.5.2.ddp",
+        "sha256": "e7845ec35ef4946413774250028b59fd42e6c87eb7a322dcb079c78a4ffce339",
+        "size": 894544
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.0.8",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "root",
@@ -517,13 +473,13 @@
       },
       "version": "2.6.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261119/wecom-2.6.2.ddp",
-        "sha256": "9bab665eb52859d721ce7627c28e9cfb14096d502423c3568e66310cdc931ac3",
-        "size": 1029099
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/wecom-2.6.2.ddp",
+        "sha256": "fe05a8b49335063273f7cfdb53323e7fce2b2d2b0ec39fa8869a0451cf804051",
+        "size": 1029110
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.4.3",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",
@@ -561,13 +517,13 @@
       },
       "version": "1.0.18",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261114-6/zanao-1.0.18.ddp",
-        "sha256": "b64961a5da8e0cea07ffaa63d9758b8df2e128fe9c32b927c6b8a69e7e916d56",
-        "size": 1721947
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/zanao-1.0.18.ddp",
+        "sha256": "40fb2ebfef7e4daf62151c3ca9b75edfd2b42ff88e45c8065c9f2671709d9116",
+        "size": 1724396
       },
       "plugin": {
-        "apiLevel": 6,
-        "minHostVersion": "1.0.8",
+        "apiLevel": 7,
+        "minHostVersion": "2.0.0",
         "publisherKeyId": "ed25519:cb08701a59d66606aa5cf461d1c865e3787dbf571ef53b2cd2c3d750a6b53ee2",
         "publisherName": "milous",
         "requiredAccess": "normal",

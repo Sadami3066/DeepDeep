@@ -2,9 +2,9 @@ package io.github.whywood.superpi.runtime.host
 
 import io.github.whywood.superpi.runtime.CommandResult
 import io.github.whywood.superpi.runtime.DetailedShellExecutor
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutionException
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutionException
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
 import okio.FileHandle
 import okio.FileMetadata
 import okio.FileSystem

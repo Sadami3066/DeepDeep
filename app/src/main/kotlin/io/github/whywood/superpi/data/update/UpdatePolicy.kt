@@ -24,7 +24,7 @@ enum class UpdateFailure {
 }
 
 object UpdatePolicy {
-    const val RELEASE_REPO = "Sadami3066/SuperPI"
+    const val RELEASE_REPO = "Sadami3066/SuperPI-App"
     const val LATEST_URL = "https://api.github.com/repos/$RELEASE_REPO/releases/latest"
     const val RELEASE_PAGE_URL = "https://github.com/$RELEASE_REPO/releases/latest"
     const val CHECK_INTERVAL_MS = 24L * 60L * 60L * 1000L

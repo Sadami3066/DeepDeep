@@ -18,8 +18,8 @@ android {
         applicationId = "io.github.whywood.superpi"
         minSdk = 29
         targetSdk = 36
-        versionCode = 10109
-        versionName = "1.5.0"
+        versionCode = 20000
+        versionName = "2.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

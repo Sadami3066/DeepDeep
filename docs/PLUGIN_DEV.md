@@ -8,16 +8,16 @@ PI plugins are **Kotlin code plugins**: implement `SuperPIPlugin` from `plugin-a
 
 ## Quick start
 
-`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.superpi.plugin.api`): the current release is `1.4.0`, whose transitive dependency is `design 0.11.0` (take the latest release in `SuperPI-Maven` as authoritative); `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`, `HOST_UI_API_LEVEL = 2`.
+`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.superpi.plugin.api`): the current release is `2.0.0`, whose transitive dependency is `design 1.0.0` (take the latest release in `SuperPI-Maven` as authoritative); `PLUGIN_API_LEVEL = 7`, `BASELINE_API_LEVEL = 7`, `MIN_SUPPORTED_API_LEVEL = 7`, `HOST_UI_API_LEVEL = 3`.
 
-`plugin-api 1.3.0` is purely additive within level 6: published plugins that use only 1.0.x/1.1.x/1.2.x capabilities need no rebuild; plugins using the new 1.3.0 capabilities (tool result renderers) write `minHostVersion: "1.1.0"` (host 1.1.0+). `plugin-api 1.3.1` / `design 0.11.0` are additive too: new `host.images()` and `DdRemoteImage`, and plugins using them write `minHostVersion: "1.4.0"`. The compatibility promise is in `plugin-api/COMPATIBILITY.md`: within one `apiLevel` only binary-compatible additions, and deleting, renaming, changing signatures or changing semantics requires a new `apiLevel`; the host rejects plugins with an `apiLevel` above its own, and level 5 has not been accepted since 1.0.4.
+`plugin-api 2.0.0` / `design 1.0.0` start the SuperPI contract line at API level 7: the Kotlin package, plugin interface and Maven group are renamed, plugin ids use `io.github.whywood.superpi.plugin.*`, and host UI API level is 3. Plugins must be rebuilt and declare `apiLevel: 7`; old 1.x plugins are rejected. Later 2.x releases stay binary-compatible within level 7. The compatibility promise is in `plugin-api/COMPATIBILITY.md`: within one `apiLevel` only binary-compatible additions, and deleting, renaming, changing signatures or changing semantics requires a new `apiLevel`; the host rejects plugins with an `apiLevel` above its own, and level 5 has not been accepted since 1.0.4.
 
 Start a plugin project from `template/` in [SuperPI-Plugins](https://github.com/Sadami3066/SuperPI-Plugins): a standalone Gradle Android project with an example tool, an example skill, one prompt section and the full `.ddp` packaging/signing/verification implementation. Copy or rename it as a starting point. Official plugin implementations are in [SuperPI-Official-Plugins](https://github.com/Sadami3066/SuperPI-Official-Plugins).
 
 Prerequisites:
 
 - JDK 17+ and the Android SDK; locate the SDK with the `ANDROID_HOME`/`ANDROID_SDK_ROOT` environment variables or `sdk.dir` in the project's `local.properties`.
-- Plugins depend on the public Maven repository `https://sadami3066.github.io/SuperPI-Maven` (group `io.github.sadami3066.superpi`, currently `plugin-api 1.4.0` / `design 0.11.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
+- Plugins depend on the public Maven repository `https://sadami3066.github.io/SuperPI-Maven` (group `io.github.sadami3066.superpi`, currently `plugin-api 2.0.0` / `design 1.0.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
 
 `plugin-api` is the contract, and `design` is the UI design system shared with the app (plugin UI uses it directly, and `plugin-api` brings it in through `api()`). Publishing a new version:
 
@@ -88,7 +88,7 @@ The manifest always lives at `assets/plugin.json` inside the package and is pars
 | `id` | string | Yes | Lowercase reverse domain, at least two segments, regex `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` (e.g. `com.example.myplugin`); the host uses it as the install directory and unique identity |
 | `version` | string | Yes | `major.minor.patch`, optionally with a `-dev`/`+build` suffix; the host records the installed version and decides upgrades |
 | `apiLevel` | int | No (default 6) | Contract level the plugin requires; must be within `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` (currently 6..6), otherwise loading is refused. Omitted means `BASELINE_API_LEVEL` (6); level 5 plugins have been rejected since host 1.0.4 |
-| `minHostVersion` | string | No | Minimum host version. The host version comes from `BuildConfig.VERSION_NAME`; comparison looks only at `major.minor.patch` and ignores suffixes. Plugins using only capabilities that existed in 1.0.x can write `"1.0.4"`; plugins using 1.1.0 capabilities (including design 0.7.0 components) write `"1.0.6"`; plugins using design 0.8.0 components write `"1.0.7"`; plugins using design 0.9.0 components or plugin-api 1.2.0 capabilities write `"1.0.8"`; plugins using tool result renderers or other 1.3.0 capabilities write `"1.1.0"`; plugins using `host.images()`/`DdRemoteImage` write `"1.4.0"` |
+| `minHostVersion` | string | No | Minimum host version. The host version comes from `BuildConfig.VERSION_NAME`; comparison looks only at `major.minor.patch` and ignores suffixes. Plugins using only capabilities that existed in 1.0.x can write `"1.0.4"`; plugins using 1.1.0 capabilities (including design 0.7.0 components) write `"1.0.6"`; plugins using design 0.8.0 components write `"1.0.7"`; plugins using design 1.0.0 components or plugin-api 2.0.0 capabilities write `"1.0.8"`; plugins using tool result renderers or other 1.3.0 capabilities write `"1.1.0"`; plugins using `host.images()`/`DdRemoteImage` write `"1.4.0"` |
 | `entryClass` | string | Yes | Fully qualified name of the class implementing `SuperPIPlugin`; it must have a no-arg constructor |
 | `name` | LocalizedText | Yes | Plugin name, with at least `default` |
 | `summary` | LocalizedText | Yes | One-line description, with at least `default` |
@@ -559,11 +559,11 @@ Fields you write into `details` other than `superpi.fileRefs` are passed through
 
 `isError = true` marks a failed tool result (the model can retry or explain it); an exception thrown from `execute` (other than cancellation) also becomes an error result, so do not use exceptions to convey business errors.
 
-#### Three layers of tool results: raw / guidance / card (1.4.3, plugin tools only)
+#### Three layers of tool results: raw / guidance / card (2.0.0, plugin tools only)
 
 Cards belong to plugin tools only: a `PluginTool` result may carry a card, and the host renders it in the answer area by `superpi.card`. Plugins that run a CLI through bash (such as Sun Yat-sen University, Feishu, WeCom) produce no cards and do not parse bash commands; their results stay CLI text that the model reads and answers from, and the host does no card handling for bash results at all.
 
-The tool writes three pieces of data into the result details, and `open fun Cards.deliver(callId, result)` (plugin-api 1.4.0, host 1.4.3+) assembles them into model-visible text and display text:
+The tool writes three pieces of data into the result details, and `open fun Cards.deliver(callId, result)` (plugin-api 2.0.0, host 2.0.0+) assembles them into model-visible text and display text:
 
 | details key | Contents | Who uses it |
 |---|---|---|
@@ -575,8 +575,8 @@ The tool writes three pieces of data into the result details, and `open fun Card
 - The text of `textResult` contains only the plugin's own body (for example a list of mailbox facts); `raw`/`guidance` are no longer assembled by the host.
 - For error results (`isError = true`), `Cards.deliver` drops the card and the `present` instruction, keeping only the body, the full return and the usage instructions.
 - The card payload must be complete (including raw dirty strings, IDs, coordinates, image URLs, state, pagination tokens); trimming happens only in the default preview/expand of the rendering layer.
-- Fetch image URLs with `host.images().load(url, maxEdgePx)` (the manifest must declare the `images` capability), which returns `RemoteImage.bitmap`; render it with `DdRemoteImage` from design 0.11.0, and use `DdImageViewer(bitmap)` for full screen. Images only go into host memory and the private cache; do not write them to shared storage or the plugin data directory.
-- `plugin-api 1.3.1` + `design 0.11.0`: plugins using `host.images()` write `minHostVersion: "1.4.0"`; `plugin-api 1.3.1` is still additive within level 6.
+- Fetch image URLs with `host.images().load(url, maxEdgePx)` (the manifest must declare the `images` capability), which returns `RemoteImage.bitmap`; render it with `DdRemoteImage` from design 1.0.0, and use `DdImageViewer(bitmap)` for full screen. Images only go into host memory and the private cache; do not write them to shared storage or the plugin data directory.
+- `plugin-api 2.0.0` + `design 1.0.0`: plugins using `host.images()` write `minHostVersion: "1.4.0"`; `plugin-api 2.0.0` is still additive within level 6.
 
 Tools enter the session with enabled plugins by default; when you need session information, use the live handle from `contributionsFor`:
 
@@ -789,7 +789,7 @@ Match rules:
 - MCP tools are called through `tool_search` + `tool_execute` by default, and renderers do not need to care about that wrapper.
 - Structured content is for UI only and does not enter the model context; do not stuff images or large JSON into `details` expecting the host to render them — prefer `structuredContent`.
 - Renderer content is subject to the same plugin UI compatibility constraints (`ui.apiLevel` / `kotlin` / `compose`) and retries automatically after a version upgrade; Compose exceptions have no crash isolation, just like slots, so test them yourself.
-- Tool result renderers need `plugin-api 1.3.0+` and host `1.1.0+`; plugins using only older capabilities are unaffected.
+- Tool result renderers need `plugin-api 2.0.0+` and host `1.1.0+`; plugins using only older capabilities are unaffected.
 
 Pages and composer actions are contributions, not slots: `PluginUiContributions.pages` (built with `pluginPage(id, title, icon?, content)`) declares plugin pages with inline page content, and `PluginUiContributions.composerActions` (built with `composerAction(id, label, icon?)`) declares composer actions. `PluginUiContributions` is a read-only interface, `pages` / `composerActions` have default empty implementations, and plugins implement only `bindings` (plus the members they need). In the plugin page list, tapping a row that has `pages` enters the first page; composer action chips appear in the chat composer and open that plugin's page when tapped (the action id opens the matching page when it equals a page id, otherwise the first page).
 
@@ -956,7 +956,7 @@ DdHtmlBlocks(
 )
 ```
 
-`design 0.10.0` adds (needs an explicit dependency and `minHostVersion: "1.3.0"`):
+`design 1.0.0` adds (needs an explicit dependency and `minHostVersion: "1.3.0"`):
 
 | Component / API | Purpose |
 |---|---|
@@ -973,7 +973,7 @@ if (items.size > PreviewRows) {
 }
 ```
 
-`design 0.9.0` adds (needs an explicit dependency and `minHostVersion: "1.0.8"`, see below):
+`design 1.0.0` adds (needs an explicit dependency and `minHostVersion: "1.0.8"`, see below):
 
 | Component / API | Purpose |
 |---|---|
@@ -1008,7 +1008,7 @@ DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
 if (viewer != null) DdImageViewer(path = viewer, onDismiss = { viewer = null })
 ```
 
-Date/time components use `java.time` (`LocalDate`/`LocalTime`); plugins using design 0.7.0 components write `minHostVersion: "1.0.6"`, using design 0.8.0 components writes `"1.0.7"` and declares `design:0.8.0` explicitly in the build script; using design 0.9.0 components writes `"1.0.8"` and declares `design:0.9.0`; using design 0.10.0 components (`DdExpandToggle`) writes `"1.3.0"` and declares `design:0.10.0`; using design 0.11.0 components (`DdRemoteImage`) writes `"1.4.0"` and declares `design:0.11.0`; using tool result renderers writes `"1.1.0"` and depends on `plugin-api 1.3.0`.
+Date/time components use `java.time` (`LocalDate`/`LocalTime`); plugins using design 0.7.0 components write `minHostVersion: "1.0.6"`, using design 0.8.0 components writes `"1.0.7"` and declares `design:0.8.0` explicitly in the build script; using design 1.0.0 components writes `"1.0.8"` and declares `design:0.9.0`; using design 1.0.0 components (`DdExpandToggle`) writes `"1.3.0"` and declares `design:0.10.0`; using design 1.0.0 components (`DdRemoteImage`) writes `"1.4.0"` and declares `design:0.11.0`; using tool result renderers writes `"1.1.0"` and depends on `plugin-api 2.0.0`.
 
 Conventions:
 
@@ -1539,13 +1539,13 @@ Plugin pages are the plugin's only interaction surface, and where the plugin kee
 
 ### 1.2.x → 1.3.0 (purely additive)
 
-`plugin-api 1.3.0` does not raise the apiLevel: existing plugins need no code change or rebuild. To render cards on MCP/plugin tool results: raise the dependency to `plugin-api 1.3.0` and write `minHostVersion: "1.1.0"` in the manifest; then also implement `ToolResultRendererContributor` on the object returned from `ui()`, matching with `toolResultMatch(source/server/tool/toolPrefix)` and constructing with `toolResultRenderer`. When the agent calls an MCP tool through `tool_execute`, the host restores the inner tool identity automatically, so renderers match on the real MCP server/tool.
+`plugin-api 2.0.0` does not raise the apiLevel: existing plugins need no code change or rebuild. To render cards on MCP/plugin tool results: raise the dependency to `plugin-api 2.0.0` and write `minHostVersion: "1.1.0"` in the manifest; then also implement `ToolResultRendererContributor` on the object returned from `ui()`, matching with `toolResultMatch(source/server/tool/toolPrefix)` and constructing with `toolResultRenderer`. When the agent calls an MCP tool through `tool_execute`, the host restores the inner tool identity automatically, so renderers match on the real MCP server/tool.
 
-`plugin-api 1.3.1` / `design 0.11.0` do not raise the apiLevel either: new `PluginHost.images()` (returning `RemoteImage`) and `DdRemoteImage`; add `images` to the `plugin.json` capabilities and a plugin can load remote images in cards. Both are additive only, and old plugins need no rebuild.
+`plugin-api 2.0.0` / `design 1.0.0` do not raise the apiLevel either: new `PluginHost.images()` (returning `RemoteImage`) and `DdRemoteImage`; add `images` to the `plugin.json` capabilities and a plugin can load remote images in cards. Both are additive only, and old plugins need no rebuild.
 
 ### 1.1.x → 1.2.0 (purely additive)
 
-`plugin-api 1.2.0` does not raise the apiLevel: existing plugins need no code change or rebuild. To use the new capabilities (theme packs, `openPageSheet`, page presentation mode, design 0.9.0 components): raise the dependencies to `plugin-api 1.2.0`/`design 0.9.0` and write `minHostVersion: "1.0.8"`; theme packs declare ids in `provides.themes` and add `assets/themes.json`.
+`plugin-api 2.0.0` does not raise the apiLevel: existing plugins need no code change or rebuild. To use the new capabilities (theme packs, `openPageSheet`, page presentation mode, design 1.0.0 components): raise the dependencies to `plugin-api 2.0.0`/`design 1.0.0` and write `minHostVersion: "1.0.8"`; theme packs declare ids in `provides.themes` and add `assets/themes.json`.
 
 ### 1.0.x → 1.1.0 (purely additive)
 
@@ -1598,7 +1598,7 @@ Manifest and project:
 
 ## ABI and versions
 
-- Currently `plugin-api 1.1.0` / API level 6: `PLUGIN_API_VERSION = "1.1.0"`, `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`. At load the host requires `plugin.apiLevel` to be within `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` (currently 6..6); an omitted `apiLevel` is treated as `BASELINE_API_LEVEL` (6). Since 1.0.4 the host rejects level 5 plugins and asks for a rebuild with the new SDK.
+- Currently `plugin-api 1.1.0` / API level 6: `PLUGIN_API_VERSION = "1.1.0"`, `PLUGIN_API_LEVEL = 7`, `BASELINE_API_LEVEL = 7`, `MIN_SUPPORTED_API_LEVEL = 7`. At load the host requires `plugin.apiLevel` to be within `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` (currently 6..6); an omitted `apiLevel` is treated as `BASELINE_API_LEVEL` (6). Since 1.0.4 the host rejects level 5 plugins and asks for a rebuild with the new SDK.
 - Compatibility matrix:
 
 | apiLevel | plugin-api / design | Host | Notes |

@@ -109,7 +109,7 @@ val verifyDocFacts = tasks.register("verifyDocFacts") {
         check(noticesRoot.asFile.readText() == noticesPackaged.asFile.readText()) {
             "THIRD_PARTY_NOTICES.md 与 app/src/main/assets/licenses 下的打包副本不一致：改根文件后同步复制"
         }
-        val sdkVersion = Regex("pi = \"v([^\"]+)\"").find(versionCatalog.asFile.readText())
+        val sdkVersion = Regex("pi = \"v?([^\"]+)\"").find(versionCatalog.asFile.readText())
             ?.groupValues?.get(1) ?: error("cannot read pi version from gradle/libs.versions.toml")
         check(noticesRoot.asFile.readText().contains("pi2kotlin SDK $sdkVersion")) {
             "THIRD_PARTY_NOTICES.md 的 SDK 版本与 gradle/libs.versions.toml 的 pi($sdkVersion) 不一致"

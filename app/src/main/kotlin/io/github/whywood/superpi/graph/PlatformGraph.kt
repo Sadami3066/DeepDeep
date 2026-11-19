@@ -21,10 +21,10 @@ import io.github.whywood.superpi.runtime.host.HostAccess
 import io.github.whywood.superpi.screen.PrivilegedMainScreenShell
 import io.github.whywood.superpi.screen.ScreenController
 import io.github.whywood.superpi.screen.ScreenToolset
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutionException
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellExecutor
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutionException
+import io.github.whywood.superpi.sdk.coding.tools.ShellExecutor
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import io.github.whywood.superpi.service.AccessibilityBootstrapRunner
 import io.github.whywood.superpi.service.AppShellExecutor
 import io.github.whywood.superpi.service.accessibilityServiceComponent

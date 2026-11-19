@@ -1,8 +1,8 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.ai.PiJson
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
-import io.github.whywood.deepdeep.sdk.mcp.config.parseMcpConfig
+import io.github.whywood.superpi.sdk.ai.PiJson
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.config.parseMcpConfig
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

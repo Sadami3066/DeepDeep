@@ -1,9 +1,9 @@
 package io.github.whywood.superpi.ui.mcp
 
 import androidx.annotation.StringRes
-import io.github.whywood.deepdeep.sdk.ai.RunSignal
-import io.github.whywood.deepdeep.sdk.mcp.config.McpServerConfig
-import io.github.whywood.deepdeep.sdk.mcp.oauth.McpOAuthInteraction
+import io.github.whywood.superpi.sdk.ai.RunSignal
+import io.github.whywood.superpi.sdk.mcp.config.McpServerConfig
+import io.github.whywood.superpi.sdk.mcp.oauth.McpOAuthInteraction
 import io.github.whywood.superpi.R
 import io.github.whywood.superpi.runtime.McpConfigSnapshot
 import io.github.whywood.superpi.runtime.McpConfigStore

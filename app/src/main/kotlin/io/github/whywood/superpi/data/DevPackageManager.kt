@@ -5,7 +5,7 @@ import io.github.whywood.superpi.R
 import io.github.whywood.superpi.runtime.host.HostAccessUnavailableException
 import io.github.whywood.superpi.runtime.host.HostEnvironment
 import io.github.whywood.superpi.runtime.host.HostEnvironmentProvider
-import io.github.whywood.deepdeep.sdk.coding.tools.ShellResult
+import io.github.whywood.superpi.sdk.coding.tools.ShellResult
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

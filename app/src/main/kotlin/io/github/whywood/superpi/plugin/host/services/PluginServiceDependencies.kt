@@ -2,7 +2,7 @@ package io.github.whywood.superpi.plugin.host.services
 
 import android.content.Context
 import android.os.Build
-import io.github.whywood.deepdeep.sdk.ai.http.HttpTransport
+import io.github.whywood.superpi.sdk.ai.http.HttpTransport
 import io.github.whywood.superpi.data.LanguagePreferences
 import io.github.whywood.superpi.plugin.api.McpCallResult
 import io.github.whywood.superpi.plugin.api.McpStructuredCallResult

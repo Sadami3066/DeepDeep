@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.plugin.host.events
 
-import io.github.whywood.deepdeep.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.ai.TextContent
 import io.github.whywood.superpi.plugin.api.InputDecision as PluginInputDecision
 import io.github.whywood.superpi.plugin.api.PluginEvent
 import io.github.whywood.superpi.plugin.api.PluginToolResult

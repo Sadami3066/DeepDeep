@@ -1,10 +1,10 @@
 package io.github.whywood.superpi.runtime
 
-import io.github.whywood.deepdeep.sdk.agent.AgentToolResult
-import io.github.whywood.deepdeep.sdk.ai.TextContent
-import io.github.whywood.deepdeep.sdk.coding.tools.CodingTool
-import io.github.whywood.deepdeep.sdk.coding.tools.FileMutationQueue
-import io.github.whywood.deepdeep.sdk.coding.tools.defaultCodingTools
+import io.github.whywood.superpi.sdk.agent.AgentToolResult
+import io.github.whywood.superpi.sdk.ai.TextContent
+import io.github.whywood.superpi.sdk.coding.tools.CodingTool
+import io.github.whywood.superpi.sdk.coding.tools.FileMutationQueue
+import io.github.whywood.superpi.sdk.coding.tools.defaultCodingTools
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking

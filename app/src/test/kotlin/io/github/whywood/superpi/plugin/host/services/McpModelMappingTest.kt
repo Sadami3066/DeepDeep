@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.plugin.host.services
 
-import io.github.whywood.deepdeep.sdk.mcp.protocol.McpCallResult
+import io.github.whywood.superpi.sdk.mcp.protocol.McpCallResult
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
