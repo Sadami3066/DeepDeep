@@ -197,6 +197,7 @@ class ChrootStreamingTest {
         sharedStorageEnabled = { false },
         resolvConf = { null },
         maxOutputBytes = maxOutputBytes,
+        logDir = null,
         runner = runner,
     )
 

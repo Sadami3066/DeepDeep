@@ -54,6 +54,34 @@ class ChrootExecutorTest {
     }
 
     @Test
+    fun executeWritesFullLogWhenLogDirectoryIsProvided() = runBlocking {
+        val dir = kotlin.io.path.createTempDirectory("chroot-log").toFile()
+        try {
+            val logs = File(dir, "tool-output")
+            val executor = ChrootExecutor(
+                linuxDir = File(dir, "linux"),
+                workspaceDir = File(dir, "workspace"),
+                sharedStorageEnabled = { false },
+                resolvConf = { null },
+                maxOutputBytes = 16,
+                logDir = logs,
+                runner = RootCommandRunner { _, _, _ ->
+                    RootProcessResult(0, "abcdefghijklmnopqrstuvwxyz", "", false, true)
+                },
+            )
+
+            val result = executor.execute("cat", 5_000)
+
+            assertTrue(result.truncated)
+            val path = result.fullOutputPath
+            assertTrue(path != null)
+            assertEquals("abcdefghijklmnopqrstuvwxyz", File(path!!).readText())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun executePassesCommandOnStdinAndMergesOutput() = runBlocking {
         val dir = kotlin.io.path.createTempDirectory("chroot-test").toFile()
         try {
@@ -65,6 +93,7 @@ class ChrootExecutorTest {
                 sharedStorageEnabled = { true },
                 resolvConf = { null },
                 maxOutputBytes = 1024,
+                logDir = null,
                 runner = RootCommandRunner { command, _, stdin ->
                     seenCommand = command
                     seenStdin = stdin
@@ -95,6 +124,7 @@ class ChrootExecutorTest {
                 sharedStorageEnabled = { false },
                 resolvConf = { null },
                 maxOutputBytes = 16,
+                logDir = null,
                 runner = RootCommandRunner { _, _, _ ->
                     RootProcessResult(0, "abcdefghijklmnopqrstuvwxyz", "", false, true)
                 },

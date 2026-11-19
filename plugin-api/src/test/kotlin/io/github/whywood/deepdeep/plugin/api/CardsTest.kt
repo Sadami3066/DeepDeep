@@ -106,6 +106,19 @@ class CardsTest {
     }
 
     @Test
+    fun deliverIsIdempotentForWrappedTools() {
+        val card = Cards.descriptor(null, "标题", null)
+        val once = Cards.deliver(
+            "call-6",
+            textResult("", buildJsonObject { put(Cards.KEY, card) }),
+        )
+
+        val twice = Cards.deliver("call-6", once)
+
+        assertEquals(once.text, twice.text)
+    }
+
+    @Test
     fun displayFallsBackToGuidanceWithoutCard() {
         val result = textResult(
             "",

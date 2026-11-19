@@ -14,6 +14,7 @@ public object Cards {
 
     private const val RAW_HEADING = "完整返回（上游原样）："
     private const val GUIDANCE_HEADING = "使用说明："
+    private const val INSTRUCTION_PREFIX = "展示这张卡片："
 
     public fun descriptor(customType: String?, title: String?, payload: JsonObject?): JsonObject =
         buildJsonObject {
@@ -35,11 +36,14 @@ public object Cards {
         val guidance = details.text(GUIDANCE_KEY)
         if (card == null && raw == null && guidance == null) return result
         val title = card?.text("title")
+        val existing = result.text.orEmpty()
         val body = buildList {
-            result.text?.trim()?.takeIf { it.isNotEmpty() }?.let(::add)
+            existing.trim().takeIf { it.isNotEmpty() }?.let(::add)
             raw?.let { add("$RAW_HEADING\n$it") }
             guidance?.let { add("$GUIDANCE_HEADING\n$it") }
-            if (card != null && !result.isError) add(instruction(callId, title))
+            if (card != null && !result.isError && !existing.contains(INSTRUCTION_PREFIX)) {
+                add(instruction(callId, title))
+            }
         }.joinToString("\n\n")
         val display = title
             ?: result.text?.trim()?.takeIf { it.isNotEmpty() }
