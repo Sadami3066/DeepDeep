@@ -868,7 +868,7 @@ private fun EmptyState(
                             contentAlignment = Alignment.Center,
                         ) {
                             Image(
-                                painter = painterResource(R.drawable.pi_mascot),
+                                painter = painterResource(R.drawable.v2_wave),
                                 contentDescription = null,
                                 modifier = Modifier.size(112.dp),
                                 contentScale = ContentScale.Fit,

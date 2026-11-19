@@ -16,8 +16,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import android.graphics.ImageDecoder
-import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,6 +54,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -64,7 +63,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -161,17 +159,11 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
                     .background(Color.White),
                 contentAlignment = Alignment.Center,
             ) {
-                AndroidView(
-                    modifier = Modifier.size(markSize * 0.72f),
-                    factory = { context ->
-                        ImageView(context).apply {
-                            scaleType = ImageView.ScaleType.FIT_CENTER
-                            val source = ImageDecoder.createSource(context.resources, R.drawable.pi_welcome)
-                            val drawable = ImageDecoder.decodeDrawable(source)
-                            setImageDrawable(drawable)
-                            if (drawable is android.graphics.drawable.AnimatedImageDrawable) drawable.start()
-                        }
-                    },
+                Image(
+                    painter = painterResource(R.drawable.mascot_wave),
+                    contentDescription = null,
+                    modifier = Modifier.size(markSize * 0.86f),
+                    contentScale = ContentScale.Fit,
                 )
             }
         }

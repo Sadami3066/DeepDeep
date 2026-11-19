@@ -1,9 +1,13 @@
 package io.github.whywood.superpi.floating
 
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,16 +27,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.whywood.superpi.R
 import io.github.whywood.superpi.design.DdType
-import io.github.whywood.superpi.design.DdWordmark
-import io.github.whywood.superpi.design.SuperPIColors
+import io.github.whywood.superpi.design.LocalDdMotionEnabled
 import io.github.whywood.superpi.design.superPiColors
 
 internal enum class FloatingBubbleRing {
@@ -68,18 +72,22 @@ internal fun FloatingBubble(
                 .size(FloatingBubbleSize)
                 .floatingLift(CircleShape, colors)
                 .clip(CircleShape)
-                .background(colors.surface.copy(alpha = 0.94f)),
+                .background(Color.White),
         )
-        Box(
-            Modifier
-                .size(FloatingBubbleSize - 4.dp)
+        val motionEnabled = LocalDdMotionEnabled.current
+        Crossfade(
+            targetState = mood,
+            modifier = Modifier
+                .size(FloatingBubbleSize - 2.dp)
                 .offset(y = 1.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            DdWordmark(
-                color = mood.tint(colors),
-                dotColor = colors.accent,
-                style = DdType.wordmark.copy(fontSize = 13.sp, lineHeight = 15.sp),
+            animationSpec = if (motionEnabled) tween(160) else snap(),
+            label = "floating-bubble-mood",
+        ) { currentMood ->
+            Image(
+                painter = painterResource(currentMood.drawable()),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
             )
         }
         if (pending > 0) {
@@ -90,13 +98,13 @@ internal fun FloatingBubble(
                     .size(20.dp)
                     .floatingLift(CircleShape, colors)
                     .clip(CircleShape)
-                    .background(colors.accent),
+                    .background(Color(0xFF18181B)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = if (pending > 99) "99+" else pending.toString(),
                     style = DdType.numeric,
-                    color = colors.onAccent,
+                    color = Color.White,
                     maxLines = 1,
                 )
             }
@@ -150,11 +158,12 @@ private fun FloatingLongPressRing(ring: FloatingBubbleRing) {
     }
 }
 
-internal fun FloatingBubbleMood.tint(colors: SuperPIColors): Color = when (this) {
-    FloatingBubbleMood.IDLE -> colors.ink
-    FloatingBubbleMood.THINKING -> colors.inkSecondary
-    FloatingBubbleMood.SLEEPY -> colors.inkTertiary
-    FloatingBubbleMood.WAITING -> colors.warning
-    FloatingBubbleMood.DONE -> colors.success
-    FloatingBubbleMood.ALERT -> colors.danger
+@DrawableRes
+internal fun FloatingBubbleMood.drawable(): Int = when (this) {
+    FloatingBubbleMood.IDLE -> R.drawable.v2_wave
+    FloatingBubbleMood.THINKING -> R.drawable.v2_thinking
+    FloatingBubbleMood.SLEEPY -> R.drawable.v2_waiting
+    FloatingBubbleMood.WAITING -> R.drawable.v2_confused
+    FloatingBubbleMood.DONE -> R.drawable.v2_done
+    FloatingBubbleMood.ALERT -> R.drawable.v2_alert
 }
