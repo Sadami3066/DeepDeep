@@ -1,6 +1,6 @@
 package io.github.whywood.superpi.ui.workspaces
 
-import android.net.Uri
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,6 +48,7 @@ import io.github.whywood.superpi.design.superPiColors
 import io.github.whywood.superpi.plugin.manager.PluginManagerFacade
 import io.github.whywood.superpi.runtime.McpConfigStore
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
+import io.github.whywood.superpi.ui.common.AvatarCropDialog
 import io.github.whywood.superpi.ui.common.BotAvatar
 import io.github.whywood.superpi.ui.settings.SettingsGroup
 import kotlinx.coroutines.Dispatchers
@@ -65,7 +66,7 @@ fun WorkspaceSettingsScreen(
     existingNames: List<String>,
     screenToolsReady: Boolean,
     onRename: (String) -> Unit,
-    onAvatarPicked: (Uri?) -> Unit,
+    onAvatarPicked: (Bitmap?) -> Unit,
     onIntroChange: (String) -> Unit,
     onBack: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -76,6 +77,7 @@ fun WorkspaceSettingsScreen(
     var reloadKey by remember(workspace.id) { mutableStateOf(0) }
     var showAgentsDoc by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showAvatarSheet by rememberSaveable(workspace.id) { mutableStateOf(false) }
+    var cropSource by rememberSaveable(workspace.id) { mutableStateOf<String?>(null) }
     var showIntroDialog by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var showRenameDialog by rememberSaveable(workspace.id) { mutableStateOf(false) }
     var capabilityKind by rememberSaveable(workspace.id) { mutableStateOf<WorkspaceCapabilityKind?>(null) }
@@ -88,7 +90,7 @@ fun WorkspaceSettingsScreen(
     var pluginsLoaded by remember(workspace.id) { mutableStateOf(false) }
     var mcpLoaded by remember(workspace.id) { mutableStateOf(false) }
     val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) onAvatarPicked(uri)
+        if (uri != null) cropSource = uri.toString()
     }
 
     LaunchedEffect(workspace.id, reloadKey) {
@@ -324,6 +326,17 @@ fun WorkspaceSettingsScreen(
             onDismiss = {
                 capabilityKind = null
                 reloadKey += 1
+            },
+        )
+    }
+
+    cropSource?.let { raw ->
+        AvatarCropDialog(
+            source = android.net.Uri.parse(raw),
+            onDismiss = { cropSource = null },
+            onCropped = {
+                cropSource = null
+                onAvatarPicked(it)
             },
         )
     }

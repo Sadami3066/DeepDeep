@@ -108,11 +108,11 @@ internal fun WorkspaceSettingsRoute(
         existingNames = workspaces.filterNot { it.id == workspaceId }.map { it.name },
         screenToolsReady = screenToolsReady,
         onRename = { name -> onRenameWorkspace(workspaceId, name) },
-        onAvatarPicked = { uri ->
+        onAvatarPicked = { bitmap ->
             scope.launch {
                 val previous = workspace.avatar
-                val path = if (uri == null) null else botAvatars.save(uri)
-                if (uri == null || path != null) {
+                val path = if (bitmap == null) null else botAvatars.save(bitmap)
+                if (bitmap == null || path != null) {
                     onUpdateProfile(workspaceId, path, workspace.intro)
                     botAvatars.delete(previous)
                 }

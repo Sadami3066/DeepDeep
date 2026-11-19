@@ -2,7 +2,6 @@ package io.github.whywood.superpi.ui.common
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -62,35 +61,6 @@ internal fun BotAvatar(
                 )
             }
         }
-    }
-}
-
-@Composable
-internal fun UriAvatarPreview(
-    uri: Uri?,
-    modifier: Modifier = Modifier,
-    size: Dp = 36.dp,
-) {
-    val context = LocalContext.current
-    val avatar by produceState<ImageBitmap?>(initialValue = null, uri) {
-        value = withContext(Dispatchers.IO) {
-            uri?.let { value ->
-                runCatching {
-                    context.contentResolver.openInputStream(value)?.use { stream ->
-                        BitmapFactory.decodeStream(stream)?.asImageBitmap()
-                    }
-                }.getOrNull()
-            }
-        }
-    }
-    val image = avatar ?: rememberAppIcon(context)
-    if (image != null) {
-        Image(
-            bitmap = image,
-            contentDescription = null,
-            modifier = modifier.size(size).clip(CircleShape),
-            contentScale = ContentScale.Crop,
-        )
     }
 }
 

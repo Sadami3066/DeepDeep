@@ -579,6 +579,7 @@ internal fun AppShell(
                         onRemoveQueued = chatViewModel::removeQueuedInput,
                         onSendQueued = chatViewModel::sendQueuedNow,
                         onScrollAnchorChange = chatViewModel::updateScrollAnchor,
+                        onOpenBotSettings = { id -> navigator.push(AppDestination.WorkspaceSettings(id)) },
                     ),
                     overlay = ChatScreenOverlay(
                         reminderCount = reminderCount,

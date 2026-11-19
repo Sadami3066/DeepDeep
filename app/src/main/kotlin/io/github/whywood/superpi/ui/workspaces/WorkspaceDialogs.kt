@@ -1,6 +1,7 @@
 package io.github.whywood.superpi.ui.workspaces
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -9,12 +10,17 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,8 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -35,7 +44,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.whywood.superpi.R
-import io.github.whywood.superpi.ui.common.UriAvatarPreview
+import io.github.whywood.superpi.ui.common.AvatarCropDialog
+import io.github.whywood.superpi.ui.common.rememberAppIcon
 import io.github.whywood.superpi.ui.common.rememberHapticFeedback
 import io.github.whywood.superpi.data.isSharedStorageGranted
 import io.github.whywood.superpi.data.mountDisplayPath
@@ -57,17 +67,18 @@ private const val MAX_INTRO_LENGTH = 40
 fun WorkspaceCreateDialog(
     existingNames: List<String>,
     privateDirectory: String,
-    onConfirm: (String, String?, Uri?, String?) -> Unit,
+    onConfirm: (String, String?, Bitmap?, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = superPiColors()
     val context = LocalContext.current
     var name by rememberSaveable { mutableStateOf("") }
     var intro by rememberSaveable { mutableStateOf("") }
-    var avatarUri by remember { mutableStateOf<Uri?>(null) }
+    var avatar by remember { mutableStateOf<Bitmap?>(null) }
+    var cropSource by rememberSaveable { mutableStateOf<String?>(null) }
     var submitted by remember { mutableStateOf(false) }
     val pickAvatar = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) avatarUri = uri
+        if (uri != null) cropSource = uri.toString()
     }
     var useSharedStorage by rememberSaveable { mutableStateOf(false) }
     var sharedDirectory by rememberSaveable { mutableStateOf<String?>(null) }
@@ -96,7 +107,7 @@ fun WorkspaceCreateDialog(
             onConfirm(
                 name.trim(),
                 sharedDirectory.takeIf { useSharedStorage },
-                avatarUri,
+                avatar,
                 intro.trim().takeIf { it.isNotEmpty() },
             )
         }
@@ -117,11 +128,11 @@ fun WorkspaceCreateDialog(
                 )
                 Spacer(Modifier.height(18.dp))
                 BotAvatarField(
-                    avatarUri = avatarUri,
+                    avatar = avatar,
                     onChoose = {
                         pickAvatar.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
-                    onUseDefault = { avatarUri = null },
+                    onUseDefault = { avatar = null },
                 )
                 Spacer(Modifier.height(18.dp))
                 DdSectionLabel(stringResource(R.string.bot_intro))
@@ -201,27 +212,54 @@ fun WorkspaceCreateDialog(
             )
         },
     )
+    cropSource?.let { raw ->
+        AvatarCropDialog(
+            source = Uri.parse(raw),
+            onDismiss = { cropSource = null },
+            onCropped = {
+                avatar = it
+                cropSource = null
+            },
+        )
+    }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }
 
 @Composable
 private fun BotAvatarField(
-    avatarUri: Uri?,
+    avatar: Bitmap?,
     onChoose: () -> Unit,
     onUseDefault: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column {
         DdSectionLabel(stringResource(R.string.bot_avatar))
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            UriAvatarPreview(uri = avatarUri, size = 44.dp)
+            val image = remember(avatar) { avatar?.asImageBitmap() } ?: rememberAppIcon(context)
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(superPiColors().accentSoft),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (image != null) {
+                    Image(
+                        bitmap = image,
+                        contentDescription = null,
+                        modifier = Modifier.size(44.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
             Spacer(Modifier.width(12.dp))
             DdTextAction(
-                text = stringResource(if (avatarUri == null) R.string.bot_avatar_choose else R.string.bot_avatar_change),
+                text = stringResource(if (avatar == null) R.string.bot_avatar_choose else R.string.bot_avatar_change),
                 onClick = onChoose,
                 modifier = Modifier.weight(1f).testTag("bot_avatar_choose"),
             )
-            if (avatarUri != null) {
+            if (avatar != null) {
                 DdTextAction(
                     text = stringResource(R.string.bot_avatar_use_default),
                     onClick = onUseDefault,

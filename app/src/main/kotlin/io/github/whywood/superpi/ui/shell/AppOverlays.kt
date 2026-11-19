@@ -139,10 +139,10 @@ internal fun AppOverlays(
         ),
         overlayActions = ShellOverlayActions(
             onDismissPluginPage = { overlays.pluginPage = null },
-            onConfirmWorkspaceCreate = { name, directory, avatarUri, intro ->
+            onConfirmWorkspaceCreate = { name, directory, avatar, intro ->
                 overlays.workspaceCreateOpen = false
                 scope.launch {
-                    val avatarPath = avatarUri?.let { botAvatarStore.save(it) }
+                    val avatarPath = avatar?.let { botAvatarStore.save(it) }
                     chatViewModel.createWorkspace(name, directory, avatarPath, intro) {
                         Toast.makeText(context, R.string.bot_created_toast, Toast.LENGTH_LONG).show()
                     }

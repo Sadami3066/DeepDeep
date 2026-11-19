@@ -184,6 +184,7 @@ data class ChatScreenActions(
     val onRemoveQueued: (QueuedInput) -> Unit,
     val onSendQueued: (QueuedInput) -> Unit,
     val onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit,
+    val onOpenBotSettings: (String) -> Unit,
 )
 
 data class ChatScreenOverlay(
@@ -223,6 +224,7 @@ fun ChatScreen(
         onPauseGoal, onResumeGoal, onOpenJobs, onModelsOpenChange, onOpenUsage,
         onAnswerQuestion, onOpenForeignQuestion, onOpenPresentFile, onSharePresentFile,
         onOpenMiniapp, onOpenPluginPage, onOpenFiles, onExportSession, onRemoveQueued, onSendQueued, onScrollAnchorChange,
+        onOpenBotSettings,
     ) = actions
     val (reminderCount, reloading, compacting, commandItems, goal, jobCount, modelsOpen, pendingQuestions, foreignQuestion) = overlay
     val attachments = state.attachments
@@ -554,6 +556,7 @@ fun ChatScreen(
                     keyboard?.hide()
                     onExportSession()
                 },
+                onOpenBotSettings = onOpenBotSettings,
             ),
             modifier = Modifier.padding(top = with(density) { stableStatusTopPx.toDp() }),
         )

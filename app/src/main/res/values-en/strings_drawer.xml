@@ -55,6 +55,10 @@
     <string name="drawer_session_has_job">Has a background job</string>
     <string name="bot_create">New Bot</string>
     <string name="bot_avatar">Avatar</string>
+    <string name="bot_avatar_crop_title">Adjust avatar</string>
+    <string name="bot_avatar_crop_hint">Drag and pinch to frame the avatar</string>
+    <string name="bot_avatar_crop_failed">This image can\'t be read</string>
+    <string name="bot_avatar_crop_confirm">Done</string>
     <string name="bot_avatar_choose">Choose image</string>
     <string name="bot_avatar_change">Change image</string>
     <string name="bot_avatar_use_default">Reset avatar</string>

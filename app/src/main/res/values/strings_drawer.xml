@@ -55,6 +55,10 @@
     <string name="drawer_session_has_job">有后台任务</string>
     <string name="bot_create">新建 Bot</string>
     <string name="bot_avatar">头像</string>
+    <string name="bot_avatar_crop_title">调整头像</string>
+    <string name="bot_avatar_crop_hint">拖动和缩放，选择头像范围</string>
+    <string name="bot_avatar_crop_failed">无法读取这张图片</string>
+    <string name="bot_avatar_crop_confirm">完成</string>
     <string name="bot_avatar_choose">选择图片</string>
     <string name="bot_avatar_change">更换图片</string>
     <string name="bot_avatar_use_default">恢复默认头像</string>

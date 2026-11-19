@@ -1,7 +1,7 @@
 package io.github.whywood.superpi.ui.shell
 
 import android.content.Context
-import android.net.Uri
+import android.graphics.Bitmap
 import android.content.Intent
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
@@ -79,7 +79,7 @@ data class ShellOverlayState(
 
 data class ShellOverlayActions(
     val onDismissPluginPage: () -> Unit,
-    val onConfirmWorkspaceCreate: (String, String?, Uri?, String?) -> Unit, val onDismissWorkspaceCreate: () -> Unit,
+    val onConfirmWorkspaceCreate: (String, String?, Bitmap?, String?) -> Unit, val onDismissWorkspaceCreate: () -> Unit,
     val onConfirmWorkspaceRename: (String) -> Unit, val onDismissWorkspaceRename: () -> Unit,
     val onConfirmWorkspaceDelete: () -> Unit, val onDismissWorkspaceDelete: () -> Unit,
     val onDismissAttachmentPreview: () -> Unit, val onShareAttachmentPreview: () -> Unit,
