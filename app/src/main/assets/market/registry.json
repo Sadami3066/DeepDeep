@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-11-19T12:57:24Z",
+  "generatedAt": "2026-11-19T14:48:00Z",
   "keyId": "ec256:db63256431bd66db",
   "entries": [
     {
@@ -33,7 +33,7 @@
       "icon": "icons/amap.png?v=1186c72c5414",
       "version": "1.5.3",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/amap-1.5.3.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/amap-1.5.3.ddp",
         "sha256": "af73873381f16ba5bbb9f163448c82c539662eeda596d2ec32867481d217c94a",
         "size": 1104633
       },
@@ -77,7 +77,7 @@
       },
       "version": "2.7.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/feishu-2.7.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/feishu-2.7.1.ddp",
         "sha256": "ade98a305cde346278a8e53f0c63b2bb45e74a22be420ebba09967aeefc6f636",
         "size": 992926
       },
@@ -121,9 +121,9 @@
       "icon": "icons/hotel.png?v=59c14774ffbd",
       "version": "1.4.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/hotel-1.4.1.ddp",
-        "sha256": "6fc8489bc42a9685bceaed6a90eb5f7bef40dacbd5cb6a00ce58c65dca968bfc",
-        "size": 1465101
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/hotel-1.4.1.ddp",
+        "sha256": "8419705f769c1f0fbbb3e5cdf8ef54583fbb5bde6ec1049884627769f5f0a8ce",
+        "size": 1465100
       },
       "plugin": {
         "apiLevel": 7,
@@ -165,7 +165,7 @@
       },
       "version": "1.6.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/mail-1.6.2.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/mail-1.6.2.ddp",
         "sha256": "50a62acb8da671234eb1210e37bcbc8a411065273d609ed3da6b9ddcc7682341",
         "size": 1819332
       },
@@ -209,9 +209,9 @@
       },
       "version": "2.7.4",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/micloud-2.7.4.ddp",
-        "sha256": "ff1170e55f104755f4ea7c190dafba6642ce718e2214780d75eda9a4b4645a0f",
-        "size": 1128446
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/micloud-2.7.4.ddp",
+        "sha256": "ff17c29a61d48e259c1819a9d93428c81f1a97846ab114dc4f36887828291e14",
+        "size": 1128456
       },
       "plugin": {
         "apiLevel": 7,
@@ -251,7 +251,7 @@
       "icon": "icons/rail.png?v=bba1560d8cf3",
       "version": "1.4.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/rail-1.4.0.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/rail-1.4.0.ddp",
         "sha256": "8d32f9293eb7d04305d98de66ac4b29b69ec7589074813070e707df9c4f3dc12",
         "size": 1144623
       },
@@ -295,7 +295,7 @@
       "icon": "icons/ride.png?v=d8c97028398c",
       "version": "1.3.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/ride-1.3.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/ride-1.3.1.ddp",
         "sha256": "ea1b828c20b169b0799a518569c3afbd14cc6d989e451a7a71cf01a101677127",
         "size": 1015821
       },
@@ -337,7 +337,7 @@
       },
       "version": "2.7.3",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/sysu-2.7.3.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/sysu-2.7.3.ddp",
         "sha256": "c4b51c156a3f2fdb8811660550b4e5b2c609ca4640b4c34ff7c6848b98ffc119",
         "size": 1023631
       },
@@ -385,7 +385,7 @@
       },
       "version": "1.0.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/themes-1.0.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/themes-1.0.1.ddp",
         "sha256": "4b15a86b2fdfd0b96f993191ab3eeeb48da511a93a8d42bf6e5b41c626319534",
         "size": 815869
       },
@@ -429,7 +429,7 @@
       },
       "version": "0.5.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/wechat-0.5.2.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/wechat-0.5.2.ddp",
         "sha256": "e7845ec35ef4946413774250028b59fd42e6c87eb7a322dcb079c78a4ffce339",
         "size": 894544
       },
@@ -473,7 +473,7 @@
       },
       "version": "2.6.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/wecom-2.6.2.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/wecom-2.6.2.ddp",
         "sha256": "fe05a8b49335063273f7cfdb53323e7fce2b2d2b0ec39fa8869a0451cf804051",
         "size": 1029110
       },
@@ -517,7 +517,7 @@
       },
       "version": "1.0.18",
       "artifact": {
-        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261120/zanao-1.0.18.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261121/zanao-1.0.18.ddp",
         "sha256": "40fb2ebfef7e4daf62151c3ca9b75edfd2b42ff88e45c8065c9f2671709d9116",
         "size": 1724396
       },
