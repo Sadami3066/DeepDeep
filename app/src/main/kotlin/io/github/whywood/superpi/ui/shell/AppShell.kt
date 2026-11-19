@@ -38,6 +38,7 @@ import io.github.whywood.superpi.data.UiPreferences
 import io.github.whywood.superpi.data.exportShareIntent
 import io.github.whywood.superpi.data.update.hasUpdate
 import io.github.whywood.superpi.design.DdFontStyle
+import io.github.whywood.superpi.design.DdFonts
 import io.github.whywood.superpi.design.superPiColors
 import io.github.whywood.superpi.plugin.host.services.PluginUiBridge
 import io.github.whywood.superpi.runtime.AgentRuntimeHost
@@ -90,7 +91,6 @@ internal fun AppShell(
     graph: AppDependencies,
     chatViewModel: ChatViewModel,
     state: ChatUiState,
-    fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     pendingDeepDestination: AppDestination? = null,
@@ -620,7 +620,7 @@ internal fun AppShell(
                     ),
                     ui = ShellRouteUi(
                         themeLabel = themeState.label,
-                        fontStyle = fontStyle,
+                        fontStyle = DdFonts.style,
                         onFontStyleChange = onFontStyleChange,
                         nickname = nickname,
                         avatar = avatarBitmap,

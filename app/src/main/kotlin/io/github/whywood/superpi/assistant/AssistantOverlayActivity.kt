@@ -62,7 +62,6 @@ class AssistantOverlayActivity : ComponentActivity() {
             ?: intent.requestedSessionId()
         requestedSessionId?.let { graph.activeSessionId.value = it }
         val language = LanguagePreferences(this).read()
-        val fontStyle = graph.fontPreferences.read()
         setContent {
             val chatUiStrings = rememberShellConversationStrings()
             val controller = remember {
@@ -144,7 +143,7 @@ class AssistantOverlayActivity : ComponentActivity() {
                 }
             }
 
-            HostTheme(controller = graph.themeController, fontStyle = fontStyle) {
+            HostTheme(controller = graph.themeController) {
                 ProvidePluginManager(graph.pluginManager) {
                     ProvideHostFiles(graph.hostFiles) {
                 AssistantOverlayScreen(

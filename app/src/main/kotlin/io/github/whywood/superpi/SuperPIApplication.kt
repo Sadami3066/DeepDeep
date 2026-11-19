@@ -20,6 +20,7 @@ class SuperPIApplication : Application() {
         CrashReporter.install(this)
         runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
         graph = AppGraph(this)
+        DdFonts.apply(graph.fontPreferences.read())
         graph.processRuntime.startAsync()
         fontWarmupScope.launch { DdFonts.preload(this@SuperPIApplication) }
     }

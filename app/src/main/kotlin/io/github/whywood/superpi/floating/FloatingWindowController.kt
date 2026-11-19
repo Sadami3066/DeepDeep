@@ -38,7 +38,6 @@ import io.github.whywood.superpi.core.AssistantEntry
 import io.github.whywood.superpi.data.FloatingWindowPreferences
 import io.github.whywood.superpi.data.FloatingWindowSettings
 import io.github.whywood.superpi.data.LocalizedContext
-import io.github.whywood.superpi.design.DdFontStyle
 import io.github.whywood.superpi.runtime.ConversationQueries
 import io.github.whywood.superpi.runtime.PendingQuestion
 import io.github.whywood.superpi.runtime.QuestionAnswer
@@ -75,7 +74,6 @@ class FloatingWindowController(
     private val questionCenter: QuestionCenter,
     private val preferences: FloatingWindowPreferences,
     private val themeController: ThemeController,
-    private val fontStyle: DdFontStyle,
     private val virtualScreenProvider: () -> VirtualScreenController?,
     private val onOpenApp: () -> Unit,
 ) {
@@ -397,7 +395,7 @@ class FloatingWindowController(
         host.start()
         val compose = host.composeView(windowContext)
         compose.setContent {
-            HostTheme(controller = themeController, fontStyle = fontStyle) {
+            HostTheme(controller = themeController) {
                 val surface by surfaceUi.collectAsState()
                 val content = surface
                 if (content != null) {
@@ -541,7 +539,7 @@ class FloatingWindowController(
         host.start()
         val compose = host.composeView(windowContext)
         compose.setContent {
-            HostTheme(controller = themeController, fontStyle = fontStyle) {
+            HostTheme(controller = themeController) {
                 val state by bubbleState.collectAsState()
                 val bubbleRing by ring.collectAsState()
                 FloatingBubble(mood = state.mood, pending = state.pending, ring = bubbleRing)

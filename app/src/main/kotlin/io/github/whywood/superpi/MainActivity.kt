@@ -14,10 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -68,16 +65,13 @@ class MainActivity : ComponentActivity() {
         startAgentService()
         graph.processRuntime.startAsync()
         requestNotificationPermission()
-        val initialFontStyle = graph.fontPreferences.read()
         setContent {
-            var fontStyle by remember { mutableStateOf(initialFontStyle) }
-            HostTheme(controller = graph.themeController, fontStyle = fontStyle) {
+            HostTheme(controller = graph.themeController) {
                 ProvideHostFiles(graph.hostFiles) {
                     ProvidePluginManager(graph.pluginManager) {
                         Box(Modifier.fillMaxSize()) {
                             SuperPIApp(
                                 graph = graph,
-                                fontStyle = fontStyle,
                                 openSessionId = pendingSessionId.value,
                                 onOpenSessionConsumed = { pendingSessionId.value = null },
                                 pendingDeepDestination = pendingDeepDestination.value,
@@ -87,10 +81,7 @@ class MainActivity : ComponentActivity() {
                                 pendingPluginImportUri = pendingPluginImportUri.value,
                                 onPluginImportConsumed = { pendingPluginImportUri.value = null },
                                 onActiveSessionChanged = { graph.activeSessionId.value = it },
-                                onFontStyleChange = { style ->
-                                    graph.fontPreferences.save(style)
-                                    fontStyle = style
-                                },
+                                onFontStyleChange = graph.fontPreferences::save,
                             )
                             PluginInteractionOverlay()
                         }

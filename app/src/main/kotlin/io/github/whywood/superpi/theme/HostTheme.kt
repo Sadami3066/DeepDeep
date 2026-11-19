@@ -11,14 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.whywood.superpi.design.DdFontStyle
 import io.github.whywood.superpi.design.DdFonts
 import io.github.whywood.superpi.design.SuperPITheme
 
 @Composable
 fun HostTheme(
     controller: ThemeController,
-    fontStyle: DdFontStyle = DdFonts.style,
     content: @Composable () -> Unit,
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
@@ -28,7 +26,7 @@ fun HostTheme(
     }
     HostThemeRuntime.dark = colors.dark
     SystemBarIcons(dark = colors.dark)
-    SuperPITheme(colors = colors, fontStyle = fontStyle, content = content)
+    SuperPITheme(colors = colors, fontStyle = DdFonts.style, content = content)
 }
 
 @Composable

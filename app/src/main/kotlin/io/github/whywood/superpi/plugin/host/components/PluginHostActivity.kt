@@ -70,9 +70,8 @@ class PluginHostActivity : ComponentActivity() {
             finish()
             return
         }
-        val initialFontStyle = graph.fontPreferences.read()
         setContent {
-            HostTheme(controller = graph.themeController, fontStyle = initialFontStyle) {
+            HostTheme(controller = graph.themeController) {
                 ProvideHostFiles(graph.hostFiles) {
                     ProvidePluginManager(graph.pluginManager) {
                         Box(Modifier.fillMaxSize()) {

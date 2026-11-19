@@ -12,6 +12,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -67,7 +69,7 @@ enum class DdFontStyle(val id: String, val displayName: String) {
     ;
 
     companion object {
-        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: SYSTEM
+        fun fromId(id: String?): DdFontStyle = entries.firstOrNull { it.id == id } ?: FREDOKA
     }
 }
 
@@ -93,8 +95,12 @@ object DdFonts {
         DdFontStyle.MANROPE to FontFamily(manropeFonts),
         DdFontStyle.SYSTEM to FontFamily(systemFonts),
     )
-    var style: DdFontStyle = DdFontStyle.SYSTEM
-        private set
+    private val selectedStyle = mutableStateOf(DdFontStyle.FREDOKA)
+    var style: DdFontStyle
+        get() = selectedStyle.value
+        private set(value) {
+            selectedStyle.value = value
+        }
 
     fun apply(style: DdFontStyle) {
         this.style = style
@@ -209,23 +215,27 @@ object DdType {
         )
 }
 
-private fun superPiTypography(): Typography = Typography(
-    displayLarge = DdType.display.copy(fontSize = 52.sp, lineHeight = 60.sp),
-    displayMedium = DdType.display,
-    displaySmall = DdType.pageTitle,
-    headlineLarge = DdType.pageTitle,
-    headlineMedium = DdType.heading,
-    headlineSmall = DdType.heading.copy(fontSize = 21.sp, lineHeight = 28.sp),
-    titleLarge = DdType.label.copy(fontSize = 18.sp, lineHeight = 24.sp),
-    titleMedium = DdType.label,
-    titleSmall = DdType.label.copy(fontSize = 13.sp, lineHeight = 18.sp),
-    bodyLarge = DdType.body,
-    bodyMedium = DdType.bodySmall,
-    bodySmall = DdType.bodySmall.copy(fontSize = 13.sp, lineHeight = 19.sp),
-    labelLarge = DdType.button,
-    labelMedium = DdType.label,
-    labelSmall = DdType.micro,
-)
+private fun superPiTypography(style: DdFontStyle): Typography {
+    val family = DdFonts.familyFor(style)
+    fun TextStyle.font() = copy(fontFamily = family)
+    return Typography(
+        displayLarge = DdType.display.font().copy(fontSize = 52.sp, lineHeight = 60.sp),
+        displayMedium = DdType.display.font(),
+        displaySmall = DdType.pageTitle.font(),
+        headlineLarge = DdType.pageTitle.font(),
+        headlineMedium = DdType.heading.font(),
+        headlineSmall = DdType.heading.font().copy(fontSize = 21.sp, lineHeight = 28.sp),
+        titleLarge = DdType.label.font().copy(fontSize = 18.sp, lineHeight = 24.sp),
+        titleMedium = DdType.label.font(),
+        titleSmall = DdType.label.font().copy(fontSize = 13.sp, lineHeight = 18.sp),
+        bodyLarge = DdType.body.font(),
+        bodyMedium = DdType.bodySmall.font(),
+        bodySmall = DdType.bodySmall.font().copy(fontSize = 13.sp, lineHeight = 19.sp),
+        labelLarge = DdType.button.font(),
+        labelMedium = DdType.label.font(),
+        labelSmall = DdType.micro.font(),
+    )
+}
 
 private val SuperPIShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
@@ -313,8 +323,10 @@ public fun SuperPITheme(
     fontStyle: DdFontStyle = DdFonts.style,
     content: @Composable () -> Unit,
 ) {
-    DdFonts.apply(fontStyle)
-    val typography = remember(fontStyle) { superPiTypography() }
+    if (DdFonts.style != fontStyle) {
+        SideEffect { DdFonts.apply(fontStyle) }
+    }
+    val typography = remember(fontStyle) { superPiTypography(fontStyle) }
     val colorScheme = remember(colors) { colors.materialScheme() }
     val motionEnabled = ValueAnimator.areAnimatorsEnabled()
     CompositionLocalProvider(

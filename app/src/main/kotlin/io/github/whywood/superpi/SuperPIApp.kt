@@ -18,7 +18,6 @@ import io.github.whywood.superpi.ui.shell.rememberShellConversationStrings
 @Composable
 internal fun SuperPIApp(
     graph: AppDependencies,
-    fontStyle: DdFontStyle = DdFontStyle.FREDOKA,
     openSessionId: String? = null,
     onOpenSessionConsumed: () -> Unit = {},
     pendingDeepDestination: AppDestination? = null,
@@ -49,7 +48,6 @@ internal fun SuperPIApp(
             graph = graph,
             chatViewModel = chatViewModel,
             state = state,
-            fontStyle = fontStyle,
             openSessionId = openSessionId,
             onOpenSessionConsumed = onOpenSessionConsumed,
             pendingDeepDestination = pendingDeepDestination,

@@ -2,6 +2,7 @@ package io.github.whywood.superpi.data
 
 import android.content.Context
 import io.github.whywood.superpi.design.DdFontStyle
+import io.github.whywood.superpi.design.DdFonts
 
 class FontPreferences(context: Context) {
     private val preferences = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
@@ -10,6 +11,7 @@ class FontPreferences(context: Context) {
 
     fun save(style: DdFontStyle) {
         preferences.edit().putString(KEY_FONT_STYLE, style.id).apply()
+        DdFonts.apply(style)
     }
 
     companion object {
