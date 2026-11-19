@@ -15,7 +15,7 @@
 | `Contributions.kt` | `Contributions`、`PluginTool`、`PluginToolCall`、`PluginRunSignal`、`PluginToolResult`、`ToolBlock` 与工厂 |
 | `Hooks.kt` | `PluginEvent` 标记接口、观察事件（含通知/后台/分享/深链/应用生命周期）、5 个变换/闸门请求与决策、`PluginHooks`（默认空实现） |
 | `Ui.kt` | `SlotIds`、`SlotBinding`、`SlotContent`、`PluginPage`、`ComposerAction`、`PluginUiContributions` 与工厂 |
-| `Cards.kt` | 插件侧卡片交付：`Cards`（details 键、`descriptor`、`instruction`、`deliver`）；`deliver` 把卡片/raw/guidance 组装成模型文本与展示文本，`PluginTool` 工厂自动调用 |
+| `Cards.kt` | 插件工具侧卡片交付：`Cards`（details 键、`descriptor`、`instruction`、`deliver`）；`deliver` 把卡片/raw/guidance 组装成模型文本与展示文本，`PluginTool` 工厂自动调用。只服务插件工具结果，通过 bash 运行 CLI 的插件不做卡片 |
 | `ToolResultRenderers.kt` | 工具结果渲染器契约：`ToolResultSource`、`ToolResultMatch` + `toolResultMatch`、`ToolResultRenderer` + `toolResultRenderer`、`ToolResultState`、`ToolResultRendererContributor` |
 | `SlotStates.kt` | `SlotState` 标记接口与 `ToolCardSlotState` / `CustomMessageSlotState` 只读接口 |
 | `Services.kt` | 现有宿主服务接口（含 UI/通知/会话/聊天方法，1.2.0 新增 `UiService.openPageSheet`，1.3.0 新增 `McpService.callStructured`，1.3.1 新增 `ImageService`）、`PluginServiceUnavailable`、聊天 DTO 与工厂 |
@@ -37,4 +37,4 @@
 - explicit API 模式开启：新增公共声明必须显式 `public`，内部实现保持 `internal`。
 - 改公开类型/签名前后跑 `./scripts/api-compat.sh`；破坏性变更必须升 `PLUGIN_API_LEVEL`、更新兼容基线并写 `CHANGELOG.md`。
 - 测试在 `src/test/kotlin`（JUnit4），运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`；`./scripts/gradlew-locked :plugin-api:publishAllPublicationsToPagesRepository` 发布 SDK 到 `build/maven-repo`，再复制到 `deepdeep-maven` 仓库。
-- 卡片交付归插件侧：插件把卡片描述符、完整返回与使用说明写进结果 details，`PluginTool` 工厂经 `Cards.deliver` 生成模型文本（含 `present` 调用指令）与展示文本；宿主只按 `deepdeep.card` 渲染，不再识别或追加卡片信息。
+- 卡片交付归插件工具侧：插件工具把卡片描述符、完整返回与使用说明写进结果 details，`PluginTool` 工厂经 `Cards.deliver` 生成模型文本（含 `present` 调用指令）与展示文本；宿主只按 `deepdeep.card` 渲染，不再识别或追加卡片信息。通过 bash 运行 CLI 的插件（中山大学、飞书、企业微信）不产出卡片，也不解析 bash 命令。

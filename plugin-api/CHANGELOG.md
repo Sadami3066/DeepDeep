@@ -6,6 +6,7 @@
 
 - 卡片交付归插件侧：新增 `Cards` 对象（`KEY`/`RAW_KEY`/`GUIDANCE_KEY`/`DISPLAY_KEY`、`descriptor(...)`、`instruction(callId, title)` 与 `deliver(callId, result)`）。`PluginTool` 工厂会自动把结果 details 里的 `deepdeep.card`、`deepdeep.raw`、`deepdeep.guidance` 组装成模型可见文本（完整返回、使用说明、`present` 调用指令），并把展示文本写进 `deepdeep.display`；宿主不再追加卡片 id 或拼接任何卡片文案。
 - `Cards.deliver(callId, result)`：插件把卡片描述符、完整返回与使用说明写进结果 details，由 SDK 生成模型文本（含 `present` 指令）与展示文本（`deepdeep.display`）；`PluginTool` 工厂自动调用，重复调用幂等，`richResult(blocks)` 也支持。
+- 卡片只服务插件工具：通过 bash 运行 CLI 的插件不生成卡片，结果保持文本；宿主不对 bash 结果做卡片处理。
 - 兼容性：`design` 仍为 0.11.0；新增项均为加法，旧插件二进制不受影响。
 
 ## 1.3.0 / API level 6

@@ -30,7 +30,7 @@
 - 单一事实源：用户意图（enabled/installedVersion/pending\*/previous\*/lastError）在 `PluginRecord`；运行期事实（实例/host/scope/会话绑定/物化贡献/failed/degraded）在 `ManagedPlugin`；相位由 `PluginPhase.derive(record, facts)` 纯函数派生，只在写 `PluginRegistry` descriptor 时算一次；UI 的 `PENDING_RESTART` 由 `record.pendingVersion` 派生，不另存。
 - 状态变更只经 `PluginRuntimeRegistry`（写串行、读返回不可变视图）；写盘（外部记录 v4）由流程负责：先写盘，再过闸门。
 - 全局启用开关：启用/停用只改变 `PluginRecord.enabled`（用户意图），停用后插件不装载、不物化贡献、不出现在任何 Bot 的能力页；崩溃自动禁用同样写 `enabled=false` 并保留 `lastError`，UI 用重试激活恢复。
-- 卡片投递：插件工具/CLI 桥在结果 details 里写卡片数据，由 plugin-api `Cards.deliver` 生成 `present` 指令与展示文本；`PluginSessionHooks` 不追加任何卡片文案。
+- 卡片投递：插件工具在结果 details 里写卡片数据，由 plugin-api `Cards.deliver` 生成 `present` 指令与展示文本；`PluginSessionHooks` 不追加任何卡片文案。通过 bash 运行 CLI 的插件不做卡片，结果原样透传。
 - 一次物化：每次 refresh 每插件调用 `availability()`/`skills()` 各 1 次，enabled 时 `contributions()`/`ui()`/`promptSections()` 各 1 次；工具装配、`promptBody`、技能同步、槽位、冲突诊断、UI 快照只读物化结果，消费路径不再调用插件。
 - 生命周期：每插件独立 `SupervisorJob` scope；disable/uninstall/close 统一 cancel scope → `close()`（5s 超时）→ 释放安装句柄 → 移除注册或清贡献 → 同步技能（会话钩子在当前 run 内按冻结集合继续派发，run 结束后的刷新快照生效）；单插件 `Throwable` 隔离（`CancellationException` 重抛）。禁用但未装载的插件为 `DISABLED` 而非 `FAILED`。
 - prompt override：`PluginHostManager.promptOverrides(excludedPlugins)` 从 registry 快照按插件过滤后映射为 runtime `PluginPromptOverrides`；只在插件 ACTIVE/DEGRADED 且声明 `prompt` 时物化，启停/刷新经 reconfigure 安全点生效；workspace 排除插件其 override 一并过滤。

@@ -19,7 +19,7 @@ DeepDeep SDK（`io.github.whywood.deepdeep.sdk`）之上的 agent 运行时：�
 | `RuntimeSessions.kt` | 会话查询、列表、重命名/置顶/归档与删除 |
 | `PiSessionEngine.kt` | 装配 pi 会话：模型、工具、MCP、系统提示词与 `RuntimeHooks`；Agent 级工具钩子覆盖动态 MCP/tool_search，输入变换在 prompt 前完成；paths 段注入共享存储与挂载目录；构造参数 `excludedSkills`/`excludedMcpServers` 由 Bot 能力策略换算成排除集合（技能含被排除插件贡献的 skill id）；屏幕工具与小程序工具由 Bot 的工具开关控制；`pluginPromptOverrides` 每轮合并插件 prompt override（preamble/rules 单胜者、sections 按 priority、单插件 32KiB/总量 64KiB、冲突与超限记 `PluginPrompt` warn） |
 | `PluginRuntimeHooks.kt` | `RuntimeHooks` 聚合（prompt/input/tool/会话绑定，`onSessionBound` 传 `SessionBinding`）与 Agent 级工具钩子桥（Block/Rewrite/Replace，保留 SDK 结果归一化） |
-| `ToolResultPostProcessor.kt` | 工具结果统一后处理（在所有插件 hook 之后）：只把 SDK 的 `structuredContent` 收进 `details.deepdeep` 供 UI/历史渲染（单条上限 256 KiB，超限只记省略标记）；模型可见文本、卡片与 `present` 指令全部由插件侧（plugin-api `Cards.deliver`）生成，宿主不识别卡片协议、不改写文本；无插件工具钩子时也挂 after hook，保持 before hook 原状 |
+| `ToolResultPostProcessor.kt` | 工具结果统一后处理（在所有插件 hook 之后）：只把 SDK 的 `structuredContent` 收进 `details.deepdeep` 供 UI/历史渲染（单条上限 256 KiB，超限只记省略标记）；模型可见文本、卡片与 `present` 指令由插件工具侧（plugin-api `Cards.deliver`）生成，宿主不识别卡片协议、不改写文本；经 bash 运行 CLI 的插件结果原样透传，不做卡片处理；无插件工具钩子时也挂 after hook，保持 before hook 原状 |
 | `SessionEngine.kt` | 建会话、会话目录与工作区目录三组接口 |
 | `RuntimeDirectories.kt` | 会话目录与工作区目录的存储适配器 |
 | `SessionHandle.kt` | 单会话操作面：发消息、压缩、MCP、用量、插件自定义消息追加、自定义 Provider 注册 |

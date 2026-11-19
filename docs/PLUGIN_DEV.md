@@ -559,9 +559,11 @@ pluginTool(
 
 `isError = true` 表示一次失败的工具结果（模型可重试/解释）；`execute` 抛异常（取消除外）也会转成 error 结果，所以不要用异常传业务错误。
 
-#### 返回三层：raw / guidance / card（1.4.3）
+#### 工具结果三层：raw / guidance / card（1.4.3，仅插件工具）
 
-插件在结果 details 里写三份数据，`open fun Cards.deliver(callId, result)`（plugin-api 1.4.0，宿主 1.4.3+）负责把它们组装成模型可见文本与展示文本：
+卡片只属于插件工具：`PluginTool` 的结果可以带卡片，宿主回答区按 `deepdeep.card` 渲染。通过 bash 运行 CLI 的插件（如中山大学、飞书、企业微信）不产出卡片，也不解析 bash 命令，结果保持 CLI 文本，由模型自己读取作答；宿主对 bash 结果不做任何卡片处理。
+
+工具在结果 details 里写三份数据，`open fun Cards.deliver(callId, result)`（plugin-api 1.4.0，宿主 1.4.3+）负责把它们组装成模型可见文本与展示文本：
 
 | details 键 | 内容 | 谁使用 |
 |---|---|---|
@@ -569,7 +571,7 @@ pluginTool(
 | `deepdeep.guidance` | 给模型的短指导：下一步、失败原因、必须询问的约束、输出文件路径、分页/登录提示；不写名称/价格/ID 等已在 raw 里的事实 | `Cards.deliver` 追加到「使用说明」段 |
 | `deepdeep.card` | `{ "customType": "...", "title": "...", "payload": {...} }` | `Cards.deliver` 生成「调用 present 展示这张卡片」指令，并写 `deepdeep.display` 给工具卡展示 |
 
-- 插件不需要自己拼卡片 id 或 `present` 指令，也不要把它写进卡片 payload；模型文本里的指令由 `Cards.deliver` 统一生成（`pluginTool` 工厂与 `CliToolBridge` 会自动调用，自行实现 `PluginTool` 的插件必须显式调用一次，重复调用幂等）。
+- 插件不需要自己拼卡片 id 或 `present` 指令，也不要把它写进卡片 payload；模型文本里的指令由 `Cards.deliver` 统一生成（`pluginTool` 工厂会自动调用，自行实现 `PluginTool` 的插件必须显式调用一次，重复调用幂等）。
 - `textResult` 的 text 只写插件自己的正文（例如邮箱事实列表）；`raw`/`guidance` 不再由宿主拼接。
 - 错误结果（`isError = true`）由 `Cards.deliver` 丢弃卡片与 `present` 指令，只保留正文、完整返回与使用说明。
 - 卡片 payload 必须全量（含原始脏字符串、ID、坐标、图片 URL、状态、分页 token）；裁剪只发生在渲染层的默认预览/展开。
