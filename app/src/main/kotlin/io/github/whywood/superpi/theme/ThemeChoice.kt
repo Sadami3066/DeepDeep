@@ -7,10 +7,6 @@ sealed interface ThemeChoice {
         override val key: String = "pi"
     }
 
-    data object System : ThemeChoice {
-        override val key: String = "system"
-    }
-
     data object ClassicBlue : ThemeChoice {
         override val key: String = "classic"
     }
@@ -30,7 +26,7 @@ sealed interface ThemeChoice {
     companion object {
         const val PACK_PREFIX: String = "pack:"
 
-        val builtIn: List<ThemeChoice> = listOf(Pi, System, ClassicBlue, Santorini, Oceanic)
+        val builtIn: List<ThemeChoice> = listOf(Pi, ClassicBlue, Santorini, Oceanic)
 
         fun parse(raw: String?): ThemeChoice = fromKey(raw) ?: Pi
 
@@ -38,7 +34,6 @@ sealed interface ThemeChoice {
             if (raw.isNullOrBlank()) return null
             return when (raw) {
                 Pi.key -> Pi
-                System.key -> System
                 ClassicBlue.key -> ClassicBlue
                 Santorini.key -> Santorini
                 Oceanic.key -> Oceanic

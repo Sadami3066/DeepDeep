@@ -9,7 +9,7 @@ class ThemeChoiceTest {
     @Test
     fun parsesBuiltInChoices() {
         assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pi"))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("system"))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("system"))
         assertEquals(ThemeChoice.ClassicBlue, ThemeChoice.parse("classic"))
         assertEquals(ThemeChoice.Santorini, ThemeChoice.parse("santorini"))
         assertEquals(ThemeChoice.Oceanic, ThemeChoice.parse("oceanic"))
@@ -40,6 +40,15 @@ class ThemeChoiceTest {
         assertNull(ThemeChoice.pack("com.example.plugin", "Aurora"))
         assertNull(ThemeChoice.pack("com.example.plugin", ""))
         assertNull(ThemeChoice.pack("plugin", "aurora"))
+    }
+
+    @Test
+    fun builtInChoicesExcludeFollowSystem() {
+        assertEquals(
+            listOf(ThemeChoice.Pi, ThemeChoice.ClassicBlue, ThemeChoice.Santorini, ThemeChoice.Oceanic),
+            ThemeChoice.builtIn,
+        )
+        assertEquals(null, ThemeChoice.fromKey("system"))
     }
 
     @Test

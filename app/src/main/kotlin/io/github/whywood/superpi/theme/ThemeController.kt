@@ -35,7 +35,6 @@ data class ThemeOption(
 object ThemePalettes {
     fun of(choice: ThemeChoice, systemDark: Boolean): SuperPIColors = when (choice) {
         ThemeChoice.Pi -> if (systemDark) DdTheme.darkPi() else DdTheme.lightPi()
-        ThemeChoice.System -> if (systemDark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
         ThemeChoice.ClassicBlue -> DdTheme.lightClassicBlue()
         ThemeChoice.Santorini -> DdTheme.lightSantorini()
         ThemeChoice.Oceanic -> DdTheme.darkOceanic()
@@ -125,11 +124,10 @@ class ThemeController(
     private fun builtInLabel(choice: ThemeChoice): String = context.getString(
         when (choice) {
             ThemeChoice.Pi -> R.string.settings_theme_preset_pi
-            ThemeChoice.System -> R.string.settings_theme_preset_system
             ThemeChoice.ClassicBlue -> R.string.settings_theme_preset_classic
             ThemeChoice.Santorini -> R.string.settings_theme_preset_santorini
             ThemeChoice.Oceanic -> R.string.settings_theme_preset_oceanic
-            is ThemeChoice.Pack -> R.string.settings_theme_preset_system
+            is ThemeChoice.Pack -> R.string.settings_theme
         },
     )
 

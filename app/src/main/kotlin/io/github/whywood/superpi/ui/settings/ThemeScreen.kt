@@ -197,7 +197,6 @@ private fun ThemeRow(
 private fun secondaryLabel(option: ThemeOption): String {
     val tone = when {
         option.id == ThemeChoice.Pi -> stringResource(R.string.settings_theme_pi_subtitle)
-        option.id == ThemeChoice.System -> stringResource(R.string.settings_theme_auto)
         option.dark -> stringResource(R.string.settings_theme_dark)
         else -> stringResource(R.string.settings_theme_light)
     }
