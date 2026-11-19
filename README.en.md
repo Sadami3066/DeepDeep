@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/media/mascot.webp" width="96" alt="PI" />
+
 # Super PI Agent
 
 **A personal agent for Android**

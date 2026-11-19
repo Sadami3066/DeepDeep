@@ -16,6 +16,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import android.graphics.ImageDecoder
+import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -61,6 +64,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -149,16 +153,27 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
                 )
             }
             val markSize = minOf(maxHeight, 260.dp, maxWidth * 0.72f)
-            DdWordmark(
-                modifier = Modifier.graphicsLayer { translationY = floatOffset.dp.toPx() },
-                color = colors.ink,
-                dotColor = colors.accent,
-                style = DdType.wordmark.copy(
-                    fontSize = (markSize.value * 0.38f).sp,
-                    lineHeight = (markSize.value * 0.44f).sp,
-                    letterSpacing = (-1).sp,
-                ),
-            )
+            Box(
+                Modifier
+                    .size(markSize)
+                    .graphicsLayer { translationY = floatOffset.dp.toPx() }
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                AndroidView(
+                    modifier = Modifier.size(markSize * 0.72f),
+                    factory = { context ->
+                        ImageView(context).apply {
+                            scaleType = ImageView.ScaleType.FIT_CENTER
+                            val source = ImageDecoder.createSource(context.resources, R.drawable.pi_welcome)
+                            val drawable = ImageDecoder.decodeDrawable(source)
+                            setImageDrawable(drawable)
+                            if (drawable is android.graphics.drawable.AnimatedImageDrawable) drawable.start()
+                        }
+                    },
+                )
+            }
         }
     }
 }

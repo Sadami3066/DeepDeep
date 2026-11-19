@@ -7,12 +7,16 @@ The adaptive launcher icon lives in `app/src/main/res/`:
 | File | Purpose |
 |---|---|
 | `mipmap-anydpi-v26/ic_launcher.xml` | Adaptive icon definition: background color, foreground, monochrome layer |
-| `drawable/ic_launcher_foreground.xml` | White PI monogram, drawn inside the adaptive-icon safe zone |
-| `drawable/ic_launcher_monochrome.xml` | Monochrome layer for themed icons on Android 13+ |
-| `drawable/ic_notification.xml` | White silhouette used for notification small icons |
-| `values/colors.xml`, `values-night/colors.xml` | `pi_icon_background` (`#09090B`) and window paper color |
+| `drawable-nodpi/ic_launcher_foreground.png` | PI robot mark, drawn inside the adaptive-icon safe zone |
+| `drawable-nodpi/ic_launcher_monochrome.png` | Monochrome layer for themed icons on Android 13+ |
+| `drawable-nodpi/ic_notification.png` | White silhouette used for notification small icons |
+| `values/colors.xml`, `values-night/colors.xml` | `pi_icon_background` (`#FFFFFF`) and window paper color |
 
-The launcher background is shared by light and dark launchers. Replace the two icon vectors together so the adaptive and monochrome layers keep the same shape.
+The launcher background is white in both light and dark launchers. The foreground and monochrome layers share the same robot geometry; replace both together when the mark changes.
+
+## Mascot
+
+`drawable-nodpi/pi_mascot.webp` is the robot mascot used on the welcome screen and the empty conversation state. It is drawn on a white circular tile in both themes so the black silhouette stays legible.
 
 ## Wordmark
 
