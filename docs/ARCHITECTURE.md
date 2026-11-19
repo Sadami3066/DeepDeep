@@ -42,10 +42,10 @@ Dependency direction: `app` → `runtime` → `runtime-api`, `app` → `shell`, 
 
 ## Themes
 
-`ThemeController` resolves the selected theme into a `DeepDeepColors` palette and provides it to the whole app and to plugin pages:
+`ThemeController` resolves the selected theme into a `SuperPIColors` palette and provides it to the whole app and to plugin pages:
 - Built-in themes: PI (default, light/dark), Follow system, Classic Blue, Santorini, Oceanic.
 - PI is the product palette: black and white structure, semantic colors for danger/success/warning, restrained syntax colors in code.
-- Third-party theme packs declare a base (`pi`, `deepdeep`, `santorini`, `oceanic`) and token overrides; the old base keys remain valid.
+- Third-party theme packs declare a base (`pi`, `superpi`, `santorini`, `oceanic`) and token overrides; the old base keys remain valid.
 - A missing plugin theme falls back to PI; it does not leave the app unstyled.
 
 ## Updates

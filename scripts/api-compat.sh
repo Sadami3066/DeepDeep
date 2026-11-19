@@ -27,7 +27,7 @@ fi
 
 dump_api() {
   local aar="$1" out="$2" tmp
-  tmp="$(mktemp -d "${TMPDIR:-/tmp}/deepdeep-api.XXXXXX")"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/superpi-api.XXXXXX")"
   unzip -q -o "$aar" classes.jar -d "$tmp"
   local jar="$tmp/classes.jar"
   if command -v jar >/dev/null 2>&1; then
@@ -53,7 +53,7 @@ filter_allowed() {
 
 check_module() {
   local name="$1" aar="$2" baseline="$3" allow="$4" current
-  current="$(mktemp "${TMPDIR:-/tmp}/deepdeep-api-current.XXXXXX")"
+  current="$(mktemp "${TMPDIR:-/tmp}/superpi-api-current.XXXXXX")"
   dump_api "$aar" "$current"
 
   if [[ "$UPDATE" -eq 1 ]]; then

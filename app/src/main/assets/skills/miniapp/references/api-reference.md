@@ -28,7 +28,7 @@
 
 ## 页面 bridge
 
-页面启动前注入 `window.deepdeep`，别名 `window.app`。所有异步接口返回 Promise。
+页面启动前注入 `window.superpi`，别名 `window.app`。所有异步接口返回 Promise。
 
 ### app.info()
 

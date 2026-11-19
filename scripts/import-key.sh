@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-PACKAGE="${PACKAGE:-io.github.whywood.deepdeep}"
-KEY_FILE="${KEY_FILE:-$HOME/.config/deepdeep/deepseek.key}"
+PACKAGE="${PACKAGE:-io.github.whywood.superpi}"
+KEY_FILE="${KEY_FILE:-$HOME/.config/superpi/deepseek.key}"
 DEVICE_TMP="/data/local/tmp/deepseek.key"
 
 test -f "$KEY_FILE"

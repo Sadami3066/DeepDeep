@@ -10,12 +10,12 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-<a href="https://github.com/Sadami3066/DeepDeep/releases"><img src="https://img.shields.io/badge/下载-最新版本-111111?style=for-the-badge&logo=github&logoColor=white" alt="下载最新版本" /></a>
+<a href="https://github.com/Sadami3066/SuperPI/releases"><img src="https://img.shields.io/badge/下载-最新版本-111111?style=for-the-badge&logo=github&logoColor=white" alt="下载最新版本" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
-<img src="https://img.shields.io/github/v/release/Sadami3066/DeepDeep?style=flat-square&color=111111" alt="最新版本" />
+<img src="https://img.shields.io/github/v/release/Sadami3066/SuperPI?style=flat-square&color=111111" alt="最新版本" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 </div>
@@ -32,7 +32,7 @@ Super PI Agent 包含一套完整的 Agent Harness：工具、技能、长期记
 
 项目开源，代码可审计；除模型服务商与用户配置的 MCP/插件外，没有数据上传。
 
-安装包从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 获取。
+安装包从 [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases) 获取。
 
 ## 能力
 
@@ -47,7 +47,7 @@ Super PI Agent 包含一套完整的 Agent Harness：工具、技能、长期记
 
 ## 快速开始
 
-1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载最新版本。
+1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases) 下载最新版本。
 2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入引导；建议跟着流程走，也可以跳过，之后在设置中逐项完成。
 3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。
 4. **初始化 Linux。** 进入「设置 → 系统访问」的「Linux 环境」区完成 Alpine 初始化。
@@ -60,7 +60,7 @@ Super PI Agent 包含一套完整的 Agent Harness：工具、技能、长期记
 | 项目 | 说明 |
 |---|---|
 | 系统 | Android 10 及以上 |
-| 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) 下载 APK |
+| 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases) 下载 APK |
 | 账号 | 没有账号系统；模型 Key 仅保存在本机 |
 | 升级 | 使用同一签名覆盖安装；更换签名需要先卸载，卸载会删除本机会话与凭据 |
 | 网络 | 对话内容只发送给已配置的模型厂商；市场与更新检查访问 GitHub，部分网络环境需要代理 |
@@ -130,7 +130,7 @@ Super PI Agent 包含一套完整的 Agent Harness：工具、技能、长期记
 
 ## 贡献
 
-欢迎提交 Issue 与 PR。提交前请阅读[贡献指南](CONTRIBUTING.md)。插件作者可以从[插件开发](docs/PLUGIN_DEV.md)与 [Super PI Agent 官方插件](https://github.com/Sadami3066/DeepDeep-Official-Plugins) 开始。安全相关问题请不要公开提交，直接联系作者。
+欢迎提交 Issue 与 PR。提交前请阅读[贡献指南](CONTRIBUTING.md)。插件作者可以从[插件开发](docs/PLUGIN_DEV.md)与 [Super PI Agent 官方插件](https://github.com/Sadami3066/SuperPI-Official-Plugins) 开始。安全相关问题请不要公开提交，直接联系作者。
 
 ## License
 
@@ -138,4 +138,4 @@ Super PI Agent 包含一套完整的 Agent Harness：工具、技能、长期记
 
 ---
 
-<sub>Built on [pi](https://pi.dev) · [DeepDeep-KotlinSDK](https://github.com/Sadami3066/DeepDeep-KotlinSDK) · Alpine Linux · Jetpack Compose</sub>
+<sub>Built on [pi](https://pi.dev) · [SuperPI-KotlinSDK](https://github.com/Sadami3066/SuperPI-KotlinSDK) · Alpine Linux · Jetpack Compose</sub>

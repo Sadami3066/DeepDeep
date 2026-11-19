@@ -19,7 +19,7 @@ First-time setup:
 
 It checks `java` and `javac` (JDK 17, with a compiler), locates the Android SDK from environment variables, then an existing `local.properties`, then common paths, installs Platform 36 and build-tools 36.0.0 with `sdkmanager` when needed, keeps an existing `local.properties`, and then builds the debug APK; it does not touch signing material.
 
-The Agent SDK comes from JitPack: `com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android`, with the version in `gradle/libs.versions.toml` under `pi`. The first build may wait for JitPack to compile the SDK (a few minutes, and it can time out); once the dependency is cached, builds can run offline. In an offline environment, run one complete build while online first.
+The Agent SDK comes from JitPack: `com.github.Sadami3066.SuperPI-KotlinSDK:pi-coding-agent-android`, with the version in `gradle/libs.versions.toml` under `pi`. The first build may wait for JitPack to compile the SDK (a few minutes, and it can time out); once the dependency is cached, builds can run offline. In an offline environment, run one complete build while online first.
 
 ## Build and verify
 
@@ -94,7 +94,7 @@ Docs-only changes do not need a build.
 **Device scripts**
 
 - `adb` is required. With several devices online, choose one with `ANDROID_SERIAL`; the scripts prefer it, then the only online device, and fail when several are online and none is specified.
-- Plugin e2e needs a plugin repository: by default the scripts look for `plugins` / `DeepDeep-Official-Plugins` next to or one level above the repository (`plugin-e2e.sh` expects DeepDeep-Plugins, `plugin-bundles-e2e.sh` the official plugin repository); set `PLUGINS_DIR` when they live elsewhere. `plugin-e2e.sh` also needs the `sample` test fixture from the plugin repository; without it the script suggests pointing `E2E_DDP` at a signed package.
+- Plugin e2e needs a plugin repository: by default the scripts look for `plugins` / `SuperPI-Official-Plugins` next to or one level above the repository (`plugin-e2e.sh` expects SuperPI-Plugins, `plugin-bundles-e2e.sh` the official plugin repository); set `PLUGINS_DIR` when they live elsewhere. `plugin-e2e.sh` also needs the `sample` test fixture from the plugin repository; without it the script suggests pointing `E2E_DDP` at a signed package.
 - `check.sh --device` and both e2e scripts install the debug build over the app: a build with the same package name but a different signature on the device (for example a release APK) makes the install fail, since debug and release signatures are not interchangeable; uninstall first (which clears app data) or use another device or emulator. A failed e2e exits with a non-zero code.
 - `api-compat.sh` needs `unzip`, `jar` and `javap`; the JDK provides the last two, and the script self-checks and reports anything missing.
 

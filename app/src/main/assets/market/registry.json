@@ -5,7 +5,7 @@
   "entries": [
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.amap",
+      "id": "io.github.whywood.superpi.plugin.amap",
       "name": {
         "zh": "高德地图",
         "en": "Amap Maps"
@@ -33,7 +33,7 @@
       "icon": "icons/amap.png?v=1186c72c5414",
       "version": "1.5.3",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116-5/amap-1.5.3.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116-5/amap-1.5.3.ddp",
         "sha256": "e5f065b796697cd074b0f46ffc55def83e396192f5c52ad9d9f63c457254ff29",
         "size": 1104735
       },
@@ -49,7 +49,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.feishu",
+      "id": "io.github.whywood.superpi.plugin.feishu",
       "name": {
         "zh": "飞书",
         "en": "Feishu"
@@ -77,7 +77,7 @@
       },
       "version": "2.7.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261119/feishu-2.7.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261119/feishu-2.7.1.ddp",
         "sha256": "e590f898690ea85da413980752421eeca8bb2bf91497f03877617a3bd8ac9eb9",
         "size": 992887
       },
@@ -93,7 +93,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.hotel",
+      "id": "io.github.whywood.superpi.plugin.hotel",
       "name": {
         "zh": "RollingGo酒店",
         "en": "RollingGo Hotels"
@@ -121,7 +121,7 @@
       "icon": "icons/hotel.png?v=59c14774ffbd",
       "version": "1.4.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116/hotel-1.4.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/hotel-1.4.1.ddp",
         "sha256": "2648852624eccaccfaae44d0ad5f710114fa9355cdd4b72483cf795eb14ef891",
         "size": 1463476
       },
@@ -137,7 +137,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.mail",
+      "id": "io.github.whywood.superpi.plugin.mail",
       "name": {
         "zh": "邮箱",
         "en": "Mail"
@@ -165,7 +165,7 @@
       },
       "version": "1.6.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261118-1/mail-1.6.2.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261118-1/mail-1.6.2.ddp",
         "sha256": "6f2d5215c800a87c07ced054e06ae3284558d059b8f43c718334e77159d6754a",
         "size": 1811767
       },
@@ -181,7 +181,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.micloud",
+      "id": "io.github.whywood.superpi.plugin.micloud",
       "name": {
         "zh": "小米云服务",
         "en": "Mi Cloud"
@@ -209,7 +209,7 @@
       },
       "version": "2.7.4",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116-3/micloud-2.7.4.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116-3/micloud-2.7.4.ddp",
         "sha256": "25c0abdd1c27efb3290dc8ec07716d129c253a6799438c153d2d1000a3d46cf6",
         "size": 1128587
       },
@@ -225,7 +225,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.purge",
+      "id": "io.github.whywood.superpi.plugin.purge",
       "name": {
         "zh": "网络攻防",
         "en": "NetSec"
@@ -269,7 +269,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.rail",
+      "id": "io.github.whywood.superpi.plugin.rail",
       "name": {
         "zh": "12306铁路",
         "en": "12306 Railway"
@@ -295,7 +295,7 @@
       "icon": "icons/rail.png?v=bba1560d8cf3",
       "version": "1.4.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116/rail-1.4.0.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/rail-1.4.0.ddp",
         "sha256": "83603bb5622100c78cd0125aa05711e4adfd9657e44e3f836067ec3dc82ef978",
         "size": 1144840
       },
@@ -311,7 +311,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.ride",
+      "id": "io.github.whywood.superpi.plugin.ride",
       "name": {
         "zh": "滴滴打车",
         "en": "DiDi Ride"
@@ -339,7 +339,7 @@
       "icon": "icons/ride.png?v=d8c97028398c",
       "version": "1.3.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116-5/ride-1.3.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116-5/ride-1.3.1.ddp",
         "sha256": "8753e6a0118d98e4f1fa50a35a89a4aa31e4562c3638fa118f0db21019a9fa66",
         "size": 1015863
       },
@@ -355,7 +355,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.sysu",
+      "id": "io.github.whywood.superpi.plugin.sysu",
       "name": {
         "zh": "中山大学 CLI",
         "en": "SYSU CLI"
@@ -381,7 +381,7 @@
       },
       "version": "2.7.3",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261119/sysu-2.7.3.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261119/sysu-2.7.3.ddp",
         "sha256": "a5af02bc23e970bc2076c3c15aa44289bafc43ab718a17497140f4dc6586ac9b",
         "size": 1023648
       },
@@ -393,15 +393,15 @@
         "requiredAccess": "normal",
         "version": "2.7.3",
         "previews": [
-          "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-1.jpg",
-          "https://raw.githubusercontent.com/Sadami3066/deepdeep-market/master/previews/sysu-2.jpg"
+          "https://raw.githubusercontent.com/Sadami3066/SuperPI-Market/master/previews/sysu-1.jpg",
+          "https://raw.githubusercontent.com/Sadami3066/SuperPI-Market/master/previews/sysu-2.jpg"
         ]
       },
       "category": "study"
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.themes",
+      "id": "io.github.whywood.superpi.plugin.themes",
       "name": {
         "zh": "主题",
         "en": "Themes"
@@ -429,7 +429,7 @@
       },
       "version": "1.0.1",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116/themes-1.0.1.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/themes-1.0.1.ddp",
         "sha256": "6ed1d2c3f074e64df42ec8cb050782ca3c36abd38cb96b2f1d4244fd76624a0e",
         "size": 815862
       },
@@ -445,7 +445,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.wechat",
+      "id": "io.github.whywood.superpi.plugin.wechat",
       "name": {
         "zh": "微信聊天记录",
         "en": "WeChat Chat History"
@@ -473,7 +473,7 @@
       },
       "version": "0.5.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261116/wechat-0.5.2.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261116/wechat-0.5.2.ddp",
         "sha256": "afd2257125820b48e4567a71cca5a41878f0dd23dc405fd97e4e5adb7dee504f",
         "size": 894528
       },
@@ -489,7 +489,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.wecom",
+      "id": "io.github.whywood.superpi.plugin.wecom",
       "name": {
         "zh": "企业微信",
         "en": "WeCom"
@@ -517,7 +517,7 @@
       },
       "version": "2.6.2",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261119/wecom-2.6.2.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261119/wecom-2.6.2.ddp",
         "sha256": "9bab665eb52859d721ce7627c28e9cfb14096d502423c3568e66310cdc931ac3",
         "size": 1029099
       },
@@ -533,7 +533,7 @@
     },
     {
       "type": "plugin",
-      "id": "io.github.whywood.deepdeep.plugin.zanao",
+      "id": "io.github.whywood.superpi.plugin.zanao",
       "name": {
         "zh": "校园集市",
         "en": "Campus Market"
@@ -561,7 +561,7 @@
       },
       "version": "1.0.18",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/plugins-20261114-6/zanao-1.0.18.ddp",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/plugins-20261114-6/zanao-1.0.18.ddp",
         "sha256": "b64961a5da8e0cea07ffaa63d9758b8df2e128fe9c32b927c6b8a69e7e916d56",
         "size": 1721947
       },
@@ -604,7 +604,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/ad-creative-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/ad-creative-1.0.0.zip",
         "sha256": "75ffaf40f2e83edc7061b8d28260603a43bcf85b8fb80d86a75e0b2e7f723289",
         "size": 18978
       },
@@ -643,7 +643,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/api-design-reviewer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/api-design-reviewer-1.0.0.zip",
         "sha256": "399d318743f53d7df78b8856038fcdd302756fd468344fed229293d2459e9b04",
         "size": 45349
       },
@@ -682,7 +682,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/apple-hig-expert-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/apple-hig-expert-1.0.0.zip",
         "sha256": "236890c5f2fc739d8c3f18eafc3a96bb0b338c6cd45da144030859b7e47696df",
         "size": 11270
       },
@@ -721,7 +721,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-article-illustrator-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-article-illustrator-1.0.0.zip",
         "sha256": "bca52e0f7a14a82d36bb227ecaf3153e6ecb006bf8e2952bd956796250228f40",
         "size": 61657
       },
@@ -760,7 +760,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-cover-image-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-cover-image-1.0.0.zip",
         "sha256": "59a6a480a2fc3edbaacff203ba048615c1726a6f1abbe8960245cbd7191551f1",
         "size": 47557
       },
@@ -799,7 +799,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-format-markdown-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-format-markdown-1.0.0.zip",
         "sha256": "1a952097863eeaa0b1c76a4d9f62a3c01bd627415fc91ca524a34c9894d7b1ce",
         "size": 20123
       },
@@ -836,7 +836,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-infographic-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-infographic-1.0.0.zip",
         "sha256": "7ade41562cd28d15855316a0128573bccc659a36ad621bfbe75bbc828b284810",
         "size": 51919
       },
@@ -875,7 +875,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-markdown-to-html-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-markdown-to-html-1.0.0.zip",
         "sha256": "92622e6d96fc200a62a37055f00f0c2f6a15cd2064b6c333e33ab73d8265a851",
         "size": 20313
       },
@@ -912,7 +912,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-slide-deck-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-slide-deck-1.0.0.zip",
         "sha256": "f9fe365cb2f08b53b696aded3d03c8712375ea99b50a2cb097ec13208f78000b",
         "size": 62378
       },
@@ -951,7 +951,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-translate-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-translate-1.0.0.zip",
         "sha256": "cc82e4174eb4bdc9ade967b30775bc36de97edd36427ad7f4bc94ca62a71a312",
         "size": 20046
       },
@@ -990,7 +990,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/baoyu-xhs-images-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/baoyu-xhs-images-1.0.0.zip",
         "sha256": "ccefaf7a54fdef1b7e7c7d23d456bbd0916c950c6e2930112e45e39f4ff35fb3",
         "size": 58427
       },
@@ -1029,7 +1029,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/book-to-skill-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/book-to-skill-1.0.0.zip",
         "sha256": "8b03e8cafea3c3868c6aea9395aa90a8944c97468798dab7a8282c59ae7ecc4c",
         "size": 97902
       },
@@ -1067,7 +1067,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/brainstorming-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/brainstorming-1.0.0.zip",
         "sha256": "8cecdc0877847c9425b424d4ac938a5471a032259e621c22baf9bc2773e00030",
         "size": 32015
       },
@@ -1106,7 +1106,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/brand-landingpage-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/brand-landingpage-1.0.0.zip",
         "sha256": "371ef65680efa6b87977045cd12a2e8ba54973a1a68b38f5146d386d01b37a63",
         "size": 22041
       },
@@ -1145,7 +1145,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/business-name-fit-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/business-name-fit-1.0.0.zip",
         "sha256": "7d8587b743d6928a3257d11347f2240c43921f67e202858aca5bd3b0a542862b",
         "size": 12917
       },
@@ -1184,7 +1184,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/canvas-design-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/canvas-design-1.0.0.zip",
         "sha256": "850c433acd345bd76e4eb9ffbbebefcbd48366abf7d732e39882f95a46bb4a90",
         "size": 2648337
       },
@@ -1223,7 +1223,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/ceo-advisor-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/ceo-advisor-1.0.0.zip",
         "sha256": "32c9e80cc5a36848f926a85a595659f3af72bd2f5ac01e26d06918dcbac83e50",
         "size": 30832
       },
@@ -1262,7 +1262,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/cfo-advisor-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/cfo-advisor-1.0.0.zip",
         "sha256": "d457980a7f783f0732d1801437284e58579aa40ead984e7728a4fe2a910eba65",
         "size": 39472
       },
@@ -1301,7 +1301,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/ci-cd-pipeline-builder-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/ci-cd-pipeline-builder-1.0.0.zip",
         "sha256": "c0d9a69d010bde246424d17d1fba44cd82fd3266029eef63993decd2f355fa32",
         "size": 11021
       },
@@ -1340,7 +1340,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/code-reviewer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/code-reviewer-1.0.0.zip",
         "sha256": "c6fbdb8236fd6a0ba3ae749cd817166c9e486ec92124ff6b467b75d91229588e",
         "size": 67001
       },
@@ -1377,7 +1377,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/cold-email-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/cold-email-1.0.0.zip",
         "sha256": "ee33cd995398ee50cc03c33b29a5da9fd5fc62ae47c1f302d0dc81463a7756e1",
         "size": 26746
       },
@@ -1416,7 +1416,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/competitive-intel-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/competitive-intel-1.0.0.zip",
         "sha256": "3c1cd55082b3c0ac6dae13360ed0c71c9021f53ce210edd1e58e0b3a0446280d",
         "size": 11614
       },
@@ -1455,7 +1455,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/competitive-teardown-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/competitive-teardown-1.0.0.zip",
         "sha256": "09c33d69e653c9de6a680512a6aa5f0d0f1a7e216152df0913942e7839eb5744",
         "size": 18433
       },
@@ -1494,7 +1494,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/content-humanizer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/content-humanizer-1.0.0.zip",
         "sha256": "5a5e713a548a603657ac06a4bb0766f4a715d4aa2db46e1b7ae7f9173be26aec",
         "size": 21474
       },
@@ -1533,7 +1533,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/content-production-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/content-production-1.0.0.zip",
         "sha256": "83241c9c9b9ca434af3d703b5f3bc5ddc7c8a8476859da63fa6cba01e3017ffb",
         "size": 33387
       },
@@ -1572,7 +1572,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/contract-and-proposal-writer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/contract-and-proposal-writer-1.0.0.zip",
         "sha256": "4bf0254a6b5b36c5aa013754f52899424e6189f0deb08b0b96b0bafb691db988",
         "size": 7291
       },
@@ -1611,7 +1611,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/copywriting-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/copywriting-1.0.0.zip",
         "sha256": "22d0fdce37cf853299ef60857da0f305cdca47e5749e102ac819b8e165590e25",
         "size": 15301
       },
@@ -1650,7 +1650,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/data-storytelling-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/data-storytelling-1.0.0.zip",
         "sha256": "bbf6f6f611c479cae972fa8ca9df6bfc442ed14a764ee8a9c90e93e320af53e4",
         "size": 6480
       },
@@ -1689,7 +1689,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/debugging-strategies-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/debugging-strategies-1.0.0.zip",
         "sha256": "c8fde758fa5e116a002b43fb0381a0a7dcae0728d968c8d1c903878545b81366",
         "size": 7024
       },
@@ -1728,7 +1728,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/deep-learning-book-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/deep-learning-book-1.0.0.zip",
         "sha256": "c2acc3a783c40ae312987e57b0f0196f86314389ee69e45c42b28d20486e7c59",
         "size": 88190
       },
@@ -1767,7 +1767,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/deep-work-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/deep-work-1.0.0.zip",
         "sha256": "a0ffa4d8274963a2167bbec9cee25a5a3a4f8a865b65b678779c9df92b3d29f3",
         "size": 28257
       },
@@ -1806,7 +1806,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/deepread-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/deepread-1.0.0.zip",
         "sha256": "395de314e51cf6d3ff069298d3a46fcf05a128585ab2da05b3ecd9b0a52cf24c",
         "size": 8444
       },
@@ -1845,7 +1845,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/design-qa-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/design-qa-1.0.0.zip",
         "sha256": "913788bb6bce22d17b594a9fa5b81d5e868fe3fb3f113c841d570e285755ce51",
         "size": 40214
       },
@@ -1884,7 +1884,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/dispatching-parallel-agents-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/dispatching-parallel-agents-1.0.0.zip",
         "sha256": "00ee23fdffa56b37f1cd9dbf4ad6d06520d4afd81ed0acd0540ccddf6d74bdd2",
         "size": 3831
       },
@@ -1923,7 +1923,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/doc-coauthoring-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/doc-coauthoring-1.0.0.zip",
         "sha256": "8c58e65ca66c093a47f34cfb48850e946e1436c69a06f8ad50483e9d933aa044",
         "size": 10452
       },
@@ -1962,7 +1962,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/docker-development-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/docker-development-1.0.0.zip",
         "sha256": "a808a3c1e9f091b43a4b12908644d2d13e48c51dcbfa181fc8dcc51eb062017c",
         "size": 19307
       },
@@ -2001,7 +2001,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/docx-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/docx-1.0.0.zip",
         "sha256": "e1c2ae5602a19e211bfe711c3495546deaa022cf6d699b2b653840ea145b38f9",
         "size": 173537
       },
@@ -2040,7 +2040,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/dossier-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/dossier-1.0.0.zip",
         "sha256": "dd14f6ac7bd73ba1c797c258881cbe53af78eb0f3553ffb3c9efa93b48befa65",
         "size": 30050
       },
@@ -2079,7 +2079,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/email-sequence-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/email-sequence-1.0.0.zip",
         "sha256": "7f5dbf81211be8fe5e554cd677691a7c9d6f092a1a4738753a55c13733ecbb86",
         "size": 11265
       },
@@ -2118,7 +2118,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/epic-design-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/epic-design-1.0.0.zip",
         "sha256": "8f97baa22076e705cd8108662ff55a7494bcfd3dda7db8d66cb70a1fb73a65d3",
         "size": 54288
       },
@@ -2157,7 +2157,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/executing-plans-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/executing-plans-1.0.0.zip",
         "sha256": "f0490dd87f259433f4bfdba9e65250bc38aedc8bcc9574e964f0e4b38aa749fb",
         "size": 10076
       },
@@ -2196,7 +2196,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/experiment-designer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/experiment-designer-1.0.0.zip",
         "sha256": "1ae064c2053cb457371a757264020119041c2fcf441b712543e143a4536417f1",
         "size": 6326
       },
@@ -2235,7 +2235,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/file-conversion-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/file-conversion-1.0.0.zip",
         "sha256": "2e3599cabb9e5ad275fd2c5a5a2aacfa9a44ef8add554a9285094d8634ac5686",
         "size": 4981
       },
@@ -2274,7 +2274,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/financial-analyst-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/financial-analyst-1.0.0.zip",
         "sha256": "09040e89e152d06657ac4f99761d134f118761e22231241db035f508ce5a0c42",
         "size": 43367
       },
@@ -2313,7 +2313,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/founder-coach-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/founder-coach-1.0.0.zip",
         "sha256": "052ef05b6716d7e012d775fdceaea8cf04426c4d3986ea34d1d25fff11eb9c66",
         "size": 15335
       },
@@ -2352,7 +2352,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/frontend-design-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/frontend-design-1.0.0.zip",
         "sha256": "3478244b357f4de3eea45e327740bc5d908f8f3e93c7ae77d28e8da32ed097a0",
         "size": 8593
       },
@@ -2391,7 +2391,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/git-advanced-workflows-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/git-advanced-workflows-1.0.0.zip",
         "sha256": "bb2f27f9f3cea607ae4f855b28d7e826fad698e903048a640034e84349fce3fb",
         "size": 5505
       },
@@ -2430,7 +2430,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/github-issue-creator-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/github-issue-creator-1.0.0.zip",
         "sha256": "52ba6d4a41f0bf18c818b49954d81c88183ae504346f4855abae9aab179ce7c4",
         "size": 3114
       },
@@ -2469,7 +2469,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/handoff-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/handoff-1.0.0.zip",
         "sha256": "1c7c45a999ba58e437016c51ebbdc04814545457aa95939c2618d1865a765a4f",
         "size": 22696
       },
@@ -2508,7 +2508,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/interaction-design-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/interaction-design-1.0.0.zip",
         "sha256": "839c846bb06eb4e7f4925041b64bd6fba08d969e95875e7b514547107679f423",
         "size": 15102
       },
@@ -2547,7 +2547,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/kpi-dashboard-design-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/kpi-dashboard-design-1.0.0.zip",
         "sha256": "5623092c8a3d883fa9ed3335bb7413790b95246a5ac390182d72f93fa7a920e2",
         "size": 8090
       },
@@ -2586,7 +2586,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/launch-strategy-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/launch-strategy-1.0.0.zip",
         "sha256": "5725f7fa23e97ac02663b42424806e476d743c0165312e8f8d4b5c54cafb8dae",
         "size": 12626
       },
@@ -2625,7 +2625,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/linkedin-content-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/linkedin-content-1.0.0.zip",
         "sha256": "b066149cfcda9da8a627c6f8646693affb537b41d215153b3939359dcf5ba23c",
         "size": 35210
       },
@@ -2664,7 +2664,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/litreview-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/litreview-1.0.0.zip",
         "sha256": "5375f82f1908785a56e94f55a5306bb81c7c7f97a93bda94fff39330c2cafacc",
         "size": 35234
       },
@@ -2703,7 +2703,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/llm-wiki-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/llm-wiki-1.0.0.zip",
         "sha256": "0ba3bafe003f0bd01b1f2ffe5ea450bbb98336ab0a5b867798488e05a7879243",
         "size": 58076
       },
@@ -2742,7 +2742,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/markdown-html-orchestrator-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/markdown-html-orchestrator-1.0.0.zip",
         "sha256": "4b0a083dceccf6d0d8f3b7e1c684b33c18ee0d2dc4e13b4be9c659d2b619f5b6",
         "size": 22021
       },
@@ -2781,7 +2781,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/market-research-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/market-research-1.0.0.zip",
         "sha256": "d4d62a18fe69f0fa4f553a2364ced3d3c84d9ee4c58e85433c208b948e6e23a5",
         "size": 23457
       },
@@ -2820,7 +2820,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/mcp-builder-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/mcp-builder-1.0.0.zip",
         "sha256": "fc4ad1bbcab9e599c472dc410a8ef9e192db39d60c59a8515e9d4a7fc8331b88",
         "size": 50517
       },
@@ -2859,7 +2859,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/md-document-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/md-document-1.0.0.zip",
         "sha256": "18f00d62c75987f4a15d4d7f69f3ea60e16fb9b402865415f241be2480c4853f",
         "size": 29318
       },
@@ -2898,7 +2898,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/md-review-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/md-review-1.0.0.zip",
         "sha256": "7a8391a9dbfff845c71b97af31b09def03a7e80c0fa47cad4586a1873686fe76",
         "size": 27505
       },
@@ -2937,7 +2937,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/md-slides-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/md-slides-1.0.0.zip",
         "sha256": "2ae3edb2df144a395ee4ca65de4462ed0cfdd7897ea6ffb42f4581e9cf4f567b",
         "size": 27175
       },
@@ -2976,7 +2976,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/meeting-analyzer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/meeting-analyzer-1.0.0.zip",
         "sha256": "3d008c41aa6fab3d84e284e3d5d4e68300d6fe64cbe6db98ffe55b7bd6695a99",
         "size": 6746
       },
@@ -3015,7 +3015,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/meetings-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/meetings-1.0.0.zip",
         "sha256": "db429efb4c21bd9e80b378a75290548fd9226674db5c451bd9303fbe8cf90bb1",
         "size": 26579
       },
@@ -3054,7 +3054,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/meta-research-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/meta-research-1.0.0.zip",
         "sha256": "1f26cf7409857a698957843a2c6580a1cfec9256729cc23a21b426386cf72603",
         "size": 5391
       },
@@ -3093,7 +3093,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/pdf-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/pdf-1.0.0.zip",
         "sha256": "d27d32d5b1dcbb47653a5fc879c3749e9c895634a34080ac25be254b7fe65b6d",
         "size": 25259
       },
@@ -3132,7 +3132,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/pptx-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/pptx-1.0.0.zip",
         "sha256": "9c38e26fbae5b51b3f06358dfa7c9bb092217a459a5d2726160f44991504c2b5",
         "size": 186938
       },
@@ -3171,7 +3171,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/pr-review-expert-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/pr-review-expert-1.0.0.zip",
         "sha256": "f1bcf0493b98a92e7d9479f5f5aceb4a51f83cc884c1f818ff62a103c62cdf54",
         "size": 6871
       },
@@ -3210,7 +3210,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/pricing-strategy-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/pricing-strategy-1.0.0.zip",
         "sha256": "ee78ca5148dbdf06ef521596fcb3f0d67050427f0168dc14c4fe1c58564f18a3",
         "size": 18385
       },
@@ -3249,7 +3249,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/product-manager-toolkit-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/product-manager-toolkit-1.0.0.zip",
         "sha256": "0dd1a68a146432d2dc532ea03494921c422d2c5abc771b34e2e322e36646d1f3",
         "size": 27107
       },
@@ -3286,7 +3286,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/readme-polish-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/readme-polish-1.0.0.zip",
         "sha256": "230042bdc3ac81015b113f19b5ebcd4febb0cc458db287b49990c9c9d3393a25",
         "size": 16164
       },
@@ -3325,7 +3325,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/receiving-code-review-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/receiving-code-review-1.0.0.zip",
         "sha256": "5ecdc6a6a714395a6b47ab6326c9ca1a3970725b0dc95c112f4c2746639df7b6",
         "size": 4063
       },
@@ -3364,7 +3364,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/reflect-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/reflect-1.0.0.zip",
         "sha256": "704c9e8c6a84cca46378eb1ee3e96614d4479139ee4f5e42dc6948a771bab7cf",
         "size": 26125
       },
@@ -3403,7 +3403,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/requesting-code-review-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/requesting-code-review-1.0.0.zip",
         "sha256": "a221df10cc26e77a776680031eb6c2a242eb48918bdbbe71be75348a37f8da42",
         "size": 5856
       },
@@ -3442,7 +3442,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/research-summarizer-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/research-summarizer-1.0.0.zip",
         "sha256": "3715053c3c4701547dee4338e14ced663da2e106de0fe53efbdc2c3195695dec",
         "size": 15883
       },
@@ -3481,7 +3481,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/research-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/research-1.0.0.zip",
         "sha256": "3831e8f0ea88a2bee4960c177972b62a71e79ad3f5da52be278f9812795601ea",
         "size": 29208
       },
@@ -3520,7 +3520,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/rfp-responder-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/rfp-responder-1.0.0.zip",
         "sha256": "341ff8dcbddcc78f7b3e1528ce7ed8a2b7f58151e27c014420edef5778e86325",
         "size": 30090
       },
@@ -3559,7 +3559,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/roadmap-communicator-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/roadmap-communicator-1.0.0.zip",
         "sha256": "b1e8e86944c5ad44bed75cdc47c128e75e3fc053c4f0436c7877ca868affdc22",
         "size": 5987
       },
@@ -3598,7 +3598,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/saas-metrics-coach-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/saas-metrics-coach-1.0.0.zip",
         "sha256": "1dbcc02b7990e18ff263c35840f03ffb65a0fe1eaa459e0827cd64e64122b940",
         "size": 13808
       },
@@ -3637,7 +3637,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/self-eval-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/self-eval-1.0.0.zip",
         "sha256": "9d2348608a846e57866976efc99c3b19ebd3187d1c5eed6f9d4e7ef62f0ffea5",
         "size": 4827
       },
@@ -3674,7 +3674,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/seo-audit-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/seo-audit-1.0.0.zip",
         "sha256": "d4b513632c7b1b7fdc1247109155902816ce44a1aa977cba37a9d27d8c80caeb",
         "size": 19669
       },
@@ -3711,7 +3711,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/skill-creator-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/skill-creator-1.0.0.zip",
         "sha256": "e00bde12ea883204f07170f17026ded7cd8c43f7c7b01bf5d48d00b37f27ceca",
         "size": 42680
       },
@@ -3750,7 +3750,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/social-content-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/social-content-1.0.0.zip",
         "sha256": "92c0360e9456e181544729a2d6ec0490b90b6657d968030c9fcdded64a81b07f",
         "size": 12735
       },
@@ -3789,7 +3789,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/spec-driven-workflow-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/spec-driven-workflow-1.0.0.zip",
         "sha256": "1ef144923c4acf5045b77a65edcce76896caf4415824ca2809e4226fcbcd0679",
         "size": 37340
       },
@@ -3826,7 +3826,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/sql-database-assistant-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/sql-database-assistant-1.0.0.zip",
         "sha256": "49c155c625d5e5ef8a419a21788f20804b48e3c038384e4278fe1a6e5387e136",
         "size": 32580
       },
@@ -3865,7 +3865,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/statistical-analyst-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/statistical-analyst-1.0.0.zip",
         "sha256": "242199cb9912e5d38838dff71ba75f132bcf81c1f631f17030d09413c2e0c5c5",
         "size": 19203
       },
@@ -3904,7 +3904,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/syllabus-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/syllabus-1.0.0.zip",
         "sha256": "a991fa67a26a1b8168e1fe03fb0e3eeba9374cef6752d52d8faee95a8e07954f",
         "size": 30023
       },
@@ -3944,7 +3944,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/systematic-debugging-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/systematic-debugging-1.0.0.zip",
         "sha256": "6e3b657b5935b56deee18c1ba0f817d3a69b6bab19429b78c68b5ff652544379",
         "size": 14070
       },
@@ -3983,7 +3983,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/tdd-guide-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/tdd-guide-1.0.0.zip",
         "sha256": "c06a14efb3e6b1ebd09d2f94d0a1309771cbf4b457ca4b7fa91ac3925e7a8725",
         "size": 53143
       },
@@ -4022,7 +4022,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/team-communications-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/team-communications-1.0.0.zip",
         "sha256": "4d9293d64dd85b28c9ae950c92150d77758c13efa05bff4a942ed6b0a891e853",
         "size": 8426
       },
@@ -4062,7 +4062,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/test-driven-development-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/test-driven-development-1.0.0.zip",
         "sha256": "ad7668b35a0effdd31012c3c9dd594cd641232658fb0c3b93473b1b111d291db",
         "size": 9373
       },
@@ -4101,7 +4101,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/theme-factory-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/theme-factory-1.0.0.zip",
         "sha256": "0e812a079f394e54a28cc65c4942c31530b6172fde89b9c112fe1441f15f3f5a",
         "size": 123870
       },
@@ -4140,7 +4140,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/ui-design-system-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/ui-design-system-1.0.0.zip",
         "sha256": "8e53a9b7bacbeffb8f94ecad266564729b62186dc1134c07ab8456aae17fe414",
         "size": 26537
       },
@@ -4180,7 +4180,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/verification-before-completion-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/verification-before-completion-1.0.0.zip",
         "sha256": "10b8cb79c2acf14dfc05c71bcb4d15a7020aab6f98111caef2f16922d6a1ba6a",
         "size": 3260
       },
@@ -4219,7 +4219,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/video-content-strategist-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/video-content-strategist-1.0.0.zip",
         "sha256": "5384d6b166554a15bd7faee392651931529094168626aa78f62bd984451b5d99",
         "size": 6254
       },
@@ -4258,7 +4258,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/visual-design-foundations-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/visual-design-foundations-1.0.0.zip",
         "sha256": "cbafeb926896b59ff7a3df72e3893a856557936cd0344262fb7426508aae3c07",
         "size": 15169
       },
@@ -4297,7 +4297,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/weekly-review-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/weekly-review-1.0.0.zip",
         "sha256": "cb215997d6de6e6c51283f153ee8c88f62deb542cce76d57369e58e8b4b6625b",
         "size": 26626
       },
@@ -4337,7 +4337,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261108/writing-plans-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261108/writing-plans-1.0.0.zip",
         "sha256": "74f5cd62f93172649a715e32e99b17596b07fe5aa4a466ebe6634e7e31123d81",
         "size": 5784
       },
@@ -4374,7 +4374,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/writing-skills-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/writing-skills-1.0.0.zip",
         "sha256": "54fa5c97605b5bc490c3e442b759cfe2899e21221477fe56fa9619cb464a8543",
         "size": 43853
       },
@@ -4413,7 +4413,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/xlsx-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/xlsx-1.0.0.zip",
         "sha256": "caebb78cf3e66143f1ba8fa29401b3337d99734c5b78e3687b7f99133c401314",
         "size": 173361
       },
@@ -4452,7 +4452,7 @@
       },
       "version": "1.0.0",
       "artifact": {
-        "url": "https://github.com/Sadami3066/deepdeep-market/releases/download/skills-20261118/zero-hallucination-coder-1.0.0.zip",
+        "url": "https://github.com/Sadami3066/SuperPI-Market/releases/download/skills-20261118/zero-hallucination-coder-1.0.0.zip",
         "sha256": "6a0db1fe43f073cb14e8babeaf67adda82474b359075838d0e4834da1de3d3c1",
         "size": 7355
       },

@@ -7,7 +7,7 @@ plugins {
 val pluginApiVersion: String = providers.gradleProperty("pluginApiVersion").getOrElse("1.4.0")
 
 android {
-    namespace = "io.github.whywood.deepdeep.plugin.api"
+    namespace = "io.github.whywood.superpi.plugin.api"
     compileSdk = 36
 
     defaultConfig {
@@ -47,8 +47,8 @@ dependencies {
     testImplementation(libs.junit)
 }
 
-val publishGroup = providers.gradleProperty("deepdeepPublishGroup")
-    .getOrElse("io.github.sadami3066.deepdeep")
+val publishGroup = providers.gradleProperty("superpiPublishGroup")
+    .getOrElse("io.github.sadami3066.superpi")
 group = publishGroup
 version = pluginApiVersion
 
@@ -69,7 +69,7 @@ afterEvaluate {
                 pom {
                     name.set("Super PI Agent Plugin API")
                     description.set("Super PI Agent external plugin contract SDK")
-                    url.set("https://github.com/Sadami3066/DeepDeep-Plugins")
+                    url.set("https://github.com/Sadami3066/SuperPI-Plugins")
                 }
             }
         }

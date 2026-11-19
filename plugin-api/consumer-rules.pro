@@ -1,5 +1,5 @@
--keep class io.github.whywood.deepdeep.plugin.api.** { *; }
--keep class io.github.whywood.deepdeep.design.** { *; }
+-keep class io.github.whywood.superpi.plugin.api.** { *; }
+-keep class io.github.whywood.superpi.design.** { *; }
 -keep class kotlin.** { *; }
 -keep class kotlinx.** { *; }
 -keep class androidx.compose.** { *; }

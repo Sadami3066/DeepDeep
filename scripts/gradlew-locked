@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-LOCK_FILE="${TMPDIR:-/tmp}/deepdeep-build.lock"
+LOCK_FILE="${TMPDIR:-/tmp}/superpi-build.lock"
 if command -v flock >/dev/null 2>&1; then
   exec 9>"$LOCK_FILE"
   if ! flock -n 9; then

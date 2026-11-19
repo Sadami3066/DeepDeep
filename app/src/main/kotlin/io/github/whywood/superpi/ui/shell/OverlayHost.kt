@@ -1,0 +1,297 @@
+package io.github.whywood.superpi.ui.shell
+
+import android.content.Context
+import android.net.Uri
+import android.content.Intent
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import io.github.whywood.superpi.data.AttachmentRef
+import io.github.whywood.superpi.design.DdMotion
+import io.github.whywood.superpi.design.DdSheet
+import io.github.whywood.superpi.design.DdSpacing
+import io.github.whywood.superpi.design.DdText
+import io.github.whywood.superpi.design.DdType
+import io.github.whywood.superpi.plugin.api.PluginPagePresentation
+import io.github.whywood.superpi.plugin.host.services.PluginPageRequest
+import io.github.whywood.superpi.R
+import io.github.whywood.superpi.ui.plugins.PluginPageHost
+import io.github.whywood.superpi.design.superPiColors
+import io.github.whywood.superpi.runtime.ConversationSummary
+import io.github.whywood.superpi.runtime.JobSnapshot
+import io.github.whywood.superpi.runtime.RuntimeWorkspace
+import io.github.whywood.superpi.runtime.SessionUsage
+import io.github.whywood.superpi.ui.SuperPIDrawer
+import io.github.whywood.superpi.ui.chat.UsageSheet
+import io.github.whywood.superpi.ui.common.chat.AttachmentPreviewDialog
+import io.github.whywood.superpi.ui.common.chat.ChatUiState
+import io.github.whywood.superpi.ui.jobs.JobsSheet
+import io.github.whywood.superpi.ui.navigation.AppDestination
+import io.github.whywood.superpi.ui.workspaces.DeleteWorkspaceDialog
+import io.github.whywood.superpi.ui.workspaces.WorkspaceCreateDialog
+import io.github.whywood.superpi.ui.workspaces.WorkspaceNameDialog
+import java.io.File
+
+
+
+sealed interface ShellOverlay {
+    data class WorkspaceCreate(val existingNames: List<String>, val privateDirectory: String) : ShellOverlay
+    data class WorkspaceRename(val workspaceId: String, val initial: String, val existingNames: List<String>) : ShellOverlay
+    data class WorkspaceDelete(val workspaceId: String, val name: String, val sessionCount: Int) : ShellOverlay
+    data class AttachmentPreview(val attachment: AttachmentRef, val file: File) : ShellOverlay
+    data class Usage(val usage: SessionUsage) : ShellOverlay
+    data class Jobs(val jobs: List<JobSnapshot>, val selectedJobId: String?, val output: String?) : ShellOverlay
+}
+
+data class ShellOverlayState(
+    val pluginPage: PluginPageRequest? = null,
+    val workspaceCreate: ShellOverlay.WorkspaceCreate? = null,
+    val workspaceRename: ShellOverlay.WorkspaceRename? = null,
+    val workspaceDelete: ShellOverlay.WorkspaceDelete? = null,
+    val attachmentPreview: ShellOverlay.AttachmentPreview? = null,
+    val usage: ShellOverlay.Usage? = null,
+    val jobs: ShellOverlay.Jobs? = null,
+)
+
+data class ShellOverlayActions(
+    val onDismissPluginPage: () -> Unit,
+    val onConfirmWorkspaceCreate: (String, String?, Uri?, String?) -> Unit, val onDismissWorkspaceCreate: () -> Unit,
+    val onConfirmWorkspaceRename: (String) -> Unit, val onDismissWorkspaceRename: () -> Unit,
+    val onConfirmWorkspaceDelete: () -> Unit, val onDismissWorkspaceDelete: () -> Unit,
+    val onDismissAttachmentPreview: () -> Unit, val onShareAttachmentPreview: () -> Unit,
+    val onExportAttachmentPreview: () -> Unit,
+    val onDismissUsage: () -> Unit, val onSelectJob: (String) -> Unit,
+    val onCloseJobOutput: () -> Unit, val onKillJob: (String) -> Unit,
+    val onClearSettledJobs: () -> Unit, val onDismissJobs: () -> Unit,
+)
+
+data class ShellDrawerState(
+    val open: Boolean,
+    val sessions: List<ConversationSummary>,
+    val workspaces: List<RuntimeWorkspace>,
+    val activeWorkspaceId: String,
+    val activeSessionId: String?,
+    val pinnedWorkspaceIds: Set<String>, val expandedWorkspaceIds: Set<String>,
+    val busySessionIds: Set<String>,
+    val timerSessionIds: Set<String>,
+    val jobSessionIds: Set<String>,
+    val userName: String,
+    val avatar: ImageBitmap? = null,
+    val hasUpdate: Boolean = false,
+)
+data class ShellDrawerActions(
+    val onNavigate: (AppDestination) -> Unit, val onDismiss: () -> Unit,
+    val onCreateWorkspace: () -> Unit, val onToggleWorkspaceExpanded: (String) -> Unit,
+    val onToggleWorkspacePinned: (String) -> Unit, val onNewSessionInWorkspace: (String) -> Unit,
+    val onWorkspaceSettings: (String) -> Unit, val onRenameWorkspace: (String) -> Unit,
+    val onDeleteWorkspace: (String) -> Unit, val onConversation: (String) -> Unit,
+    val onRename: (String, String) -> Unit, val onSetPinned: (String, Boolean) -> Unit,
+    val onSetArchived: (String, Boolean) -> Unit, val onDelete: (String) -> Unit,
+    val onSettings: () -> Unit,
+)
+fun resolveOverlays(state: ShellOverlayState): List<ShellOverlay> = buildList {
+    state.workspaceCreate?.let(::add)
+    state.workspaceRename?.let(::add)
+    state.workspaceDelete?.let(::add)
+    state.attachmentPreview?.let(::add)
+    state.usage?.let(::add)
+    state.jobs?.let(::add)
+}
+fun resolveOverlay(state: ShellOverlayState): ShellOverlay? = resolveOverlays(state).lastOrNull()
+
+@Composable
+internal fun OverlayHost(
+    overlays: ShellOverlayState,
+    overlayActions: ShellOverlayActions,
+    drawer: ShellDrawerState,
+    drawerActions: ShellDrawerActions,
+) {
+    ShellDrawerHost(drawer, drawerActions)
+    resolveOverlays(overlays).forEach { overlay ->
+        key(overlay::class) {
+            when (overlay) {
+                is ShellOverlay.WorkspaceCreate -> WorkspaceCreateDialog(
+                    existingNames = overlay.existingNames,
+                    privateDirectory = overlay.privateDirectory,
+                    onConfirm = overlayActions.onConfirmWorkspaceCreate,
+                    onDismiss = overlayActions.onDismissWorkspaceCreate,
+                )
+
+                is ShellOverlay.WorkspaceRename -> WorkspaceNameDialog(
+                    initial = overlay.initial, existingNames = overlay.existingNames,
+                    onConfirm = overlayActions.onConfirmWorkspaceRename,
+                    onDismiss = overlayActions.onDismissWorkspaceRename,
+                )
+
+                is ShellOverlay.WorkspaceDelete -> DeleteWorkspaceDialog(
+                    overlay.name, overlay.sessionCount,
+                    onConfirm = overlayActions.onConfirmWorkspaceDelete,
+                    onDismiss = overlayActions.onDismissWorkspaceDelete,
+                )
+
+                is ShellOverlay.AttachmentPreview -> AttachmentPreviewDialog(
+                    overlay.attachment, overlay.file,
+                    onDismiss = overlayActions.onDismissAttachmentPreview,
+                    onShare = overlayActions.onShareAttachmentPreview,
+                    onExport = overlayActions.onExportAttachmentPreview,
+                )
+
+                is ShellOverlay.Usage -> UsageSheet(overlay.usage, overlayActions.onDismissUsage)
+
+                is ShellOverlay.Jobs -> JobsSheet(
+                    overlay.jobs, overlay.selectedJobId, overlay.output,
+                    onSelect = overlayActions.onSelectJob,
+                    onCloseOutput = overlayActions.onCloseJobOutput,
+                    onKill = overlayActions.onKillJob,
+                    onClearSettled = overlayActions.onClearSettledJobs,
+                    onDismiss = overlayActions.onDismissJobs,
+                )
+
+            }
+        }
+    }
+    overlays.pluginPage?.let { request ->
+        key(request) {
+            PluginPageSheet(request, overlayActions.onDismissPluginPage)
+        }
+    }
+}
+
+@Composable
+private fun PluginPageSheet(request: PluginPageRequest, onDismiss: () -> Unit) {
+    val colors = superPiColors()
+    DdSheet(onDismiss = onDismiss) {
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            PluginPageHost(
+                pluginId = request.pluginId,
+                pageId = request.pageId,
+                arguments = request.arguments,
+                presentation = PluginPagePresentation.SHEET,
+                fallback = {
+                    Box(
+                        Modifier.fillMaxSize().padding(DdSpacing.Lg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DdText(
+                            text = stringResource(R.string.plugins_page_unavailable),
+                            style = DdType.bodySmall,
+                            color = colors.inkTertiary,
+                        )
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions) {
+    val colors = superPiColors()
+    val density = LocalDensity.current
+    val drawerWidthPx = with(density) { 304.dp.toPx() }
+    val transition = updateTransition(state.open, label = "drawer")
+    val progress = transition.animateFloat(
+        transitionSpec = { tween(DdMotion.BASE, easing = DdMotion.EaseOut) },
+        label = "drawer-progress",
+    ) { open -> if (open) 1f else 0f }
+    var mounted by remember { mutableStateOf(state.open) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { state.open || progress.value > 0.01f }
+            .collect { visible -> mounted = visible }
+    }
+    Box(Modifier.fillMaxSize()) {
+        if (mounted) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = progress.value }
+                    .drawBehind { drawRect(colors.scrim.copy(alpha = 0.32f * progress.value)) }
+                    .then(
+                        if (state.open) {
+                            Modifier.clickable { actions.onDismiss() }
+                        } else {
+                            Modifier
+                        },
+                    ),
+            )
+        }
+        if (mounted) {
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .width(304.dp)
+                    .align(Alignment.CenterStart)
+                    .graphicsLayer { translationX = -drawerWidthPx * (1f - progress.value) },
+            ) {
+            SuperPIDrawer(
+                sessions = state.sessions,
+                workspaces = state.workspaces,
+                activeWorkspaceId = state.activeWorkspaceId,
+                activeSessionId = state.activeSessionId,
+                pinnedWorkspaceIds = state.pinnedWorkspaceIds,
+                expandedWorkspaceIds = state.expandedWorkspaceIds,
+                busySessionIds = state.busySessionIds,
+                timerSessionIds = state.timerSessionIds,
+                jobSessionIds = state.jobSessionIds,
+                userName = state.userName,
+                avatar = state.avatar,
+                hasUpdate = state.hasUpdate,
+                onOpenSearch = { actions.onNavigate(AppDestination.Search) },
+                onOpenMiniapp = { actions.onNavigate(AppDestination.Miniapp) },
+                onOpenSkills = { actions.onNavigate(AppDestination.Skills) },
+                onOpenMcp = { actions.onNavigate(AppDestination.Mcp) },
+                onOpenPlugins = { actions.onNavigate(AppDestination.Plugins) },
+                onOpenTimers = { actions.onNavigate(AppDestination.Timers) },
+                onOpenMemory = { actions.onNavigate(AppDestination.Memory) },
+                onOpenRemote = { actions.onNavigate(AppDestination.Remote) },
+                onCreateWorkspace = actions.onCreateWorkspace,
+                onToggleWorkspaceExpanded = actions.onToggleWorkspaceExpanded,
+                onToggleWorkspacePinned = actions.onToggleWorkspacePinned,
+                onNewSessionInWorkspace = actions.onNewSessionInWorkspace,
+                onWorkspaceSettings = actions.onWorkspaceSettings,
+                onRenameWorkspace = actions.onRenameWorkspace,
+                onDeleteWorkspace = actions.onDeleteWorkspace,
+                onConversation = actions.onConversation,
+                onRename = actions.onRename,
+                onSetPinned = actions.onSetPinned,
+                onSetArchived = actions.onSetArchived,
+                onDelete = actions.onDelete,
+                onSettings = actions.onSettings,
+            )
+        }
+    }
+    }
+}
+
+@Composable
+internal fun rememberFrozenChatState(live: ChatUiState, frozen: Boolean): ChatUiState {
+    val snapshot = remember { mutableStateOf(live) }
+    if (!frozen) {
+        SideEffect { snapshot.value = live }
+    }
+    return if (frozen) snapshot.value else live
+}

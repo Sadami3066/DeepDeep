@@ -65,7 +65,7 @@
         android:required="false" />
 
     <application
-        android:name=".DeepDeepApplication"
+        android:name=".SuperPIApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
@@ -75,7 +75,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DeepDeep"
+        android:theme="@style/Theme.SuperPI"
         android:usesCleartextTraffic="true">
         <service
             android:name=".service.AgentService"
@@ -115,7 +115,7 @@
             android:name=".plugin.host.components.PluginHostActivity"
             android:exported="false"
             android:launchMode="standard"
-            android:theme="@style/Theme.DeepDeep" />
+            android:theme="@style/Theme.SuperPI" />
 
         <service
             android:name=".plugin.host.components.PluginNotificationListenerService"
@@ -166,16 +166,16 @@
         <activity
             android:name=".arrange.CalendarPermissionActivity"
             android:exported="false"
-            android:theme="@style/Theme.DeepDeep.PermissionRequest"
+            android:theme="@style/Theme.SuperPI.PermissionRequest"
             android:excludeFromRecents="true"
             android:noHistory="true" />
 
         <activity
             android:name=".assistant.AssistantOverlayActivity"
             android:exported="true"
-            android:theme="@style/Theme.DeepDeep.AssistantOverlay"
+            android:theme="@style/Theme.SuperPI.AssistantOverlay"
             android:launchMode="singleInstance"
-            android:taskAffinity="io.github.whywood.deepdeep.assist"
+            android:taskAffinity="io.github.whywood.superpi.assist"
             android:excludeFromRecents="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -198,13 +198,13 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="deepdeep" android:host="oauth" />
+                <data android:scheme="superpi" android:host="oauth" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="deepdeep" />
+                <data android:scheme="superpi" />
                 <data android:host="chat" />
                 <data android:host="settings" />
                 <data android:host="plugins" />
@@ -226,7 +226,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" android:mimeType="application/vnd.deepdeep.plugin" />
+                <data android:scheme="content" android:mimeType="application/vnd.superpi.plugin" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

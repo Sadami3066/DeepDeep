@@ -5,7 +5,7 @@ Applies to the current version. The interface and capabilities will keep changin
 ## Install and first launch
 
 - Requires Android 10 or later.
-- Download the package from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases). The first launch runs a 6-screen onboarding: welcome, account, models, notifications and permissions, choosing a work environment, system access.
+- Download the package from [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases). The first launch runs a 6-screen onboarding: welcome, account, models, notifications and permissions, choosing a work environment, system access.
 - You can skip onboarding or leave it midway, then fill in each item later in Settings.
 - The app has no account system and needs no sign-up; model keys stay on this device.
 
@@ -120,7 +120,7 @@ Screen control is off by default; turn it on in that bot's Settings → Tools. Y
 
 ### Marketplace
 
-- Plugins, skills and remote MCP servers are available from the [PI marketplace](https://github.com/Sadami3066/deepdeep-market). The index is signed and artifacts are checked against sha256.
+- Plugins, skills and remote MCP servers are available from the [PI marketplace](https://github.com/Sadami3066/SuperPI-Market). The index is signed and artifacts are checked against sha256.
 
 Plugin entries list the access they need (Normal / ADB / Root); when the current system access tier is below the requirement, plugin details warn that some features may be unavailable.
 

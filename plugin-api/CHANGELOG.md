@@ -4,8 +4,8 @@
 
 Additive release, `PLUGIN_API_LEVEL` stays 6: interfaces only grow, published plugins need no rebuild; plugins that use the new capabilities need `minHostVersion >= 1.4.3`.
 
-- Card delivery moves to the plugin side: new `Cards` object (`KEY`/`RAW_KEY`/`GUIDANCE_KEY`/`DISPLAY_KEY`, `descriptor(...)`, `instruction(callId, title)` and `deliver(callId, result)`). The `PluginTool` factory automatically assembles `deepdeep.card`, `deepdeep.raw` and `deepdeep.guidance` from the result details into model-visible text (full return, usage instructions, the `present` call instruction) and writes the display text into `deepdeep.display`; the host no longer appends card ids or any card copy.
-- `Cards.deliver(callId, result)`: the plugin writes the card descriptor, full return and usage instructions into the result details, and the SDK generates the model text (including the `present` instruction) and the display text (`deepdeep.display`); the `PluginTool` factory calls it automatically, repeated calls are idempotent, and `richResult(blocks)` is supported too.
+- Card delivery moves to the plugin side: new `Cards` object (`KEY`/`RAW_KEY`/`GUIDANCE_KEY`/`DISPLAY_KEY`, `descriptor(...)`, `instruction(callId, title)` and `deliver(callId, result)`). The `PluginTool` factory automatically assembles `superpi.card`, `superpi.raw` and `superpi.guidance` from the result details into model-visible text (full return, usage instructions, the `present` call instruction) and writes the display text into `superpi.display`; the host no longer appends card ids or any card copy.
+- `Cards.deliver(callId, result)`: the plugin writes the card descriptor, full return and usage instructions into the result details, and the SDK generates the model text (including the `present` instruction) and the display text (`superpi.display`); the `PluginTool` factory calls it automatically, repeated calls are idempotent, and `richResult(blocks)` is supported too.
 - Cards serve plugin tools only: plugins that run a CLI through bash produce no cards and keep text results; the host does no card handling for bash results.
 - Compatibility: `design` stays 0.11.0; everything added is additive, so existing plugin binaries are unaffected.
 
@@ -27,7 +27,7 @@ Additive release, `PLUGIN_API_LEVEL` stays 6: interfaces only grow, published pl
 
 - manifest: `Provides` gains `themes: List<String>` (empty list by default, declaring the themes a plugin can provide); `Provides.isEmpty` counts themes too.
 - Pages: `UiService.openPageSheet(pageId, arguments)` (the default implementation falls back to `openPageWithArguments`); new `PluginPagePresentation` (`PAGE`/`SHEET`, including `fromWire`) and `PluginPageContext.presentation` (default `PAGE`).
-- Compatibility: `design` needs 0.9.0+ (`DeepDeepTheme(colors, fontStyle)` overload, `DdTheme.lightDeepDeep()`, `DdStatusRow`/`DdNoticeBar`/`DdProgressBar`); every new API has a host implementation or an explicit unavailable degradation.
+- Compatibility: `design` needs 0.9.0+ (`SuperPITheme(colors, fontStyle)` overload, `DdTheme.lightSuperPI()`, `DdStatusRow`/`DdNoticeBar`/`DdProgressBar`); every new API has a host implementation or an explicit unavailable degradation.
 
 ## 1.1.0 / API level 6
 

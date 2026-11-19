@@ -1,0 +1,302 @@
+package io.github.whywood.superpi.ui.navigation
+
+import java.util.Base64
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+
+sealed interface AppDestination {
+    val routeKey: String
+    val depth: Int
+
+    data object Chat : AppDestination {
+        override val routeKey: String = "chat"
+        override val depth: Int = 0
+    }
+
+    data object Settings : AppDestination {
+        override val routeKey: String = "settings"
+        override val depth: Int = 1
+    }
+
+    data object Providers : AppDestination {
+        override val routeKey: String = "providers"
+        override val depth: Int = 2
+    }
+
+    data class ProviderDetail(val id: String) : AppDestination {
+        override val routeKey: String = "providers/$id"
+        override val depth: Int = 3
+    }
+
+    data class CustomProviderEditor(val id: String? = null) : AppDestination {
+        override val routeKey: String = if (id == null) CUSTOM_PROVIDER_NEW_ROUTE else "$CUSTOM_PROVIDER_PREFIX$id"
+        override val depth: Int = 3
+    }
+
+    data object Archived : AppDestination {
+        override val routeKey: String = "archived"
+        override val depth: Int = 2
+    }
+
+    data object Mcp : AppDestination {
+        override val routeKey: String = "mcp"
+        override val depth: Int = 1
+    }
+
+    data object SystemAccess : AppDestination {
+        override val routeKey: String = "settings/access"
+        override val depth: Int = 2
+    }
+
+    data object Personalization : AppDestination {
+        override val routeKey: String = "settings/personalization"
+        override val depth: Int = 2
+    }
+
+    data object Theme : AppDestination {
+        override val routeKey: String = "settings/theme"
+        override val depth: Int = 2
+    }
+
+    data object Fonts : AppDestination {
+        override val routeKey: String = "settings/fonts"
+        override val depth: Int = 2
+    }
+
+    data object AssistantSettings : AppDestination {
+        override val routeKey: String = "settings/assistant"
+        override val depth: Int = 2
+    }
+
+    data object ChatSettings : AppDestination {
+        override val routeKey: String = "settings/chat"
+        override val depth: Int = 2
+    }
+
+    data object UsageHabits : AppDestination {
+        override val routeKey: String = "settings/usage-habits"
+        override val depth: Int = 2
+    }
+
+    data object Scan : AppDestination {
+        override val routeKey: String = "settings/scan"
+        override val depth: Int = 2
+    }
+
+    data object ScanJson : AppDestination {
+        override val routeKey: String = "settings/scan/json"
+        override val depth: Int = 3
+    }
+
+    data object Privacy : AppDestination {
+        override val routeKey: String = "settings/privacy"
+        override val depth: Int = 2
+    }
+
+    data object AndroidSettings : AppDestination {
+        override val routeKey: String = "settings/android"
+        override val depth: Int = 2
+    }
+
+    data object AgentSettings : AppDestination {
+        override val routeKey: String = "settings/agent"
+        override val depth: Int = 2
+    }
+
+    data object WebSearch : AppDestination {
+        override val routeKey: String = "settings/web-search"
+        override val depth: Int = 3
+    }
+
+    data object Update : AppDestination {
+        override val routeKey: String = "settings/update"
+        override val depth: Int = 2
+    }
+
+
+    data object Search : AppDestination {
+        override val routeKey: String = "search"
+        override val depth: Int = 1
+    }
+
+    data class Files(val rootPath: String) : AppDestination {
+        override val routeKey: String = FILES_PREFIX + encodeRoutePath(rootPath)
+        override val depth: Int = 1
+    }
+
+    data object Skills : AppDestination {
+        override val routeKey: String = "skills"
+        override val depth: Int = 1
+    }
+
+    data object Timers : AppDestination {
+        override val routeKey: String = "timers"
+        override val depth: Int = 1
+    }
+
+    data object Memory : AppDestination {
+        override val routeKey: String = "memory"
+        override val depth: Int = 1
+    }
+
+    data object Plugins : AppDestination {
+        override val routeKey: String = "plugins"
+        override val depth: Int = 1
+    }
+
+    data object Remote : AppDestination {
+        override val routeKey: String = "remote"
+        override val depth: Int = 1
+    }
+
+    data class RemoteConnect(val computerId: String) : AppDestination {
+        override val routeKey: String = REMOTE_CONNECT_PREFIX + computerId
+        override val depth: Int = 2
+    }
+
+    data object Miniapp : AppDestination {
+        override val routeKey: String = "miniapp"
+        override val depth: Int = 1
+    }
+
+    data class MiniappDetail(val id: String) : AppDestination {
+        override val routeKey: String = "miniapp/$id"
+        override val depth: Int = 2
+    }
+
+    data class PluginPage(
+        val pluginId: String,
+        val pageId: String,
+        val arguments: JsonObject = JsonObject(emptyMap()),
+        val title: String = "",
+    ) : AppDestination {
+        override val routeKey: String = buildString {
+            append(PLUGIN_DETAIL_PREFIX)
+            append(pluginId)
+            append(PLUGIN_PAGE_MARKER)
+            append(encodeRoutePath(pageId))
+            if (arguments.isNotEmpty()) {
+                append(PLUGIN_ARGUMENTS_QUERY)
+                append(encodePluginArguments(arguments))
+            }
+        }
+        override val depth: Int = 2
+    }
+
+    data class WorkspaceSettings(val workspaceId: String) : AppDestination {
+        override val routeKey: String = "workspaces/$workspaceId/settings"
+        override val depth: Int = 1
+    }
+
+    companion object {
+        private const val FILES_PREFIX = "files/"
+        private const val PROVIDER_DETAIL_PREFIX = "providers/"
+        private const val CUSTOM_PROVIDER_PREFIX = "providers/custom/"
+        private const val CUSTOM_PROVIDER_NEW_ROUTE = "providers/custom"
+        private const val PLUGIN_DETAIL_PREFIX = "plugins/"
+        private const val MINIAPP_DETAIL_PREFIX = "miniapp/"
+        private const val REMOTE_CONNECT_PREFIX = "remote/"
+        private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
+        private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
+        private const val PLUGIN_PAGE_MARKER = "/page/"
+        private const val PLUGIN_ARGUMENTS_QUERY = "?args="
+        private val MINIAPP_ID_REGEX = Regex("[a-z0-9][a-z0-9_-]{0,47}")
+
+        fun encodeRoutePath(path: String): String =
+            Base64.getUrlEncoder().withoutPadding().encodeToString(path.toByteArray(Charsets.UTF_8))
+
+        fun decodeRoutePath(value: String): String? = runCatching {
+            String(Base64.getUrlDecoder().decode(value), Charsets.UTF_8)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+
+        fun encodePluginArguments(arguments: JsonObject): String =
+            Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(arguments.toString().toByteArray(Charsets.UTF_8))
+
+        fun decodePluginArguments(value: String): JsonObject? = runCatching {
+            val raw = String(Base64.getUrlDecoder().decode(value), Charsets.UTF_8)
+            Json.parseToJsonElement(raw).jsonObject
+        }.getOrNull()
+
+        fun fromRouteKey(routeKey: String): AppDestination? = when {
+            routeKey == Chat.routeKey -> Chat
+            routeKey == Settings.routeKey -> Settings
+            routeKey == Providers.routeKey -> Providers
+            routeKey == Archived.routeKey -> Archived
+            routeKey == SystemAccess.routeKey -> SystemAccess
+            routeKey == Personalization.routeKey -> Personalization
+            routeKey == Theme.routeKey -> Theme
+            routeKey == Fonts.routeKey -> Fonts
+            routeKey == ChatSettings.routeKey -> ChatSettings
+            routeKey == UsageHabits.routeKey -> UsageHabits
+            routeKey == Scan.routeKey -> Scan
+            routeKey == ScanJson.routeKey -> ScanJson
+            routeKey == AssistantSettings.routeKey -> AssistantSettings
+            routeKey == Privacy.routeKey -> Privacy
+            routeKey == AndroidSettings.routeKey -> AndroidSettings
+            routeKey == AgentSettings.routeKey -> AgentSettings
+            routeKey == WebSearch.routeKey -> WebSearch
+            routeKey == Update.routeKey -> Update
+            routeKey == Search.routeKey -> Search
+            routeKey == Skills.routeKey -> Skills
+            routeKey == Mcp.routeKey -> Mcp
+            routeKey == Timers.routeKey -> Timers
+            routeKey == Memory.routeKey -> Memory
+            routeKey == Plugins.routeKey -> Plugins
+            routeKey == Remote.routeKey -> Remote
+            routeKey.startsWith(REMOTE_CONNECT_PREFIX) ->
+                RemoteConnect(routeKey.removePrefix(REMOTE_CONNECT_PREFIX))
+                    .takeIf { it.computerId.isNotBlank() }
+
+            routeKey == Miniapp.routeKey -> Miniapp
+            routeKey.startsWith(MINIAPP_DETAIL_PREFIX) -> {
+                val id = routeKey.removePrefix(MINIAPP_DETAIL_PREFIX)
+                MiniappDetail(id).takeIf { id.matches(MINIAPP_ID_REGEX) }
+            }
+
+            routeKey.startsWith(PLUGIN_DETAIL_PREFIX) && PLUGIN_PAGE_MARKER in routeKey -> {
+                val encodedArguments = routeKey.substringAfter(PLUGIN_ARGUMENTS_QUERY, "")
+                val base = routeKey.substringBefore(PLUGIN_ARGUMENTS_QUERY)
+                val rest = base.removePrefix(PLUGIN_DETAIL_PREFIX)
+                val pluginId = rest.substringBefore(PLUGIN_PAGE_MARKER)
+                val pageId = decodeRoutePath(rest.substringAfter(PLUGIN_PAGE_MARKER))
+                val arguments = if (encodedArguments.isEmpty()) {
+                    JsonObject(emptyMap())
+                } else {
+                    decodePluginArguments(encodedArguments)
+                }
+                if (pluginId.isNotBlank() &&
+                    !pluginId.contains('/') &&
+                    pageId != null &&
+                    (encodedArguments.isEmpty() || arguments != null)
+                ) {
+                    PluginPage(pluginId, pageId, arguments ?: JsonObject(emptyMap()))
+                } else {
+                    null
+                }
+            }
+
+            routeKey.startsWith(FILES_PREFIX) -> decodeRoutePath(routeKey.removePrefix(FILES_PREFIX))?.let(::Files)
+
+            routeKey == CUSTOM_PROVIDER_NEW_ROUTE -> CustomProviderEditor()
+
+            routeKey.startsWith(CUSTOM_PROVIDER_PREFIX) ->
+                routeKey.removePrefix(CUSTOM_PROVIDER_PREFIX)
+                    .takeIf { it.isNotBlank() }
+                    ?.let { id -> CustomProviderEditor(id) }
+
+            routeKey.startsWith(PROVIDER_DETAIL_PREFIX) ->
+                ProviderDetail(routeKey.removePrefix(PROVIDER_DETAIL_PREFIX))
+
+            routeKey.startsWith(WORKSPACE_SETTINGS_PREFIX) && routeKey.endsWith(WORKSPACE_SETTINGS_SUFFIX) -> {
+                val id = routeKey
+                    .removePrefix(WORKSPACE_SETTINGS_PREFIX)
+                    .removeSuffix(WORKSPACE_SETTINGS_SUFFIX)
+                WorkspaceSettings(id).takeIf { id.isNotBlank() }
+            }
+
+            else -> null
+        }
+    }
+}

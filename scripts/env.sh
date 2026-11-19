@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-deepdeep_repo_root() {
+superpi_repo_root() {
   cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
 }
 
-deepdeep_neighbor_dir() {
+superpi_neighbor_dir() {
   local repo dir name
-  repo="$(deepdeep_repo_root)"
+  repo="$(superpi_repo_root)"
   for name in "$@"; do
     for dir in "$repo/../$name" "$repo/../../$name"; do
       if [[ -d "$dir" ]]; then
@@ -18,9 +18,9 @@ deepdeep_neighbor_dir() {
   return 1
 }
 
-deepdeep_android_sdk() {
+superpi_android_sdk() {
   local repo local_sdk="" line sdk
-  repo="$(deepdeep_repo_root)"
+  repo="$(superpi_repo_root)"
   if [[ -f "$repo/local.properties" ]]; then
     while IFS= read -r line; do
       case "$line" in
@@ -47,7 +47,7 @@ deepdeep_android_sdk() {
   return 1
 }
 
-deepdeep_require() {
+superpi_require() {
   local missing="" cmd
   for cmd in "$@"; do
     command -v "$cmd" >/dev/null 2>&1 || missing="${missing:+$missing }$cmd"
@@ -58,8 +58,8 @@ deepdeep_require() {
   fi
 }
 
-deepdeep_ensure_jdk17() {
-  if ! deepdeep_require java javac; then
+superpi_ensure_jdk17() {
+  if ! superpi_require java javac; then
     echo "需要 JDK 17+（含 javac）；macOS: brew install openjdk@17" >&2
     return 1
   fi
@@ -75,10 +75,10 @@ deepdeep_ensure_jdk17() {
   fi
 }
 
-deepdeep_ensure_sdk_components() {
+superpi_ensure_sdk_components() {
   local sdk="${1:-}" sdkmanager
   if [[ -z "$sdk" ]]; then
-    echo "deepdeep_ensure_sdk_components 需要 SDK 路径" >&2
+    echo "superpi_ensure_sdk_components 需要 SDK 路径" >&2
     return 1
   fi
   if [[ -d "$sdk/platforms/android-36" && -d "$sdk/build-tools/36.0.0" ]]; then
@@ -94,11 +94,11 @@ deepdeep_ensure_sdk_components() {
   "$sdkmanager" "platforms;android-36" "build-tools;36.0.0"
 }
 
-deepdeep_require_adb() {
-  deepdeep_require adb
+superpi_require_adb() {
+  superpi_require adb
 }
 
-deepdeep_device_serial() {
+superpi_device_serial() {
   if [[ -n "${ANDROID_SERIAL:-}" ]]; then
     printf '%s\n' "$ANDROID_SERIAL"
     return 0
@@ -127,10 +127,10 @@ deepdeep_device_serial() {
   printf '%s\n' "$serial"
 }
 
-deepdeep_install_apk() {
+superpi_install_apk() {
   local serial="${1:-}" apk="${2:-}" output
   if [[ -z "$serial" || -z "$apk" ]]; then
-    echo "deepdeep_install_apk 需要设备 serial 与 APK 路径" >&2
+    echo "superpi_install_apk 需要设备 serial 与 APK 路径" >&2
     return 1
   fi
   output="$(adb -s "$serial" install -r -t "$apk" 2>&1)" || true
@@ -141,19 +141,19 @@ deepdeep_install_apk() {
   fi
 }
 
-deepdeep_clear_app_dir() {
+superpi_clear_app_dir() {
   local serial="${1:-}" device_dir="${2:-}"
   if [[ -z "$serial" || -z "$device_dir" ]]; then
-    echo "deepdeep_clear_app_dir 需要设备 serial 与设备目录" >&2
+    echo "superpi_clear_app_dir 需要设备 serial 与设备目录" >&2
     return 1
   fi
   adb -s "$serial" shell "rm -rf '$device_dir' && mkdir -p '$device_dir'"
 }
 
-deepdeep_stage_app_file() {
+superpi_stage_app_file() {
   local serial="${1:-}" source="${2:-}" device_dir="${3:-}" name="${4:-}"
   if [[ -z "$serial" || -z "$source" || -z "$device_dir" ]]; then
-    echo "deepdeep_stage_app_file 需要设备 serial、源文件与设备目录" >&2
+    echo "superpi_stage_app_file 需要设备 serial、源文件与设备目录" >&2
     return 1
   fi
   if [[ -z "$name" ]]; then
@@ -163,10 +163,10 @@ deepdeep_stage_app_file() {
   adb -s "$serial" push "$source" "$device_dir/$name" >/dev/null
 }
 
-deepdeep_instrument() {
+superpi_instrument() {
   local serial="${1:-}" test_class="${2:-}" component="${3:-}" output
   if [[ -z "$serial" || -z "$test_class" || -z "$component" ]]; then
-    echo "deepdeep_instrument 需要设备 serial、测试类与测试组件" >&2
+    echo "superpi_instrument 需要设备 serial、测试类与测试组件" >&2
     return 1
   fi
   if ! output="$(adb -s "$serial" shell am instrument -w -e class "$test_class" "$component")"; then

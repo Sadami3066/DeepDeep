@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var envData = window.__DEEPDEEP_ENV__ || {};
+  var envData = window.__SUPERPI_ENV__ || {};
   envData.app = envData.app || {};
   envData.theme = envData.theme || {};
   var listeners = {};
@@ -17,7 +17,7 @@
 
   function call(method, params, onEvent) {
     return new Promise(function (resolve, reject) {
-      var native = window.DeepDeepNative;
+      var native = window.SuperPINative;
       if (!native || typeof native.postMessage !== 'function') {
         reject(bridgeError('Native bridge is unavailable', 'bridge_unavailable'));
         return;
@@ -60,7 +60,7 @@
     });
   }
 
-  window.__deepdeepBridge = {
+  window.__superpiBridge = {
     dispatch: function (payload) {
       var message = parsePayload(payload);
       if (!message || typeof message !== 'object') return;
@@ -155,10 +155,10 @@
   function applyTheme(theme) {
     envData.theme = theme || {};
     var css = buildThemeCss(envData.theme);
-    if (!installStyle('__deepdeep-theme', css) && document.readyState === 'loading') {
+    if (!installStyle('__superpi-theme', css) && document.readyState === 'loading') {
       pendingThemeCss = css;
       document.addEventListener('DOMContentLoaded', function () {
-        installStyle('__deepdeep-theme', pendingThemeCss || css);
+        installStyle('__superpi-theme', pendingThemeCss || css);
       });
     }
   }
@@ -181,13 +181,13 @@
 
   function applySafeArea(area) {
     envData.safeArea = area || {};
-    installStyle('__deepdeep-safe-area', buildSafeAreaCss(envData.safeArea));
+    installStyle('__superpi-safe-area', buildSafeAreaCss(envData.safeArea));
   }
 
   applyTheme(envData.theme);
   applySafeArea(envData.safeArea);
-  window.__deepdeepApplyTheme = applyTheme;
-  window.__deepdeepApplySafeArea = applySafeArea;
+  window.__superpiApplyTheme = applyTheme;
+  window.__superpiApplySafeArea = applySafeArea;
 
   function on(type, handler) {
     if (typeof type !== 'string' || !type || typeof handler !== 'function') return function () {};
@@ -221,7 +221,7 @@
     if (index >= 0) entries.splice(index, 1);
   }
 
-  var deepdeep = {
+  var superpi = {
     info: function () {
       return Promise.resolve({ app: envData.app });
     },
@@ -401,9 +401,9 @@
     }
   };
 
-  window.deepdeep = deepdeep;
-  window.app = deepdeep;
+  window.superpi = superpi;
+  window.app = superpi;
   window.alert = function (message) {
-    deepdeep.toast(String(message));
+    superpi.toast(String(message));
   };
 })();

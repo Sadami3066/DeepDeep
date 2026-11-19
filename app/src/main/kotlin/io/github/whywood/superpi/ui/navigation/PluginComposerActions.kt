@@ -1,0 +1,77 @@
+package io.github.whywood.superpi.ui.navigation
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import io.github.whywood.superpi.design.DdPressable
+import io.github.whywood.superpi.design.DdType
+import io.github.whywood.superpi.design.superPiColors
+import io.github.whywood.superpi.plugin.manager.PluginComposerActionUi
+import io.github.whywood.superpi.ui.common.chat.LocalPluginManager
+import io.github.whywood.superpi.ui.plugins.PluginIcon
+import io.github.whywood.superpi.ui.plugins.pluginComposerActions
+import io.github.whywood.superpi.ui.plugins.rememberPluginTextResolver
+
+@Composable
+internal fun PluginComposerActionRow(
+    onOpenPluginPage: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val manager = LocalPluginManager.current ?: return
+    val actions = pluginComposerActions(manager)
+    if (actions.isEmpty()) return
+    val textResolver = rememberPluginTextResolver()
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        actions.forEach { entry ->
+            PluginComposerActionChip(
+                entry = entry,
+                label = textResolver.resolve(entry.action.label),
+                onClick = { onOpenPluginPage(entry.pluginId, entry.pageId) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PluginComposerActionChip(
+    entry: PluginComposerActionUi,
+    label: String,
+    onClick: () -> Unit,
+) {
+    val colors = superPiColors()
+    DdPressable(
+        onClick = onClick,
+        modifier = Modifier.height(32.dp).testTag("plugin_composer_action"),
+        shape = RoundedCornerShape(10.dp),
+        contentDescription = label,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PluginIcon(
+                icon = entry.action.icon,
+                assetsDir = null,
+                tint = colors.inkSecondary,
+                size = 15.dp,
+            )
+            Text(text = label, style = DdType.label, color = colors.ink, maxLines = 1)
+        }
+    }
+}

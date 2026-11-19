@@ -202,7 +202,7 @@ def main():
         "icon_count": len(entries),
         "android_drawable_prefix": "vendor_",
         "android_drawable_dir": "app/src/main/res/drawable-nodpi",
-        "kotlin_map_file": "app/src/main/kotlin/io/github/whywood/deepdeep/ui/plugins/VendorIcons.kt",
+        "kotlin_map_file": "app/src/main/kotlin/io/github/whywood/superpi/ui/plugins/VendorIcons.kt",
         "tabler": {"version": TABLER_VERSION, "commit": TABLER_COMMIT,
                    "license": "MIT", "license_file": "licenses/LICENSE-Tabler-MIT.txt"},
         "app_store_artwork_notice": "licenses/NOTICE-AppStore-Artwork.md",

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.whywood.deepdeep.runtime"
+    namespace = "io.github.whywood.superpi.runtime"
     compileSdk = 36
 
     defaultConfig {

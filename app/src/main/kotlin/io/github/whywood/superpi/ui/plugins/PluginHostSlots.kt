@@ -1,0 +1,57 @@
+package io.github.whywood.superpi.ui.plugins
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.whywood.superpi.plugin.api.LocalPluginPageContext
+import io.github.whywood.superpi.plugin.api.PluginPagePresentation
+import io.github.whywood.superpi.plugin.host.interaction.HostPluginPageContext
+import io.github.whywood.superpi.plugin.host.interaction.PluginPageContexts
+import io.github.whywood.superpi.plugin.manager.PluginComposerActionUi
+import io.github.whywood.superpi.plugin.manager.PluginManagerFacade
+import io.github.whywood.superpi.ui.common.chat.LocalPluginManager
+import kotlinx.serialization.json.JsonObject
+
+@Composable
+internal fun PluginPageHost(
+    pluginId: String,
+    pageId: String,
+    fallback: @Composable () -> Unit,
+    arguments: JsonObject = JsonObject(emptyMap()),
+    presentation: PluginPagePresentation = PluginPagePresentation.PAGE,
+) {
+    val manager = LocalPluginManager.current ?: run {
+        fallback()
+        return
+    }
+    val uiState by manager.state.collectAsStateWithLifecycle()
+    val page = remember(uiState, pluginId, pageId) {
+        manager.pagesOf(pluginId).firstOrNull { it.id == pageId }
+    }
+    if (page == null) {
+        if (!uiState.loading && uiState.snapshot(pluginId) != null) fallback()
+        return
+    }
+    val pageContext = remember(pluginId, pageId, arguments, presentation) {
+        HostPluginPageContext(pageId = pageId, arguments = arguments, presentation = presentation)
+    }
+    DisposableEffect(pluginId, pageId, pageContext) {
+        PluginPageContexts.enter(pluginId, pageId, pageContext)
+        onDispose { PluginPageContexts.exit(pluginId, pageId) }
+    }
+    CompositionLocalProvider(LocalPluginPageContext provides pageContext) {
+        key(pluginId, pageId, presentation) {
+            page.content()
+        }
+    }
+}
+
+@Composable
+internal fun pluginComposerActions(manager: PluginManagerFacade): List<PluginComposerActionUi> {
+    val uiState by manager.state.collectAsStateWithLifecycle()
+    return remember(uiState) { manager.composerActions() }
+}

@@ -5,7 +5,7 @@ Third-party components included in this repository and in the APK belong to thei
 
 - Full license texts in the repository: `app/src/main/assets/licenses/`, `design/src/main/assets/licenses/`, `shell/src/main/assets/licenses/`
 - Path inside the APK: `assets/licenses/` (the directories above are merged at build time)
-- Contact and GPL/LGPL source requests (written offer): <https://github.com/Sadami3066/DeepDeep/issues>
+- Contact and GPL/LGPL source requests (written offer): <https://github.com/Sadami3066/SuperPI/issues>
 - This file is packaged into the APK as `assets/licenses/THIRD_PARTY_NOTICES.md`
 
 ## 0. Distribution Obligations at a Glance
@@ -84,16 +84,16 @@ Not legal advice; the full text of each license governs. The summary below cover
 
 ### 1.4 Written Offer (GPL / LGPL Corresponding Source)
 
-For at least three years from the date this APK was first distributed, any third party may request the complete corresponding source for the GPL/LGPL components listed in sections 1.1–1.3 at no charge through <https://github.com/Sadami3066/DeepDeep/issues>: the OpenMinis/proot source snapshot, the `deps/build_proot.sh` build script, the Termux PRoot loader source, the talloc 2.4.2 source tarball, Alpine aports v3.24.2, and the upstream source of each package; if provided on physical media, only the cost of the media and shipping is charged.
+For at least three years from the date this APK was first distributed, any third party may request the complete corresponding source for the GPL/LGPL components listed in sections 1.1–1.3 at no charge through <https://github.com/Sadami3066/SuperPI/issues>: the OpenMinis/proot source snapshot, the `deps/build_proot.sh` build script, the Termux PRoot loader source, the talloc 2.4.2 source tarball, Alpine aports v3.24.2, and the upstream source of each package; if provided on physical media, only the cost of the media and shipping is charged.
 
 ## 2. Code Libraries Compiled into the APK
 
-### 2.1 pi2kotlin SDK 0.6.3 (DeepDeep-KotlinSDK)
+### 2.1 pi2kotlin SDK 0.6.3 (SuperPI-KotlinSDK)
 
-- Artifacts: `com.github.Sadami3066.DeepDeep-KotlinSDK:pi-coding-agent-android:v0.6.3`, `pi-ai-android`, `pi-agent-android`, `pi-mcp-android` (JitPack build, version tag `v0.6.3`)
+- Artifacts: `com.github.Sadami3066.SuperPI-KotlinSDK:pi-coding-agent-android:v0.6.3`, `pi-ai-android`, `pi-agent-android`, `pi-mcp-android` (JitPack build, version tag `v0.6.3`)
 - Copyright lines: `Copyright (c) 2026 pi2kotlin contributors`, `Copyright (c) 2025 Mario Zechner and pi contributors`
 - License: MIT
-- Source: <https://github.com/Sadami3066/DeepDeep-KotlinSDK> tag `v0.6.3`, commit `df388d6d737ee079303e4e4acb5776d9ee62746f` (`LICENSE`)
+- Source: <https://github.com/Sadami3066/SuperPI-KotlinSDK> tag `v0.6.3`, commit `df388d6d737ee079303e4e4acb5776d9ee62746f` (`LICENSE`)
 - Declared in this repository: `gradle/libs.versions.toml` (`pi = "v0.6.3"`; dependency coordinates in `[libraries]` in the same file)
 - Full license text: `licenses/pi2kotlin-MIT.txt`
 - Note: the upstream AAR/POM carries no LICENSE/NOTICE metadata; this entry provides the copyright and license notices required when distributing the binary.
@@ -274,7 +274,7 @@ Every file below is a direct download from the official release address (terms n
 | `licenses/BSD-2-Clause.txt` | <https://spdx.org/licenses/BSD-2-Clause.txt> (downloaded file sha256 `ffcd6a8c421ee58d9f85b115ee0642805be3b497d2023565739622f044dc11e2`) | `0b86240ad7fea85ddf41452089afc233637d0879dc833cf425d73dac9fd4dee0` |
 | `licenses/BSD-3-Clause.txt` | <https://spdx.org/licenses/BSD-3-Clause.txt> (downloaded file sha256 `0fe4dd6931c4c2fc418940de41074fa3c506cad24bfd891743ea7f2fcfe631ef`) | `7d4b8b9f72b9a4795b33e71ab9fcddd8df245b2a609aa82fd455270e103b70a8` |
 | `licenses/Bouncy-Castle.txt` | <https://www.bouncycastle.org/licence.html> | c61027784b36d538c8ca196869d6a3e3f3937e3cd0e5869c38c1c10bdbb6723d |
-| `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/DeepDeep-KotlinSDK/94f300abef96516204358a8fe549f9d774c373df/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
+| `licenses/pi2kotlin-MIT.txt` | <https://raw.githubusercontent.com/Sadami3066/SuperPI-KotlinSDK/94f300abef96516204358a8fe549f9d774c373df/LICENSE> | `8a9a64220cdc0d7201389aeb34ffd627e73d160abf26ccfdc415928594ecbd53` |
 | `licenses/lobehub-MIT.txt` | <https://raw.githubusercontent.com/lobehub/lobe-icons/680f1d7f95b5ae6a494fe43539da8a992f17b53d/LICENSE> | `add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a` |
 | `licenses/lora-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/lora/OFL.txt> (byte-identical to the OFL.txt in cyrealtype/Lora-Cyrillic) | `1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716` |
 | `licenses/manrope-OFL.txt` | <https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt> | `58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b` |
@@ -292,5 +292,5 @@ Note: `licenses/PRoot-GPL-2.0.txt` is the upstream PRoot COPYING (the full GPL-2
 - 2026-11-01: Upgraded pi2kotlin SDK to 0.3.0, updating artifacts and source commits.
 - 2026-11-01: Upgraded pi2kotlin SDK to 0.4.0, updating artifacts and source commits.
 - 2026-11-05: Added two OFL-1.1 fonts, Open Runde (Regular/Medium/Semibold, static OTF) and Fredoka (`wght`/`wdth` variable TTF), with copyright lines, upstream sources and commits, file sha256 values, and full license texts; made Open Runde the default font.
-- 2026-11-09: Upgraded pi2kotlin SDK to 0.6.2 (JitPack coordinate `com.github.Sadami3066.DeepDeep-KotlinSDK`), updating artifacts, source commits, and version declarations.
+- 2026-11-09: Upgraded pi2kotlin SDK to 0.6.2 (JitPack coordinate `com.github.Sadami3066.SuperPI-KotlinSDK`), updating artifacts, source commits, and version declarations.
 - 2026-11-11: Upgraded pi2kotlin SDK to 0.6.3 (tag `v0.6.3`, commit `df388d6d737ee079303e4e4acb5776d9ee62746f`), updating artifact coordinates and version declarations.

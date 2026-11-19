@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.whywood.deepdeep.shell"
+    namespace = "io.github.whywood.superpi.shell"
     compileSdk = 36
 
     defaultConfig {

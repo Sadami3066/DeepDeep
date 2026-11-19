@@ -46,7 +46,7 @@ jobs:
       - name: Ensure Android SDK 36
         run: |
           source scripts/env.sh
-          deepdeep_ensure_sdk_components "$(deepdeep_android_sdk)"
+          superpi_ensure_sdk_components "$(superpi_android_sdk)"
 
       - name: Check
         run: ./scripts/check.sh --full

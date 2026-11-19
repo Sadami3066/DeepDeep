@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "deepdeep"
+rootProject.name = "superpi"
 
 include(":app", ":runtime", ":runtime-api", ":shell", ":design", ":plugin-api")

@@ -18,12 +18,12 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
         layout.projectDirectory.dir("$module/src/main/kotlin")
     }
     val allowlistFile = layout.projectDirectory.file("gradle/package-boundaries.allow")
-    val strictBoundaries = providers.gradleProperty("deepdeep.strictBoundaries").orNull == "true"
+    val strictBoundaries = providers.gradleProperty("superpi.strictBoundaries").orNull == "true"
     inputs.files(sourceRoots.values)
     inputs.file(allowlistFile)
     inputs.property("strictBoundaries", strictBoundaries)
     doLast {
-        val base = "io.github.whywood.deepdeep"
+        val base = "io.github.whywood.superpi"
         val allowlist = allowlistFile.asFile.readLines()
             .map { it.trim() }
             .filter { it.isNotEmpty() && !it.startsWith("#") }
@@ -50,11 +50,11 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
                     if (!line.startsWith("import ")) return@forEach
                     val imported = line.removePrefix("import ").removePrefix("import\t").substringBefore(" as ").trim()
                     if (!imported.startsWith(base)) return@forEach
-                    if (module != "app" && (imported == "$base.AppGraph" || imported == "$base.DeepDeepApplication" || imported.startsWith("$base.ui."))) {
+                    if (module != "app" && (imported == "$base.AppGraph" || imported == "$base.SuperPIApplication" || imported.startsWith("$base.ui."))) {
                         check("$module/$relative|$imported", "module $module")
                     }
                     if (module == "app" && packageName.startsWith("$base.ui.")) {
-                        if (imported == "$base.AppGraph" || imported == "$base.DeepDeepApplication") {
+                        if (imported == "$base.AppGraph" || imported == "$base.SuperPIApplication") {
                             check("ui/$relative|$imported", "shell access from ui")
                         }
                         val parts = imported.split('.')
@@ -77,7 +77,7 @@ val verifyPackageBoundaries = tasks.register("verifyPackageBoundaries") {
                 }
             }
         }
-        logger.lifecycle("Package boundaries: composition layer (ui.navigation/ui.shell) may import features; ui may never import AppGraph/DeepDeepApplication or assistant; assistant/floating may not import ui.chat")
+        logger.lifecycle("Package boundaries: composition layer (ui.navigation/ui.shell) may import features; ui may never import AppGraph/SuperPIApplication or assistant; assistant/floating may not import ui.chat")
         val stale = allowlist - observed
         if (stale.isNotEmpty()) {
             val message = "Package boundary allowlist has ${stale.size} stale entries (remove them):\n" +

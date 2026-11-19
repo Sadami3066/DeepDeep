@@ -1,0 +1,199 @@
+package io.github.whywood.superpi.shell
+
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class RootfsBootstrapTest {
+    @Test
+    fun bootstrapScriptChecksBusyboxAndMarksReady() {
+        val script = RootfsBootstrap.buildBootstrapScript(
+            appRootfs = File("/data/user/0/app/files/linux/rootfs"),
+            linuxDir = File("/data/adb/superpi/linux"),
+            runScript = File("/data/user/0/app/cache/root-bash/run.sh"),
+            profileFile = File("/data/user/0/app/cache/root-bash/profile.sh"),
+        )
+
+        assertTrue(script.contains("/data/adb/ap/bin/busybox"))
+        assertTrue(script.contains("/data/adb/magisk/busybox"))
+        assertTrue(script.contains("SUPERPI_NO_BUSYBOX"))
+        assertTrue(script.contains("SUPERPI_READY"))
+        assertTrue(script.contains(".superpi-ready"))
+        assertTrue(script.contains("cp -a"))
+        assertTrue(script.contains("ln -s /storage/emulated/0"))
+        assertTrue(script.contains("\$TMP/data"))
+        assertTrue(script.contains("\$TMP/vendor"))
+        assertTrue(script.contains("\$TMP/proc"))
+        assertTrue(script.contains("\$TMP/sys"))
+        assertTrue(script.contains("\$TMP/dev"))
+        assertTrue(script.contains(".superpi-empty"))
+        assertTrue(script.contains("cp \"\$RUN_SCRIPT\" \"\$LINUX/run.sh\""))
+
+        val probe = "/system/bin/chroot \"\$ROOT\" /bin/bash -c 'echo SUPERPI_PROBE_OK' >/dev/null 2>&1"
+        assertTrue(script.contains(probe))
+        assertTrue(script.indexOf(probe) < script.indexOf("echo SUPERPI_ALREADY"))
+    }
+
+    @Test
+    fun runScriptPrivatizesMountsAndBindsAndroidData() {
+        val script = RootfsBootstrap.buildRunScript(File("/data/adb/superpi/linux"))
+
+        assertTrue(script.contains("nsenter -t 1 -m --"))
+        assertTrue(script.contains("unshare -m"))
+        assertTrue(script.contains("mount --make-rprivate /"))
+        assertTrue(script.contains("mount -t proc proc"))
+        assertTrue(script.contains("mount --rbind /data"))
+        assertTrue(script.contains("mount --bind /data/user/0 \"\$ROOT/data/user/0\""))
+        assertTrue(script.contains("mount --rbind /dev/binderfs"))
+        assertTrue(script.contains("mount --bind \"\$ROOT/.superpi-empty\" \"\$ROOT/data/adb/superpi\""))
+        assertTrue(script.contains("ln -s /storage/emulated/0"))
+        assertTrue(script.contains("mount --bind /storage/emulated/0 \"\$ROOT/storage/emulated/0\""))
+        assertFalse(script.contains("/android"))
+        assertFalse(script.contains("android/data/user/0"))
+        assertTrue(script.contains("getprop persist.sys.timezone"))
+        assertTrue(script.contains("for d in system vendor product system_ext odm"))
+        assertTrue(script.contains("mount --rbind /apex/com.android.runtime"))
+        assertTrue(script.contains("\$ROOT/linkerconfig"))
+        assertTrue(script.contains("ln -sfn /system/usr/share/zoneinfo"))
+        assertTrue(script.contains("chroot"))
+        assertTrue(script.contains("/bin/bash -ls"))
+        assertTrue(script.contains("SUPERPI_CWD=\"\$1\""))
+        assertTrue(script.contains("mkdir -p \"\$ROOT\$1\""))
+        assertTrue(script.contains("mount --rbind \"\$1\" \"\$ROOT\$1\""))
+        assertTrue(script.contains("\$ROOT/proc"))
+        assertTrue(script.contains("\$ROOT/sys"))
+        assertTrue(script.contains("\$ROOT/dev"))
+        assertFalse(script.contains("/work"))
+    }
+
+    @Test
+    fun profileSetsPathAndWorkingDirectory() {
+        val script = RootfsBootstrap.buildProfileScript()
+
+        assertTrue(script.contains("export PATH="))
+        assertTrue(script.contains("export HOME=/root"))
+        assertFalse(script.contains("export TZ=UTC"))
+        assertTrue(script.contains("export TZ"))
+        assertTrue(script.contains("CST-8"))
+        assertTrue(script.contains("/usr/share/zoneinfo/"))
+        assertTrue(script.contains("cd -- \"\${SUPERPI_CWD:-/}\""))
+    }
+
+    @Test
+    fun failedReasonSurvivesRestart() {
+        val dir = kotlin.io.path.createTempDirectory("rootfs-failed-status").toFile()
+        try {
+            val statusFile = File(dir, "state")
+            statusFile.writeText("failed:busybox not found")
+            val bootstrap = RootfsBootstrap(
+                appRootfsDir = File(dir, "app-rootfs"),
+                statusFile = statusFile,
+                scratchDir = File(dir, "scratch"),
+                linuxDir = File(dir, "linux"),
+                runner = RootCommandRunner { _, _, _ -> RootProcessResult(0, "", "", false, true) },
+                ioDispatcher = Dispatchers.Unconfined,
+            )
+
+            assertEquals(RootfsState.Failed("busybox not found"), bootstrap.cachedStatus().state)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun ensureReadyPersistsReadyStatus() = runBlocking {
+        val dir = kotlin.io.path.createTempDirectory("rootfs-bootstrap").toFile()
+        try {
+            val appRootfs = File(dir, "app-rootfs")
+            File(appRootfs, "bin").mkdirs()
+            File(appRootfs, "bin/bash").writeText("")
+            val statusFile = File(dir, "state")
+            val bootstrap = RootfsBootstrap(
+                appRootfsDir = appRootfs,
+                statusFile = statusFile,
+                scratchDir = File(dir, "scratch"),
+                linuxDir = File(dir, "linux"),
+                runner = RootCommandRunner { command, _, _ ->
+                    assertTrue(command.startsWith("sh "))
+                    RootProcessResult(0, "SUPERPI_READY", "", false, true)
+                },
+                ioDispatcher = Dispatchers.Unconfined,
+            )
+
+            val status = bootstrap.ensureReady()
+
+            assertEquals(RootfsState.Ready, status.state)
+            assertEquals("ready", statusFile.readText())
+            assertTrue(File(dir, "scratch").isDirectory)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun ensureReadyReportsMissingBusybox() = runBlocking {
+        val dir = kotlin.io.path.createTempDirectory("rootfs-bootstrap-fail").toFile()
+        try {
+            val appRootfs = File(dir, "app-rootfs")
+            File(appRootfs, "bin").mkdirs()
+            File(appRootfs, "bin/bash").writeText("")
+            val bootstrap = RootfsBootstrap(
+                appRootfsDir = appRootfs,
+                statusFile = File(dir, "state"),
+                scratchDir = File(dir, "scratch"),
+                linuxDir = File(dir, "linux"),
+                runner = RootCommandRunner { _, _, _ ->
+                    RootProcessResult(0, "SUPERPI_NO_BUSYBOX", "", false, true)
+                },
+                ioDispatcher = Dispatchers.Unconfined,
+            )
+
+            val status = bootstrap.ensureReady()
+
+            assertEquals(RootfsState.Failed("busybox not found"), status.state)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun rebuildClearsRootfsThenPrepares() = runBlocking {
+        val dir = kotlin.io.path.createTempDirectory("rootfs-rebuild").toFile()
+        try {
+            val appRootfs = File(dir, "app-rootfs")
+            File(appRootfs, "bin").mkdirs()
+            File(appRootfs, "bin/bash").writeText("")
+            val commands = mutableListOf<String>()
+            val statusFile = File(dir, "state")
+            val bootstrap = RootfsBootstrap(
+                appRootfsDir = appRootfs,
+                statusFile = statusFile,
+                scratchDir = File(dir, "scratch"),
+                linuxDir = File(dir, "linux"),
+                runner = RootCommandRunner { command, _, _ ->
+                    commands += command
+                    if (command.startsWith("rm -rf ")) {
+                        RootProcessResult(0, "", "", false, true)
+                    } else {
+                        RootProcessResult(0, "SUPERPI_READY", "", false, true)
+                    }
+                },
+                ioDispatcher = Dispatchers.Unconfined,
+            )
+
+            val status = bootstrap.rebuild()
+
+            assertEquals(RootfsState.Ready, status.state)
+            assertEquals(2, commands.size)
+            assertTrue(commands[0].startsWith("rm -rf "))
+            assertTrue(commands[0].contains("rootfs"))
+            assertTrue(commands[1].startsWith("sh "))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+}

@@ -40,7 +40,7 @@ node design/icons/gen.mjs
 node design/icons/gen.mjs --check
 ```
 
-Output: `design/src/main/res/drawable-nodpi/ic_<category>_<id>.png|xml`, `design/src/main/kotlin/io/github/whywood/deepdeep/design/DdIcons.kt` and `design/icons/preview.html`. The script removes the old naming (`ic_milo_*`, `ic_dd_*`) and generated resources that are no longer registered.
+Output: `design/src/main/res/drawable-nodpi/ic_<category>_<id>.png|xml`, `design/src/main/kotlin/io/github/whywood/superpi/design/DdIcons.kt` and `design/icons/preview.html`. The script removes the old naming (`ic_milo_*`, `ic_dd_*`) and generated resources that are no longer registered.
 
 `--check` only compares and writes nothing; it exits non-zero on drift, so CI can use it directly.
 

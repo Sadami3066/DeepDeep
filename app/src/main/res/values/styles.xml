@@ -1,12 +1,12 @@
 <resources>
-    <style name="Theme.DeepDeep" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.SuperPI" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowBackground">@color/pi_paper</item>
     </style>
 
-    <style name="Theme.DeepDeep.PermissionRequest" parent="android:style/Theme.Translucent.NoTitleBar">
+    <style name="Theme.SuperPI.PermissionRequest" parent="android:style/Theme.Translucent.NoTitleBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>
@@ -15,7 +15,7 @@
         <item name="android:windowDisablePreview">true</item>
     </style>
 
-    <style name="Theme.DeepDeep.AssistantOverlay" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.SuperPI.AssistantOverlay" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowIsFloating">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>

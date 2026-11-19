@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
-cd "$(deepdeep_repo_root)"
+cd "$(superpi_repo_root)"
 
-deepdeep_ensure_jdk17
+superpi_ensure_jdk17
 
-if ! sdk="$(deepdeep_android_sdk)"; then
+if ! sdk="$(superpi_android_sdk)"; then
   cat >&2 <<'EOF'
 找不到 Android SDK：请安装 Android SDK 或设置 ANDROID_HOME。
   macOS: $HOME/Library/Android/sdk
@@ -33,7 +33,7 @@ else
 fi
 
 echo "[setup] Android SDK: $sdk"
-deepdeep_ensure_sdk_components "$sdk"
+superpi_ensure_sdk_components "$sdk"
 export ANDROID_HOME="$sdk"
 export ANDROID_SDK_ROOT="$sdk"
 

@@ -51,7 +51,7 @@ description: 在 PI「小程序」里创建或修改 HTML/CSS/JS 轻量小应用
 
 ## 页面基础能力
 
-页面脚本运行前会注入 `window.deepdeep`（别名 `window.app`），全部返回 Promise：
+页面脚本运行前会注入 `window.superpi`（别名 `window.app`），全部返回 Promise：
 
 ```js
 const todos = await app.data.get("todos");

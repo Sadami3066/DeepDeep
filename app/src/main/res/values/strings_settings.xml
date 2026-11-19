@@ -51,7 +51,7 @@
     <string name="settings_theme_preset_pi">PI</string>
     <string name="settings_theme_pi_subtitle">浅色与深色</string>
     <string name="settings_theme_preset_system">跟随系统</string>
-    <string name="settings_theme_preset_deepdeep">经典蓝</string>
+    <string name="settings_theme_preset_classic">经典蓝</string>
     <string name="settings_theme_preset_santorini">Santorini</string>
     <string name="settings_theme_preset_oceanic">Oceanic</string>
 

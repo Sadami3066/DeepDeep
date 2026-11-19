@@ -11,11 +11,11 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "io.github.whywood.deepdeep"
+    namespace = "io.github.whywood.superpi"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.whywood.deepdeep"
+        applicationId = "io.github.whywood.superpi"
         minSdk = 29
         targetSdk = 36
         versionCode = 10109

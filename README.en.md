@@ -10,12 +10,12 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-<a href="https://github.com/Sadami3066/DeepDeep/releases"><img src="https://img.shields.io/badge/Download-Latest-111111?style=for-the-badge&logo=github&logoColor=white" alt="Download latest release" /></a>
+<a href="https://github.com/Sadami3066/SuperPI/releases"><img src="https://img.shields.io/badge/Download-Latest-111111?style=for-the-badge&logo=github&logoColor=white" alt="Download latest release" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
-<img src="https://img.shields.io/github/v/release/Sadami3066/DeepDeep?style=flat-square&color=111111" alt="Latest release" />
+<img src="https://img.shields.io/github/v/release/Sadami3066/SuperPI?style=flat-square&color=111111" alt="Latest release" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 </div>
@@ -32,7 +32,7 @@ Super PI Agent ships a complete agent harness: tools, skills, long-term memory, 
 
 The project is open source and auditable. Apart from the model provider and the MCP servers or plugins you configure, it does not upload data.
 
-Installers are available from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases).
+Installers are available from [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases).
 
 ## Capabilities
 
@@ -47,7 +47,7 @@ Installers are available from [GitHub Releases](https://github.com/Sadami3066/De
 
 ## Quick Start
 
-1. **Download the installer.** Get the latest build from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases).
+1. **Download the installer.** Get the latest build from [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases).
 2. **Install and open.** Android 10 or newer is required. The first launch walks through setup; you can follow it or skip and finish later in Settings.
 3. **Connect a model.** Open Settings → Providers, choose a provider, and enter an API key or sign in with OAuth.
 4. **Initialize Linux.** In Settings → System access → Linux environment, finish the Alpine setup.
@@ -60,7 +60,7 @@ Installers are available from [GitHub Releases](https://github.com/Sadami3066/De
 | Item | Details |
 |---|---|
 | System | Android 10 or newer |
-| Installer | APK from [GitHub Releases](https://github.com/Sadami3066/DeepDeep/releases) |
+| Installer | APK from [GitHub Releases](https://github.com/Sadami3066/SuperPI/releases) |
 | Account | No account system; model keys stay on the device |
 | Updates | Install over the same signature. Changing signatures requires uninstalling, which deletes local sessions and credentials |
 | Network | Conversations go only to the configured model provider; the market and update checks use GitHub and may need a proxy on some networks |
@@ -130,7 +130,7 @@ See the [Developer Guide](docs/DEVELOPER_GUIDE.md) for the complete workflow.
 
 ## Contributing
 
-Issues and pull requests are welcome. Read the [Contributing Guide](CONTRIBUTING.md) first. Plugin authors can start with [Plugin Development](docs/PLUGIN_DEV.md) and [Super PI Agent official plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins). Do not report security issues in public; contact the maintainer directly.
+Issues and pull requests are welcome. Read the [Contributing Guide](CONTRIBUTING.md) first. Plugin authors can start with [Plugin Development](docs/PLUGIN_DEV.md) and [Super PI Agent official plugins](https://github.com/Sadami3066/SuperPI-Official-Plugins). Do not report security issues in public; contact the maintainer directly.
 
 ## License
 
@@ -138,4 +138,4 @@ Our own code is licensed under [Apache-2.0](LICENSE). Third-party components, fo
 
 ---
 
-<sub>Built on [pi](https://pi.dev) · [DeepDeep-KotlinSDK](https://github.com/Sadami3066/DeepDeep-KotlinSDK) · Alpine Linux · Jetpack Compose</sub>
+<sub>Built on [pi](https://pi.dev) · [SuperPI-KotlinSDK](https://github.com/Sadami3066/SuperPI-KotlinSDK) · Alpine Linux · Jetpack Compose</sub>

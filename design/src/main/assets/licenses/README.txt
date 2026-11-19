@@ -1,4 +1,4 @@
-deepdeep UI assets
+superpi UI assets
 
 Lora
 - Source: https://github.com/cyrealtype/Lora-Cyrillic

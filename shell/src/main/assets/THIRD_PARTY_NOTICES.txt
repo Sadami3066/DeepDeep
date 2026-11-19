@@ -1,4 +1,4 @@
-deepdeep Linux environment third-party notices
+superpi Linux environment third-party notices
 ==============================================
 
 This file covers the Linux environment components shipped in the APK
@@ -45,7 +45,7 @@ versions.
 Written offer: for at least three years from the date this APK is distributed,
 the complete corresponding source for the components above (PRoot source,
 build script, talloc 2.4.2 source) is available on request via
-https://github.com/Sadami3066/DeepDeep/issues or from the source distribution
+https://github.com/Sadami3066/SuperPI/issues or from the source distribution
 that contains this notice.
 
 PRoot loader

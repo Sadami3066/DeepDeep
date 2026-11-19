@@ -4,7 +4,7 @@
 
 | File | Purpose | In git |
 |---|---|---|
-| `app/release.keystore` | Release signing certificate (RSA 4096, alias `deepdeep`) | No |
+| `app/release.keystore` | Release signing certificate (RSA 4096, alias `superpi`) | No |
 | `keystore.properties` | Certificate path and passwords | No |
 
 The build script reads `keystore.properties` automatically; fields:
@@ -12,7 +12,7 @@ The build script reads `keystore.properties` automatically; fields:
 ```properties
 storeFile=release.keystore
 storePassword=...
-keyAlias=deepdeep
+keyAlias=superpi
 keyPassword=...
 ```
 

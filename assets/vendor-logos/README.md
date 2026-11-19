@@ -41,7 +41,7 @@ Tabler snapshot: `tabler-icons` v3.50.0, commit `ed177a085b652fe04ec4f37ced867c9
 - `png/192/<id>.png` is the 192px derivative copied into `app/src/main/res/drawable-nodpi/` (PNGs in the asset directory are not tracked); the largest measures 9.6 KB (cap 30 KB).
 - Android resource names allow only lowercase letters, digits and underscores: `vendor_<id>.png`, one-to-one with plugin ids (the `micloud` plugin reuses `vendor_xiaomi`).
 - Tracked: the 10 files in `app/src/main/res/drawable-nodpi/`; the Kotlin mapping is in
-  `app/src/main/kotlin/io/github/whywood/deepdeep/ui/plugins/VendorIcons.kt` (only `feishu`, `wecom` and `micloud` are wired to existing plugins; the rest are spare).
+  `app/src/main/kotlin/io/github/whywood/superpi/ui/plugins/VendorIcons.kt` (only `feishu`, `wecom` and `micloud` are wired to existing plugins; the rest are spare).
 - Tabler line icons use brand colors: GitHub / Notion are dark marks, so showing them in brand colors on a dark theme would need a white variant in `drawable-night-nodpi/` (not done; `VendorPluginIcons` currently wires only Feishu/WeCom/Xiaomi, all colored marks, so it isn't affected).
 
 ## Regeneration

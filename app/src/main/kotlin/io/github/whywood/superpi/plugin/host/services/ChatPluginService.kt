@@ -1,0 +1,73 @@
+package io.github.whywood.superpi.plugin.host.services
+
+import io.github.whywood.superpi.plugin.api.ChatAttachment
+import io.github.whywood.superpi.plugin.api.ChatDelivery
+import io.github.whywood.superpi.plugin.api.ChatMessageOptions
+import io.github.whywood.superpi.plugin.api.ChatSendKind
+import io.github.whywood.superpi.plugin.api.ChatSendResult
+import io.github.whywood.superpi.plugin.api.ChatService
+import java.io.File
+import io.github.whywood.superpi.runtime.PluginTurnResult
+import io.github.whywood.superpi.runtime.SessionCommands
+import kotlinx.serialization.json.JsonObject
+
+internal class ChatPluginService(
+    private val post: suspend (String, String, JsonObject, String, Boolean) -> Boolean,
+    private val commands: SessionCommands,
+) : ChatService {
+    override suspend fun postCustomMessage(
+        sessionId: String,
+        customType: String,
+        payload: JsonObject,
+        text: String,
+        display: Boolean,
+    ): Boolean = post(sessionId, customType, payload, text, display)
+
+    override suspend fun sendMessage(
+        sessionId: String,
+        text: String,
+        options: ChatMessageOptions,
+    ): ChatSendResult {
+        options.display?.let { display ->
+            post(sessionId, display.customType, display.payload, display.text, true)
+        }
+        if (!options.triggerTurn) {
+            return HostChatSendResult(ChatSendKind.DISPLAYED, sessionId, runId = null, delivery = null)
+        }
+        return when (val result = commands.deliverPluginTurn(sessionId, text, options.deliverAs == ChatDelivery.FOLLOW_UP)) {
+            is PluginTurnResult.Started -> HostChatSendResult(ChatSendKind.STARTED, sessionId, result.runId, null)
+            is PluginTurnResult.Queued -> HostChatSendResult(ChatSendKind.QUEUED, sessionId, null, options.deliverAs)
+        }
+    }
+
+    override suspend fun sendMessageWithAttachments(
+        sessionId: String,
+        text: String,
+        attachments: List<ChatAttachment>,
+        options: ChatMessageOptions,
+    ): ChatSendResult {
+        val usable = attachments.mapNotNull { attachment ->
+            val file = File(attachment.path)
+            if (!file.isFile || !file.canRead()) null else attachment
+        }
+        if (usable.isEmpty()) return sendMessage(sessionId, text, options)
+        val suffix = usable.joinToString("\n") { attachment ->
+            val name = attachment.name?.takeIf { it.isNotBlank() } ?: File(attachment.path).name
+            val mime = attachment.mimeType.orEmpty()
+            if (mime.startsWith("image/")) {
+                "![$name](${attachment.path})"
+            } else {
+                "file: ${attachment.path} ($name${if (mime.isBlank()) "" else ", $mime"})"
+            }
+        }
+        val merged = if (text.isBlank()) suffix else text + "\n\n" + suffix
+        return sendMessage(sessionId, merged, options)
+    }
+
+    private class HostChatSendResult(
+        override val kind: ChatSendKind,
+        override val sessionId: String,
+        override val runId: String?,
+        override val delivery: ChatDelivery?,
+    ) : ChatSendResult
+}

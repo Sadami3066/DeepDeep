@@ -1,5 +1,5 @@
 ---
-name: deepdeep-gui
+name: superpi-gui
 description: 优先操作后台虚拟屏，也支持显式选择主屏；读取节点、输入中文、点击、滚动、等待和截图。
 ---
 

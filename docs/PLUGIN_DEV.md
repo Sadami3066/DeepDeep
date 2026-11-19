@@ -1,32 +1,32 @@
 # Super PI Agent Plugin Development
 
-Development documentation for external plugin authors: project setup, contracts, packaging and signing, install and update, and every extension surface. Official plugins and the template are in [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) and [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins); the host repository keeps only the contract and on-device regression scripts. Product capabilities: [USER_GUIDE.md](USER_GUIDE.md); builds and modules: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).
+Development documentation for external plugin authors: project setup, contracts, packaging and signing, install and update, and every extension surface. Official plugins and the template are in [SuperPI-Official-Plugins](https://github.com/Sadami3066/SuperPI-Official-Plugins) and [SuperPI-Plugins](https://github.com/Sadami3066/SuperPI-Plugins); the host repository keeps only the contract and on-device regression scripts. Product capabilities: [USER_GUIDE.md](USER_GUIDE.md); builds and modules: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md).
 
-PI plugins are **Kotlin code plugins**: implement `DeepDeepPlugin` from `plugin-api`, package as `.ddp`, and the host loads them inside the app process. Plugins install only from `.ddp`; nothing is compiled into the app.
+PI plugins are **Kotlin code plugins**: implement `SuperPIPlugin` from `plugin-api`, package as `.ddp`, and the host loads them inside the app process. Plugins install only from `.ddp`; nothing is compiled into the app.
 
 **Security premise**: plugins share the app process and UID with no sandbox, and installing means trusting — plugin code is equivalent to app code and can read the app's private data, reflect into host internals and crash the app. Install only plugins you trust; use MCP for third-party tool sources.
 
 ## Quick start
 
-`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.deepdeep.plugin.api`): the current release is `1.4.0`, whose transitive dependency is `design 0.11.0` (take the latest release in `deepdeep-maven` as authoritative); `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`, `HOST_UI_API_LEVEL = 2`.
+`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.superpi.plugin.api`): the current release is `1.4.0`, whose transitive dependency is `design 0.11.0` (take the latest release in `SuperPI-Maven` as authoritative); `PLUGIN_API_LEVEL = 6`, `BASELINE_API_LEVEL = 6`, `MIN_SUPPORTED_API_LEVEL = 6`, `HOST_UI_API_LEVEL = 2`.
 
 `plugin-api 1.3.0` is purely additive within level 6: published plugins that use only 1.0.x/1.1.x/1.2.x capabilities need no rebuild; plugins using the new 1.3.0 capabilities (tool result renderers) write `minHostVersion: "1.1.0"` (host 1.1.0+). `plugin-api 1.3.1` / `design 0.11.0` are additive too: new `host.images()` and `DdRemoteImage`, and plugins using them write `minHostVersion: "1.4.0"`. The compatibility promise is in `plugin-api/COMPATIBILITY.md`: within one `apiLevel` only binary-compatible additions, and deleting, renaming, changing signatures or changing semantics requires a new `apiLevel`; the host rejects plugins with an `apiLevel` above its own, and level 5 has not been accepted since 1.0.4.
 
-Start a plugin project from `template/` in [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins): a standalone Gradle Android project with an example tool, an example skill, one prompt section and the full `.ddp` packaging/signing/verification implementation. Copy or rename it as a starting point. Official plugin implementations are in [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins).
+Start a plugin project from `template/` in [SuperPI-Plugins](https://github.com/Sadami3066/SuperPI-Plugins): a standalone Gradle Android project with an example tool, an example skill, one prompt section and the full `.ddp` packaging/signing/verification implementation. Copy or rename it as a starting point. Official plugin implementations are in [SuperPI-Official-Plugins](https://github.com/Sadami3066/SuperPI-Official-Plugins).
 
 Prerequisites:
 
 - JDK 17+ and the Android SDK; locate the SDK with the `ANDROID_HOME`/`ANDROID_SDK_ROOT` environment variables or `sdk.dir` in the project's `local.properties`.
-- Plugins depend on the public Maven repository `https://sadami3066.github.io/deepdeep-maven` (group `io.github.sadami3066.deepdeep`, currently `plugin-api 1.4.0` / `design 0.11.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
+- Plugins depend on the public Maven repository `https://sadami3066.github.io/SuperPI-Maven` (group `io.github.sadami3066.superpi`, currently `plugin-api 1.4.0` / `design 0.11.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
 
 `plugin-api` is the contract, and `design` is the UI design system shared with the app (plugin UI uses it directly, and `plugin-api` brings it in through `api()`). Publishing a new version:
 
 ```bash
 ./scripts/gradlew-locked :design:publishAllPublicationsToPagesRepository :plugin-api:publishAllPublicationsToPagesRepository
-# artifacts land in app/build/maven-repo/io/github/sadami3066/deepdeep/
+# artifacts land in app/build/maven-repo/io/github/sadami3066/superpi/
 ```
 
-Sync the artifacts into the matching directories of the `deepdeep-maven` repository and push; Pages updates automatically. When the SDK version goes up, update `compileOnly` in each module's `build.gradle.kts` and the template version too.
+Sync the artifacts into the matching directories of the `SuperPI-Maven` repository and push; Pages updates automatically. When the SDK version goes up, update `compileOnly` in each module's `build.gradle.kts` and the template version too.
 
 Adding a plugin:
 
@@ -71,7 +71,7 @@ A plugin is an ordinary Android application project; the artifact only needs `cl
 
 Dependency rules:
 
-- Libraries the host already provides can only be `compileOnly`: `io.github.sadami3066.deepdeep:plugin-api` (version from the latest `deepdeep-maven` release; `api()` carries the matching `design:0.7.0`, and plugin UI uses its Dd components directly), Compose (`ui`/`foundation`/`material3` + BOM), `kotlinx-coroutines-core`, `kotlinx-serialization-json`.
+- Libraries the host already provides can only be `compileOnly`: `io.github.sadami3066.superpi:plugin-api` (version from the latest `SuperPI-Maven` release; `api()` carries the matching `design:0.7.0`, and plugin UI uses its Dd components directly), Compose (`ui`/`foundation`/`material3` + BOM), `kotlinx-coroutines-core`, `kotlinx-serialization-json`.
 - The host release applies R8 keep to plugin runtime dependencies (`plugin-api`, `design`, Kotlin, coroutines, Compose, plus `androidx.lifecycle`/`androidx.activity`/`androidx.savedstate` commonly used by plugin UI), so these libraries never lose classes in the minified build. Keep preserves ABI names only and is not a version compatibility promise: plugins still need a rebuild for each host SDK version, and host libraries outside the allowlist are not guaranteed to work.
 - **Do not** use `implementation` for these libraries: the host is parent-first, `plugin-api` and Compose exist only in the host, and duplicates packed into the plugin trigger class conflicts.
 - A plugin may bring its own third-party libraries, but they must be packed into `classes*.dex` and must avoid packages and class names the host already occupies.
@@ -89,7 +89,7 @@ The manifest always lives at `assets/plugin.json` inside the package and is pars
 | `version` | string | Yes | `major.minor.patch`, optionally with a `-dev`/`+build` suffix; the host records the installed version and decides upgrades |
 | `apiLevel` | int | No (default 6) | Contract level the plugin requires; must be within `MIN_SUPPORTED_API_LEVEL..PLUGIN_API_LEVEL` (currently 6..6), otherwise loading is refused. Omitted means `BASELINE_API_LEVEL` (6); level 5 plugins have been rejected since host 1.0.4 |
 | `minHostVersion` | string | No | Minimum host version. The host version comes from `BuildConfig.VERSION_NAME`; comparison looks only at `major.minor.patch` and ignores suffixes. Plugins using only capabilities that existed in 1.0.x can write `"1.0.4"`; plugins using 1.1.0 capabilities (including design 0.7.0 components) write `"1.0.6"`; plugins using design 0.8.0 components write `"1.0.7"`; plugins using design 0.9.0 components or plugin-api 1.2.0 capabilities write `"1.0.8"`; plugins using tool result renderers or other 1.3.0 capabilities write `"1.1.0"`; plugins using `host.images()`/`DdRemoteImage` write `"1.4.0"` |
-| `entryClass` | string | Yes | Fully qualified name of the class implementing `DeepDeepPlugin`; it must have a no-arg constructor |
+| `entryClass` | string | Yes | Fully qualified name of the class implementing `SuperPIPlugin`; it must have a no-arg constructor |
 | `name` | LocalizedText | Yes | Plugin name, with at least `default` |
 | `summary` | LocalizedText | Yes | One-line description, with at least `default` |
 | `description` | LocalizedText | No | Detail text |
@@ -242,7 +242,7 @@ Example:
 
 ### Theme packs (`assets/themes.json`)
 
-Plugins can contribute fixed light or dark themes; the user switches them under Settings → Theme and they apply globally. Built-in themes are PI (the default, following the system light/dark setting), Follow system, Classic Blue (legacy key `deepdeep`), Santorini and Oceanic. A theme pack only reads JSON from the install directory and never runs plugin code; when the plugin is disabled or the file is missing, the selection falls back to the default PI theme. `provides.themes` in `plugin.json` declares the theme ids and `assets/themes.json` defines them; the two must match exactly.
+Plugins can contribute fixed light or dark themes; the user switches them under Settings → Theme and they apply globally. Built-in themes are PI (the default, following the system light/dark setting), Follow system, Classic Blue (legacy key `superpi`), Santorini and Oceanic. A theme pack only reads JSON from the install directory and never runs plugin code; when the plugin is disabled or the file is missing, the selection falls back to the default PI theme. `provides.themes` in `plugin.json` declares the theme ids and `assets/themes.json` defines them; the two must match exactly.
 
 ```json
 {
@@ -270,10 +270,10 @@ Plugins can contribute fixed light or dark themes; the user switches them under 
 | `id` | string | Yes | Theme id, regex `^[a-z][a-z0-9_-]*$`, max 64 characters; matches `provides.themes` |
 | `name` | object | Yes | `default` is required, `zh`/`en` optional; chosen by app language, falling back to `default`; each entry max 64 characters |
 | `dark` | bool | Yes | Theme light/dark; decides the color marker, status bar icons and the plugin's `ui.isDark` |
-| `base` | string | Yes | `pi`, `deepdeep`, `santorini` or `oceanic`; supplies defaults for tokens not overridden |
+| `base` | string | Yes | `pi`, `superpi`, `santorini` or `oceanic`; supplies defaults for tokens not overridden |
 | `tokens` | object | Yes | Color overrides; keys must be in the allowlist below and values must be `#RRGGBB` or `#AARRGGBB` |
 
-`base` is only a starting point: `pi` is the default PI palette, `deepdeep` (Classic Blue) and `santorini` are light, and `oceanic` is dark; `dark` may differ from the `base` light/dark, and the final light/dark comes from `dark`. Tokens you do not write come from `base`. The existing wire keys `deepdeep`, `santorini` and `oceanic` stay valid for third-party theme packs, and `pi` is new.
+`base` is only a starting point: `pi` is the default PI palette, `superpi` (Classic Blue) and `santorini` are light, and `oceanic` is dark; `dark` may differ from the `base` light/dark, and the final light/dark comes from `dark`. Tokens you do not write come from `base`. The existing wire keys `superpi`, `santorini` and `oceanic` stay valid for third-party theme packs, and `pi` is new.
 
 Available tokens:
 
@@ -434,7 +434,7 @@ The host keeps a phase per plugin (visible on the Plugins page and in the info d
 
 Only loaded, running plugins (`ACTIVE`/`DEGRADED`) aggregate contributions; when `availability()` is unavailable, skills are disabled and the reason shown, **but the plugin's tools/prompts/UI/hooks are not cleared automatically** — unavailable capabilities should return empty from `contributions()`/`ui()` based on availability.
 
-`DeepDeepPlugin` lifecycle methods (`availability()` must be implemented; the rest have default empty implementations; callback exceptions are isolated by the host and never take the app down):
+`SuperPIPlugin` lifecycle methods (`availability()` must be implemented; the rest have default empty implementations; callback exceptions are isolated by the host and never take the app down):
 
 | Method | When it is called and what it must do |
 |---|---|
@@ -551,25 +551,25 @@ Host reserved tool names (conflicts are rejected at install time): the engine de
 
 | Constructor | Purpose |
 |---|---|
-| `textResult(text, details?, isError?)` | Plain text result; `details` is host-side structured metadata (for tool cards and logs, not model context), where `deepdeep.fileRefs` is a host reserved key that plugins must not read or write |
-| `richResult(blocks, details?, isError?)` | Multi-block result: `textBlock(text)`, `imageBlock(data, mimeType)` (base64 goes into model image content), `fileRefBlock(path, mimeType?)` (content keeps one `file: <path> (<mime>)` text line for the model to read, and the host also writes `{path, mimeType}` into the reserved details key `deepdeep.fileRefs`; tool cards and history render a clickable file row that survives reopening the session) |
+| `textResult(text, details?, isError?)` | Plain text result; `details` is host-side structured metadata (for tool cards and logs, not model context), where `superpi.fileRefs` is a host reserved key that plugins must not read or write |
+| `richResult(blocks, details?, isError?)` | Multi-block result: `textBlock(text)`, `imageBlock(data, mimeType)` (base64 goes into model image content), `fileRefBlock(path, mimeType?)` (content keeps one `file: <path> (<mime>)` text line for the model to read, and the host also writes `{path, mimeType}` into the reserved details key `superpi.fileRefs`; tool cards and history render a clickable file row that survives reopening the session) |
 | Result fields | `PluginToolResult` is a read-only interface (`text`/`blocks`/`details`/`isError`), constructed with the two factories above; the old `PluginToolResult.Text`/`Rich` constructors were removed |
 
-Fields you write into `details` other than `deepdeep.fileRefs` are passed through to the tool card and the custom message card as is; `deepdeep.fileRefs` is generated by the host from `fileRefBlock(...)` in `richResult(...)`, and plugins must not overwrite it.
+Fields you write into `details` other than `superpi.fileRefs` are passed through to the tool card and the custom message card as is; `superpi.fileRefs` is generated by the host from `fileRefBlock(...)` in `richResult(...)`, and plugins must not overwrite it.
 
 `isError = true` marks a failed tool result (the model can retry or explain it); an exception thrown from `execute` (other than cancellation) also becomes an error result, so do not use exceptions to convey business errors.
 
 #### Three layers of tool results: raw / guidance / card (1.4.3, plugin tools only)
 
-Cards belong to plugin tools only: a `PluginTool` result may carry a card, and the host renders it in the answer area by `deepdeep.card`. Plugins that run a CLI through bash (such as Sun Yat-sen University, Feishu, WeCom) produce no cards and do not parse bash commands; their results stay CLI text that the model reads and answers from, and the host does no card handling for bash results at all.
+Cards belong to plugin tools only: a `PluginTool` result may carry a card, and the host renders it in the answer area by `superpi.card`. Plugins that run a CLI through bash (such as Sun Yat-sen University, Feishu, WeCom) produce no cards and do not parse bash commands; their results stay CLI text that the model reads and answers from, and the host does no card handling for bash results at all.
 
 The tool writes three pieces of data into the result details, and `open fun Cards.deliver(callId, result)` (plugin-api 1.4.0, host 1.4.3+) assembles them into model-visible text and display text:
 
 | details key | Contents | Who uses it |
 |---|---|---|
-| `deepdeep.raw` | The full upstream output (verbatim; CLI results drop ANSI, `[exit: N]` and host hints, with no summarization or truncation) | `Cards.deliver` appends it to the "full return" section of the model text |
-| `deepdeep.guidance` | Short guidance for the model: next step, failure reason, constraints that must be asked about, output file paths, pagination/login hints; do not restate facts already in raw such as names, prices or IDs | `Cards.deliver` appends it to the "usage instructions" section |
-| `deepdeep.card` | `{ "customType": "...", "title": "...", "payload": {...} }` | `Cards.deliver` generates the "call present to show this card" instruction and writes `deepdeep.display` for the tool card to display |
+| `superpi.raw` | The full upstream output (verbatim; CLI results drop ANSI, `[exit: N]` and host hints, with no summarization or truncation) | `Cards.deliver` appends it to the "full return" section of the model text |
+| `superpi.guidance` | Short guidance for the model: next step, failure reason, constraints that must be asked about, output file paths, pagination/login hints; do not restate facts already in raw such as names, prices or IDs | `Cards.deliver` appends it to the "usage instructions" section |
+| `superpi.card` | `{ "customType": "...", "title": "...", "payload": {...} }` | `Cards.deliver` generates the "call present to show this card" instruction and writes `superpi.display` for the tool card to display |
 
 - Plugins do not assemble card ids or the `present` instruction themselves, and must not put it into the card payload; the instruction in the model text is generated uniformly by `Cards.deliver` (the `pluginTool` factory calls it automatically, while plugins that implement `PluginTool` themselves must call it explicitly once; repeated calls are idempotent).
 - The text of `textResult` contains only the plugin's own body (for example a list of mailbox facts); `raw`/`guidance` are no longer assembled by the host.
@@ -620,9 +620,9 @@ override fun contributionsFor(host: PluginHost, session: PluginSessionInfo?) = c
 The experimental capability added in v6: after declaring the `prompt` capability in the manifest and implementing `PromptOverridePlugin`, a plugin can override the preamble and rules of the agent system prompt, not just append sections. The API is marked `@PluginExperimentalApi`, needs an explicit opt-in, and may change while experimental.
 
 ```kotlin
-import io.github.whywood.deepdeep.plugin.api.promptOverride as promptOverrideOf
+import io.github.whywood.superpi.plugin.api.promptOverride as promptOverrideOf
 
-class MyPlugin : DeepDeepPlugin, PromptOverridePlugin {
+class MyPlugin : SuperPIPlugin, PromptOverridePlugin {
     override fun promptOverride(host: PluginHost): PromptOverride = promptOverrideOf(
         preamble = "You are a sync assistant.",
         rules = "- Confirm the target directory before syncing.",
@@ -743,7 +743,7 @@ SlotIds.matches(slotId)                      // validates a full slot id
 Slots are "registered by exact tool name", which suits a plugin's own tools. To render **MCP tools** or a batch of tools with different names with a plugin card, use tool result renderers:
 
 ```kotlin
-class TravelPlugin : DeepDeepPlugin {
+class TravelPlugin : SuperPIPlugin {
     override fun ui(host: PluginHost): PluginUiContributions =
         object : PluginUiContributions, ToolResultRendererContributor {
             override val bindings = emptyList<SlotBinding>()
@@ -898,7 +898,7 @@ override fun ui(host: PluginHost) = object : PluginUiContributions {
 
 ### Plugin UI uses only `:design`
 
-Plugin UI uses the app's design system `io.github.whywood.deepdeep.design` directly (`plugin-api` already carries `design 0.7.0` through `api()`, so plugin projects do not declare the coordinate again). Components are identical to the app's and inventing styles is forbidden; new components are in the second and third blocks of the table below:
+Plugin UI uses the app's design system `io.github.whywood.superpi.design` directly (`plugin-api` already carries `design 0.7.0` through `api()`, so plugin projects do not declare the coordinate again). Components are identical to the app's and inventing styles is forbidden; new components are in the second and third blocks of the table below:
 
 | Component | Purpose |
 |---|---|
@@ -916,7 +916,7 @@ Plugin UI uses the app's design system `io.github.whywood.deepdeep.design` direc
 | `DdEmptyState` / `DdLoadingBlock` / `DdSpinner` | Empty and loading states |
 | `DdHairline` | Divider |
 | `DdType` | Type scale: `pageTitle`/`heading`/`body`/`bodySmall`/`label`/`button` |
-| `deepDeepColors()` | Color tokens: `paper`/`surface`/`raised`/`ink`/`inkSecondary`/`inkTertiary`/`accent`/`accentSoft`/`danger`/`success`/`warning`/`hairline`/`wash` |
+| `superPiColors()` | Color tokens: `paper`/`surface`/`raised`/`ink`/`inkSecondary`/`inkTertiary`/`accent`/`accentSoft`/`danger`/`success`/`warning`/`hairline`/`wash` |
 
 `design 0.7.0` adds:
 
@@ -944,7 +944,7 @@ Plugin UI uses the app's design system `io.github.whywood.deepdeep.design` direc
 | `LocalDdMotionEnabled` | System "reduce motion" switch; custom animations skip when it is false |
 
 ```kotlin
-compileOnly("io.github.sadami3066.deepdeep:design:0.8.0")
+compileOnly("io.github.sadami3066.superpi:design:0.8.0")
 ```
 
 ```kotlin
@@ -980,8 +980,8 @@ if (items.size > PreviewRows) {
 | `DdStatusRow(label, value, tone, busy)` | Status summary row: label on the left, value on the right, `DdStatusTone` controls the dot/spinner color; on refresh keep the old value and mark only that row busy |
 | `DdNoticeBar(text, tone, actionLabel?, onAction?)` | Inline page notice: `DdNoticeTone.INFO/SUCCESS/WARNING/DANGER`, good for errors with retry, sign-in prompts and action results |
 | `DdProgressBar(progress: Float?)` | Download/install/sync progress; `null` is indeterminate, pass 0..1 for determinate progress; respects reduce motion |
-| `DeepDeepTheme(colors, fontStyle)` | Wraps a page in a custom `DeepDeepColors` (the host already sets it, so plugins usually do not call it) |
-| `DdTheme.lightPi()` / `DdTheme.darkPi()` | The default PI light and dark palettes, usable as a theme pack `base` or a starting point for custom colors; `DdTheme.lightDeepDeep()` remains for the legacy Classic Blue palette |
+| `SuperPITheme(colors, fontStyle)` | Wraps a page in a custom `SuperPIColors` (the host already sets it, so plugins usually do not call it) |
+| `DdTheme.lightPi()` / `DdTheme.darkPi()` | The default PI light and dark palettes, usable as a theme pack `base` or a starting point for custom colors; `DdTheme.lightSuperPI()` remains for the legacy Classic Blue palette |
 | `DdStatusTone` / `DdNoticeTone` | The status/notice tones above |
 
 ```kotlin
@@ -995,7 +995,7 @@ if (error != null) {
 DdProgressBar(progress = if (downloading) percent else null)
 ```
 
-Import components such as `io.github.whywood.deepdeep.design.DdMarkdown` directly (or import the whole package); no extra dependency declaration is needed.
+Import components such as `io.github.whywood.superpi.design.DdMarkdown` directly (or import the whole package); no extra dependency declaration is needed.
 
 ```kotlin
 DdPullToRefresh(isRefreshing = refreshing, onRefresh = { refreshing = true }) {
@@ -1012,7 +1012,7 @@ Date/time components use `java.time` (`LocalDate`/`LocalTime`); plugins using de
 
 Conventions:
 
-- Do not hardcode colors or type sizes; use only `DdType.*` and `deepDeepColors()`; do not use Material3's `Card`/`Button`/`OutlinedButton`/`TextButton`/`Switch`/`OutlinedTextField` directly — they look inconsistent with the app.
+- Do not hardcode colors or type sizes; use only `DdType.*` and `superPiColors()`; do not use Material3's `Card`/`Button`/`OutlinedButton`/`TextButton`/`Switch`/`OutlinedTextField` directly — they look inconsistent with the app.
 - The page is its own scroll container: `Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp))`; do not add a title bar (the host already has a 64dp top bar), and add 24dp where bottom spacing is needed.
 - State changes must be stable: do not clear known values into loading on init; keep old values while refreshing and mark only the affected area busy, to avoid page flicker.
 - Show errors inline near where they happen (`DdType.bodySmall` + `danger` color) with the last part of the CLI/API output; do not show only an exit code and do not use a Toast.
@@ -1020,7 +1020,7 @@ Conventions:
 ```kotlin
 @Composable
 private fun StatusCard(host: PluginHost, status: Status) {
-    val colors = deepDeepColors()
+    val colors = superPiColors()
     DdGroupCard {
         DdListRow(title = "Runtime", value = status.runtime)
         DdListRow(title = "Sign-in status", value = if (status.authorized) "Connected" else "Not connected")
@@ -1116,7 +1116,7 @@ if (linux == null || !linux.available) {
 | `goals()` | `observe()`, `get/create/edit/pause/resume/complete/clear` | returns null for invalid goal state |
 | `miniapp()` | Mini apps: `scan/load/create/edit/delete/run` | throws `PluginServiceUnavailable` when the host does not provide it |
 | `mcp()` | `servers()`, `probe(name)`, `tools(server)`, `call(server,tool,arguments)`, `callStructured(server,tool,arguments)` | returns an error result or throws when the server does not exist; `callStructured` gives text blocks and the structured result together |
-| `ui()` | Open URLs/sharing/Toast, pages and arguments, interactive pickers, Snackbar, `isDark` (see "UI extensions") | throws `PluginServiceUnavailable("ui.xxx")` for an individual unwired item; `openPage` only accepts this plugin's page ids, not `deepdeep://` deep links |
+| `ui()` | Open URLs/sharing/Toast, pages and arguments, interactive pickers, Snackbar, `isDark` (see "UI extensions") | throws `PluginServiceUnavailable("ui.xxx")` for an individual unwired item; `openPage` only accepts this plugin's page ids, not `superpi://` deep links |
 | `app()` | `info: AppInfo` (versionName/versionCode/pluginApiLevel/uiApiLevel/language/androidSdkInt/deviceModel/installationId) | always available |
 | `bus()` | Plugin bus: `publish(event)` (built with `pluginBusEvent(...)`), `subscribe(topic?)` → `Flow<PluginBusEvent>` | throws `PluginServiceUnavailable` when the host does not provide it |
 | `logs()` | `log(level, message, error?)` + `debug/info/warn/error` | always available |
@@ -1533,7 +1533,7 @@ Plugin pages are the plugin's only interaction surface, and where the plugin kee
 - `PluginPage.content` does not receive a `SlotState`; when you need the active session call `host.sessions().active`, and when you need page arguments read `pageContext()`.
 - `host.requestContributionsRefresh()` is asynchronous and does not wait for completion; when the UI must confirm the result, use the plugin's own state marker and do not assume materialization has happened when it returns.
 - After leaving a page the host cancels its coroutines such as `LaunchedEffect`; long tasks go on `host.scope`, never relying on the page lifecycle to stay alive.
-- `network().get`/`post` and `PluginAvailability.isReady` are extension functions; with explicit imports you must import `get`/`post`/`isReady` separately (or import the whole `io.github.whywood.deepdeep.plugin.api.*` package).
+- `network().get`/`post` and `PluginAvailability.isReady` are extension functions; with explicit imports you must import `get`/`post`/`isReady` separately (or import the whole `io.github.whywood.superpi.plugin.api.*` package).
 
 ## Compatibility and migration
 
@@ -1555,7 +1555,7 @@ Plugin pages are the plugin's only interaction surface, and where the plugin kee
 2. Raise `minHostVersion` to `"1.0.6"`; plugins that only run on older hosts and do not call the new 1.1.0 APIs can keep their previous threshold (such as `"1.0.4"`).
 3. Declare the new capabilities in `capabilities`; runtime permissions go in `permissions` and system components in `components`, declared in pairs with the matching capability (see "Permission declarations" and "Component declarations").
 4. When using experimental APIs (`components()` / `credentials()` / `accessibility()`, `PromptOverridePlugin`), add `@OptIn(PluginExperimentalApi::class)`.
-5. Wire page arguments, interactive pickers, notification actions and system events per the new sections; import design 0.7.0 components directly from `io.github.whywood.deepdeep.design`.
+5. Wire page arguments, interactive pickers, notification actions and system events per the new sections; import design 0.7.0 components directly from `io.github.whywood.superpi.design`.
 6. Bump the plugin version, sign again and update the marketplace entry; the runtime threshold is enforced by `minHostVersion` and the host's actual capabilities.
 
 ### Migrating from API level 5 to level 6
@@ -1592,7 +1592,7 @@ Manifest and project:
 
 - `apiLevel: 6`, `minHostVersion: "1.0.4"`, `ui.apiLevel: 2`; `entryClass` and the entry class's no-arg constructor are unchanged.
 - `capabilities` may add `prompt` (prompt override); all other wire names are unchanged.
-- Dependencies become `compileOnly("io.github.sadami3066.deepdeep:plugin-api:<version>")` (`<version>` from the latest `deepdeep-maven` release), rebuilt against the host Kotlin/Compose versions; any change to `.ddp` contents requires a new signature.
+- Dependencies become `compileOnly("io.github.sadami3066.superpi:plugin-api:<version>")` (`<version>` from the latest `SuperPI-Maven` release), rebuilt against the host Kotlin/Compose versions; any change to `.ddp` contents requires a new signature.
 - Manifest parsing, validation and version comparison moved to the host (host repository `app/plugin/host/external/`), and the SDK no longer has `PluginManifestCodec` / `PluginValidation` / `PluginVersion`; `PluginManifest` / `Provides` / `UiManifest` / `PublisherInfo` are host-constructed read-only interfaces that plugins do not construct.
 - The compatibility promise applies from 1.0.0: within level 6 only binary-compatible additions; deleting or changing public APIs requires a new `apiLevel` (see `plugin-api/COMPATIBILITY.md`).
 
@@ -1630,12 +1630,12 @@ Manifest and project:
 
 ## Debugging and common errors
 
-Build/package/sign (the template project is `template/` in DeepDeep-Plugins, artifacts in `template/build/plugin/plugin-template.ddp`):
+Build/package/sign (the template project is `template/` in SuperPI-Plugins, artifacts in `template/build/plugin/plugin-template.ddp`):
 
 ```bash
 cd template && ./gradlew assemblePlugin signPlugin verifyPlugin
 
-# Official plugin repository (DeepDeep-Official-Plugins root)
+# Official plugin repository (SuperPI-Official-Plugins root)
 ./scripts/check.sh        # build, sign and verify all five official plugins
 ```
 
@@ -1662,9 +1662,9 @@ Troubleshooting paths:
 - **Compile errors with old APIs**: `Unresolved reference` on old symbols such as `PluginTool(` / `PluginToolResult.Text` / `PluginEvent.SessionStarted` / `literal(` / `IconRef.Asset` → replace factories and interfaces item by item per "Migrating from API level 5 to level 6".
 - **Level 5 plugin rejected**: since 1.0.4 the host accepts only `apiLevel = 6`; old packages must be rebuilt with `plugin-api 1.0.0`, raise `apiLevel` and `minHostVersion`, and be signed again.
 - **Load failure**: `ClassNotFoundException` → wrong `entryClass` or minified away; `NoSuchMethodException` → missing no-arg constructor; `NoClassDefFoundError` → host version mismatch or host dependencies packed into the bundle.
-- **Behavior differs**: `host.logs()` goes to the host log (logcat tag `DeepDeepPlugin/<pluginId>`); exceptions thrown by plugins are isolated by the host and shown in the plugin row error.
+- **Behavior differs**: `host.logs()` goes to the host log (logcat tag `SuperPIPlugin/<pluginId>`); exceptions thrown by plugins are isolated by the host and shown in the plugin row error.
 - **Tools/skills unchanged after refresh**: after changing state in a page, call `host.requestContributionsRefresh()`; a busy session is rebuilt only after the current round ends, and the current round does not change midway.
-- **File rows not showing**: `fileRefBlock(...)` uses the path exactly as the plugin gives it, absolute; file rows are restored by the host from the reserved details key `deepdeep.fileRefs`, so do not write that key yourself; if `afterToolExecution` swaps the result with `resultReplace(...)` and drops the details, the file rows disappear with it.
+- **File rows not showing**: `fileRefBlock(...)` uses the path exactly as the plugin gives it, absolute; file rows are restored by the host from the reserved details key `superpi.fileRefs`, so do not write that key yourself; if `afterToolExecution` swaps the result with `resultReplace(...)` and drops the details, the file rows disappear with it.
 - **Hooks not effective / events still arriving after disable**: hooks apply whether returned from `contributions()` or `contributionsFor()`; when only `contributionsFor` is written and it returns the default `PluginHooks.None`, the global hooks are used; session contributions are materialized once per session, and plugin enable/disable or refresh rebuilds the session at a safe point (after the current round) before materializing again; the current run dispatches by the frozen set, so a disabled or uninstalled plugin still receives the run's remaining events, which is expected.
 - **Skills not appearing**: the plugin must be enabled and `availability()` must be `Available` (skills are not enabled when unavailable); SKILL.md must have frontmatter, `PluginSkill.id` must match `name`, and `files` paths must be relative and safe.
 - **Slots/pages not showing**: the slot id must pass `SlotIds.matches`; `provides.uiSlots` must match the actual bindings (at runtime `ui()` is authoritative); the page must appear in `PluginUiContributions.pages`; check the manifest `ui` fields (`ui.apiLevel`/`ui.kotlin`/`ui.compose`) against the host versions; when incompatible the whole UI block is disabled, falling back to host default views or an unavailable notice, and `host.logs()` records the reason.
@@ -1684,7 +1684,7 @@ Troubleshooting paths:
 
 ## Reference
 
-- Contract source: `plugin-api/src/main/kotlin/io/github/whywood/deepdeep/plugin/api/` in the host repository; compatibility contract and changelog: `plugin-api/COMPATIBILITY.md`, `plugin-api/CHANGELOG.md`; ABI gate: `./scripts/api-compat.sh`
+- Contract source: `plugin-api/src/main/kotlin/io/github/whywood/superpi/plugin/api/` in the host repository; compatibility contract and changelog: `plugin-api/COMPATIBILITY.md`, `plugin-api/CHANGELOG.md`; ABI gate: `./scripts/api-compat.sh`
 - Design system: `design/` in the host repository (design 0.7.0 components and usage, carried to plugins through `plugin-api`)
-- Plugin projects: [DeepDeep-Official-Plugins](https://github.com/Sadami3066/DeepDeep-Official-Plugins) (official implementations) and [DeepDeep-Plugins](https://github.com/Sadami3066/DeepDeep-Plugins) (template and development material)
+- Plugin projects: [SuperPI-Official-Plugins](https://github.com/Sadami3066/SuperPI-Official-Plugins) (official implementations) and [SuperPI-Plugins](https://github.com/Sadami3066/SuperPI-Plugins) (template and development material)
 - Product capabilities: [USER_GUIDE.md](USER_GUIDE.md); builds and modules: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)

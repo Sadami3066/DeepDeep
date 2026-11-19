@@ -1,0 +1,51 @@
+package io.github.whywood.superpi.screen
+
+import io.github.whywood.superpi.vscreen.VirtualScreenEngine
+import io.github.whywood.superpi.vscreen.VirtualScreenFailureCategory
+import io.github.whywood.superpi.vscreen.VirtualScreenLaunchReport
+import io.github.whywood.superpi.vscreen.VirtualScreenResult
+import io.github.whywood.superpi.vscreen.VirtualScreenRuntime
+import io.github.whywood.superpi.vscreen.VirtualScreenState
+
+class VirtualEngineBackend(
+    private val engineProvider: () -> VirtualScreenEngine? = { VirtualScreenRuntime.engine() },
+) : ScreenVirtualBackend {
+    override suspend fun state(): VirtualScreenState = requireEngine().state.value
+
+    override suspend fun tap(x: Int, y: Int, durationMs: Int): VirtualScreenResult = requireEngine().tap(x, y, durationMs)
+
+    override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): VirtualScreenResult =
+        requireEngine().swipe(x1, y1, x2, y2, durationMs)
+
+    override suspend fun key(name: String): VirtualScreenResult = requireEngine().key(name)
+
+    override suspend fun text(value: String): VirtualScreenResult = requireEngine().text(value)
+
+    override suspend fun screenshot(): ByteArray? = requireEngine().screenshot()
+
+    override suspend fun launch(packageName: String): VirtualScreenLaunchReport = requireEngine().launchWithReport(packageName)
+
+    override fun reconnecting(): Boolean = engineProvider()?.reconnecting == true
+
+    override fun helperUid(): Int? = runCatching { requireEngine().helperUid }.getOrNull()
+
+    override fun lastFailure(): ScreenVirtualFailure? = runCatching {
+        requireEngine().lastFailure?.let { failure ->
+            ScreenVirtualFailure(
+                category = when (failure.category) {
+                    VirtualScreenFailureCategory.TRANSPORT -> VIRTUAL_FAILURE_TRANSPORT
+                    VirtualScreenFailureCategory.BACKEND -> VIRTUAL_FAILURE_BACKEND
+                    VirtualScreenFailureCategory.START -> VIRTUAL_FAILURE_START
+                },
+                message = failure.message,
+                recoverable = failure.recoverable,
+                reason = failure.reason,
+            )
+        }
+    }.getOrNull()
+
+    override fun lastTransportNotice(): String? = runCatching { requireEngine().lastTransportNotice }.getOrNull()
+
+    private fun requireEngine(): VirtualScreenEngine = engineProvider()
+        ?: throw IllegalStateException("Virtual screen engine is not ready; open the virtual screen plugin page and retry")
+}

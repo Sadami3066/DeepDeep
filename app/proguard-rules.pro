@@ -1,5 +1,5 @@
--keep class io.github.whywood.deepdeep.plugin.api.** { *; }
--keep class io.github.whywood.deepdeep.design.** { *; }
+-keep class io.github.whywood.superpi.plugin.api.** { *; }
+-keep class io.github.whywood.superpi.design.** { *; }
 -keep class org.lsposed.hiddenapibypass.** { *; }
 -keep class com.github.muntashirakon.adb.** { *; }
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
@@ -21,8 +21,8 @@
 -dontwarn org.bouncycastle.**
 
 # Wireless-debug shell daemon is launched via app_process reflection; R8 must keep the entry class and its main.
--keep class io.github.whywood.deepdeep.adb.ShellDaemon { *; }
--keep class io.github.whywood.deepdeep.vscreen.VirtualScreenHelperMain { *; }
+-keep class io.github.whywood.superpi.adb.ShellDaemon { *; }
+-keep class io.github.whywood.superpi.vscreen.VirtualScreenHelperMain { *; }
 
 # WorkManager ships a prebuilt Room database whose implementation is created by Room via reflection.
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
