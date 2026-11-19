@@ -75,11 +75,13 @@ class PersonalizationPromptTest {
         )
 
         assertEquals(
-            listOf("environment", "instruction", "plugins", "page"),
+            listOf("environment", "instruction", "plugins", "preamble", "page"),
             result.keys.toList(),
         )
         assertTrue(result.getValue("plugins").contains("feishu ready"))
         assertEquals("<page>prompt</page>", result.getValue("page"))
+        assertTrue(result.getValue("preamble").contains("You are PI"))
+        assertFalse(result.getValue("preamble").contains("DeepDeep"))
     }
 
     @Test
@@ -92,7 +94,8 @@ class PersonalizationPromptTest {
             pluginBody = "   ",
         )
 
-        assertEquals(listOf("environment"), result.keys.toList())
+        assertEquals(listOf("environment", "preamble"), result.keys.toList())
+        assertTrue(result.getValue("preamble").contains("You are PI"))
     }
 
     @Test
@@ -173,7 +176,7 @@ class PersonalizationPromptTest {
     }
 
     @Test
-    fun absentPluginPromptOverridesDoNotEmitPreambleOrRules() {
+    fun absentPluginPromptOverridesUseDefaultPreamble() {
         val result = buildSessionSystemPromptSections(
             personalization = Personalization(),
             providerId = "deepseek",
@@ -182,7 +185,8 @@ class PersonalizationPromptTest {
             pluginBody = null,
         )
 
-        assertFalse(result.containsKey("preamble"))
+        assertTrue(result.getValue("preamble").contains("You are PI"))
+        assertFalse(result.getValue("preamble").contains("DeepDeep"))
         assertFalse(result.containsKey("rules"))
         assertFalse(result.containsKey("plugins"))
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild DeepDeep vendor logo assets from svg/ and upstream/ sources.
+"""Rebuild Super PI Agent vendor logo assets from svg/ and upstream/ sources.
 
 Usage:
   NODE_PATH=<dir containing sharp> python3 scripts/build.py
@@ -196,7 +196,7 @@ def main():
         entries.append(entry)
 
     manifest = {
-        "title": "DeepDeep vendor logo assets",
+        "title": "Super PI Agent vendor logo assets",
         "generated": datetime.date.today().isoformat(),
         "generator": "sharp (libvips) for SVG rasterization + ImageMagick for App Store artwork cleanup; see scripts/",
         "icon_count": len(entries),

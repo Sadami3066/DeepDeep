@@ -109,7 +109,7 @@ class CalendarPermissionGate(
             else -> "calendar"
         }
         return ArrangeCalendarPermissionException(
-            "Calendar $access permission was not granted; grant calendar access for DeepDeep in system settings, then retry",
+            "Calendar $access permission was not granted; grant calendar access for PI in system settings, then retry",
         )
     }
 }

@@ -68,8 +68,8 @@ afterEvaluate {
                 artifactId = "design"
                 version = pluginApiVersion
                 pom {
-                    name.set("DeepDeep Design")
-                    description.set("DeepDeep design system components shared with plugin UIs")
+                    name.set("Super PI Agent Design")
+                    description.set("Super PI Agent design system components shared with plugin UIs")
                     url.set("https://github.com/Sadami3066/DeepDeep-Plugins")
                 }
             }

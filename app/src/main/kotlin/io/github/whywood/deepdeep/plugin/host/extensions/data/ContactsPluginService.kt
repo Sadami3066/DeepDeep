@@ -332,7 +332,7 @@ internal class ContactsPluginServiceImpl(
     private fun requireRead() {
         if (!permissionGranted) {
             throw SecurityException(
-                "Contacts read requires READ_CONTACTS permission; grant contacts access for DeepDeep and retry",
+                "Contacts read requires READ_CONTACTS permission; grant contacts access for PI and retry",
             )
         }
     }
@@ -340,7 +340,7 @@ internal class ContactsPluginServiceImpl(
     private fun requireWrite() {
         if (!DataPermissions.allGranted(context, DataPermissions.contactsWrite)) {
             throw SecurityException(
-                "Contacts write requires WRITE_CONTACTS permission; grant contacts access for DeepDeep and retry",
+                "Contacts write requires WRITE_CONTACTS permission; grant contacts access for PI and retry",
             )
         }
     }

@@ -40,11 +40,11 @@ internal object DataPermissions {
     fun requireGranted(context: Context, permissions: Array<String>, operation: String) {
         if (allGranted(context, permissions)) return
         val missing = permissions.filterNot { granted(context, it) }
-        throw SecurityException("$operation requires ${missing.joinToString()} permission; grant it for DeepDeep and retry")
+        throw SecurityException("$operation requires ${missing.joinToString()} permission; grant it for PI and retry")
     }
 
     fun locationGrantedMessage(): String =
-        "Location permission was not granted; grant location access for DeepDeep and retry"
+        "Location permission was not granted; grant location access for PI and retry"
 
     fun permissionWire(androidPermission: String): String? = when (androidPermission) {
         Manifest.permission.ACCESS_COARSE_LOCATION -> PluginPermission.LOCATION_COARSE

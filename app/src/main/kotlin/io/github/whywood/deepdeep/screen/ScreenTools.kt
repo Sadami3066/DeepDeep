@@ -767,7 +767,7 @@ internal fun statusJson(status: ScreenStatusSnapshot): JsonObject = buildJsonObj
 
         "disabled" -> put(
             "hint",
-            "Accessibility service is off: enable DeepDeep accessibility in settings; once enabled, nodes can be read and operated by ref",
+            "Accessibility service is off: enable PI accessibility in settings; once enabled, nodes can be read and operated by ref",
         )
     }
     val virtualInfo = status.virtual

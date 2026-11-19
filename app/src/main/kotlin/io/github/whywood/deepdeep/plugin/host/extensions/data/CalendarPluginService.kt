@@ -136,7 +136,7 @@ internal class CalendarPluginServiceImpl(
         val granted = permissions.all { result[it] == true }
         if (!granted) {
             throw SecurityException(
-                "Calendar $action permission was not granted; grant calendar access for DeepDeep and retry",
+                "Calendar $action permission was not granted; grant calendar access for PI and retry",
             )
         }
     }

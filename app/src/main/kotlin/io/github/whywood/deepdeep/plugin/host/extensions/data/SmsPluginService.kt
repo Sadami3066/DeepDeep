@@ -99,7 +99,7 @@ internal class SmsPluginServiceImpl(
         withContext(ioDispatcher) {
             if (!canSend) {
                 throw SecurityException(
-                    "SMS sending requires SEND_SMS permission; grant SMS access for DeepDeep and retry",
+                    "SMS sending requires SEND_SMS permission; grant SMS access for PI and retry",
                 )
             }
             val target = address.trim()
@@ -193,7 +193,7 @@ internal class SmsPluginServiceImpl(
     private fun requireRead() {
         if (!canRead) {
             throw SecurityException(
-                "SMS reading requires READ_SMS permission; grant SMS access for DeepDeep and retry",
+                "SMS reading requires READ_SMS permission; grant SMS access for PI and retry",
             )
         }
     }

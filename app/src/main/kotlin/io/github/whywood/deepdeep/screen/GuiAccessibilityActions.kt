@@ -204,7 +204,7 @@ class GuiAccessibilityActions(
 
     private fun requireService(): GuiAccessibilityService =
         serviceProvider() ?: throw GuiUnavailableException(
-            "Accessibility service is not connected: enable DeepDeep in system accessibility settings; if it is already on, turn it off and on again (the service does not reconnect after being stopped by the system; a reboot also works)",
+            "Accessibility service is not connected: enable PI in system accessibility settings; if it is already on, turn it off and on again (the service does not reconnect after being stopped by the system; a reboot also works)",
         )
 
     private fun requireNode(displayId: Int, selector: GuiSelector): GuiSnapshotNode {

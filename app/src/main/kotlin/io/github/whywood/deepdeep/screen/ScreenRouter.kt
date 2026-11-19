@@ -159,8 +159,8 @@ class ScreenRouter(
 
     private fun requireAccessibility() {
         check(accessibility.connected) {
-            if (accessibilityEnabled()) "Accessibility is enabled but the service is not connected; wait briefly and retry, or toggle DeepDeep accessibility off and on in system settings if it stays disconnected"
-            else "Virtual screen node reading and Unicode input need accessibility; enable DeepDeep accessibility in system settings. Coordinate taps, swipes, keys and screenshots still work"
+            if (accessibilityEnabled()) "Accessibility is enabled but the service is not connected; wait briefly and retry, or toggle PI accessibility off and on in system settings if it stays disconnected"
+            else "Virtual screen node reading and Unicode input need accessibility; enable PI accessibility in system settings. Coordinate taps, swipes, keys and screenshots still work"
         }
     }
 

@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-enum class ThemePreset { PI, SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC }
+enum class ThemePreset { SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC, PI }
 
 @Immutable
 data class DeepDeepColors(

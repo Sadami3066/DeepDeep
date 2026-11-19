@@ -67,8 +67,8 @@ afterEvaluate {
                 artifactId = "plugin-api"
                 version = pluginApiVersion
                 pom {
-                    name.set("DeepDeep Plugin API")
-                    description.set("DeepDeep external plugin contract SDK")
+                    name.set("Super PI Agent Plugin API")
+                    description.set("Super PI Agent external plugin contract SDK")
                     url.set("https://github.com/Sadami3066/DeepDeep-Plugins")
                 }
             }

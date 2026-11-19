@@ -1,5 +1,6 @@
 package io.github.whywood.deepdeep.runtime
 
+import io.github.whywood.deepdeep.sdk.coding.prompt.DEFAULT_SYSTEM_PROMPT_PREAMBLE
 import java.time.OffsetDateTime
 
 enum class InteractionStyle {
@@ -70,7 +71,8 @@ internal fun buildSessionSystemPromptSections(
     if (body.isNotEmpty()) {
         sections["plugins"] = wrapPromptSection("plugins", body)
     }
-    promptPreamble?.trim()?.takeIf { it.isNotEmpty() }?.let { sections["preamble"] = it }
+    sections["preamble"] = promptPreamble?.trim()?.takeIf { it.isNotEmpty() }
+        ?: DEFAULT_SYSTEM_PROMPT_PREAMBLE.replace("DeepDeep", "PI")
     promptRules?.trim()?.takeIf { it.isNotEmpty() }?.let { sections["rules"] = wrapPromptSection("rules", it) }
     sections.putAll(extra)
     return sections
