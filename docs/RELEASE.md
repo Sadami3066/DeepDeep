@@ -35,11 +35,12 @@ The version numbers in `app/build.gradle.kts` are edited by hand before a releas
 
 Version numbers appear only in: `app/build.gradle.kts`, the top section of `CHANGELOG.md`, `release-notes/vX.Y.Z.md`, and git tags. Product docs such as README and USER_GUIDE do not carry versions.
 
-1. Set `versionCode` and `versionName`, then commit after `./scripts/check.sh --full` passes.
-2. Tag `vX.Y.Z`, matching `versionName`.
-3. Create a GitHub release with a single asset, named `PI-X.Y.Z.apk`.
-4. Write the notes by hand as user-facing copy: the app's update page shows them verbatim. Do not generate a commit list with `--generate-notes`, and do not write notes like "see the attachments below" that only make sense on GitHub.
-5. Do not mark the release as prerelease or draft: the app only reads the latest stable release.
+1. Sync the bundled market seed: copy `registry.json` and `registry.json.sig` from the market repository into `app/src/main/assets/market/`, verify the signature, and confirm the entry count.
+2. Set `versionCode` and `versionName`, then commit after `./scripts/check.sh --full` passes.
+3. Tag `vX.Y.Z`, matching `versionName`.
+4. Create a GitHub release with a single asset, named `PI-X.Y.Z.apk`.
+5. Write the notes by hand as user-facing copy: the app's update page shows them verbatim. Do not generate a commit list with `--generate-notes`, and do not write notes like "see the attachments below" that only make sense on GitHub.
+6. Do not mark the release as prerelease or draft: the app only reads the latest stable release.
 
 How the app reads `releases/latest` and validates the asset and digest is described in [In-app updates (release contract)](#in-app-updates-release-contract).
 

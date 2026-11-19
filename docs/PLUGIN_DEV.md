@@ -71,7 +71,7 @@ A plugin is an ordinary Android application project; the artifact only needs `cl
 
 Dependency rules:
 
-- Libraries the host already provides can only be `compileOnly`: `io.github.sadami3066.superpi:plugin-api` (version from the latest `SuperPI-Maven` release; `api()` carries the matching `design:0.7.0`, and plugin UI uses its Dd components directly), Compose (`ui`/`foundation`/`material3` + BOM), `kotlinx-coroutines-core`, `kotlinx-serialization-json`.
+- Libraries the host already provides can only be `compileOnly`: `io.github.sadami3066.superpi:plugin-api` (version from the latest `SuperPI-Maven` release; `api()` carries the matching `design:1.0.0`, and plugin UI uses its Dd components directly), Compose (`ui`/`foundation`/`material3` + BOM), `kotlinx-coroutines-core`, `kotlinx-serialization-json`.
 - The host release applies R8 keep to plugin runtime dependencies (`plugin-api`, `design`, Kotlin, coroutines, Compose, plus `androidx.lifecycle`/`androidx.activity`/`androidx.savedstate` commonly used by plugin UI), so these libraries never lose classes in the minified build. Keep preserves ABI names only and is not a version compatibility promise: plugins still need a rebuild for each host SDK version, and host libraries outside the allowlist are not guaranteed to work.
 - **Do not** use `implementation` for these libraries: the host is parent-first, `plugin-api` and Compose exist only in the host, and duplicates packed into the plugin trigger class conflicts.
 - A plugin may bring its own third-party libraries, but they must be packed into `classes*.dex` and must avoid packages and class names the host already occupies.
@@ -242,7 +242,7 @@ Example:
 
 ### Theme packs (`assets/themes.json`)
 
-Plugins can contribute fixed light or dark themes; the user switches them under Settings → Theme and they apply globally. Built-in themes are PI (the default, following the system light/dark setting), Follow system, Classic Blue (legacy key `superpi`), Santorini and Oceanic. A theme pack only reads JSON from the install directory and never runs plugin code; when the plugin is disabled or the file is missing, the selection falls back to the default PI theme. `provides.themes` in `plugin.json` declares the theme ids and `assets/themes.json` defines them; the two must match exactly.
+Plugins can contribute fixed light or dark themes; the user switches them under Settings → Theme and they apply globally. Built-in themes are PI (the default, following the system light/dark setting), Classic Blue, Santorini and Oceanic. A theme pack only reads JSON from the install directory and never runs plugin code; when the plugin is disabled or the file is missing, the selection falls back to the default PI theme. `provides.themes` in `plugin.json` declares the theme ids and `assets/themes.json` defines them; the two must match exactly.
 
 ```json
 {
@@ -270,10 +270,10 @@ Plugins can contribute fixed light or dark themes; the user switches them under 
 | `id` | string | Yes | Theme id, regex `^[a-z][a-z0-9_-]*$`, max 64 characters; matches `provides.themes` |
 | `name` | object | Yes | `default` is required, `zh`/`en` optional; chosen by app language, falling back to `default`; each entry max 64 characters |
 | `dark` | bool | Yes | Theme light/dark; decides the color marker, status bar icons and the plugin's `ui.isDark` |
-| `base` | string | Yes | `pi`, `superpi`, `santorini` or `oceanic`; supplies defaults for tokens not overridden |
+| `base` | string | Yes | `pi`, `classic`, `santorini` or `oceanic`; supplies defaults for tokens not overridden |
 | `tokens` | object | Yes | Color overrides; keys must be in the allowlist below and values must be `#RRGGBB` or `#AARRGGBB` |
 
-`base` is only a starting point: `pi` is the default PI palette, `superpi` (Classic Blue) and `santorini` are light, and `oceanic` is dark; `dark` may differ from the `base` light/dark, and the final light/dark comes from `dark`. Tokens you do not write come from `base`. The existing wire keys `superpi`, `santorini` and `oceanic` stay valid for third-party theme packs, and `pi` is new.
+`base` is only a starting point: `pi` is the default PI palette, `classic` (Classic Blue) and `santorini` are light, and `oceanic` is dark; `dark` may differ from the `base` light/dark, and the final light/dark comes from `dark`. Tokens you do not write come from `base`.
 
 Available tokens:
 
@@ -981,7 +981,7 @@ if (items.size > PreviewRows) {
 | `DdNoticeBar(text, tone, actionLabel?, onAction?)` | Inline page notice: `DdNoticeTone.INFO/SUCCESS/WARNING/DANGER`, good for errors with retry, sign-in prompts and action results |
 | `DdProgressBar(progress: Float?)` | Download/install/sync progress; `null` is indeterminate, pass 0..1 for determinate progress; respects reduce motion |
 | `SuperPITheme(colors, fontStyle)` | Wraps a page in a custom `SuperPIColors` (the host already sets it, so plugins usually do not call it) |
-| `DdTheme.lightPi()` / `DdTheme.darkPi()` | The default PI light and dark palettes, usable as a theme pack `base` or a starting point for custom colors; `DdTheme.lightSuperPI()` remains for the legacy Classic Blue palette |
+| `DdTheme.lightPi()` / `DdTheme.darkPi()` | The default PI light and dark palettes, usable as a theme pack `base` or a starting point for custom colors; `DdTheme.lightClassicBlue()` remains for the Classic Blue palette |
 | `DdStatusTone` / `DdNoticeTone` | The status/notice tones above |
 
 ```kotlin

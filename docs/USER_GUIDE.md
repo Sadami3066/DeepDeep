@@ -32,10 +32,10 @@ Applies to the current version. The interface and capabilities will keep changin
 
 ## Bots
 
-- Every bot in the drawer is an independent assistant identity: its own name, avatar, one-line summary and instructions, plus its own skills, plugins, connectors, tools and file directory.
+- Every bot in the drawer is an independent assistant identity: its own name, avatar, one-line summary and instructions, plus its own skills, plugins, connectors, tools and file directory. The chat header shows the active bot; tap it to open that bot's settings.
 - Sessions under each bot are independent; switching bots switches the whole context.
 - The default bot is PI, uses the app icon, and cannot be renamed or deleted; all its capabilities are on by default and can be turned off one by one.
-- New bot: in the Bot section of the drawer tap "New", then name it, pick an avatar and write a summary. A new bot starts with no capabilities enabled; turn them on in "Bot settings" after creating it.
+- New bot: in the Bot section of the drawer tap "New", then name it, pick and crop an avatar and write a summary. A new bot starts with no capabilities enabled; turn them on in "Bot settings" after creating it.
 - Bot settings:
   - Capabilities: per-item switches for skills, plugins and connectors;
   - Tools: screen tools and mini app tools, off by default; screen tools need the ADB or Root system access tier;
