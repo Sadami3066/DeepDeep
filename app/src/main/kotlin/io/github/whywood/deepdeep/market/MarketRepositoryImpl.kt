@@ -166,7 +166,7 @@ class MarketRepositoryImpl(
         val skills = runCatching { skillRepository.list() }
             .getOrNull()?.getOrNull()
             .orEmpty()
-            .filter { it.globalEnabled && it.id.isNotBlank() }
+            .filter { it.id.isNotBlank() }
             .associate { it.id to skillVersions[it.id] }
         val content = InstalledContent(
             plugins = runCatching { pluginManager.state.value.plugins }
@@ -237,7 +237,6 @@ class MarketRepositoryImpl(
             val result = skillRepository.install(bytes, entry.id)
             if (result is SkillArchiveResult.Failure) error(result.error.name)
             val skill = (result as SkillArchiveResult.Success).skill
-            if (!skillRepository.setGlobalEnabled(skill.id, true)) error("安装失败，请稍后再试")
             skillRepository.syncActiveSkills()
             writeSkillVersion(skill.id, entry.version)
         } finally {

@@ -1,5 +1,13 @@
 # Plugin API changelog
 
+## 1.4.0 / API level 6
+
+加法版本，`PLUGIN_API_LEVEL` 仍为 6：接口只增不改，已发布插件无需重新编译；使用本版本新能力的插件需 `minHostVersion >= 1.4.3`。
+
+- 卡片交付归插件侧：新增 `Cards` 对象（`KEY`/`RAW_KEY`/`GUIDANCE_KEY`/`DISPLAY_KEY`、`descriptor(...)`、`instruction(callId, title)` 与 `deliver(callId, result)`）。`PluginTool` 工厂会自动把结果 details 里的 `deepdeep.card`、`deepdeep.raw`、`deepdeep.guidance` 组装成模型可见文本（完整返回、使用说明、`present` 调用指令），并把展示文本写进 `deepdeep.display`；宿主不再追加卡片 id 或拼接任何卡片文案。
+- 新增 `PluginCard` + `pluginCard(title, customType, payload)` 与 `pluginResult(...)`：插件构造带卡片的结果时只传数据，卡片指令与展示文本由 SDK 统一生成。
+- 兼容性：`design` 仍为 0.11.0；新增项均为加法，旧插件二进制不受影响。
+
 ## 1.3.0 / API level 6
 
 加法版本，`PLUGIN_API_LEVEL` 仍为 6：接口只增不改，已发布插件无需重新编译；使用本版本新能力的插件需 `minHostVersion >= 1.1.0`。

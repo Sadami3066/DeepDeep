@@ -33,6 +33,6 @@
 
 - `ProcessDisclosure` 是活动段展开/收起唯一实现（流式 snap、结束后 tween）；`ActivitySection` 与工具组共用。
 - 卡片槽位统一由 `PluginAnswerCardSlot` 解析，`HostAnswerCardSlotState` 同时实现工具卡/自定义消息两种状态；`AnswerCardSource` 只保留历史自定义消息卡与宿主内容卡，工具结果卡不再自动上屏。槽位缺失（插件未装/停用/未注册）时显示 `PresentedCardFallback`“这张卡片暂时无法展示”，不再出现空白。
-- 回答区卡片只有一个来源：模型调用 `present`（`type=card` 时按卡片 id 找 `deepdeep.card` 或工具轨迹），宿主不再把工具结果自动变成卡片；历史遗留的自定义消息卡仍作为 `TurnBlock.Card` 渲染。
+- 回答区卡片只有一个来源：模型调用 `present`（`type=card` 时按卡片 id 找 `deepdeep.card` 或工具轨迹）；`present` 指令由插件写进工具结果文本，宿主不追加；工具输出展示优先用插件提供的 `deepdeep.display`。
 - 流式期间活动段展开/收起与摘要尺寸用 snap，`followContent` 用带符号差值贴底，内容收缩也回顶到底部锚点，避免卡片插入或过程折叠把最终正文上下推。
-- 渲染顺序：过程区统一是原始工具卡（精确 `tool.card.content:<name>` 槽位 → 插件工具结果渲染器 → 宿主默认工具卡）；回答区的富卡片只由 `present` 的 `type=card` 引入，按 `deepdeep.card` 的 `customType` 走自定义消息槽位、否则按工具轨迹走工具卡槽位。`ToolInvocation` 统一 trace key、工具身份、参数与结构化结果，负责把 `mcp__server__tool` 与 `tool_execute` 包装还原成真实 MCP 工具身份。
+- 渲染顺序：过程区统一是原始工具卡（精确 `tool.card.content:<name>` 槽位 → 插件工具结果渲染器 → 宿主默认工具卡，输出优先 `deepdeep.display`）；回答区的富卡片只由 `present` 的 `type=card` 引入，按 `deepdeep.card` 的 `customType` 走自定义消息槽位、否则按工具轨迹走工具卡槽位。`ToolInvocation` 统一 trace key、工具身份、参数与结构化结果，负责把 `mcp__server__tool` 与 `tool_execute` 包装还原成真实 MCP 工具身份。

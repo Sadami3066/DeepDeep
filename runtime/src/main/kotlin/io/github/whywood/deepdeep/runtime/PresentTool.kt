@@ -110,9 +110,6 @@ fun presentTool(
     parameters = presentParameters,
     label = "present",
     promptSnippet = "Deliver finished work to the user: files, images, pages, miniapps, or cards from tool results",
-    promptGuidelines = listOf(
-        "When a tool result ends with a card id, deliver that card with present(type=card) instead of restating its data; several related cards may be delivered in one call.",
-    ),
     execute = { _, args, signal, _ ->
         signal?.throwIfAborted()
         val bound = session()

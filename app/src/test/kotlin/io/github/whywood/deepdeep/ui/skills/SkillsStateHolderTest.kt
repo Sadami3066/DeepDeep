@@ -20,8 +20,8 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SkillsStateHolderTest {
-    private val alpha = InstalledSkill("alpha", "Alpha", "Alpha skill", false, false, 1)
-    private val beta = InstalledSkill("beta", "Beta", "Search the web", false, true, 2)
+    private val alpha = InstalledSkill("alpha", "Alpha", "Alpha skill", false, 1)
+    private val beta = InstalledSkill("beta", "Beta", "Search the web", false, 2)
 
     private class FakeSource : SkillsDataSource {
         override val changes = MutableStateFlow(0L)

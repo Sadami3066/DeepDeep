@@ -9,6 +9,7 @@ class ChrootExecutor internal constructor(
     private val sharedStorageEnabled: () -> Boolean,
     private val resolvConf: () -> File?,
     private val maxOutputBytes: Int,
+    private val logDir: File?,
     private val runner: RootCommandRunner,
 ) : LinuxExecutor {
     constructor(
@@ -16,13 +17,15 @@ class ChrootExecutor internal constructor(
         workspaceDir: File,
         sharedStorageEnabled: () -> Boolean = { false },
         resolvConf: () -> File? = { null },
-        maxOutputBytes: Int = 64 * 1024,
+        maxOutputBytes: Int = 256 * 1024,
+        logDir: File? = null,
     ) : this(
         linuxDir = linuxDir,
         workspaceDir = workspaceDir,
         sharedStorageEnabled = sharedStorageEnabled,
         resolvConf = resolvConf,
         maxOutputBytes = maxOutputBytes,
+        logDir = logDir,
         runner = ProcessRootCommandRunner(),
     )
 
@@ -67,14 +70,25 @@ class ChrootExecutor internal constructor(
         if (!process.started) throw IOException("su is not available")
         val combined = mergeOutput(process.stdout, process.stderr)
         val (output, truncated) = boundOutput(combined)
+        val logFile = if (truncated) writeFullLog(combined) else null
         return LinuxResult(
             exitCode = if (process.timedOut) NO_EXIT_CODE else process.exitCode,
             output = output,
             truncated = truncated,
             timedOut = process.timedOut,
             durationMillis = durationMillis,
-            fullOutputPath = null,
+            fullOutputPath = logFile?.absolutePath,
         )
+    }
+
+    private fun writeFullLog(text: String): File? {
+        val directory = logDir ?: return null
+        return runCatching {
+            if (!directory.isDirectory) directory.mkdirs()
+            File(directory, "command-${java.util.UUID.randomUUID()}.log").apply {
+                writeText(text)
+            }
+        }.getOrNull()
     }
 
     private fun boundOutput(text: String): Pair<String, Boolean> {

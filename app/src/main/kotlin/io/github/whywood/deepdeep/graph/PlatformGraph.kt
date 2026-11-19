@@ -243,6 +243,7 @@ internal class PlatformGraph(private val deps: PlatformGraphDeps) {
                 workspaceDir = cwd,
                 sharedStorageEnabled = { deps.sharedStorage.value },
                 resolvConf = { linuxEnvironmentFor(cwd.absolutePath).exportResolvConf() },
+                logDir = File(deps.appContext.cacheDir, "tool-output"),
             )
         }
     }

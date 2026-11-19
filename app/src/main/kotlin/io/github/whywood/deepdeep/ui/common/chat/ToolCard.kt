@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
+import io.github.whywood.deepdeep.plugin.api.Cards
 import io.github.whywood.deepdeep.design.DdAlpha
 import io.github.whywood.deepdeep.design.DdIcon
 import io.github.whywood.deepdeep.design.DdIcons
@@ -66,6 +67,7 @@ import java.util.Base64
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 internal object ProcessRowMetrics {
     val IconSize = 13.dp
@@ -355,9 +357,13 @@ private fun formatToolArguments(raw: JsonObject?, legacy: Map<String, String>): 
 private fun JsonElement.displayValue(): String = if (this is JsonPrimitive && isString) content else toString()
 
 private fun ToolTrace.resultText(): String? =
-    resultPayload?.text()?.takeIf { it.isNotBlank() }
+    displayText()
+        ?: resultPayload?.text()?.takeIf { it.isNotBlank() }
         ?: error?.takeIf { it.isNotBlank() }
         ?: output?.takeIf { it.isNotBlank() }
+
+private fun ToolTrace.displayText(): String? =
+    (resultDetails?.get(Cards.DISPLAY_KEY) as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
 internal fun ToolTrace.pluginSlotResult(): PluginToolResult? {
     val isError = status == ToolActivityStatus.FAILED

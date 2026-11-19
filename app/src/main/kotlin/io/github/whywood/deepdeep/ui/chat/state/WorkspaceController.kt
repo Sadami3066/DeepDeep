@@ -75,11 +75,12 @@ internal class WorkspaceController(
         }
     }
 
-    fun delete(workspaceId: String) {
+    fun delete(workspaceId: String, onDeleted: () -> Unit = {}) {
         if (workspaceId == HOME_ID) return
         scope.launch {
             try {
                 runtime.deleteWorkspace(workspaceId)
+                onDeleted()
                 if (state().currentWorkspaceId == workspaceId) {
                     val workspaces = withContext(ioDispatcher) { queries.workspaces() }
                     val home = workspaces.firstOrNull { it.isHome } ?: workspaces.firstOrNull()

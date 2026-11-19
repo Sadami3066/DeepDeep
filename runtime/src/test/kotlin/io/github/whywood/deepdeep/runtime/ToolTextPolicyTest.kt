@@ -58,9 +58,7 @@ class ToolTextPolicyTest {
         val present = presentTool(null) { null }
 
         assertTrue(present.promptSnippet.orEmpty().contains("card"))
-        assertTrue(
-            present.promptGuidelines.orEmpty().any { it.contains("card id") && it.contains("present") },
-        )
+        assertTrue(present.description.contains("type=card"))
     }
 
     private fun scan(tool: String, text: String) {

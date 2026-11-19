@@ -265,7 +265,10 @@ class PiSessionEngine(
         } else {
             shellExecutor
         }
-        return buildTools(shell, SessionBinding(supportsChatDelivery)) { null }
+        val binding = SessionBinding(supportsChatDelivery).also { candidate ->
+            candidate.bind(BoundSession(sessionId = "", sessionFile = null, cwd = cwd.toString()))
+        }
+        return buildTools(shell, binding) { null }
     }
 
     private fun buildTools(
@@ -300,7 +303,7 @@ class PiSessionEngine(
     override suspend fun loadMcpServers(): Map<String, McpServerConfig> {
         val settings = SettingsManager.forPaths(paths, fs)
         val loaded = McpConfigLoader(paths, fs, settings).load()
-        return loaded.servers.toMap()
+        return loaded.servers.filter { (name, _) -> name !in excludedMcpServers }.toMap()
     }
 
     suspend fun listSessions(): List<ConversationSummary> = SessionManager.list(paths, fs).map { info ->

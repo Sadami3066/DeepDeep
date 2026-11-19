@@ -3,7 +3,7 @@ package io.github.whywood.deepdeep.ui.common.chat
 import io.github.whywood.deepdeep.runtime.AssistantMessage
 import io.github.whywood.deepdeep.runtime.AssistantStep
 import io.github.whywood.deepdeep.runtime.ToolActivityStatus
-import io.github.whywood.deepdeep.runtime.ToolResultDetails
+import io.github.whywood.deepdeep.plugin.api.Cards
 import io.github.whywood.deepdeep.runtime.ToolTrace
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -37,7 +37,7 @@ private fun presentedCardRef(trace: ToolTrace): PresentedCardRef? {
 }
 
 private fun cardDescriptor(trace: ToolTrace): PresentedCardRef.Payload? {
-    val descriptor = trace.resultDetails?.get(ToolResultDetails.CARD_KEY) as? JsonObject ?: return null
+    val descriptor = trace.resultDetails?.get(Cards.KEY) as? JsonObject ?: return null
     val customType = descriptor.string("customType") ?: return null
     val payload = descriptor["payload"] as? JsonObject ?: return null
     return PresentedCardRef.Payload(

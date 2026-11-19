@@ -483,7 +483,9 @@ private fun PluginRow(
     val colors = deepDeepColors()
     val available = snapshot.availability is PluginAvailabilityUi.Available
     val failure = snapshot.lastError?.takeIf {
-        snapshot.phase == PluginPhaseUi.FAILED || snapshot.phase == PluginPhaseUi.DEGRADED
+        snapshot.phase == PluginPhaseUi.FAILED ||
+            snapshot.phase == PluginPhaseUi.DEGRADED ||
+            snapshot.phase == PluginPhaseUi.DISABLED
     }
     val description = when {
         !available -> (snapshot.availability as? PluginAvailabilityUi.Unavailable)?.reason
@@ -637,7 +639,9 @@ private fun PluginDetailSheet(
     val context = LocalContext.current
     val publisher = snapshot.publisher
     val failure = snapshot.lastError?.takeIf {
-        snapshot.phase == PluginPhaseUi.FAILED || snapshot.phase == PluginPhaseUi.DEGRADED
+        snapshot.phase == PluginPhaseUi.FAILED ||
+            snapshot.phase == PluginPhaseUi.DEGRADED ||
+            snapshot.phase == PluginPhaseUi.DISABLED
     }
     val bodyMaxHeight = (LocalConfiguration.current.screenHeightDp * 0.66f).dp
     DdSheet(onDismiss = onDismiss) {

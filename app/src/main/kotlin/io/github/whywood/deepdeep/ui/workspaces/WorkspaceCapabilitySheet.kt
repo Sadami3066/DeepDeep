@@ -64,7 +64,7 @@ internal fun WorkspaceCapabilitySheet(
             loading = true
             val loaded = when (kind) {
                 WorkspaceCapabilityKind.Skills -> skillRepository.list().getOrNull()
-                    ?.map { CapabilityItem(it.id, it.name) }
+                    ?.map { CapabilityItem(it.name, it.name) }
                     .orEmpty()
 
                 WorkspaceCapabilityKind.Plugins -> pluginManager.state.value.plugins

@@ -100,7 +100,7 @@ fun WorkspaceSettingsScreen(
             SettingsLoad(
                 agentsDocSet = agentDocStore.read(workspace.cwd) != null,
                 policy = current,
-                skillCount = current.enabledSkills(skills.mapTo(mutableSetOf()) { it.id }).size,
+                skillCount = current.enabledSkills(skills.mapTo(mutableSetOf()) { it.name }).size,
                 pluginCount = current.enabledPlugins(plugins).size,
                 mcpCount = current.enabledMcpServers(mcpServers).size,
             )

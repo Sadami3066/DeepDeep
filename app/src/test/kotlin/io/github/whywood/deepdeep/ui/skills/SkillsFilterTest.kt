@@ -6,9 +6,9 @@ import org.junit.Test
 
 class SkillsFilterTest {
     private val skills = listOf(
-        InstalledSkill("ppt", "Slides", "Build slide decks", false, true, 1),
-        InstalledSkill("web", "Research", "Search the web and summarize", false, true, 2),
-        InstalledSkill("misc", "Notes", "Local note helpers", true, false, 3),
+        InstalledSkill("ppt", "Slides", "Build slide decks", false, 1),
+        InstalledSkill("web", "Research", "Search the web and summarize", false, 2),
+        InstalledSkill("misc", "Notes", "Local note helpers", true, 3),
     )
 
     @Test

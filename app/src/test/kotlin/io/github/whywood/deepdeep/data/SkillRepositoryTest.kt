@@ -79,8 +79,15 @@ class SkillRepositoryTest {
         assertEquals("alpha", skill.name)
         assertEquals("Alpha skill", skill.description)
         assertFalse(skill.disableModelInvocation)
-        assertFalse(skill.globalEnabled)
         assertTrue(repository.readContent("alpha")!!.contains("Alpha body"))
+    }
+
+    @Test
+    fun installActivatesSkillWithoutSeparateEnableStep() = runTest {
+        repository.install(skillZip(), "alpha.zip")
+        assertTrue(globalFile().isFile)
+        assertEquals(0, repository.syncActiveSkills())
+        assertEquals(listOf("alpha"), repository.list().getOrThrow().map { it.id })
     }
 
     @Test
@@ -94,7 +101,7 @@ class SkillRepositoryTest {
     @Test
     fun installUpsertsAndRefreshesActiveCopies() = runTest {
         repository.install(skillZip("First"), "alpha.zip")
-        assertTrue(repository.setGlobalEnabled("alpha", true))
+        assertTrue(globalFile().isFile)
         val updated = repository.install(skillZip("Second"), "alpha.zip")
         assertTrue(updated is SkillArchiveResult.Success)
         assertEquals("Second", repository.list().getOrThrow().single().description)
@@ -102,43 +109,12 @@ class SkillRepositoryTest {
     }
 
     @Test
-    fun globalEnableCopiesAndRemovesProjectCopies() = runTest {
+    fun deleteRemovesRepositoryAndActiveCopy() = runTest {
         repository.install(skillZip(), "alpha.zip")
-        homeProjectFile().parentFile?.mkdirs()
-        homeProjectFile().writeText("stale")
-        workspaceProjectFile().parentFile?.mkdirs()
-        workspaceProjectFile().writeText("stale")
-        assertTrue(repository.setGlobalEnabled("alpha", true))
         assertTrue(globalFile().isFile)
-        assertFalse(homeProjectFile().exists())
-        assertFalse(workspaceProjectFile().exists())
-        assertTrue(repository.list().getOrThrow().single().globalEnabled)
-        assertTrue(repository.setGlobalEnabled("alpha", false))
-        assertFalse(globalFile().exists())
-        assertFalse(repository.list().getOrThrow().single().globalEnabled)
-    }
-
-    @Test
-    fun projectTogglesCopyAndRemove() = runTest {
-        repository.install(skillZip(), "alpha.zip")
-        assertTrue(repository.applyProjectSkills(workspaceDir.absolutePath, setOf("alpha")))
-        assertTrue(workspaceProjectFile().isFile)
-        assertEquals(setOf("alpha"), repository.projectEnabledIds(workspaceDir.absolutePath))
-        assertTrue(repository.applyProjectSkills(workspaceDir.absolutePath, emptySet()))
-        assertFalse(workspaceProjectFile().exists())
-        assertTrue(repository.projectEnabledIds(workspaceDir.absolutePath).isEmpty())
-    }
-
-    @Test
-    fun deleteRemovesRepositoryGlobalAndProjectCopies() = runTest {
-        repository.install(skillZip(), "alpha.zip")
-        assertTrue(repository.setGlobalEnabled("alpha", true))
-        assertTrue(repository.applyProjectSkills(workspaceDir.absolutePath, setOf("alpha")))
-        assertTrue(workspaceProjectFile().isFile)
         assertTrue(repository.delete("alpha"))
         assertFalse(File(repoDir, "alpha").exists())
         assertFalse(globalFile().exists())
-        assertFalse(workspaceProjectFile().exists())
         assertTrue(repository.list().getOrThrow().isEmpty())
         assertNull(repository.readContent("alpha"))
     }
@@ -156,8 +132,6 @@ class SkillRepositoryTest {
         assertTrue(File(repoDir, "agent-skill/SKILL.md").isFile)
         assertTrue(File(repoDir, "home-skill/SKILL.md").isFile)
         assertTrue(File(repoDir, "workspace-skill/SKILL.md").isFile)
-        assertTrue(skills.getValue("agent-skill").globalEnabled)
-        assertFalse(skills.getValue("home-skill").globalEnabled)
         assertEquals(1L, repository.changes.value)
     }
 
@@ -221,17 +195,8 @@ class SkillRepositoryTest {
         assertTrue(repository.install(skillZip(), "alpha.zip") is SkillArchiveResult.Success)
         assertEquals(1L, repository.changes.value)
 
-        assertTrue(repository.setGlobalEnabled("alpha", true))
-        assertEquals(2L, repository.changes.value)
-
-        assertTrue(repository.applyProjectSkills(workspaceDir.absolutePath, setOf("alpha")))
-        assertEquals(3L, repository.changes.value)
-
-        assertFalse(repository.setGlobalEnabled("missing", true))
-        assertEquals(3L, repository.changes.value)
-
         assertTrue(repository.delete("alpha"))
-        assertEquals(4L, repository.changes.value)
+        assertEquals(2L, repository.changes.value)
     }
 
     @Test
@@ -250,10 +215,7 @@ class SkillRepositoryTest {
 
     @Test
     fun rejectsUnsafeIds() = runTest {
-        assertFalse(repository.setGlobalEnabled("../alpha", true))
         assertFalse(repository.delete("../alpha"))
         assertNull(repository.readContent("../alpha"))
-        assertTrue(repository.projectEnabledIds("").isEmpty())
-        assertFalse(repository.applyProjectSkills("", setOf("alpha")))
     }
 }

@@ -64,7 +64,8 @@ internal class PluginToolImpl(
     override val exposure: PluginToolExposure,
     private val executeBlock: suspend (PluginToolCall) -> PluginToolResult,
 ) : PluginTool {
-    override suspend fun execute(call: PluginToolCall): PluginToolResult = executeBlock(call)
+    override suspend fun execute(call: PluginToolCall): PluginToolResult =
+        Cards.deliver(call.callId, executeBlock(call))
 }
 
 public interface PluginToolCall {

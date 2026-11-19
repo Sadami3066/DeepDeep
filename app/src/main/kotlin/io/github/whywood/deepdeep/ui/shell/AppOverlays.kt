@@ -32,8 +32,10 @@ import io.github.whywood.deepdeep.ui.common.chat.ChatUiState
 import io.github.whywood.deepdeep.ui.common.chat.rememberAttachmentPickers
 import io.github.whywood.deepdeep.ui.common.shareChooser
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 
@@ -96,7 +98,9 @@ internal fun AppOverlays(
     val attachmentPickers = rememberAttachmentPickers { uri -> chatViewModel.attach(uri) }
     val botAvatarStore = remember { BotAvatarStore(context) }
     LaunchedEffect(state.workspaces, state.ready) {
-        if (state.ready) botAvatarStore.cleanup(state.workspaces.mapNotNull { it.avatar })
+        if (!state.ready || state.workspaces.isEmpty()) return@LaunchedEffect
+        val avatars = state.workspaces.mapNotNull { it.avatar }
+        withContext(Dispatchers.IO) { botAvatarStore.cleanup(avatars) }
     }
     LaunchedEffect(overlays.jobsSheetOpen, overlays.selectedJobId) {
         val id = overlays.selectedJobId
@@ -154,9 +158,10 @@ internal fun AppOverlays(
             onConfirmWorkspaceDelete = {
                 val target = overlays.workspaceDeleteTarget
                 overlays.workspaceDeleteTarget = null
-                target?.let {
-                    botAvatarStore.delete(it.avatar)
-                    chatViewModel.deleteWorkspace(it.id)
+                target?.let { workspace ->
+                    chatViewModel.deleteWorkspace(workspace.id) {
+                        scope.launch(Dispatchers.IO) { botAvatarStore.delete(workspace.avatar) }
+                    }
                 }
             },
             onDismissWorkspaceDelete = { overlays.workspaceDeleteTarget = null },

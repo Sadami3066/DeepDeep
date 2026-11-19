@@ -9,7 +9,6 @@
 | `AgentDocStore.kt` | 项目 AGENTS.md 读写（override 优先、限 64 KB、原子写） |
 | `crash/` | 崩溃日志：`CrashLogStore` 把未捕获异常的线程/堆栈/版本/设备写到 `files/crash/crash-<时间戳>.txt`（最多 5 份，读取与清除）；`CrashReporter` 在 Application 启动时包装默认 uncaught handler，写完仍交给系统处理 |
 | `BundledSkills.kt` | 随包技能：`assets/skills/**` 按内容同步到技能仓库与全局启用目录，可传入门控谓词并删除被排除的自有技能；跳过插件标记/用户自有目录 |
-| `CapabilitySettingsStore.kt` | 能力开关 `files/capabilities.json`：屏幕操作 `screenOps` StateFlow 默认关闭 |
 | `AppPreferences.kt` | 聊天界面偏好：过程折叠、过程详细度、自动重试、后台唤醒、置顶、字号 |
 | `BotAvatarStore.kt` | Bot 头像：把相册图片解码、缩放到 256px 存为 JPEG 到 `files/bot-avatars/`，返回绝对路径给 `RuntimeWorkspace.avatar`；删除/替换时清理旧文件，`cleanup` 清掉未被引用的残留 |
 | `Attachment.kt` | 附件模型/分类/MIME 猜测与 `<attachments>` 块编解码 |
@@ -38,10 +37,10 @@
 | `SharePayload.kt` | 解析系统分享的 URI/文本（去重、最多 20 条） |
 | `ShareStaging.kt` | 分享附件暂存到 cache token 目录（限额、重名、1 小时清理） |
 | `SkillArchive.kt` | 技能 zip 解析：单 SKILL.md、frontmatter、路径安全与体积限制 |
-| `SkillRepository.kt` | 技能仓库：安装/删除/全局开关与项目级 `.pi/skills` 同步 |
+| `SkillRepository.kt` | 技能仓库：安装即写入 `agentDir/skills` 生效目录（唯一一层），删除同时清理；启动时把外部 active 目录里的技能导入仓库 |
 | `StorageMigration.kt` | 旧目录迁到 home/workspaces 并重写会话 JSONL 的 cwd |
 | `StorageMountStore.kt` | 公共存储挂载目录 `files/storage-mounts.json`：`StorageMount(id,name,description,path)`、最多 20 个、名称≤32/说明≤160、限定 `/storage/emulated/0/`、原子写 |
-| `WorkspaceToolPolicyStore.kt` | Bot 能力策略 `files/workspace-tool-policies.json`：按 canonical cwd 存 `WorkspaceToolPolicy(allCapabilities, skills, plugins, mcpServers, screenTools, miniappTools)`；`allCapabilities=true` 时集合是排除项（默认 Bot），否则是启用项（普通 Bot）；Mutex + 原子写 |
+| `WorkspaceToolPolicyStore.kt` | Bot 能力策略 `files/workspace-tool-policies.json`：按 canonical cwd 存 `WorkspaceToolPolicy(allCapabilities, skills, plugins, mcpServers, screenTools, miniappTools)`；`allCapabilities=true` 时集合是排除项（默认 Bot），否则是启用项（普通 Bot）；`changes` 流用于写入后重建已打开会话；Mutex + 原子写 |
 | `ThemePreferences.kt` | 主题选择与已解析调色板缓存（SharedPreferences，冷启动首帧可读；插件主题失效时由 ThemeController 回退 system） |
 | [update/](update/AGENTS.md) | 应用内更新：GitHub 最新 Release 检查、下载校验与系统安装（详见子包文档） |
 | `VoicePreferences.kt` | 语音自动朗读开关 DataStore |

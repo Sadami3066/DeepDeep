@@ -109,6 +109,17 @@ public interface io.github.whywood.deepdeep.plugin.api.CalendarService {
 public final class io.github.whywood.deepdeep.plugin.api.CalendarService$DefaultImpls {
   public static java.lang.Object events$default(io.github.whywood.deepdeep.plugin.api.CalendarService, long, long, java.util.List, int, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
+public final class io.github.whywood.deepdeep.plugin.api.Cards {
+  public static final io.github.whywood.deepdeep.plugin.api.Cards INSTANCE;
+  public static final java.lang.String KEY;
+  public static final java.lang.String RAW_KEY;
+  public static final java.lang.String GUIDANCE_KEY;
+  public static final java.lang.String DISPLAY_KEY;
+  public static final int $stable;
+  public final kotlinx.serialization.json.JsonObject descriptor(java.lang.String, java.lang.String, kotlinx.serialization.json.JsonObject);
+  public final java.lang.String instruction(java.lang.String, java.lang.String);
+  public final io.github.whywood.deepdeep.plugin.api.PluginToolResult deliver(java.lang.String, io.github.whywood.deepdeep.plugin.api.PluginToolResult);
+}
 public interface io.github.whywood.deepdeep.plugin.api.ChatAttachment {
   public abstract java.lang.String getPath();
   public abstract java.lang.String getMimeType();
@@ -721,6 +732,18 @@ public final class io.github.whywood.deepdeep.plugin.api.ImageBlockImpl implemen
   public final io.github.whywood.deepdeep.plugin.api.ImageBlockImpl copy(byte[], java.lang.String);
   public static io.github.whywood.deepdeep.plugin.api.ImageBlockImpl copy$default(io.github.whywood.deepdeep.plugin.api.ImageBlockImpl, byte[], java.lang.String, int, java.lang.Object);
   public java.lang.String toString();
+}
+public interface io.github.whywood.deepdeep.plugin.api.ImageService {
+  public static final io.github.whywood.deepdeep.plugin.api.ImageService$Companion Companion;
+  public static final int DEFAULT_MAX_EDGE_PX;
+  public abstract java.lang.Object load(java.lang.String, int, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.RemoteImage>);
+  public static java.lang.Object load$default(io.github.whywood.deepdeep.plugin.api.ImageService, java.lang.String, int, kotlin.coroutines.Continuation, int, java.lang.Object);
+}
+public final class io.github.whywood.deepdeep.plugin.api.ImageService$Companion {
+  public static final int DEFAULT_MAX_EDGE_PX;
+}
+public final class io.github.whywood.deepdeep.plugin.api.ImageService$DefaultImpls {
+  public static java.lang.Object load$default(io.github.whywood.deepdeep.plugin.api.ImageService, java.lang.String, int, kotlin.coroutines.Continuation, int, java.lang.Object);
 }
 public interface io.github.whywood.deepdeep.plugin.api.InputDecision {
   public abstract java.lang.String getText();
@@ -1795,6 +1818,7 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginCapability {
   public static final java.lang.String access$getACCESSIBILITY$cp();
   public static final java.lang.String access$getSHARE$cp();
   public static final java.lang.String access$getDEEPLINK$cp();
+  public static final java.lang.String access$getIMAGES$cp();
   public static final java.util.List access$getALL$cp();
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginCapability$Companion {
@@ -1836,6 +1860,7 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginCapability$Compan
   public final java.lang.String getACCESSIBILITY-G6-5-uY();
   public final java.lang.String getSHARE-G6-5-uY();
   public final java.lang.String getDEEPLINK-G6-5-uY();
+  public final java.lang.String getIMAGES-G6-5-uY();
   public final java.util.List<io.github.whywood.deepdeep.plugin.api.PluginCapability> getALL();
   public final java.lang.String fromWire-e8UcEes(java.lang.String);
   public io.github.whywood.deepdeep.plugin.api.PluginCapability$Companion(kotlin.jvm.internal.DefaultConstructorMarker);
@@ -2180,6 +2205,7 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHost {
   public abstract io.github.whywood.deepdeep.plugin.api.MiniappService miniapp();
   public abstract io.github.whywood.deepdeep.plugin.api.McpService mcp();
   public abstract io.github.whywood.deepdeep.plugin.api.UiService ui();
+  public default io.github.whywood.deepdeep.plugin.api.ImageService images();
   public abstract io.github.whywood.deepdeep.plugin.api.AppInfoService app();
   public abstract io.github.whywood.deepdeep.plugin.api.PluginBus bus();
   public abstract io.github.whywood.deepdeep.plugin.api.LogService logs();
@@ -2203,9 +2229,11 @@ public interface io.github.whywood.deepdeep.plugin.api.PluginHost {
   public abstract io.github.whywood.deepdeep.plugin.api.CredentialService credentials();
   public abstract io.github.whywood.deepdeep.plugin.api.AccessibilityServicePlugin accessibility();
   public abstract void requestContributionsRefresh();
+  public static io.github.whywood.deepdeep.plugin.api.ImageService access$images$jd(io.github.whywood.deepdeep.plugin.api.PluginHost);
   public static io.github.whywood.deepdeep.plugin.api.ChatService access$chat$jd(io.github.whywood.deepdeep.plugin.api.PluginHost);
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginHost$DefaultImpls {
+  public static io.github.whywood.deepdeep.plugin.api.ImageService images(io.github.whywood.deepdeep.plugin.api.PluginHost);
   public static io.github.whywood.deepdeep.plugin.api.ChatService chat(io.github.whywood.deepdeep.plugin.api.PluginHost);
 }
 public final class io.github.whywood.deepdeep.plugin.api.PluginKt {
@@ -2825,6 +2853,9 @@ public final class io.github.whywood.deepdeep.plugin.api.PluginToolImpl implemen
   public io.github.whywood.deepdeep.plugin.api.PluginToolExposure getExposure();
   public java.lang.Object execute(io.github.whywood.deepdeep.plugin.api.PluginToolCall, kotlin.coroutines.Continuation<? super io.github.whywood.deepdeep.plugin.api.PluginToolResult>);
 }
+final class io.github.whywood.deepdeep.plugin.api.PluginToolImpl$execute$1 extends kotlin.coroutines.jvm.internal.ContinuationImpl {
+  public final java.lang.Object invokeSuspend(java.lang.Object);
+}
 public interface io.github.whywood.deepdeep.plugin.api.PluginToolResult {
   public abstract java.lang.String getText();
   public abstract java.util.List<io.github.whywood.deepdeep.plugin.api.ToolBlock> getBlocks();
@@ -3048,6 +3079,26 @@ public final class io.github.whywood.deepdeep.plugin.api.Provides$DefaultImpls {
 public interface io.github.whywood.deepdeep.plugin.api.PublisherInfo {
   public abstract java.lang.String getName();
   public abstract java.lang.String getKeyId();
+}
+public final class io.github.whywood.deepdeep.plugin.api.RemoteImage {
+  public static final int $stable;
+  public io.github.whywood.deepdeep.plugin.api.RemoteImage(androidx.compose.ui.graphics.ImageBitmap, int, int, java.lang.String, boolean);
+  public io.github.whywood.deepdeep.plugin.api.RemoteImage(androidx.compose.ui.graphics.ImageBitmap, int, int, java.lang.String, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker);
+  public final androidx.compose.ui.graphics.ImageBitmap getBitmap();
+  public final int getWidth();
+  public final int getHeight();
+  public final java.lang.String getContentType();
+  public final boolean getFromCache();
+  public final androidx.compose.ui.graphics.ImageBitmap component1();
+  public final int component2();
+  public final int component3();
+  public final java.lang.String component4();
+  public final boolean component5();
+  public final io.github.whywood.deepdeep.plugin.api.RemoteImage copy(androidx.compose.ui.graphics.ImageBitmap, int, int, java.lang.String, boolean);
+  public static io.github.whywood.deepdeep.plugin.api.RemoteImage copy$default(io.github.whywood.deepdeep.plugin.api.RemoteImage, androidx.compose.ui.graphics.ImageBitmap, int, int, java.lang.String, boolean, int, java.lang.Object);
+  public java.lang.String toString();
+  public int hashCode();
+  public boolean equals(java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.plugin.api.ResolvedIntent {
   public static final int $stable;

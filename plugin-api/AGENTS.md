@@ -1,6 +1,6 @@
 # plugin-api · 插件契约 SDK
 
-外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放契约类型与顶层工厂，不含宿主实现；manifest 解析/校验/版本比较已移到 `:app` 的 `plugin/host/external/`。`PLUGIN_API_LEVEL = 6`，`HOST_UI_API_LEVEL = 2`，当前 SDK 版本 `1.3.1`（level 6 内加法，宿主 1.1.0+；`images` 服务需宿主 1.4.0+）。
+外部 `.ddp` 插件共用的唯一契约，也是对外发布的插件 SDK（Android library，包名 `io.github.whywood.deepdeep.plugin.api`）。只放契约类型与顶层工厂，不含宿主实现；manifest 解析/校验/版本比较已移到 `:app` 的 `plugin/host/external/`。`PLUGIN_API_LEVEL = 6`，`HOST_UI_API_LEVEL = 2`，当前 SDK 版本 `1.4.0`（level 6 内加法，宿主 1.4.3+；`images` 服务需宿主 1.4.0+）。
 
 ## 文件
 
@@ -15,6 +15,7 @@
 | `Contributions.kt` | `Contributions`、`PluginTool`、`PluginToolCall`、`PluginRunSignal`、`PluginToolResult`、`ToolBlock` 与工厂 |
 | `Hooks.kt` | `PluginEvent` 标记接口、观察事件（含通知/后台/分享/深链/应用生命周期）、5 个变换/闸门请求与决策、`PluginHooks`（默认空实现） |
 | `Ui.kt` | `SlotIds`、`SlotBinding`、`SlotContent`、`PluginPage`、`ComposerAction`、`PluginUiContributions` 与工厂 |
+| `Cards.kt` | 插件侧卡片交付：`Cards`（details 键、卡片描述符、`present` 指令、`deliver`）、`PluginCard` + `pluginCard`、`pluginResult`；工具结果文案与展示文本由插件 SDK 统一生成 |
 | `ToolResultRenderers.kt` | 工具结果渲染器契约：`ToolResultSource`、`ToolResultMatch` + `toolResultMatch`、`ToolResultRenderer` + `toolResultRenderer`、`ToolResultState`、`ToolResultRendererContributor` |
 | `SlotStates.kt` | `SlotState` 标记接口与 `ToolCardSlotState` / `CustomMessageSlotState` 只读接口 |
 | `Services.kt` | 现有宿主服务接口（含 UI/通知/会话/聊天方法，1.2.0 新增 `UiService.openPageSheet`，1.3.0 新增 `McpService.callStructured`，1.3.1 新增 `ImageService`）、`PluginServiceUnavailable`、聊天 DTO 与工厂 |
@@ -36,4 +37,4 @@
 - explicit API 模式开启：新增公共声明必须显式 `public`，内部实现保持 `internal`。
 - 改公开类型/签名前后跑 `./scripts/api-compat.sh`；破坏性变更必须升 `PLUGIN_API_LEVEL`、更新兼容基线并写 `CHANGELOG.md`。
 - 测试在 `src/test/kotlin`（JUnit4），运行 `./scripts/gradlew-locked :plugin-api:testDebugUnitTest`；`./scripts/gradlew-locked :plugin-api:publishAllPublicationsToPagesRepository` 发布 SDK 到 `build/maven-repo`，再复制到 `deepdeep-maven` 仓库。
-- 工具结果里的卡片数据通过 details 保留键 `deepdeep.card`（`customType` + `title` + `payload`）交给宿主，卡片由模型调用 `present` 展示，不再自动上屏。
+- 卡片交付归插件侧：插件把卡片描述符、完整返回与使用说明写进结果 details，`PluginTool` 工厂经 `Cards.deliver` 生成模型文本（含 `present` 调用指令）与展示文本；宿主只按 `deepdeep.card` 渲染，不再识别或追加卡片信息。

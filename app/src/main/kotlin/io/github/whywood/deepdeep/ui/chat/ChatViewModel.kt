@@ -597,7 +597,8 @@ class ChatViewModel(
     fun updateWorkspaceProfile(workspaceId: String, avatar: String?, intro: String?) =
         workspaceController.updateProfile(workspaceId, avatar, intro)
 
-    fun deleteWorkspace(workspaceId: String) = workspaceController.delete(workspaceId)
+    fun deleteWorkspace(workspaceId: String, onDeleted: () -> Unit = {}) =
+        workspaceController.delete(workspaceId, onDeleted)
 
     suspend fun loadWorkspaceSessionCount(workspaceId: String): Int = sessionList.sessionCount(workspaceId)
 

@@ -150,19 +150,61 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         return installedPluginIds() - policy.enabledPlugins(installedPluginIds())
     }
 
-    private suspend fun installedMcpServers(): Set<String> =
-        runCatching { deps.mcpConfigStore.load().servers.keys }.getOrDefault(emptySet())
+    @Volatile
+    private var cachedSkills: List<io.github.whywood.deepdeep.data.InstalledSkill>? = null
+
+    @Volatile
+    private var cachedMcpServers: Set<String>? = null
+
+    private suspend fun installedSkills(): List<io.github.whywood.deepdeep.data.InstalledSkill> {
+        val listed = runCatching { deps.skillRepository.list().getOrNull() }.getOrNull()
+        if (listed != null) cachedSkills = listed
+        return listed ?: cachedSkills.orEmpty()
+    }
+
+    private suspend fun installedMcpServers(): Set<String> {
+        val loaded = runCatching { deps.mcpConfigStore.load().servers.keys }.getOrNull()
+        if (loaded != null) cachedMcpServers = loaded
+        return loaded ?: cachedMcpServers.orEmpty()
+    }
+
+    private suspend fun exclusionsFor(cwd: String): BotPolicyExclusions {
+        val policy = resolvedPolicy(cwd)
+        val installedPlugins = installedPluginIds()
+        val excludedPlugins = installedPlugins - policy.enabledPlugins(installedPlugins)
+        val skills = installedSkills()
+        val allSkillNames = skills.mapTo(mutableSetOf()) { it.name }
+        val nameById = skills.associate { it.id to it.name }
+        val excludedPluginSkills = excludedPlugins.flatMapTo(mutableSetOf()) { pluginId ->
+            deps.pluginManager().skillIds(pluginId).mapTo(mutableSetOf()) { id -> nameById[id] ?: id }
+        }
+        val enabledSkills = policy.enabledSkills(allSkillNames)
+        val excludedScreenSkill = if (policy.screenTools) emptySet() else setOf(BundledSkills.SCREEN_OPS_SKILL)
+        val mcp = installedMcpServers()
+        return BotPolicyExclusions(
+            plugins = excludedPlugins,
+            skills = (allSkillNames - enabledSkills) + excludedPluginSkills + excludedScreenSkill,
+            mcpServers = mcp - policy.enabledMcpServers(mcp),
+        )
+    }
+
+    private suspend fun homeExcludedPlugins(): Set<String> =
+        exclusionsFor(deps.homeDir.absolutePath).plugins
+
+    private suspend fun homeExcludedSkills(): Set<String> =
+        exclusionsFor(deps.homeDir.absolutePath).skills
+
+    private suspend fun homeExcludedMcpServers(): Set<String> =
+        exclusionsFor(deps.homeDir.absolutePath).mcpServers
+
+    private data class BotPolicyExclusions(
+        val plugins: Set<String>,
+        val skills: Set<String>,
+        val mcpServers: Set<String>,
+    )
 
     private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
-        val workspacePolicy = resolvedPolicy(cwd.absolutePath)
-        val allPlugins = installedPluginIds()
-        val allSkills = deps.skillRepository.list().getOrNull().orEmpty().mapTo(mutableSetOf()) { it.id }
-        val allMcp = installedMcpServers()
-        val enabledPlugins = workspacePolicy.enabledPlugins(allPlugins)
-        val excludedPlugins = allPlugins - enabledPlugins
-        val excludedPluginSkills = excludedPlugins.flatMapTo(mutableSetOf()) { deps.pluginManager().skillIds(it) }
-        val enabledSkills = workspacePolicy.enabledSkills(allSkills)
-        val excludedScreenSkill = if (workspacePolicy.screenTools) emptySet() else setOf(BundledSkills.SCREEN_OPS_SKILL)
+        val exclusions = exclusionsFor(cwd.absolutePath)
         PiSessionEngine(
             workspace = cwd,
             agentDir = deps.agentDir,
@@ -173,10 +215,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             personalization = { deps.personalizationStore.read().toRuntime() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             storageMounts = { storageMountInfos() },
-            pluginPromptBody = { deps.pluginManager().promptBody(excludedPlugins) },
-            pluginPromptOverrides = { deps.pluginManager().promptOverrides(excludedPlugins) },
-            excludedSkills = (allSkills - enabledSkills) + excludedPluginSkills + excludedScreenSkill,
-            excludedMcpServers = allMcp - workspacePolicy.enabledMcpServers(allMcp),
+            pluginPromptBody = { deps.pluginManager().promptBody(exclusions.plugins) },
+            pluginPromptOverrides = { deps.pluginManager().promptOverrides(exclusions.plugins) },
+            excludedSkills = exclusions.skills,
+            excludedMcpServers = exclusions.mcpServers,
             toolContext = appToolContext,
             memory = memoryStore,
             hooks = pluginRuntimeHooks(),
@@ -194,8 +236,10 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
             defaultConfig = { deps.modelConfigStore.read() },
             configuredProviders = deps.configuredProviderIds,
             personalization = { deps.personalizationStore.read().toRuntime() },
-            pluginPromptBody = { deps.pluginManager().promptBody() },
-            pluginPromptOverrides = { deps.pluginManager().promptOverrides() },
+            pluginPromptBody = { deps.pluginManager().promptBody(homeExcludedPlugins()) },
+            pluginPromptOverrides = { deps.pluginManager().promptOverrides(homeExcludedPlugins()) },
+            excludedSkills = { homeExcludedSkills() },
+            excludedMcpServers = { homeExcludedMcpServers() },
             sharedStorage = { deps.linuxSettings.isSharedStorageEnabled() && isSharedStorageGranted() },
             storageMounts = { storageMountInfos() },
             defaultMaxTurns = { 16 },

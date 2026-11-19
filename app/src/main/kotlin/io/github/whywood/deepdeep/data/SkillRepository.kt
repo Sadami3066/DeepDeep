@@ -23,7 +23,6 @@ data class InstalledSkill(
     val name: String,
     val description: String,
     val disableModelInvocation: Boolean,
-    val globalEnabled: Boolean,
     val installedAt: Long,
 )
 
@@ -76,7 +75,7 @@ class SkillRepository(
             is SkillArchiveResult.Failure -> result
             is SkillArchiveResult.Success -> try {
                 writeSkillDirectory(result.skill, File(repoDir, result.skill.id))
-                refreshActiveCopies(result.skill.id)
+                copyDirectory(File(repoDir, result.skill.id), File(globalSkillsDir, result.skill.id))
                 _changes.value += 1
                 SkillArchiveResult.Success(result.skill)
             } catch (cancelled: CancellationException) {
@@ -87,32 +86,11 @@ class SkillRepository(
         }
     }
 
-    suspend fun setGlobalEnabled(id: String, enabled: Boolean): Boolean = locked {
-        if (!isSafeSkillId(id)) return@locked false
-        if (!File(File(repoDir, id), SKILL_MD_FILE).isFile) return@locked false
-        try {
-            val global = File(globalSkillsDir, id)
-            if (enabled) {
-                copyDirectory(File(repoDir, id), global)
-                removeProjectCopies(id)
-            } else {
-                global.deleteRecursively()
-            }
-            _changes.value += 1
-            true
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            false
-        }
-    }
-
     suspend fun delete(id: String): Boolean = locked {
         if (!isSafeSkillId(id)) return@locked false
         try {
             File(repoDir, id).deleteRecursively()
             File(globalSkillsDir, id).deleteRecursively()
-            removeProjectCopies(id)
             _changes.value += 1
             true
         } catch (cancelled: CancellationException) {
@@ -131,44 +109,6 @@ class SkillRepository(
             throw cancelled
         } catch (error: Exception) {
             null
-        }
-    }
-
-    suspend fun projectEnabledIds(cwd: String): Set<String> = locked {
-        if (cwd.isBlank()) return@locked emptySet()
-        try {
-            projectSkillDirectories(cwd)
-                .map { it.name }
-                .filter { isSafeSkillId(it) }
-                .toSet()
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            emptySet()
-        }
-    }
-
-    suspend fun applyProjectSkills(cwd: String, enabledIds: Set<String>): Boolean = locked {
-        if (cwd.isBlank()) return@locked false
-        try {
-            val root = File(cwd, PROJECT_SKILLS_DIRECTORY)
-            root.mkdirs()
-            val repoIds = repoSkillDirectories().map { it.name }.toSet()
-            root.listFiles()
-                ?.filter { it.isDirectory && it.name in repoIds && it.name !in enabledIds }
-                ?.forEach { it.deleteRecursively() }
-            enabledIds.forEach { id ->
-                if (!isSafeSkillId(id)) return@forEach
-                val source = File(repoDir, id)
-                if (!File(source, SKILL_MD_FILE).isFile) return@forEach
-                copyDirectory(source, File(root, id))
-            }
-            _changes.value += 1
-            true
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (error: Exception) {
-            false
         }
     }
 
@@ -247,7 +187,6 @@ class SkillRepository(
                 name = metadata.name,
                 description = metadata.description,
                 disableModelInvocation = metadata.disableModelInvocation,
-                globalEnabled = File(globalSkillsDir, directory.name).isDirectory,
                 installedAt = directory.lastModified(),
             )
         }
@@ -261,40 +200,9 @@ class SkillRepository(
         }
         .orEmpty()
 
-    private fun projectSkillDirectories(cwd: String): List<File> = File(cwd, PROJECT_SKILLS_DIRECTORY)
-        .listFiles()
-        ?.filter { directory ->
-            directory.isDirectory && File(directory, SKILL_MD_FILE).isFile
-        }
-        .orEmpty()
-
     private fun workspaceDirectories(): List<File> = workspacesDir.listFiles()
         ?.filter { it.isDirectory }
         .orEmpty()
-
-    private fun projectSkillsRoot(cwd: String): File = File(cwd, PROJECT_SKILLS_DIRECTORY)
-
-    private fun projectCopyDirectories(id: String): List<File> = buildList {
-        add(File(projectSkillsRoot(homeDir.absolutePath), id))
-        workspaceDirectories().forEach { workspace ->
-            add(File(projectSkillsRoot(workspace.absolutePath), id))
-        }
-    }.filter { it.isDirectory }
-
-    private fun refreshActiveCopies(id: String) {
-        val source = File(repoDir, id)
-        if (!File(source, SKILL_MD_FILE).isFile) return
-        val global = File(globalSkillsDir, id)
-        if (global.isDirectory) copyDirectory(source, global)
-        projectCopyDirectories(id).forEach { copyDirectory(source, it) }
-    }
-
-    private fun removeProjectCopies(id: String) {
-        File(projectSkillsRoot(homeDir.absolutePath), id).deleteRecursively()
-        workspaceDirectories().forEach { workspace ->
-            File(projectSkillsRoot(workspace.absolutePath), id).deleteRecursively()
-        }
-    }
 
     private fun writeSkillDirectory(skill: ParsedSkill, target: File) {
         val parent = target.parentFile ?: repoDir

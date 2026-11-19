@@ -59,4 +59,5 @@
 | 6 | 1.0.x / 0.6.1 | 1.0.4+ | 工厂式构造、事件接口、prompt override 实验能力 |
 | 6 | 1.1.x / 0.7.x | 1.0.6+ | 加法扩展：设备/权限/包管理/高级系统访问/Intent/独立窗口/后台任务/剪贴板/定位/联系人/短信/日历/媒体/语音/网页/宿主凭据/无障碍/设置存储、页面参数与交互式选择器、通知监听与动作、系统事件 hooks、design 新组件；插件可使用 `permissions`/`components` 清单字段 |
 | 6 | 1.2.x / 0.9.x | 1.0.8+ | 主题化与插件页 sheet：manifest `provides.themes`、`UiService.openPageSheet`、`PluginPageContext.presentation`/`PluginPagePresentation`；design 主题颜色重载、`DdTheme.lightDeepDeep()` 与状态/提示/进度组件 |
-| 6 | 1.3.x / 0.9.x | 1.1.0+ | MCP/插件工具结果渲染器：`ToolResultRendererContributor`、`ToolResultRenderer`/`ToolResultState`；宿主持久化 structuredContent，支持 `tool_execute` 包装还原 |
+| 6 | 1.3.x / 0.9.x–0.11.x | 1.1.0+ | MCP/插件工具结果渲染器：`ToolResultRendererContributor`、`ToolResultRenderer`/`ToolResultState`；宿主持久化 structuredContent，支持 `tool_execute` 包装还原 |
+| 6 | 1.4.x / 0.11.x | 1.4.3+ | 插件侧卡片交付：`Cards`、`pluginCard`、`pluginResult`，工具结果文案与 `present` 指令由插件 SDK 生成；`images` 服务（1.3.1 起）需宿主 1.4.0+ |

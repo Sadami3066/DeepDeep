@@ -2,6 +2,9 @@ package io.github.whywood.deepdeep.data
 
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -35,17 +38,13 @@ class WorkspaceToolPolicyStore(private val file: File) {
     @Volatile
     private var cache: Map<String, WorkspaceToolPolicy> = readFromDisk()
 
-    fun isConfigured(cwd: String): Boolean = cwd.isNotBlank() && cache.containsKey(key(cwd))
+    private val _changes = MutableStateFlow(0L)
+
+    val changes: StateFlow<Long> = _changes.asStateFlow()
 
     fun policyForCwd(cwd: String): WorkspaceToolPolicy {
         if (cwd.isBlank()) return WorkspaceToolPolicy()
         return cache[key(cwd)] ?: WorkspaceToolPolicy()
-    }
-
-    fun defaultAllPolicy(): WorkspaceToolPolicy = WorkspaceToolPolicy(allCapabilities = true)
-
-    suspend fun reload() = withContext(Dispatchers.IO) {
-        mutex.withLock { cache = readFromDisk() }
     }
 
     suspend fun update(cwd: String, policy: WorkspaceToolPolicy) = withContext(Dispatchers.IO) {
@@ -54,6 +53,7 @@ class WorkspaceToolPolicyStore(private val file: File) {
             val next = if (policy.isEmpty) cache - key(cwd) else cache + (key(cwd) to policy)
             writeToDisk(next)
             cache = next
+            _changes.value += 1
         }
     }
 

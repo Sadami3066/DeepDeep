@@ -250,9 +250,11 @@ class PluginHostManager internal constructor(
     }
 
     private suspend fun autoDisable(pluginId: String, message: Int) {
+        val error = strings.get(message)
         external?.setEnabled(pluginId, false)
+        external?.markFailure(pluginId, error)
         gate.setEnabled(pluginId, false)
-        gate.markFailure(pluginId, strings.get(message))
+        gate.markFailure(pluginId, error)
     }
 
     private companion object {

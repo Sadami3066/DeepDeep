@@ -42,6 +42,7 @@ class BotAvatarStore(
 
     fun cleanup(validPaths: Collection<String>) {
         val valid = validPaths.toSet()
+        if (valid.isEmpty()) return
         directory.listFiles()?.forEach { file ->
             if (file.absolutePath !in valid) file.delete()
         }
