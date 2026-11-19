@@ -60,6 +60,7 @@ class DevPackageManagerTest {
             withTimeout(10_000) {
                 manager.state.first { it.operation == null && (it.installed.isNotEmpty() || it.error != null) }
             }
+            withTimeout(10_000) { while (notifier.finished.isEmpty()) delay(10) }
 
             assertNull(manager.state.value.error)
             assertTrue(notifier.finished.any { it.second })
