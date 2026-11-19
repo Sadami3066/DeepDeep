@@ -16,6 +16,9 @@ dependencyResolutionManagement {
         mavenLocal {
             content { includeGroup("io.github.whywood.superpi.sdk") }
         }
+        maven("https://sadami3066.github.io/SuperPI-Maven") {
+            content { includeGroup("io.github.whywood.superpi.sdk") }
+        }
         google()
         mavenCentral()
         maven("https://jitpack.io")
