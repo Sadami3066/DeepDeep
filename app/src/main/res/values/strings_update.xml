@@ -12,7 +12,7 @@
     <string name="update_downloading">正在下载 %1$d%%</string>
     <string name="update_ready">已下载，可以安装</string>
     <string name="update_install">安装</string>
-    <string name="update_permission_needed">需要允许 DeepDeep 安装应用</string>
+    <string name="update_permission_needed">需要允许 PI 安装应用</string>
     <string name="update_open_permission">去允许</string>
     <string name="update_error_network">无法连接更新服务，请检查网络后重试</string>
     <string name="update_error_service">更新信息异常，请稍后重试</string>

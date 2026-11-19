@@ -3,7 +3,7 @@
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowBackground">#F7F8F8</item>
+        <item name="android:windowBackground">@color/pi_paper</item>
     </style>
 
     <style name="Theme.DeepDeep.PermissionRequest" parent="android:style/Theme.Translucent.NoTitleBar">

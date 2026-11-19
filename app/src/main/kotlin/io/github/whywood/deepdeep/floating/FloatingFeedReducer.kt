@@ -10,7 +10,7 @@ const val FLOATING_SLEEPY_AFTER_MS = 10 * 60_000L
 const val FLOATING_COMPLETED_LIMIT = 20
 const val FLOATING_DISMISSED_LIMIT = 50
 
-enum class FloatingWhaleMood {
+enum class FloatingBubbleMood {
     IDLE,
     THINKING,
     SLEEPY,
@@ -355,17 +355,17 @@ fun floatingVisibleCompletions(state: FloatingFeedState): List<FloatingCompletio
 fun floatingPendingCount(state: FloatingFeedState): Int =
     state.questions.size + floatingVisibleCompletions(state).size
 
-fun floatingWhaleMood(state: FloatingFeedState, now: Long): FloatingWhaleMood = when {
-    state.runs.isNotEmpty() -> FloatingWhaleMood.THINKING
-    state.questions.isNotEmpty() -> FloatingWhaleMood.WAITING
+fun floatingBubbleMood(state: FloatingFeedState, now: Long): FloatingBubbleMood = when {
+    state.runs.isNotEmpty() -> FloatingBubbleMood.THINKING
+    state.questions.isNotEmpty() -> FloatingBubbleMood.WAITING
     floatingVisibleCompletions(state).isNotEmpty() ->
         if (floatingVisibleCompletions(state).any { it.status == RunStatus.FAILED || it.error != null }) {
-            FloatingWhaleMood.ALERT
+            FloatingBubbleMood.ALERT
         } else {
-            FloatingWhaleMood.DONE
+            FloatingBubbleMood.DONE
         }
-    now - state.lastEventAt >= FLOATING_SLEEPY_AFTER_MS -> FloatingWhaleMood.SLEEPY
-    else -> FloatingWhaleMood.IDLE
+    now - state.lastEventAt >= FLOATING_SLEEPY_AFTER_MS -> FloatingBubbleMood.SLEEPY
+    else -> FloatingBubbleMood.IDLE
 }
 
 fun floatingEventQueue(state: FloatingFeedState): List<FloatingEventCard> {

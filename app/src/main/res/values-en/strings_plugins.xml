@@ -89,7 +89,7 @@
     <string name="plugins_import_confirm">Import</string>
     <string name="plugins_import_success">Plugin imported</string>
     <string name="plugins_import_done">Plugin imported and active.</string>
-    <string name="plugins_import_restart">Plugin imported; takes effect after DeepDeep restarts.</string>
+    <string name="plugins_import_restart">Plugin imported; takes effect after PI restarts.</string>
     <string name="plugins_market_installed_hint">Go to the plugin page to configure it</string>
 
     <string name="plugins_page_title">Plugin page</string>
@@ -101,7 +101,7 @@
     <string name="plugins_pending_update_notice">Update ready to apply</string>
     <string name="plugins_apply_update">Update now</string>
     <string name="plugins_updating_update">Updating…</string>
-    <string name="plugin_notification_listener_label">DeepDeep plugin notifications</string>
+    <string name="plugin_notification_listener_label">PI plugin notifications</string>
 
     <string name="plugins_import_permissions">Permissions</string>
     <string name="plugins_import_components">System components</string>

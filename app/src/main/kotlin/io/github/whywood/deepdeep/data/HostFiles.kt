@@ -176,7 +176,7 @@ class HostFiles(
     }
 }
 
-internal const val SHARED_EXPORT_DIRECTORY = "/storage/emulated/0/Download/DeepDeep"
+internal const val SHARED_EXPORT_DIRECTORY = "/storage/emulated/0/Download/PI"
 internal const val EXPORT_MAX_AGE_MINUTES = 24L * 60L
 
 internal fun exportTarget(root: String, token: String, name: String): File =

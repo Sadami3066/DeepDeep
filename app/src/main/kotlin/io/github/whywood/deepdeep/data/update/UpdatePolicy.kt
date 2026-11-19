@@ -31,8 +31,8 @@ object UpdatePolicy {
     const val RETRY_INTERVAL_MS = 15L * 60L * 1000L
     const val PAGE_REFRESH_INTERVAL_MS = 10L * 60L * 1000L
 
-    private const val APK_PREFIX = "DeepDeep-"
-    private const val USER_AGENT = "DeepDeep-Android"
+    private const val APK_PREFIX = "PI-"
+    private const val USER_AGENT = "PI-Android"
     private val VERSION = Regex("^[vV]?(\\d+)\\.(\\d+)\\.(\\d+)$")
     private val SHA256 = Regex("^sha256:([0-9a-fA-F]{64})$", RegexOption.IGNORE_CASE)
 

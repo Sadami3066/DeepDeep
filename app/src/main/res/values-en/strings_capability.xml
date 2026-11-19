@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="screen_ops_service_label">Screen control</string>
-    <string name="screen_ops_service_description">Allow DeepDeep to read the current screen, tap, type, scroll and take screenshots</string>
+    <string name="screen_ops_service_description">Allow PI to read the current screen, tap, type, scroll and take screenshots</string>
 </resources>

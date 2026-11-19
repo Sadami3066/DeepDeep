@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-enum class ThemePreset { SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC }
+enum class ThemePreset { PI, SYSTEM, DEEP_DEEP, SANTORINI, OCEANIC }
 
 @Immutable
 data class DeepDeepColors(
@@ -292,12 +292,13 @@ private fun DeepDeepColors.materialScheme() = if (dark) {
 }
 @Composable
 public fun DeepDeepTheme(
-    preset: ThemePreset = ThemePreset.SYSTEM,
+    preset: ThemePreset = ThemePreset.PI,
     fontStyle: DdFontStyle = DdFonts.style,
     content: @Composable () -> Unit,
 ) {
     val systemDark = isSystemInDarkTheme()
     val colors = when (preset) {
+        ThemePreset.PI -> if (systemDark) DdTheme.darkPi() else DdTheme.lightPi()
         ThemePreset.SYSTEM -> if (systemDark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
         ThemePreset.SANTORINI -> DdTheme.lightSantorini()
         ThemePreset.OCEANIC -> DdTheme.darkOceanic()

@@ -95,7 +95,7 @@ class ProviderOAuthServiceTest {
         val raw = store.raw as kotlinx.serialization.json.JsonObject
         assertEquals("access", (raw["access"] as kotlinx.serialization.json.JsonPrimitive).content)
         assertEquals("123e4567-e89b-12d3-a456-426614174000", capturedOptions?.deviceId)
-        assertEquals("DeepDeep", capturedOptions?.agentName)
+        assertEquals("PI", capturedOptions?.agentName)
     }
 
     @Test

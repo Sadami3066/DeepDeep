@@ -53,7 +53,7 @@ class ContactsPluginServiceTest {
                 ContactValueRow("alice@example.com", Email.TYPE_WORK, null),
                 ContactValueRow("", Email.TYPE_HOME, null),
             ),
-            organization = "DeepDeep",
+            organization = "Acme",
             note = "  ",
             starred = true,
         )
@@ -64,7 +64,7 @@ class ContactsPluginServiceTest {
         assertEquals("mobile", contact.phones.single().label)
         assertEquals(1, contact.emails.size)
         assertEquals("work", contact.emails.single().label)
-        assertEquals("DeepDeep", contact.organization)
+        assertEquals("Acme", contact.organization)
         assertNull(contact.note)
         assertTrue(contact.starred)
     }

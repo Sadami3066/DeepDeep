@@ -73,7 +73,7 @@ internal class NotificationPluginService(
     override fun updateProgress(id: String, progress: Int?, title: String?) {
         val previous = posted[id]
         val builder = NotificationCompat.Builder(context, channelId(ChannelKind.PROGRESS))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title ?: previous?.title ?: context.getString(R.string.plugins_title))
             .setContentText(previous?.body.orEmpty())
             .setOnlyAlertOnce(true)
@@ -93,7 +93,7 @@ internal class NotificationPluginService(
 
     private fun post(notification: PluginNotification) {
         val builder = NotificationCompat.Builder(context, channelId(kindOf(notification)))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(notification.title)
             .setContentText(notification.body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(notification.body))

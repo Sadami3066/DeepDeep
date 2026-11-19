@@ -399,7 +399,7 @@ private fun CrashLogSheet(
                     enabled = text.isNotBlank(),
                     onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                        clipboard?.setPrimaryClip(ClipData.newPlainText("DeepDeep crash", text))
+                        clipboard?.setPrimaryClip(ClipData.newPlainText("PI crash", text))
                     },
                 )
                 DdTextAction(

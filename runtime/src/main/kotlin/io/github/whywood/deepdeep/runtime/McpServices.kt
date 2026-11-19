@@ -191,7 +191,7 @@ internal fun McpServerConfig.Http.oauthOptions(serverName: String): McpOAuthOpti
     clientSecret = oauth?.clientSecret,
     callbackPort = oauth?.callbackPort,
     callbackUrl = oauth?.callbackUrl,
-    clientName = oauth?.clientName ?: "DeepDeep",
+    clientName = oauth?.clientName ?: "PI",
     authorizationServerMetadataUrl = oauth?.authServerMetadataUrl,
 )
 

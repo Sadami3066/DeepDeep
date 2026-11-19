@@ -3,6 +3,10 @@ package io.github.whywood.deepdeep.theme
 sealed interface ThemeChoice {
     val key: String
 
+    data object Pi : ThemeChoice {
+        override val key: String = "pi"
+    }
+
     data object System : ThemeChoice {
         override val key: String = "system"
     }
@@ -26,13 +30,14 @@ sealed interface ThemeChoice {
     companion object {
         const val PACK_PREFIX: String = "pack:"
 
-        val builtIn: List<ThemeChoice> = listOf(System, DeepDeep, Santorini, Oceanic)
+        val builtIn: List<ThemeChoice> = listOf(Pi, System, DeepDeep, Santorini, Oceanic)
 
-        fun parse(raw: String?): ThemeChoice = fromKey(raw) ?: System
+        fun parse(raw: String?): ThemeChoice = fromKey(raw) ?: Pi
 
         fun fromKey(raw: String?): ThemeChoice? {
             if (raw.isNullOrBlank()) return null
             return when (raw) {
+                Pi.key -> Pi
                 System.key -> System
                 DeepDeep.key -> DeepDeep
                 Santorini.key -> Santorini

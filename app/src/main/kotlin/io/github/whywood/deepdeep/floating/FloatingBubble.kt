@@ -1,11 +1,9 @@
 package io.github.whywood.deepdeep.floating
 
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,15 +23,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.whywood.deepdeep.R
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.DdWordmark
+import io.github.whywood.deepdeep.design.DeepDeepColors
 import io.github.whywood.deepdeep.design.deepDeepColors
 
 internal enum class FloatingBubbleRing {
@@ -45,7 +44,7 @@ internal enum class FloatingBubbleRing {
 
 @Composable
 internal fun FloatingBubble(
-    mood: FloatingWhaleMood,
+    mood: FloatingBubbleMood,
     pending: Int,
     ring: FloatingBubbleRing,
     modifier: Modifier = Modifier,
@@ -71,14 +70,18 @@ internal fun FloatingBubble(
                 .clip(CircleShape)
                 .background(colors.surface.copy(alpha = 0.94f)),
         )
-        Image(
-            painter = painterResource(mood.drawable()),
-            contentDescription = null,
-            modifier = Modifier
+        Box(
+            Modifier
                 .size(FloatingBubbleSize - 4.dp)
                 .offset(y = 1.dp),
-            contentScale = ContentScale.Fit,
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            DdWordmark(
+                color = mood.tint(colors),
+                dotColor = colors.accent,
+                style = DdType.wordmark.copy(fontSize = 13.sp, lineHeight = 15.sp),
+            )
+        }
         if (pending > 0) {
             Box(
                 Modifier
@@ -147,12 +150,11 @@ private fun FloatingLongPressRing(ring: FloatingBubbleRing) {
     }
 }
 
-@DrawableRes
-internal fun FloatingWhaleMood.drawable(): Int = when (this) {
-    FloatingWhaleMood.IDLE -> R.drawable.v2_wave
-    FloatingWhaleMood.THINKING -> R.drawable.v2_thinking
-    FloatingWhaleMood.SLEEPY -> R.drawable.v2_waiting
-    FloatingWhaleMood.WAITING -> R.drawable.v2_confused
-    FloatingWhaleMood.DONE -> R.drawable.v2_done
-    FloatingWhaleMood.ALERT -> R.drawable.v2_alert
+internal fun FloatingBubbleMood.tint(colors: DeepDeepColors): Color = when (this) {
+    FloatingBubbleMood.IDLE -> colors.ink
+    FloatingBubbleMood.THINKING -> colors.inkSecondary
+    FloatingBubbleMood.SLEEPY -> colors.inkTertiary
+    FloatingBubbleMood.WAITING -> colors.warning
+    FloatingBubbleMood.DONE -> colors.success
+    FloatingBubbleMood.ALERT -> colors.danger
 }

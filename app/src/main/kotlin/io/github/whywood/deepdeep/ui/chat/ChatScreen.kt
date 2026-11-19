@@ -94,7 +94,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
@@ -113,6 +112,7 @@ import io.github.whywood.deepdeep.design.DdSpacing
 import io.github.whywood.deepdeep.design.DdSpinner
 import io.github.whywood.deepdeep.design.DdTextAction
 import io.github.whywood.deepdeep.design.DdType
+import io.github.whywood.deepdeep.design.DdWordmark
 import io.github.whywood.deepdeep.design.deepDeepColors
 import io.github.whywood.deepdeep.runtime.AssistantRole
 import io.github.whywood.deepdeep.runtime.GoalView
@@ -859,13 +859,12 @@ private fun EmptyState(
                         )
                         Spacer(Modifier.height(DdSpacing.Lg))
                     } else {
-                        Image(
-                            painter = painterResource(R.drawable.mascot_wave),
-                            contentDescription = null,
-                            modifier = Modifier.size(148.dp),
-                            contentScale = ContentScale.Fit,
+                        DdWordmark(
+                            color = colors.ink,
+                            dotColor = colors.accent,
+                            style = DdType.display.copy(fontSize = 48.sp, lineHeight = 54.sp),
                         )
-                        Spacer(Modifier.height(DdSpacing.Xs))
+                        Spacer(Modifier.height(DdSpacing.Sm))
                     }
                     Text(
                         text = greeting(nickname),

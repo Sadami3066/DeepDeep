@@ -70,6 +70,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk "DeepDeep-${VERSION}.apk"
-          gh release create "${{ inputs.tag }}" "DeepDeep-${VERSION}.apk" \
+          cp app/build/outputs/apk/release/app-release.apk "PI-${VERSION}.apk"
+          gh release create "${{ inputs.tag }}" "PI-${VERSION}.apk" \
             --title "${{ inputs.tag }}" --notes-file "${{ inputs.notes_file }}"

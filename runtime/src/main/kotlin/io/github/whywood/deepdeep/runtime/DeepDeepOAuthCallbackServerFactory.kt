@@ -156,14 +156,14 @@ private class CallbackServer<T>(
 
     private fun successPage(providerName: String): String = page(
         title = "Signed in",
-        message = "${escape(providerName)} · 已登录，正在返回 DeepDeep…",
-        button = "返回 DeepDeep",
+        message = "${escape(providerName)} · 已登录，正在返回 PI…",
+        button = "返回 PI",
     )
 
     private fun errorPage(message: String): String = page(
         title = "Sign-in failed",
         message = escape(message),
-        button = "返回 DeepDeep",
+        button = "返回 PI",
     )
 
     private fun page(title: String, message: String, button: String): String = """

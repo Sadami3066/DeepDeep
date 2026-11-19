@@ -39,6 +39,6 @@ class LocalAdbManager(context: Context) : AbsAdbConnectionManager() {
         const val LOOPBACK = "127.0.0.1"
         const val CONNECT_TIMEOUT_SECONDS = 8L
         const val AUTHORIZATION_TIMEOUT_SECONDS = 30L
-        const val DEVICE_NAME = "DeepDeep"
+        const val DEVICE_NAME = "PI"
     }
 }

@@ -162,7 +162,7 @@ fun DdWordmark(
 ) {
     Row(modifier) {
         Text(
-            text = "deepdeep",
+            text = "PI",
             style = style,
             color = color,
         )

@@ -109,7 +109,7 @@ object ThemePackCodec {
         val baseWire = json.string("base")
         val base = baseWire?.let(ThemeBase::fromWire)
         if (base == null) {
-            issues += ThemePackIssue("$path.base", "base must be deepdeep, santorini or oceanic")
+            issues += ThemePackIssue("$path.base", "base must be pi, deepdeep, santorini or oceanic")
         }
         val tokensJson = json["tokens"] as? JsonObject
         val tokens = linkedMapOf<ThemeToken, Color>()
@@ -130,7 +130,7 @@ object ThemePackCodec {
             }
         }
         if (id == null || name == null || dark == null || base == null || tokensJson == null) return null
-        val colors = base.colors().applyTokens(tokens, dark)
+        val colors = base.colors(dark).applyTokens(tokens, dark)
         checkContrast(id, colors, path, issues)
         if (issues.any { it.path.startsWith("$path.") }) return null
         return ThemePackTheme(

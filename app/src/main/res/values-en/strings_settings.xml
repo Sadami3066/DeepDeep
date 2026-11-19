@@ -45,8 +45,10 @@
     <string name="settings_theme_auto">Automatic</string>
     <string name="settings_theme_current">Current</string>
     <string name="settings_theme_empty">Themes from installed and enabled plugins appear here.</string>
+    <string name="settings_theme_preset_pi">PI</string>
+    <string name="settings_theme_pi_subtitle">Light and dark</string>
     <string name="settings_theme_preset_system">Follow system</string>
-    <string name="settings_theme_preset_deepdeep">DeepDeep</string>
+    <string name="settings_theme_preset_deepdeep">Classic Blue</string>
     <string name="settings_theme_preset_santorini">Santorini</string>
     <string name="settings_theme_preset_oceanic">Oceanic</string>
     <string name="settings_version">Version</string>
@@ -66,7 +68,7 @@
     <string name="settings_linux_status_installed">Built in · Alpine %1$s</string>
     <string name="settings_linux_status_failed">Built-in environment couldn\'t be prepared</string>
     <string name="settings_linux_builtin">Built-in environment</string>
-    <string name="settings_linux_enable">Allow DeepDeep to run Linux commands</string>
+    <string name="settings_linux_enable">Allow PI to run Linux commands</string>
     <string name="settings_linux_reset">Prepare built-in environment again</string>
     <string name="settings_linux_reset_title">Prepare built-in environment again?</string>
     <string name="settings_linux_reset_dialog">This deletes the current built-in environment and turns it off. It will be prepared again on next launch. Bot files are kept.</string>
@@ -125,7 +127,7 @@
     <string name="personalization_tone_cute">Playful</string>
     <string name="personalization_tone_calm">Calm</string>
     <string name="personalization_tone_custom">Custom</string>
-    <string name="personalization_instruction_hint">Write the preferences DeepDeep should follow long-term…</string>
+    <string name="personalization_instruction_hint">Write the preferences PI should follow long-term…</string>
     <string name="personalization_instruction_counter">%1$d chars</string>
     <string name="personalization_preset_warm">Respond with warmth and energy; show appropriate emotion and support without exaggeration or flattery.</string>
     <string name="personalization_preset_cute">Respond in a playful, light tone; a few particles or emoticons are fine, but keep the information accurate and avoid overdoing it.</string>
@@ -133,8 +135,8 @@
 
     <string name="agreement_intro">By using this app, you agree to the following.</string>
     <string name="agreement_data_title">Data &amp; Privacy</string>
-    <string name="agreement_data_local">Conversations, bot files, API keys, and OAuth and connector credentials are stored only in the app\'s private directory and are never uploaded to DeepDeep\'s servers.</string>
-    <string name="agreement_data_provider">Conversation content is sent only to the model provider you choose; DeepDeep keeps no copy on its servers.</string>
+    <string name="agreement_data_local">Conversations, bot files, API keys, and OAuth and connector credentials are stored only in the app\'s private directory and are never uploaded to PI\'s servers.</string>
+    <string name="agreement_data_provider">Conversation content is sent only to the model provider you choose; PI keeps no copy on its servers.</string>
     <string name="agreement_data_connectors">Content read through connectors becomes part of your chat history and may be sent to the model provider with the conversation.</string>
     <string name="agreement_data_tracking">No analytics, advertising, or third-party tracking SDKs are included.</string>
     <string name="agreement_data_uninstall">Uninstalling the app deletes local private data; system backup is disabled.</string>
@@ -213,11 +215,11 @@
     <string name="assistant_settings_role">Default assistant</string>
     <string name="assistant_settings_role_held">Set</string>
     <string name="assistant_settings_role_missing">Not set</string>
-    <string name="assistant_settings_power">Launch DeepDeep with a long press of the power button</string>
+    <string name="assistant_settings_power">Launch PI with a long press of the power button</string>
     <string name="assistant_settings_power_unavailable">This settings page is unavailable</string>
 
     <string name="settings_linux_mounts">Mounted folders</string>
-    <string name="settings_linux_mounts_empty">Mount a folder from shared storage and tell DeepDeep what it is for.</string>
+    <string name="settings_linux_mounts_empty">Mount a folder from shared storage and tell PI what it is for.</string>
     <string name="settings_linux_mount_count">%1$d folders</string>
     <string name="settings_linux_mount_add">Add mounted folder</string>
     <string name="settings_linux_mount_add_grant">Grant "All files access" first</string>

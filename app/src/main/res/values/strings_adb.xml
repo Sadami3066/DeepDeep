@@ -22,7 +22,7 @@
     <string name="adb_error_pairing_code_invalid">配对码无效，请输入 6 位数字</string>
     <string name="adb_error_no_pairing_service">没有发现配对服务，请先在系统中打开「使用配对码配对设备」页面</string>
     <string name="adb_error_pairing_failed">配对失败，请重新打开配对页面获取新的配对码</string>
-    <string name="adb_error_not_paired">本机无线调试未信任 DeepDeep，请重新配对</string>
+    <string name="adb_error_not_paired">本机无线调试未信任 PI，请重新配对</string>
     <string name="adb_error_connect_failed">无法连接到本机无线调试，请确认无线调试已开启</string>
     <string name="adb_error_daemon_start_failed">ADB 守护进程启动失败</string>
 </resources>

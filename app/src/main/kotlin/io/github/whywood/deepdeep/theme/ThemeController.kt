@@ -34,11 +34,12 @@ data class ThemeOption(
 
 object ThemePalettes {
     fun of(choice: ThemeChoice, systemDark: Boolean): DeepDeepColors = when (choice) {
+        ThemeChoice.Pi -> if (systemDark) DdTheme.darkPi() else DdTheme.lightPi()
         ThemeChoice.System -> if (systemDark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
         ThemeChoice.DeepDeep -> DdTheme.lightDeepDeep()
         ThemeChoice.Santorini -> DdTheme.lightSantorini()
         ThemeChoice.Oceanic -> DdTheme.darkOceanic()
-        is ThemeChoice.Pack -> if (systemDark) DdTheme.darkOceanic() else DdTheme.lightSantorini()
+        is ThemeChoice.Pack -> if (systemDark) DdTheme.darkPi() else DdTheme.lightPi()
     }
 }
 
@@ -82,7 +83,7 @@ class ThemeController(
         when (choice) {
             is ThemeChoice.Pack -> {
                 val theme = catalog.find(choice.pluginId, choice.themeId)
-                if (theme == null) fallbackToSystem() else applyPack(choice, theme)
+                if (theme == null) fallbackToDefault() else applyPack(choice, theme)
             }
 
             else -> applyBuiltIn(choice)
@@ -102,10 +103,10 @@ class ThemeController(
         _state.value = HostThemeState(choice, null, builtInLabel(choice))
     }
 
-    private fun fallbackToSystem() {
-        HostThemeRuntime.dark = ThemePalettes.of(ThemeChoice.System, systemDark()).dark
-        preferences.write(ThemeChoice.System, null, null)
-        _state.value = HostThemeState(ThemeChoice.System, null, builtInLabel(ThemeChoice.System))
+    private fun fallbackToDefault() {
+        HostThemeRuntime.dark = ThemePalettes.of(ThemeChoice.Pi, systemDark()).dark
+        preferences.write(ThemeChoice.Pi, null, null)
+        _state.value = HostThemeState(ThemeChoice.Pi, null, builtInLabel(ThemeChoice.Pi))
     }
 
     private fun initialState(): HostThemeState {
@@ -123,6 +124,7 @@ class ThemeController(
 
     private fun builtInLabel(choice: ThemeChoice): String = context.getString(
         when (choice) {
+            ThemeChoice.Pi -> R.string.settings_theme_preset_pi
             ThemeChoice.System -> R.string.settings_theme_preset_system
             ThemeChoice.DeepDeep -> R.string.settings_theme_preset_deepdeep
             ThemeChoice.Santorini -> R.string.settings_theme_preset_santorini

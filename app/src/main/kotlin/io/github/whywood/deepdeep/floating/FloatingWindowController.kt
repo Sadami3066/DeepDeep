@@ -246,7 +246,7 @@ class FloatingWindowController(
     private fun updateWindows() {
         if (!shown) return
         bubbleState.value = FloatingBubbleState(
-            mood = floatingWhaleMood(feed.state.value, now.value),
+            mood = floatingBubbleMood(feed.state.value, now.value),
             pending = floatingPendingCount(feed.state.value),
         )
         updateSurfaceWindow()
@@ -931,7 +931,7 @@ class FloatingWindowController(
 }
 
 internal data class FloatingBubbleState(
-    val mood: FloatingWhaleMood = FloatingWhaleMood.IDLE,
+    val mood: FloatingBubbleMood = FloatingBubbleMood.IDLE,
     val pending: Int = 0,
 )
 

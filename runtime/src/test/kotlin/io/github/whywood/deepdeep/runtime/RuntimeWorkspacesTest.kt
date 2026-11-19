@@ -204,7 +204,7 @@ class RuntimeWorkspacesTest {
     fun homeWorkspaceUsesDeepDeepNameAndNoAvatar() = runBlocking {
         val home = workspaces.list().single { it.isHome }
 
-        assertEquals("DeepDeep", home.name)
+        assertEquals("PI", home.name)
         assertEquals(null, home.avatar)
         assertEquals(null, home.intro)
     }

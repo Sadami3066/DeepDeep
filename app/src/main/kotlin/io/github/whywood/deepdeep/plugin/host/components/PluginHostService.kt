@@ -104,7 +104,7 @@ class PluginHostService : Service() {
         firstPageId: String?,
     ): Notification {
         val builder = NotificationCompat.Builder(this, pluginChannelId(pluginId, CHANNEL_KIND))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(options.title)
             .setContentText(options.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(options.text))

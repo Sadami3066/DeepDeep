@@ -395,7 +395,7 @@ class RemoteConnection(
             manufacturer.isEmpty() || model.startsWith(manufacturer, ignoreCase = true) -> model
             else -> "$manufacturer $model"
         }
-        return label.ifBlank { "DeepDeep" }.take(MAX_LABEL_LENGTH)
+        return label.ifBlank { "PI" }.take(MAX_LABEL_LENGTH)
     }
 
     private data class ProbeOutcome(

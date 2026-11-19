@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">deepdeep</string>
+    <string name="app_name">PI</string>
     <string name="relative_just_now">Just now</string>
     <string name="relative_minutes">%1$d min ago</string>
     <string name="relative_hours">%1$d h ago</string>

@@ -37,14 +37,14 @@ class UpdatePolicyTest {
     @Test
     fun evaluatesNewerRelease() {
         val result = UpdatePolicy.evaluateLatest(
-            latestJson(version = "1.0.3", assetName = "DeepDeep-1.0.3.apk"),
+            latestJson(version = "1.0.3", assetName = "PI-1.0.3.apk"),
             currentVersion = "1.0.2",
         )
         val release = (result as UpdatePolicy.Latest.Newer).release
         assertEquals("v1.0.3", release.tag)
         assertEquals("1.0.3", release.versionName)
         assertEquals("更新内容", release.notes)
-        assertEquals("https://example.com/DeepDeep-1.0.3.apk", release.apkUrl)
+        assertEquals("https://example.com/PI-1.0.3.apk", release.apkUrl)
         assertEquals(3L, release.apkSize)
         assertEquals("b".repeat(64), release.sha256)
         assertEquals("https://github.com/example/releases/tag/v1.0.3", release.pageUrl)
@@ -89,12 +89,36 @@ class UpdatePolicyTest {
         val assets = JSONArray(
             """
             [
-              {"name":"DeepDeep-other.apk","browser_download_url":"https://example.com/other.apk","size":1},
-              {"name":"DeepDeep-1.0.3.apk","browser_download_url":"https://example.com/main.apk","size":2}
+              {"name":"PI-other.apk","browser_download_url":"https://example.com/other.apk","size":1},
+              {"name":"PI-1.0.3.apk","browser_download_url":"https://example.com/main.apk","size":2}
             ]
             """.trimIndent(),
         )
         assertEquals("https://example.com/main.apk", UpdatePolicy.chooseAsset(assets, "1.0.3")?.url)
+    }
+
+    @Test
+    fun fallsBackToFirstApkWhenExactNameIsMissing() {
+        val assets = JSONArray(
+            """
+            [
+              {"name":"PI-1.5.0.apk","browser_download_url":"https://example.com/main.apk","size":2}
+            ]
+            """.trimIndent(),
+        )
+        assertEquals("https://example.com/main.apk", UpdatePolicy.chooseAsset(assets, "1.5.0")?.url)
+    }
+
+    @Test
+    fun oldAssetNameStillMatchesByFallback() {
+        val assets = JSONArray(
+            """
+            [
+              {"name":"DeepDeep-1.5.0.apk","browser_download_url":"https://example.com/legacy.apk","size":2}
+            ]
+            """.trimIndent(),
+        )
+        assertEquals("https://example.com/legacy.apk", UpdatePolicy.chooseAsset(assets, "1.5.0")?.url)
     }
 
     @Test
@@ -127,12 +151,12 @@ class UpdatePolicyTest {
 
     @Test
     fun apkFileNameFollowsReleaseProtocol() {
-        assertEquals("DeepDeep-1.0.3.apk", UpdatePolicy.apkFileName("1.0.3"))
+        assertEquals("PI-1.0.3.apk", UpdatePolicy.apkFileName("1.0.3"))
     }
 
     private fun latestJson(
         version: String,
-        assetName: String = "DeepDeep-$version.apk",
+        assetName: String = "PI-$version.apk",
         prerelease: Boolean = false,
         draft: Boolean = false,
     ): String = """

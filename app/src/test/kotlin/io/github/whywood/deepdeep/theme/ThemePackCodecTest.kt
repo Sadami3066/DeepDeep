@@ -38,6 +38,31 @@ class ThemePackCodecTest {
     }
 
     @Test
+    fun decodesPiBasePalette() {
+        val result = ThemePackCodec.decode(
+            """
+            {
+              "schema": 1,
+              "themes": [
+                {
+                  "id": "mono",
+                  "name": { "default": "Mono" },
+                  "dark": false,
+                  "base": "pi",
+                  "tokens": {}
+                }
+              ]
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(result is ThemePackResult.Valid)
+        val theme = (result as ThemePackResult.Valid).pack.themes.single()
+        assertEquals("pi", theme.base.wire)
+        assertEquals(DdTheme.lightPi().paper, theme.colors.paper)
+    }
+
+    @Test
     fun darkFieldOverridesBaseMode() {
         val result = ThemePackCodec.decode(
             """

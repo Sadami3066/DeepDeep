@@ -212,7 +212,7 @@ private suspend fun downloadQrImage(context: Context, url: String): File? {
     val request = runCatching {
         Request.Builder()
             .url(url)
-            .header("User-Agent", "DeepDeep")
+            .header("User-Agent", "PI")
             .header("Accept", "image/*")
             .build()
     }.getOrNull() ?: return null

@@ -310,7 +310,7 @@ private fun RemoteWebView(
                         allowContentAccess = false
                         javaScriptCanOpenWindowsAutomatically = false
                         setSupportMultipleWindows(false)
-                        userAgentString = "$userAgentString DeepDeep"
+                        userAgentString = "$userAgentString PI"
                     }
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(

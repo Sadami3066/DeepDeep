@@ -237,7 +237,7 @@ internal fun AppShell(
     val personalization by graph.personalizationStore.personalization.collectAsStateWithLifecycle(
         initialValue = PersonalizationUi(),
     )
-    val nickname = personalization.nickname.trim().ifBlank { "DeepDeep" }
+    val nickname = personalization.nickname.trim().ifBlank { "PI" }
     val expandedWorkspacesSaver = remember {
         Saver<Set<String>, ArrayList<String>>(
             save = { ArrayList(it) },

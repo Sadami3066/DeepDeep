@@ -10,7 +10,7 @@
     <string name="onboarding_skip">Set up later</string>
     <string name="onboarding_later">Later</string>
 
-    <string name="onboarding_welcome_title">Hello,\nI\'m DeepDeep.</string>
+    <string name="onboarding_welcome_title">Hello,\nI\'m PI.</string>
     <string name="onboarding_welcome_lead">Your everyday AI assistant.\nFrom daily chores to new ideas.</string>
     <string name="onboarding_welcome_note">A few steps now; you can adjust them anytime.</string>
 
@@ -63,13 +63,13 @@
     <string name="onboarding_permission_assistant">System assistant</string>
     <string name="onboarding_permission_assistant_hint">Launch as the default assistant</string>
     <string name="onboarding_permission_shortcut">Home shortcut</string>
-    <string name="onboarding_permission_shortcut_hint">Add DeepDeep to your home screen</string>
+    <string name="onboarding_permission_shortcut_hint">Add PI to your home screen</string>
     <string name="onboarding_permission_storage">Shared storage</string>
     <string name="onboarding_permission_storage_hint">Read files on your phone</string>
     <string name="onboarding_permission_calendar">Calendar</string>
     <string name="onboarding_permission_calendar_hint">Read and write your schedule</string>
     <string name="onboarding_permission_camera">Camera</string>
-    <string name="onboarding_permission_camera_hint">Take photos for DeepDeep</string>
+    <string name="onboarding_permission_camera_hint">Take photos for PI</string>
     <string name="onboarding_permission_microphone">Microphone</string>
     <string name="onboarding_permission_microphone_hint">Talk instead of typing</string>
     <string name="onboarding_permission_battery">Battery optimization</string>

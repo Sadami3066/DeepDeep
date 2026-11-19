@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -62,6 +61,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -148,15 +148,16 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
                     style = Stroke(width = 1.dp.toPx()),
                 )
             }
-            val mascotHeight = minOf(maxHeight, 264.dp, maxWidth * 356f / 342f)
-            val mascotWidth = mascotHeight * 342f / 356f
-            Image(
-                painter = painterResource(R.drawable.mascot_wave),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(mascotWidth, mascotHeight)
-                    .graphicsLayer { translationY = floatOffset.dp.toPx() },
-                contentScale = ContentScale.Fit,
+            val markSize = minOf(maxHeight, 260.dp, maxWidth * 0.72f)
+            DdWordmark(
+                modifier = Modifier.graphicsLayer { translationY = floatOffset.dp.toPx() },
+                color = colors.ink,
+                dotColor = colors.accent,
+                style = DdType.wordmark.copy(
+                    fontSize = (markSize.value * 0.38f).sp,
+                    lineHeight = (markSize.value * 0.44f).sp,
+                    letterSpacing = (-1).sp,
+                ),
             )
         }
     }

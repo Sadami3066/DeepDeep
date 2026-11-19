@@ -6,18 +6,21 @@ import io.github.whywood.deepdeep.design.DeepDeepColors
 import java.io.File
 
 enum class ThemeBase(val wire: String) {
+    PI("pi") {
+        override fun colors(dark: Boolean): DeepDeepColors = if (dark) DdTheme.darkPi() else DdTheme.lightPi()
+    },
     DEEP_DEEP("deepdeep") {
-        override fun colors(): DeepDeepColors = DdTheme.lightDeepDeep()
+        override fun colors(dark: Boolean): DeepDeepColors = DdTheme.lightDeepDeep()
     },
     SANTORINI("santorini") {
-        override fun colors(): DeepDeepColors = DdTheme.lightSantorini()
+        override fun colors(dark: Boolean): DeepDeepColors = DdTheme.lightSantorini()
     },
     OCEANIC("oceanic") {
-        override fun colors(): DeepDeepColors = DdTheme.darkOceanic()
+        override fun colors(dark: Boolean): DeepDeepColors = DdTheme.darkOceanic()
     },
     ;
 
-    abstract fun colors(): DeepDeepColors
+    abstract fun colors(dark: Boolean): DeepDeepColors
 
     companion object {
         fun fromWire(value: String): ThemeBase? = entries.firstOrNull { it.wire == value }

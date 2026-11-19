@@ -56,7 +56,7 @@ internal class MediaPluginServiceImpl(
                 put(MediaStore.Images.Media.DISPLAY_NAME, name)
                 put(MediaStore.Images.Media.MIME_TYPE, mimeType.takeIf { it.isNotBlank() } ?: "image/jpeg")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
-                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/DeepDeep")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/PI")
             }
             val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: return@withContext null

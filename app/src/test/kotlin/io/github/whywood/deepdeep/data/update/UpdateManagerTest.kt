@@ -110,7 +110,7 @@ class UpdateManagerTest {
             tag = "v1.0.3",
             versionName = "1.0.3",
             notes = "更新内容",
-            apkUrl = "https://example.com/DeepDeep-1.0.3.apk",
+            apkUrl = "https://example.com/PI-1.0.3.apk",
             apkSize = APK_BODY.length.toLong(),
             sha256 = sha256Hex(APK_BODY),
             pageUrl = "https://github.com/example/releases/tag/v1.0.3",
@@ -161,10 +161,10 @@ class UpdateManagerTest {
 
         val phase = manager.ui.value.phase as UpdatePhase.ReadyToInstall
         assertFalse(phase.needsPermission)
-        val apk = File(updatesDir, "DeepDeep-1.0.3.apk")
+        val apk = File(updatesDir, "PI-1.0.3.apk")
         assertTrue(apk.isFile)
         assertEquals(APK_BODY, apk.readText())
-        assertNull(File(updatesDir, "DeepDeep-1.0.3.apk.part").takeIf { it.exists() })
+        assertNull(File(updatesDir, "PI-1.0.3.apk.part").takeIf { it.exists() })
     }
 
     @Test
@@ -186,7 +186,7 @@ class UpdateManagerTest {
 
         val phase = manager.ui.value.phase as UpdatePhase.Failed
         assertEquals(UpdateFailure.VERIFY, phase.failure)
-        assertFalse(File(updatesDir, "DeepDeep-1.0.3.apk").exists())
+        assertFalse(File(updatesDir, "PI-1.0.3.apk").exists())
     }
 
     @Test
@@ -205,7 +205,7 @@ class UpdateManagerTest {
 
         val phase = manager.ui.value.phase as UpdatePhase.Failed
         assertEquals(UpdateFailure.ARCHIVE, phase.failure)
-        assertFalse(File(updatesDir, "DeepDeep-1.0.3.apk").exists())
+        assertFalse(File(updatesDir, "PI-1.0.3.apk").exists())
     }
 
     @Test
@@ -265,12 +265,12 @@ class UpdateManagerTest {
             tag = "v1.0.3",
             versionName = "1.0.3",
             notes = "",
-            apkUrl = "https://example.com/DeepDeep-1.0.3.apk",
+            apkUrl = "https://example.com/PI-1.0.3.apk",
             apkSize = 0,
             sha256 = null,
             pageUrl = "https://github.com/example/releases/tag/v1.0.3",
         )
-        val apk = File(updatesDir, "DeepDeep-1.0.3.apk").apply { writeText("stale") }
+        val apk = File(updatesDir, "PI-1.0.3.apk").apply { writeText("stale") }
         val store = FakeStore(UpdateSnapshot(lastSuccessAt = 1L, release = stale))
         val manager = newManager(transport = FakeTransport { error("no request") }, store = store, currentVersionName = "1.0.3")
         advanceUntilIdle()
@@ -309,8 +309,8 @@ class UpdateManagerTest {
           "html_url": "https://github.com/example/releases/tag/v$version",
           "assets": [
             {
-              "name": "DeepDeep-$version.apk",
-              "browser_download_url": "https://example.com/DeepDeep-$version.apk",
+              "name": "PI-$version.apk",
+              "browser_download_url": "https://example.com/PI-$version.apk",
               "size": ${body.length},
               "digest": "sha256:$digest"
             }

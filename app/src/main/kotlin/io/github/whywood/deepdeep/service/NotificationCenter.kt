@@ -108,7 +108,7 @@ class NotificationCenter(
             ?: context.getString(R.string.app_name)
         val body = questionNotificationBody(questions.first())
         val builder = NotificationCompat.Builder(context, CHANNEL_QUESTIONS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_question_title, title))
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -144,7 +144,7 @@ class NotificationCenter(
             else -> activityText(latest.activity)
         }
         val builder = NotificationCompat.Builder(context, CHANNEL_RUNTIME)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(content)
             .setContentIntent(openAppIntent(latest?.sessionId))
@@ -166,7 +166,7 @@ class NotificationCenter(
 
     fun notifyInstall(label: String, stage: String?, progress: Int?) {
         val builder = NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_download_title))
             .setContentText(stage ?: label)
             .setContentIntent(openAppIntent(null))
@@ -185,7 +185,7 @@ class NotificationCenter(
             context.getString(R.string.notification_download_failed, error?.take(160).orEmpty())
         }
         val builder = NotificationCompat.Builder(context, CHANNEL_DOWNLOADS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_download_title))
             .setContentText(text)
             .setContentIntent(openAppIntent(null))
@@ -202,7 +202,7 @@ class NotificationCenter(
     fun notifyAccessibilityLost() {
         val text = context.getString(R.string.notification_accessibility_lost_text)
         val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_accessibility_lost_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -216,7 +216,7 @@ class NotificationCenter(
         val sessionId = interruptedNotificationTarget(questions, runs) ?: return
         val text = context.getString(R.string.notification_interrupted_text, interruptedNotificationCount(questions, runs))
         val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_interrupted_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -269,7 +269,7 @@ class NotificationCenter(
         }
         val preview = text.trim().take(600)
         val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title.ifBlank { context.getString(R.string.app_name) })
             .setContentText(line)
             .setContentIntent(openAppIntent(sessionId))

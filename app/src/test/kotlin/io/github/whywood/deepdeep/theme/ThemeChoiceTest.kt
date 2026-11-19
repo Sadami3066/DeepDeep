@@ -8,6 +8,7 @@ import org.junit.Test
 class ThemeChoiceTest {
     @Test
     fun parsesBuiltInChoices() {
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pi"))
         assertEquals(ThemeChoice.System, ThemeChoice.parse("system"))
         assertEquals(ThemeChoice.DeepDeep, ThemeChoice.parse("deepdeep"))
         assertEquals(ThemeChoice.Santorini, ThemeChoice.parse("santorini"))
@@ -22,15 +23,15 @@ class ThemeChoiceTest {
     }
 
     @Test
-    fun invalidValuesFallBackToSystem() {
-        assertEquals(ThemeChoice.System, ThemeChoice.parse(null))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse(""))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("unknown"))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("pack:missing"))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("pack:com.example.plugin/"))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("pack:com.example.plugin/a/b"))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("pack:Com.Example/Aurora"))
-        assertEquals(ThemeChoice.System, ThemeChoice.parse("pack:plain/aurora"))
+    fun invalidValuesFallBackToPi() {
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse(null))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse(""))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("unknown"))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pack:missing"))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pack:com.example.plugin/"))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pack:com.example.plugin/a/b"))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pack:Com.Example/Aurora"))
+        assertEquals(ThemeChoice.Pi, ThemeChoice.parse("pack:plain/aurora"))
     }
 
     @Test
@@ -52,8 +53,8 @@ class ThemeChoiceTest {
 
     @Test
     fun paletteCodecRoundTrips() {
-        val light = DdTheme.lightSantorini()
-        val dark = DdTheme.darkOceanic()
+        val light = DdTheme.lightPi()
+        val dark = DdTheme.darkPi()
         assertEquals(light, ThemePaletteCodec.decode(ThemePaletteCodec.encode(light)))
         assertEquals(dark, ThemePaletteCodec.decode(ThemePaletteCodec.encode(dark)))
         assertNull(ThemePaletteCodec.decode(null))

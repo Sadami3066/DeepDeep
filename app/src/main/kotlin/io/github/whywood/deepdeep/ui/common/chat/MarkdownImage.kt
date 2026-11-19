@@ -515,7 +515,7 @@ private object MarkdownImageLoader {
             readTimeout = 15_000
             instanceFollowRedirects = true
             requestMethod = "GET"
-            setRequestProperty("User-Agent", "DeepDeep")
+            setRequestProperty("User-Agent", "PI")
             setRequestProperty("Accept", "image/*")
         }
         try {

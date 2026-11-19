@@ -10,7 +10,7 @@ import io.github.whywood.deepdeep.ui.common.shareChooser
 
 internal fun copyToClipboard(context: Context, text: String): Boolean {
     val clipboard = context.getSystemService(ClipboardManager::class.java) ?: return false
-    clipboard.setPrimaryClip(ClipData.newPlainText("deepdeep", text))
+    clipboard.setPrimaryClip(ClipData.newPlainText("PI", text))
     return true
 }
 

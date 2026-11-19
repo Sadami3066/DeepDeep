@@ -57,7 +57,7 @@ class CrashLogStore(
     internal fun format(thread: Thread, error: Throwable, info: CrashInfo, timestamp: Long): String {
         val time = TIME_FORMAT.format(Date(timestamp))
         return buildString {
-            appendLine("DeepDeep crash report")
+            appendLine("PI crash report")
             appendLine("time: $time")
             appendLine("version: ${info.versionName} (${info.versionCode})")
             appendLine("android: ${info.androidSdk}")

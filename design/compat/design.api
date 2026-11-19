@@ -917,6 +917,8 @@ public final class io.github.whywood.deepdeep.design.DdTheme {
   public final io.github.whywood.deepdeep.design.DeepDeepColors lightDeepDeep();
   public final io.github.whywood.deepdeep.design.DeepDeepColors lightSantorini();
   public final io.github.whywood.deepdeep.design.DeepDeepColors darkOceanic();
+  public final io.github.whywood.deepdeep.design.DeepDeepColors lightPi();
+  public final io.github.whywood.deepdeep.design.DeepDeepColors darkPi();
 }
 public final class io.github.whywood.deepdeep.design.DdTimePickerKt {
   public static final void DdTimePicker(java.time.LocalTime, kotlin.jvm.functions.Function1<? super java.time.LocalTime, kotlin.Unit>, kotlin.jvm.functions.Function0<kotlin.Unit>, java.lang.String, java.lang.String, androidx.compose.runtime.Composer, int);
@@ -1557,6 +1559,7 @@ final class io.github.whywood.deepdeep.design.RenderedInline {
   public boolean equals(java.lang.Object);
 }
 public final class io.github.whywood.deepdeep.design.ThemePreset extends java.lang.Enum<io.github.whywood.deepdeep.design.ThemePreset> {
+  public static final io.github.whywood.deepdeep.design.ThemePreset PI;
   public static final io.github.whywood.deepdeep.design.ThemePreset SYSTEM;
   public static final io.github.whywood.deepdeep.design.ThemePreset DEEP_DEEP;
   public static final io.github.whywood.deepdeep.design.ThemePreset SANTORINI;

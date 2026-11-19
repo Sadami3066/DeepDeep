@@ -391,25 +391,25 @@ class FloatingFeedReducerTest {
             questions = listOf(pending("req-1")),
             lastEventAt = 1_000L,
         )
-        assertEquals(FloatingWhaleMood.THINKING, floatingWhaleMood(running, 2_000L))
+        assertEquals(FloatingBubbleMood.THINKING, floatingBubbleMood(running, 2_000L))
         val waiting = baseState().copy(
             questions = listOf(pending("req-1")),
             lastEventAt = 1_000L,
         )
-        assertEquals(FloatingWhaleMood.WAITING, floatingWhaleMood(waiting, 2_000L))
+        assertEquals(FloatingBubbleMood.WAITING, floatingBubbleMood(waiting, 2_000L))
         val completed = baseState().copy(
             completed = listOf(completion("session-a", 1_000L, RunStatus.DONE)),
             lastEventAt = 1_000L,
         )
-        assertEquals(FloatingWhaleMood.DONE, floatingWhaleMood(completed, 2_000L))
+        assertEquals(FloatingBubbleMood.DONE, floatingBubbleMood(completed, 2_000L))
         val failed = baseState().copy(
             completed = listOf(completion("session-a", 1_000L, RunStatus.FAILED)),
             lastEventAt = 1_000L,
         )
-        assertEquals(FloatingWhaleMood.ALERT, floatingWhaleMood(failed, 2_000L))
+        assertEquals(FloatingBubbleMood.ALERT, floatingBubbleMood(failed, 2_000L))
         val idle = baseState().copy(lastEventAt = 1_000L)
-        assertEquals(FloatingWhaleMood.IDLE, floatingWhaleMood(idle, 1_000L + FLOATING_SLEEPY_AFTER_MS - 1))
-        assertEquals(FloatingWhaleMood.SLEEPY, floatingWhaleMood(idle, 1_000L + FLOATING_SLEEPY_AFTER_MS))
+        assertEquals(FloatingBubbleMood.IDLE, floatingBubbleMood(idle, 1_000L + FLOATING_SLEEPY_AFTER_MS - 1))
+        assertEquals(FloatingBubbleMood.SLEEPY, floatingBubbleMood(idle, 1_000L + FLOATING_SLEEPY_AFTER_MS))
     }
 
     @Test

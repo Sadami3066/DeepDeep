@@ -22,7 +22,7 @@
     <string name="adb_error_pairing_code_invalid">Invalid pairing code. Enter 6 digits</string>
     <string name="adb_error_no_pairing_service">No pairing service found. Open the Pair device with pairing code screen in system settings first</string>
     <string name="adb_error_pairing_failed">Pairing failed. Reopen the pairing screen to get a new code</string>
-    <string name="adb_error_not_paired">System wireless debugging does not trust DeepDeep yet. Pair again</string>
+    <string name="adb_error_not_paired">System wireless debugging does not trust PI yet. Pair again</string>
     <string name="adb_error_connect_failed">Cannot connect to local wireless debugging. Make sure it is enabled</string>
     <string name="adb_error_daemon_start_failed">Failed to start the ADB daemon</string>
 </resources>

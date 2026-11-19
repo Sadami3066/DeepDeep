@@ -12,7 +12,7 @@
     <string name="update_downloading">Downloading %1$d%%</string>
     <string name="update_ready">Downloaded and ready to install</string>
     <string name="update_install">Install</string>
-    <string name="update_permission_needed">Allow DeepDeep to install apps</string>
+    <string name="update_permission_needed">Allow PI to install apps</string>
     <string name="update_open_permission">Allow</string>
     <string name="update_error_network">Can’t reach the update service. Check your network and try again.</string>
     <string name="update_error_service">Update information is invalid. Try again later.</string>

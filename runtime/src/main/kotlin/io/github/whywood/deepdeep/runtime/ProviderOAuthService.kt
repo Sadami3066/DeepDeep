@@ -48,6 +48,6 @@ class ProviderOAuthService(
     }
 
     private companion object {
-        const val AGENT_NAME = "DeepDeep"
+        const val AGENT_NAME = "PI"
     }
 }

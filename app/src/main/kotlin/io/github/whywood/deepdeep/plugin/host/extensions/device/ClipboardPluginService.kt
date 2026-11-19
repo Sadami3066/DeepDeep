@@ -56,6 +56,6 @@ internal class ClipboardPluginService(private val context: Context) : ClipboardS
     }
 
     private companion object {
-        const val CLIP_LABEL = "DeepDeep"
+        const val CLIP_LABEL = "PI"
     }
 }
