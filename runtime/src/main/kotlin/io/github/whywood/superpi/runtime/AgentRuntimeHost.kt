@@ -39,7 +39,7 @@ class AgentRuntimeHost internal constructor(
     constructor(
         homeDir: File,
         workspacesDir: File,
-        engineFactory: suspend (File) -> PiSessionEngine,
+        engineFactory: suspend (File) -> SessionEngine,
         modelConfigStore: ModelConfigStore,
         catalog: SessionCatalog,
         workspaceStore: WorkspaceStore,
@@ -52,9 +52,11 @@ class AgentRuntimeHost internal constructor(
         runLedger: RunLedger = RunLedger(null),
         keepHandleAlive: (String) -> Boolean = { true },
         clock: () -> Long = System::currentTimeMillis,
+        remoteWorkspaces: suspend () -> List<RuntimeWorkspace> = { emptyList() },
     ) : this(
         homeDir, workspacesDir, { cwd -> engineFactory(cwd) }, modelConfigStore,
-        CatalogSessionDirectory(catalog), WorkspaceStoreDirectory(workspaceStore),
+        CatalogSessionDirectory(catalog),
+        MergedWorkspaceDirectory(WorkspaceStoreDirectory(workspaceStore), remoteWorkspaces),
         providers, backgroundScope, goalDriver, titleNamer, sessionCleaner, sessionArchived, runLedger, keepHandleAlive,
         clock,
     )

@@ -281,6 +281,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
                 deps.scope.launch { deps.goalService.clearSession(sessionId) }
             },
             sessionArchived = { sessionId -> deps.jobRegistry().clearSession(sessionId) },
+            remoteWorkspaces = { deps.remoteWorkspaces() },
             runLedger = RunLedger(File(deps.appContext.filesDir, "tasks")),
             keepHandleAlive = { sessionId ->
                 deps.timerService().timers.value.any { timer ->

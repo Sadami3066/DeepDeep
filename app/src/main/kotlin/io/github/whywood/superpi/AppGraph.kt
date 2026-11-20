@@ -165,6 +165,8 @@ class AppGraph(context: Context) : AppDependencies {
     override val relayController: io.github.whywood.superpi.data.relay.RelayController get() = dataGraph.relayController
     override val relayMirror get() = dataGraph.relayMirror
 
+    private val remoteBots = MutableStateFlow<List<io.github.whywood.superpi.data.relay.RemoteBot>>(emptyList())
+
     override val relayLive: io.github.whywood.superpi.data.relay.RelayLive by lazy {
         io.github.whywood.superpi.data.relay.RelayLive(
             scope = scope,
@@ -172,7 +174,11 @@ class AppGraph(context: Context) : AppDependencies {
             host = host,
             memorySync = dataGraph.relayMemorySync,
             appVersion = BuildConfig.VERSION_NAME,
-        )
+        ).also { live ->
+            scope.launch {
+                live.remoteBots.collect { bots -> remoteBots.value = bots }
+            }
+        }
     }
 
     private val updateInstaller: AndroidUpdateInstaller by lazy { AndroidUpdateInstaller(appContext) }
@@ -350,6 +356,12 @@ class AppGraph(context: Context) : AppDependencies {
         jobRegistry = { serviceGraph.jobRegistry },
         appPreferences = dataGraph.appPreferences,
         memoryBackend = dataGraph.relayMemorySync,
+        remoteWorkspaces = {
+            io.github.whywood.superpi.data.relay.RemoteWorkspaces.workspaces(
+                root = io.github.whywood.superpi.data.relay.RemoteWorkspaces.remoteRoot(appContext.filesDir),
+                bots = remoteBots.value,
+            )
+        },
         apiKeyProvider = {
             dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
                 dataGraph.credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)

@@ -43,6 +43,14 @@ data class ConversationSummary(
     val archived: Boolean = false,
 )
 
+data class RemoteBotRef(
+    val deviceId: String,
+    val deviceName: String,
+    val botId: String,
+    val botName: String,
+    val online: Boolean,
+)
+
 data class RuntimeWorkspace(
     val id: String,
     val name: String,
@@ -51,6 +59,7 @@ data class RuntimeWorkspace(
     val isHome: Boolean = false,
     val avatar: String? = null,
     val intro: String? = null,
+    val remote: RemoteBotRef? = null,
 )
 
 data class OpenedSession(

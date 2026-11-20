@@ -8,9 +8,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +46,21 @@ class RelayLive(
 
     private val _devices = MutableStateFlow<List<RelayDevice>>(emptyList())
     val devices: StateFlow<List<RelayDevice>> = _devices.asStateFlow()
+
+    val remoteBots: StateFlow<List<RemoteBot>> = combine(_devices, _state) { devices, state ->
+        val linked = state == RelayLiveState.Online
+        devices.flatMap { device ->
+            device.bots.map { bot ->
+                RemoteBot(
+                    deviceId = device.deviceId,
+                    deviceName = device.name,
+                    botId = bot.id,
+                    botName = bot.name,
+                    online = linked && device.online,
+                )
+            }
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val _allowRemote = MutableStateFlow(false)
     val allowRemote: StateFlow<Boolean> = _allowRemote.asStateFlow()
