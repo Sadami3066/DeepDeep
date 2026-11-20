@@ -56,6 +56,7 @@ internal class RemoteChatStateHolder(
     private var callInFlight = false
     private var firstEventWatchdog: Job? = null
     private var settleWatchdog: Job? = null
+    private var routeEventSeen = false
     private var failedText: String? = null
     private var nextKey = 0L
     private var mirrorSession: String? = null
@@ -100,6 +101,11 @@ internal class RemoteChatStateHolder(
         }
         sendFailure = null
         failedText = null
+        routeEventSeen = false
+        firstEventWatchdog?.cancel()
+        firstEventWatchdog = null
+        settleWatchdog?.cancel()
+        settleWatchdog = null
         blocks = blocks + RemoteChatBlock.User(nextKey(), trimmed)
         running = true
         settled = false
@@ -119,6 +125,7 @@ internal class RemoteChatStateHolder(
         }
         sendFailure = null
         failedText = null
+        routeEventSeen = false
         running = true
         settled = false
         scope.launch { deliver(text) }
@@ -132,6 +139,18 @@ internal class RemoteChatStateHolder(
             val result = relayLive.call(deviceId, "bot.abort", buildJsonObject { put("sessionId", current) })
             if (result == null) {
                 interrupt(relayLive.lastCallError.value?.let(RemoteChatFailure::from) ?: RemoteChatFailure.Disconnected)
+                return@launch
+            }
+            delay(ABORT_GRACE_MILLIS)
+            if (running) {
+                firstEventWatchdog?.cancel()
+                firstEventWatchdog = null
+                settleWatchdog?.cancel()
+                settleWatchdog = null
+                running = false
+                settled = true
+                canAbort = false
+                activeRouteId = null
             }
         }
     }
@@ -156,10 +175,12 @@ internal class RemoteChatStateHolder(
                 sessionId = replySession
                 beginMirror(replySession, text)
             }
-            firstEventWatchdog?.cancel()
-            firstEventWatchdog = scope.launch {
-                delay(FIRST_EVENT_TIMEOUT_MILLIS)
-                interrupt(RemoteChatFailure.Timeout)
+            if (!routeEventSeen) {
+                firstEventWatchdog?.cancel()
+                firstEventWatchdog = scope.launch {
+                    delay(FIRST_EVENT_TIMEOUT_MILLIS)
+                    interrupt(RemoteChatFailure.Timeout)
+                }
             }
         } finally {
             callInFlight = false
@@ -206,6 +227,7 @@ internal class RemoteChatStateHolder(
 
     private fun onRemoteEvent(event: RemoteEvent) {
         if (event.routeId != activeRouteId) return
+        routeEventSeen = true
         firstEventWatchdog?.cancel()
         firstEventWatchdog = null
         val decoded = RemoteAgentProtocol.decode(event.event) ?: return
@@ -333,5 +355,6 @@ internal class RemoteChatStateHolder(
     private companion object {
         private const val FIRST_EVENT_TIMEOUT_MILLIS = 30_000L
         private const val SETTLE_TIMEOUT_MILLIS = 2_000L
+        private const val ABORT_GRACE_MILLIS = 3_000L
     }
 }
