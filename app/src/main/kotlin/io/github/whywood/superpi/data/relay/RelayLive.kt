@@ -4,12 +4,16 @@ import io.github.whywood.superpi.runtime.AgentRuntime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 
 enum class RelayLiveState {
@@ -31,6 +35,7 @@ class RelayLive(
     private val socket = RelaySocket(scope, io)
     private val server = RemoteAgentServer(host, ::bots, ::send, scope)
     private val mutex = Mutex()
+    private val calls = RemoteCallTracker()
 
     private val _state = MutableStateFlow(RelayLiveState.Disabled)
     val state: StateFlow<RelayLiveState> = _state.asStateFlow()
@@ -40,6 +45,12 @@ class RelayLive(
 
     private val _allowRemote = MutableStateFlow(false)
     val allowRemote: StateFlow<Boolean> = _allowRemote.asStateFlow()
+
+    private val _remoteEvents = MutableSharedFlow<RemoteEvent>(extraBufferCapacity = REMOTE_EVENT_BUFFER)
+    val remoteEvents: SharedFlow<RemoteEvent> = _remoteEvents.asSharedFlow()
+
+    private val _lastCallError = MutableStateFlow<RemoteCallError?>(null)
+    val lastCallError: StateFlow<RemoteCallError?> = _lastCallError.asStateFlow()
 
     @Volatile
     private var started = false
@@ -60,6 +71,7 @@ class RelayLive(
         started = false
         socket.stop()
         server.reset()
+        calls.failAll(RemoteCallError(RemoteCallCodes.DISCONNECTED, "relay stopped"))
         _devices.value = emptyList()
         _state.value = RelayLiveState.Disabled
     }
@@ -70,6 +82,42 @@ class RelayLive(
 
     fun sendRoute(to: String, method: String, params: JsonObject): Boolean =
         send(RelayFrames.route(routeId(), to, method, params))
+
+    suspend fun call(
+        to: String,
+        method: String,
+        params: JsonObject,
+        timeoutMillis: Long = CALL_TIMEOUT_MILLIS,
+        onRouteId: (String) -> Unit = {},
+    ): JsonObject? {
+        if (socket.state.value != RelaySocketState.Online) {
+            _lastCallError.value = RemoteCallError(RemoteCallCodes.NOT_CONNECTED, "relay is not connected")
+            return null
+        }
+        val id = routeId()
+        onRouteId(id)
+        val pending = calls.open(id)
+        if (!send(RelayFrames.route(id, to, method, params))) {
+            calls.settle(
+                id,
+                RemoteCallOutcome.Failed(RemoteCallError(RemoteCallCodes.NOT_CONNECTED, "relay is not connected")),
+            )
+        }
+        val outcome = withTimeoutOrNull(timeoutMillis) { pending.await() }
+            ?: RemoteCallOutcome.Failed(RemoteCallError(RemoteCallCodes.TIMEOUT, "the device did not answer"))
+        calls.settle(id, outcome)
+        return when (outcome) {
+            is RemoteCallOutcome.Ok -> {
+                _lastCallError.value = null
+                outcome.result
+            }
+
+            is RemoteCallOutcome.Failed -> {
+                _lastCallError.value = outcome.error
+                null
+            }
+        }
+    }
 
     private suspend fun bots(): List<RelayBot> = runCatching {
         host.workspaces().map { workspace -> RelayBot(workspace.id, workspace.name) }
@@ -111,6 +159,7 @@ class RelayLive(
             RelaySocketState.Unauthorized -> RelayLiveState.Unauthorized
         }
         if (value != RelaySocketState.Online) {
+            calls.failAll(RemoteCallError(RemoteCallCodes.DISCONNECTED, "relay disconnected"))
             server.reset()
             _devices.value = emptyList()
         }
@@ -152,7 +201,22 @@ class RelayLive(
 
             is RelayServerFrame.MemoryChanged -> runCatching { memorySync.refreshIfStale(0) }
             is RelayServerFrame.Route -> server.handle(frame)
+            is RelayServerFrame.RouteOk -> calls.settle(frame.id, RemoteCallOutcome.Ok(frame.result))
+            is RelayServerFrame.RouteError -> calls.settle(
+                frame.id,
+                RemoteCallOutcome.Failed(RemoteCallError(frame.code, frame.message)),
+            )
+
+            is RelayServerFrame.RouteEvent -> _remoteEvents.tryEmit(
+                RemoteEvent(routeId = frame.id, seq = frame.seq, event = frame.event),
+            )
+
             else -> Unit
         }
+    }
+
+    private companion object {
+        private const val CALL_TIMEOUT_MILLIS = 15_000L
+        private const val REMOTE_EVENT_BUFFER = 256
     }
 }
