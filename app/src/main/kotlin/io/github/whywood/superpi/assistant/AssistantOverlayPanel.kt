@@ -103,8 +103,9 @@ internal fun AssistantOverlayPanel(
     val scroll = rememberChatScrollController(listState)
     val shape = RoundedCornerShape(28.dp)
     val copiedMessage = stringResource(R.string.assistant_overlay_copied)
-    val workspaceName = state.workspaces.firstOrNull { it.id == state.workspaceId }?.name
-        ?: stringResource(R.string.assistant_overlay_workspace)
+    val workspace = state.workspaces.firstOrNull { it.id == state.workspaceId }
+    val workspaceName = workspace?.name ?: stringResource(R.string.assistant_overlay_workspace)
+    val workspaceLabel = workspace?.remote?.let { remote -> "$workspaceName · ${remote.deviceName}" } ?: workspaceName
     var headerHeightPx by remember { mutableIntStateOf(0) }
     val itemHeights = remember(state.sessionId) { mutableStateMapOf<Any, Int>() }
     var lastContentHeightPx by remember(state.sessionId) { mutableIntStateOf(-1) }
@@ -232,7 +233,7 @@ internal fun AssistantOverlayPanel(
                     verticalArrangement = Arrangement.spacedBy(1.dp),
                 ) {
                     Text(
-                        text = workspaceName,
+                        text = workspaceLabel,
                         style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
                         color = colors.inkTertiary,
                         maxLines = 1,

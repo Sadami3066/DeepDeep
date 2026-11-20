@@ -59,6 +59,8 @@ import io.github.whywood.superpi.design.DdIcon
 import io.github.whywood.superpi.design.DdIconButton
 import io.github.whywood.superpi.design.DdIcons
 import io.github.whywood.superpi.design.DdMotion
+import io.github.whywood.superpi.design.DdNoticeBar
+import io.github.whywood.superpi.design.DdNoticeTone
 import io.github.whywood.superpi.design.DdPressable
 import io.github.whywood.superpi.design.DdSpinner
 import io.github.whywood.superpi.design.DdType
@@ -66,6 +68,7 @@ import io.github.whywood.superpi.design.superPiColors
 import io.github.whywood.superpi.ui.common.ComposerVoice
 import io.github.whywood.superpi.ui.common.VoiceRecordingBar
 import io.github.whywood.superpi.ui.common.VoiceTranscriptPreview
+import io.github.whywood.superpi.ui.common.remoteChatControls
 import io.github.whywood.superpi.ui.common.chat.ChatInputField
 import io.github.whywood.superpi.ui.common.chat.ComposerChip
 import io.github.whywood.superpi.ui.common.chat.ComposerMetrics
@@ -93,7 +96,13 @@ internal fun AssistantOverlayComposer(
     val colors = superPiColors()
     val keyboard = LocalSoftwareKeyboardController.current
     val busy = state.conversation.sending
-    val canSend = value.isNotBlank() && state.conversation.loaded
+    val remoteControls = remember(state.workspaces, state.workspaceId) {
+        remoteChatControls(state.workspaces, state.workspaceId)
+    }
+    val inputEnabled = remoteControls.inputEnabled
+    val modelControlsVisible = remoteControls.modelControlsVisible
+    val blockedReason = if (inputEnabled) null else stringResource(R.string.assistant_remote_offline)
+    val canSend = inputEnabled && value.isNotBlank() && state.conversation.loaded
     var showModelSheet by remember { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     var pendingExpand by remember { mutableStateOf(false) }
@@ -137,6 +146,13 @@ internal fun AssistantOverlayComposer(
             .pointerInput(Unit) { detectTapGestures { } }
             .padding(vertical = 4.dp),
     ) {
+        if (blockedReason != null) {
+            DdNoticeBar(
+                text = blockedReason,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                tone = DdNoticeTone.WARNING,
+            )
+        }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier
@@ -215,12 +231,15 @@ internal fun AssistantOverlayComposer(
                                         if (isFocused) pendingExpand = false
                                     },
                                     onOpenModels = { showModelSheet = true },
+                                    inputEnabled = inputEnabled,
+                                    modelControlsVisible = modelControlsVisible,
                                     focusRequester = focusRequester,
                                 )
                             } else {
                                 AssistantOverlayCollapsedBar(
                                     state = state,
                                     canSend = canSend,
+                                    inputEnabled = inputEnabled,
                                     micDescription = micDescription,
                                     attachDescription = attachDescription,
                                     sendDescription = sendDescription,
@@ -238,7 +257,7 @@ internal fun AssistantOverlayComposer(
         }
     }
 
-    if (showModelSheet) {
+    if (showModelSheet && modelControlsVisible) {
         ModelPickerSheet(
             providerId = state.providerId,
             modelId = state.modelId,
@@ -283,10 +302,16 @@ private fun AssistantOverlayExpandedContent(
     actions: AssistantOverlayActions,
     onFocusChanged: (Boolean) -> Unit,
     onOpenModels: () -> Unit,
+    inputEnabled: Boolean,
+    modelControlsVisible: Boolean,
     focusRequester: FocusRequester?,
 ) {
     val colors = superPiColors()
-    val modelLabel = state.modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
+    val modelLabel = if (modelControlsVisible) {
+        state.modelLabel.ifBlank { stringResource(R.string.assistant_model_unconfigured) }
+    } else {
+        ""
+    }
     Column(Modifier.fillMaxWidth()) {
         Box(
             Modifier
@@ -318,6 +343,7 @@ private fun AssistantOverlayExpandedContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { onFocusChanged(it.isFocused) },
+                    enabled = inputEnabled,
                     maxLines = 6,
                     focusRequester = focusRequester,
                     testTag = "assistant_overlay_input",
@@ -334,7 +360,7 @@ private fun AssistantOverlayExpandedContent(
                 Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
                     DdSpinner(size = 14.dp, color = colors.inkTertiary)
                 }
-            } else {
+            } else if (inputEnabled) {
                 DdIconButton(
                     icon = DdIcons.Plus,
                     onClick = actions.onPickAttachment,
@@ -345,19 +371,23 @@ private fun AssistantOverlayExpandedContent(
                     tint = colors.inkTertiary,
                 )
             }
-            ComposerChip(
-                text = modelLabel,
-                onClick = onOpenModels,
-                contentDescription = stringResource(R.string.assistant_model_sheet),
-                testTag = "assistant_overlay_model_chip",
-                maxWidth = 150.dp,
-            )
+            if (modelControlsVisible) {
+                ComposerChip(
+                    text = modelLabel,
+                    onClick = onOpenModels,
+                    contentDescription = stringResource(R.string.assistant_model_sheet),
+                    testTag = "assistant_overlay_model_chip",
+                    maxWidth = 150.dp,
+                )
+            }
             Spacer(Modifier.weight(1f))
-            OverlayMicButton(
-                contentDescription = micDescription,
-                onClick = onMicClick,
-                modifier = Modifier.testTag("assistant_overlay_mic"),
-            )
+            if (inputEnabled) {
+                OverlayMicButton(
+                    contentDescription = micDescription,
+                    onClick = onMicClick,
+                    modifier = Modifier.testTag("assistant_overlay_mic"),
+                )
+            }
             if (busy) {
                 Spacer(Modifier.width(6.dp))
                 OverlayStopButton(onClick = actions.onStop)
@@ -377,6 +407,7 @@ private fun AssistantOverlayExpandedContent(
 private fun AssistantOverlayCollapsedBar(
     state: AssistantOverlayState,
     canSend: Boolean,
+    inputEnabled: Boolean,
     micDescription: String,
     attachDescription: String,
     sendDescription: String,
@@ -403,7 +434,7 @@ private fun AssistantOverlayCollapsedBar(
             Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
                 DdSpinner(size = 14.dp, color = colors.inkTertiary)
             }
-        } else {
+        } else if (inputEnabled) {
             DdIconButton(
                 icon = DdIcons.Plus,
                 onClick = actions.onPickAttachment,
@@ -425,12 +456,14 @@ private fun AssistantOverlayCollapsedBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        OverlayMicButton(
-            contentDescription = micDescription,
-            onClick = onMicClick,
-            modifier = Modifier.testTag("assistant_overlay_mic"),
-        )
-        Spacer(Modifier.width(6.dp))
+        if (inputEnabled) {
+            OverlayMicButton(
+                contentDescription = micDescription,
+                onClick = onMicClick,
+                modifier = Modifier.testTag("assistant_overlay_mic"),
+            )
+            Spacer(Modifier.width(6.dp))
+        }
         OverlaySendButton(
             canSend = canSend,
             busy = false,
