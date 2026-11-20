@@ -111,6 +111,36 @@ class RelayClientTest {
     }
 
     @Test
+    fun fetchesCaFromSelfSignedRelay() = runBlocking {
+        val caKeyPair = keyPair()
+        val ca = generateCertificate(
+            X500Name("CN=Relay CA"),
+            X500Name("CN=Relay CA"),
+            caKeyPair.public,
+            caKeyPair.private,
+            isCa = true,
+        )
+        val leafKeyPair = keyPair()
+        val leaf = generateCertificate(
+            X500Name("CN=relay"),
+            X500Name("CN=Relay CA"),
+            leafKeyPair.public,
+            caKeyPair.private,
+            isCa = false,
+        )
+        val server = secureServer(leaf, leafKeyPair.private, "/v1/ca") { exchange ->
+            respond(exchange, 200, toPem(ca))
+        }
+        server.start()
+        try {
+            val pem = client.fetchCa("https://127.0.0.1:${server.address.port}")
+            assertEquals(RemoteTlsFingerprint.of(ca), client.fingerprintOf(pem.orEmpty()))
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
     fun rejectsCertificatesFromAnotherAuthority() = runBlocking {
         val caKeyPair = keyPair()
         generateCertificate(
@@ -182,10 +212,15 @@ class RelayClientTest {
         return server
     }
 
-    private fun secureServer(certificate: X509Certificate, privateKey: PrivateKey, handler: (HttpExchange) -> Unit): HttpsServer {
+    private fun secureServer(
+        certificate: X509Certificate,
+        privateKey: PrivateKey,
+        path: String = "/v1/pair/enroll",
+        handler: (HttpExchange) -> Unit,
+    ): HttpsServer {
         val server = HttpsServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.setHttpsConfigurator(HttpsConfigurator(serverContext(certificate, privateKey)))
-        server.createContext("/v1/pair/enroll", handler)
+        server.createContext(path, handler)
         return server
     }
 
@@ -242,6 +277,12 @@ class RelayClientTest {
         builder.addExtension(Extension.basicConstraints, true, BasicConstraints(isCa))
         val signer = JcaContentSignerBuilder("SHA256withRSA").build(signingKey)
         return JcaX509CertificateConverter().getCertificate(builder.build(signer))
+    }
+
+    private object RemoteTlsFingerprint {
+        fun of(certificate: X509Certificate): String =
+            MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
+                .joinToString("") { "%02x".format(it) }
     }
 
     private companion object {

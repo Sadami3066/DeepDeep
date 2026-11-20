@@ -1,5 +1,6 @@
 package io.github.whywood.superpi.data.relay
 
+import io.github.whywood.superpi.data.remote.CaptureTrustManager
 import io.github.whywood.superpi.data.remote.RemoteTls
 import java.io.IOException
 import javax.net.ssl.SSLException
@@ -14,15 +15,31 @@ class RelayClient(
     private val appVersion: String = "",
 ) : RelayEnroller {
     override suspend fun fetchCa(origin: String): String? = withContext(Dispatchers.IO) {
-        val client = RemoteTls.client(pin = null, remote = true, bootstrap = true)
+        val secure = origin.startsWith("https://")
+        val capture = if (secure) CaptureTrustManager() else null
+        val client = if (capture != null) {
+            RemoteTls.capturingClient(capture, remote = true)
+        } else {
+            RemoteTls.client(pin = null, remote = true, bootstrap = true)
+        }
         val request = Request.Builder().url("$origin/v1/ca").get().build()
         try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) throw RelayException(RelayFailure.BadResponse)
-                response.body.string().takeIf { it.isNotBlank() }
+                val pem = response.body.string().takeIf { it.isNotBlank() }
+                if (capture != null && pem != null) {
+                    val ca = RemoteTls.decodeBytes(pem.toByteArray(Charsets.UTF_8))
+                        ?: throw RelayException(RelayFailure.BadResponse)
+                    if (!RemoteTls.verifies(ca, capture.chain)) {
+                        throw RelayException(RelayFailure.FingerprintMismatch)
+                    }
+                }
+                pem
             }
         } catch (error: RelayException) {
             throw error
+        } catch (error: SSLException) {
+            throw RelayException(RelayFailure.CertificateRejected, cause = error)
         } catch (error: IOException) {
             throw RelayException(RelayFailure.Unreachable, cause = error)
         }
