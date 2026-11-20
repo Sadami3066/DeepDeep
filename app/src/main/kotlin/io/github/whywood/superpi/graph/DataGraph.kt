@@ -1,5 +1,6 @@
 package io.github.whywood.superpi.graph
 
+import io.github.whywood.superpi.BuildConfig
 import io.github.whywood.superpi.sdk.ai.http.okHttpTransport
 import io.github.whywood.superpi.sdk.mcp.oauth.FileMcpTokenStore
 import io.github.whywood.superpi.sdk.mcp.oauth.defaultMcpAuthFile
@@ -27,6 +28,9 @@ import io.github.whywood.superpi.data.remote.RemoteComputerStore
 import io.github.whywood.superpi.data.remote.RemoteConnection
 import io.github.whywood.superpi.data.remote.RemoteGatewayClient
 import io.github.whywood.superpi.data.remote.RemoteSecrets
+import io.github.whywood.superpi.data.relay.RelayClient
+import io.github.whywood.superpi.data.relay.RelayController
+import io.github.whywood.superpi.data.relay.RelayStore
 import io.github.whywood.superpi.data.WebSearchSettingsStore
 import io.github.whywood.superpi.data.isSharedStorageGranted
 import io.github.whywood.superpi.plugin.AndroidPluginStrings
@@ -80,6 +84,12 @@ internal class DataGraph(private val deps: DataGraphDeps) {
         secrets = RemoteSecrets(secretStore),
         browser = RemoteBrowserClient(deps.appContext),
         client = RemoteGatewayClient(),
+        scope = deps.scope,
+    )
+    val relayStore = RelayStore(deps.appContext)
+    val relayController = RelayController(
+        store = relayStore,
+        enroller = RelayClient(platform = "android", appVersion = BuildConfig.VERSION_NAME),
         scope = deps.scope,
     )
     val themePreferences = ThemePreferences(deps.appContext)

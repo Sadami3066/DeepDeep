@@ -150,6 +150,11 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
+    data object Relay : AppDestination {
+        override val routeKey: String = "relay"
+        override val depth: Int = 1
+    }
+
     data class RemoteConnect(val computerId: String) : AppDestination {
         override val routeKey: String = REMOTE_CONNECT_PREFIX + computerId
         override val depth: Int = 2
@@ -245,6 +250,7 @@ sealed interface AppDestination {
             routeKey == Memory.routeKey -> Memory
             routeKey == Plugins.routeKey -> Plugins
             routeKey == Remote.routeKey -> Remote
+            routeKey == Relay.routeKey -> Relay
             routeKey.startsWith(REMOTE_CONNECT_PREFIX) ->
                 RemoteConnect(routeKey.removePrefix(REMOTE_CONNECT_PREFIX))
                     .takeIf { it.computerId.isNotBlank() }

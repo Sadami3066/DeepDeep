@@ -20,6 +20,7 @@ import io.github.whywood.superpi.ui.navigation.routes.CustomProviderEditorRoute
 import io.github.whywood.superpi.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.superpi.ui.navigation.routes.ProvidersRoute
 import io.github.whywood.superpi.ui.navigation.routes.RemoteConnectRoute
+import io.github.whywood.superpi.ui.navigation.routes.RelayRoute
 import io.github.whywood.superpi.ui.navigation.routes.RemoteRoute
 import io.github.whywood.superpi.ui.navigation.routes.ScanJsonRoute
 import io.github.whywood.superpi.ui.navigation.routes.ScanSettingsRoute
@@ -205,6 +206,11 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
         AppDestination.Remote -> RemoteRoute(
             dependencies = dependencies,
             navigator = host.navigator,
+            onBack = onBack,
+        )
+
+        AppDestination.Relay -> RelayRoute(
+            dependencies = dependencies,
             onBack = onBack,
         )
 

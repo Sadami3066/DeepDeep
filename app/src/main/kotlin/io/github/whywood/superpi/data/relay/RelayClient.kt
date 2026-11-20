@@ -12,8 +12,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class RelayClient(
     private val platform: String = "android",
     private val appVersion: String = "",
-) {
-    suspend fun fetchCa(origin: String): String? = withContext(Dispatchers.IO) {
+) : RelayEnroller {
+    override suspend fun fetchCa(origin: String): String? = withContext(Dispatchers.IO) {
         val client = RemoteTls.client(pin = null, remote = true, bootstrap = true)
         val request = Request.Builder().url("$origin/v1/ca").get().build()
         try {
@@ -28,7 +28,7 @@ class RelayClient(
         }
     }
 
-    suspend fun enroll(
+    override suspend fun enroll(
         origin: String,
         caPem: String?,
         deviceName: String,
@@ -60,7 +60,7 @@ class RelayClient(
         }
     }
 
-    fun fingerprintOf(caPem: String): String? {
+    override fun fingerprintOf(caPem: String): String? {
         val certificate = RemoteTls.decodeBytes(caPem.toByteArray(Charsets.UTF_8)) ?: return null
         return RelayPairingLink.normalizeFingerprint(RemoteTls.sha256Hex(certificate))
     }

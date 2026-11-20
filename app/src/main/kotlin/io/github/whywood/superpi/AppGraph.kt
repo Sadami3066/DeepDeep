@@ -162,6 +162,7 @@ class AppGraph(context: Context) : AppDependencies {
     override val questionCenter: QuestionCenter get() = dataGraph.questionCenter
     override val goalService: GoalService get() = dataGraph.goalService
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
+    override val relayController: io.github.whywood.superpi.data.relay.RelayController get() = dataGraph.relayController
 
     private val updateInstaller: AndroidUpdateInstaller by lazy { AndroidUpdateInstaller(appContext) }
 

@@ -1,0 +1,32 @@
+<resources>
+    <string name="relay_title">Connect devices</string>
+    <string name="relay_back">Back</string>
+    <string name="relay_intro">Once connected, this phone and your computer share one memory and can use each other\'s bots.</string>
+    <string name="relay_link_label">Pairing link</string>
+    <string name="relay_link_placeholder">https://server:8443/#fp=…&amp;code=…</string>
+    <string name="relay_fingerprint_label">Server fingerprint</string>
+    <string name="relay_secret_label">Login secret</string>
+    <string name="relay_secret_placeholder">Only for the first device</string>
+    <string name="relay_device_name_label">Device name</string>
+    <string name="relay_device_name_placeholder">How other devices see this one</string>
+    <string name="relay_connect">Connect</string>
+    <string name="relay_connecting">Connecting…</string>
+    <string name="relay_connected">Connected</string>
+    <string name="relay_account_device">Device</string>
+    <string name="relay_account_server">Server</string>
+    <string name="relay_account_id">Account</string>
+    <string name="relay_account_since">Connected</string>
+    <string name="relay_sign_out">Sign out</string>
+    <string name="relay_sign_out_title">Sign out</string>
+    <string name="relay_sign_out_message">This phone will stop syncing memory and can no longer use bots on other devices.</string>
+    <string name="relay_sign_out_confirm">Sign out</string>
+    <string name="relay_cancel">Cancel</string>
+    <string name="relay_error_invalid_link">That link does not look right. Check it and try again.</string>
+    <string name="relay_error_missing_code">The link has no pairing code. Generate a new pairing link.</string>
+    <string name="relay_error_missing_fingerprint">The link is missing the server fingerprint. Use the full pairing link.</string>
+    <string name="relay_error_fingerprint">The server does not match the pairing link. Connection stopped.</string>
+    <string name="relay_error_unreachable">Cannot reach the server. Check the network and try again.</string>
+    <string name="relay_error_unauthorized">The pairing code or login secret is wrong. Get a new one.</string>
+    <string name="relay_error_bad_response">The server could not finish connecting. Try again later.</string>
+    <string name="relay_retry">Retry</string>
+</resources>
