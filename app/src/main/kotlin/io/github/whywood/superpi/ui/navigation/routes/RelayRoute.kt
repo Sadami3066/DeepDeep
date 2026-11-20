@@ -14,13 +14,20 @@ internal fun RelayRoute(
     onBack: () -> Unit,
 ) {
     val state by dependencies.relayController.state.collectAsStateWithLifecycle()
+    val liveState by dependencies.relayLive.state.collectAsStateWithLifecycle()
+    val allowRemote by dependencies.relayLive.allowRemote.collectAsStateWithLifecycle()
+    val devices by dependencies.relayLive.devices.collectAsStateWithLifecycle()
     val model = Build.MODEL.orEmpty().trim()
     RelayScreen(
         state = state,
+        liveState = liveState,
+        allowRemote = allowRemote,
+        devices = devices,
         defaultDeviceName = remember(model) { model.ifEmpty { "Android" } },
         onBack = onBack,
         onConnect = dependencies.relayController::signIn,
         onSignOut = dependencies.relayController::signOut,
         onDismissError = dependencies.relayController::dismissError,
+        onToggleAllowRemote = dependencies.relayLive::setAllowRemote,
     )
 }

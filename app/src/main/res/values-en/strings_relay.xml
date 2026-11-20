@@ -29,4 +29,15 @@
     <string name="relay_error_unauthorized">The pairing code or login secret is wrong. Get a new one.</string>
     <string name="relay_error_bad_response">The server could not finish connecting. Try again later.</string>
     <string name="relay_retry">Retry</string>
+    <string name="relay_share_title">Let other devices use this phone</string>
+    <string name="relay_share_on">Other devices can use this phone\'s bots</string>
+    <string name="relay_share_off">When on, other devices can run bots on this phone</string>
+    <string name="relay_live_connecting">Connecting…</string>
+    <string name="relay_live_online">Online</string>
+    <string name="relay_live_offline">Offline, reconnecting</string>
+    <string name="relay_live_unauthorized">The connection expired. Connect again</string>
+    <string name="relay_devices_empty">No other devices yet</string>
+    <string name="relay_devices_empty_hint">Connect the same account on another device to see it here</string>
+    <string name="relay_devices_offline">Offline</string>
+    <string name="relay_devices_no_bots">No bots available</string>
 </resources>

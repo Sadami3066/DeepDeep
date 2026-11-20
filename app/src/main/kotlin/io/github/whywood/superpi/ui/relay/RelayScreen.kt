@@ -1,6 +1,8 @@
 package io.github.whywood.superpi.ui.relay
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -8,9 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +34,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.whywood.superpi.R
 import io.github.whywood.superpi.data.relay.RelayAccount
+import io.github.whywood.superpi.data.relay.RelayDevice
 import io.github.whywood.superpi.data.relay.RelayError
+import io.github.whywood.superpi.data.relay.RelayLiveState
 import io.github.whywood.superpi.data.relay.RelayPairingLink
 import io.github.whywood.superpi.data.relay.RelayUiState
 import io.github.whywood.superpi.design.DdDialog
@@ -42,6 +49,7 @@ import io.github.whywood.superpi.design.DdNoticeTone
 import io.github.whywood.superpi.design.DdPageScaffold
 import io.github.whywood.superpi.design.DdPrimaryButton
 import io.github.whywood.superpi.design.DdSpacing
+import io.github.whywood.superpi.design.DdSwitch
 import io.github.whywood.superpi.design.DdText
 import io.github.whywood.superpi.design.DdTextAction
 import io.github.whywood.superpi.design.DdTextField
@@ -55,11 +63,15 @@ import java.time.format.FormatStyle
 @Composable
 internal fun RelayScreen(
     state: RelayUiState,
+    liveState: RelayLiveState,
+    allowRemote: Boolean,
+    devices: List<RelayDevice>,
     defaultDeviceName: String,
     onBack: () -> Unit,
     onConnect: (link: String, loginSecret: String?, deviceName: String) -> Unit,
     onSignOut: () -> Unit,
     onDismissError: () -> Unit,
+    onToggleAllowRemote: (Boolean) -> Unit,
 ) {
     val colors = superPiColors()
     var link by rememberSaveable { mutableStateOf("") }
@@ -106,6 +118,10 @@ internal fun RelayScreen(
         } else {
             ConnectedAccount(
                 account = account,
+                liveState = liveState,
+                allowRemote = allowRemote,
+                devices = devices,
+                onToggleAllowRemote = onToggleAllowRemote,
                 onSignOut = { confirmSignOut = true },
             )
         }
@@ -236,6 +252,10 @@ private fun ColumnScope.ConnectForm(
 @Composable
 private fun ColumnScope.ConnectedAccount(
     account: RelayAccount,
+    liveState: RelayLiveState,
+    allowRemote: Boolean,
+    devices: List<RelayDevice>,
+    onToggleAllowRemote: (Boolean) -> Unit,
     onSignOut: () -> Unit,
 ) {
     val colors = superPiColors()
@@ -268,6 +288,13 @@ private fun ColumnScope.ConnectedAccount(
                 value = formatDate(account.enrolledAt),
             )
         }
+        Spacer(Modifier.height(DdSpacing.Xl))
+        ShareCard(
+            liveState = liveState,
+            allowRemote = allowRemote,
+            devices = devices,
+            onToggleAllowRemote = onToggleAllowRemote,
+        )
         Spacer(Modifier.height(DdSpacing.Xxxl))
         DdTextAction(
             text = stringResource(R.string.relay_sign_out),
@@ -275,6 +302,81 @@ private fun ColumnScope.ConnectedAccount(
             color = colors.danger,
         )
     }
+}
+
+@Composable
+private fun ShareCard(
+    liveState: RelayLiveState,
+    allowRemote: Boolean,
+    devices: List<RelayDevice>,
+    onToggleAllowRemote: (Boolean) -> Unit,
+) {
+    val colors = superPiColors()
+    DdGroupCard(
+        header = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.relay_share_title),
+                        style = DdType.label,
+                        color = colors.ink,
+                    )
+                    Spacer(Modifier.height(DdSpacing.Xxs))
+                    Text(
+                        text = stringResource(
+                            if (allowRemote) liveState.textRes() else R.string.relay_share_off,
+                        ),
+                        style = DdType.bodySmall,
+                        color = colors.inkSecondary,
+                    )
+                }
+                Spacer(Modifier.width(DdSpacing.Md))
+                DdSwitch(
+                    checked = allowRemote,
+                    onCheckedChange = onToggleAllowRemote,
+                    stateDescription = stringResource(
+                        if (allowRemote) R.string.relay_share_on else R.string.relay_share_off,
+                    ),
+                )
+            }
+        },
+    ) {
+        if (devices.isEmpty()) {
+            DdListRow(
+                title = stringResource(R.string.relay_devices_empty),
+                subtitle = stringResource(R.string.relay_devices_empty_hint),
+            )
+        } else {
+            devices.forEach { device ->
+                DdListRow(
+                    title = device.name,
+                    subtitle = if (device.online) {
+                        device.bots.joinToString("、") { it.name }.ifEmpty {
+                            stringResource(R.string.relay_devices_no_bots)
+                        }
+                    } else {
+                        stringResource(R.string.relay_devices_offline)
+                    },
+                    trailing = {
+                        Box(
+                            Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(if (device.online) colors.accent else colors.hairline),
+                        )
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun RelayLiveState.textRes(): Int = when (this) {
+    RelayLiveState.Disabled -> R.string.relay_share_off
+    RelayLiveState.Connecting -> R.string.relay_live_connecting
+    RelayLiveState.Online -> R.string.relay_live_online
+    RelayLiveState.Offline -> R.string.relay_live_offline
+    RelayLiveState.Unauthorized -> R.string.relay_live_unauthorized
 }
 
 @Composable

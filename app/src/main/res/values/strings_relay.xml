@@ -29,4 +29,15 @@
     <string name="relay_error_unauthorized">配对码或登录密钥不正确，请重新获取。</string>
     <string name="relay_error_bad_response">服务器暂时无法完成连接，请稍后重试。</string>
     <string name="relay_retry">重试</string>
+    <string name="relay_share_title">允许其他设备使用</string>
+    <string name="relay_share_on">其他设备可以直接使用这台手机的 Bot</string>
+    <string name="relay_share_off">开启后，其他设备可以在这台手机上运行 Bot</string>
+    <string name="relay_live_connecting">正在连接…</string>
+    <string name="relay_live_online">已在线</string>
+    <string name="relay_live_offline">当前离线，正在重连</string>
+    <string name="relay_live_unauthorized">连接已失效，请重新连接</string>
+    <string name="relay_devices_empty">还没有其他设备</string>
+    <string name="relay_devices_empty_hint">在另一台设备上连接同一个账号后，会显示在这里</string>
+    <string name="relay_devices_offline">离线</string>
+    <string name="relay_devices_no_bots">没有可用的 Bot</string>
 </resources>

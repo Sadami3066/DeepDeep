@@ -164,6 +164,16 @@ class AppGraph(context: Context) : AppDependencies {
     override val remoteConnection: RemoteConnection get() = dataGraph.remoteConnection
     override val relayController: io.github.whywood.superpi.data.relay.RelayController get() = dataGraph.relayController
 
+    override val relayLive: io.github.whywood.superpi.data.relay.RelayLive by lazy {
+        io.github.whywood.superpi.data.relay.RelayLive(
+            scope = scope,
+            accounts = dataGraph.relayStore,
+            host = host,
+            memorySync = dataGraph.relayMemorySync,
+            appVersion = BuildConfig.VERSION_NAME,
+        )
+    }
+
     private val updateInstaller: AndroidUpdateInstaller by lazy { AndroidUpdateInstaller(appContext) }
 
     override val updateManager: UpdateManager by lazy {

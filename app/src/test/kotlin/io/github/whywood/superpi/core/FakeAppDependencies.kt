@@ -67,6 +67,8 @@ internal class FakeAppDependencies(
 
     override val relayController: io.github.whywood.superpi.data.relay.RelayController get() = unavailable("relayController")
 
+    override val relayLive: io.github.whywood.superpi.data.relay.RelayLive get() = unavailable("relayLive")
+
     override val updateManager: UpdateManager get() = unavailable("updateManager")
 
     override suspend fun prepare() {

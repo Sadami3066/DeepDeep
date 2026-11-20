@@ -38,6 +38,7 @@ class AgentService : Service() {
     override fun onCreate() {
         super.onCreate()
         graph.notificationCenter.start()
+        runCatching { graph.relayLive.start() }
         startForeground(NOTIFICATION_ID, graph.notificationCenter.foregroundNotification())
         graph.notificationCenter.onForegroundStarted()
         registerClockReceiver()
@@ -91,6 +92,7 @@ class AgentService : Service() {
         floatingWindow?.stop()
         floatingWindow = null
         graph.timerService.stop()
+        graph.relayLive.stop()
         graph.notificationCenter.stop()
         scope.cancel()
         super.onDestroy()
