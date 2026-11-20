@@ -262,20 +262,6 @@ class SessionCommandPlaneTest {
     }
 
     @Test
-    fun reusedReconfigureClaimCanSkipDeferral() {
-        val plane = SessionCommandPlane()
-        plane.attach("session")
-        val start = plane.begin("session", TurnSource.USER)!!
-
-        assertEquals(0L, plane.claimReconfigure("session", deferWhenBusy = false))
-        assertFalse(plane.finish("session", start.runId).reconfigure)
-
-        val retried = plane.begin("session", TurnSource.USER)!!
-        assertEquals(0L, plane.claimReconfigure("session"))
-        assertTrue(plane.finish("session", retried.runId).reconfigure)
-    }
-
-    @Test
     fun activeRunTracksOwner() {
         val plane = SessionCommandPlane()
         plane.attach("session")

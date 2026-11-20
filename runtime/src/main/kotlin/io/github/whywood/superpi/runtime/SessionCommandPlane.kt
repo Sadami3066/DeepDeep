@@ -152,11 +152,11 @@ class SessionCommandPlane {
         }
     }
 
-    fun claimReconfigure(sessionId: String, deferWhenBusy: Boolean = true): Long {
+    fun claimReconfigure(sessionId: String): Long {
         val state = states[sessionId] ?: return 0
         synchronized(state.lock) {
             if (state.reconfigureOwner != 0L || state.busy) {
-                if (deferWhenBusy) state.pendingReconfigure = true
+                state.pendingReconfigure = true
                 return 0
             }
             val token = reconfigureTokens.incrementAndGet()
