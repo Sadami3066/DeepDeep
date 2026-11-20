@@ -146,8 +146,6 @@ internal fun AppShell(
         chatViewModel.adoptConfiguredModel(config)
     }
     val timers by graph.timerService.timers.collectAsStateWithLifecycle()
-    val remoteBots by graph.relayLive.remoteBots.collectAsStateWithLifecycle()
-    LaunchedEffect(remoteBots) { chatViewModel.refreshWorkspaces() }
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val sharedStorageEnabled by graph.linuxSettings.sharedStorageEnabled.collectAsStateWithLifecycle(

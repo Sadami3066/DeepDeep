@@ -251,10 +251,6 @@ class ChatViewModel(
 
     fun refreshModelCatalog() = modelController.refreshModels()
 
-    fun refreshWorkspaces() {
-        viewModelScope.launch { refreshSessions() }
-    }
-
     fun onInputChange(value: String) = sessionDrafts.updateInput(value)
 
     fun refreshAvailableSkills() {
