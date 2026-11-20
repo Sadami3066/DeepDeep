@@ -82,8 +82,22 @@ class RelayLive(
         started = true
         scope.launch {
             runCatching { _devices.value = accounts.readDevices() }
+            launchCollectors()
         }
-        scope.launch { accounts.account.collect { value -> account = value; reconcile() } }
+    }
+
+    private fun launchCollectors() {
+        scope.launch {
+            accounts.account.collect { value ->
+                val previous = account
+                account = value
+                if (value == null && previous != null) {
+                    _devices.value = emptyList()
+                    runCatching { accounts.saveDevices(emptyList()) }
+                }
+                reconcile()
+            }
+        }
         scope.launch { accounts.allowRemote.collect { value -> _allowRemote.value = value; reconcile() } }
         scope.launch { socket.state.collect { value -> onSocketState(value) } }
         scope.launch { socket.frames.collect { frame -> onFrame(frame) } }
@@ -147,6 +161,34 @@ class RelayLive(
         }
     }
 
+    private fun mergePresence(frame: RelayServerFrame.Presence): List<RelayDevice> {
+        val existing = _devices.value
+        val previous = existing.firstOrNull { it.deviceId == frame.deviceId }
+        val merged = RelayDevice(
+            deviceId = frame.deviceId,
+            name = previous?.name ?: frame.deviceId,
+            platform = previous?.platform.orEmpty(),
+            online = frame.online,
+            lastSeen = frame.lastSeen,
+            bots = if (frame.online) frame.bots.orEmpty() else previous?.bots.orEmpty(),
+        )
+        return existing.filterNot { it.deviceId == frame.deviceId } + merged
+    }
+
+    private fun mergeDevices(incoming: List<RelayDevice>, previous: List<RelayDevice>): List<RelayDevice> =
+        incoming.map { device ->
+            val cached = previous.firstOrNull { it.deviceId == device.deviceId }
+            if (cached == null) {
+                device
+            } else {
+                device.copy(
+                    name = device.name.takeIf { it != device.deviceId } ?: cached.name,
+                    platform = device.platform.ifEmpty { cached.platform },
+                    bots = if (device.online) device.bots else cached.bots.ifEmpty { device.bots },
+                )
+            }
+        }
+
     private fun persistDevices() {
         val snapshot = _devices.value
         scope.launch { runCatching { accounts.saveDevices(snapshot) } }
@@ -166,10 +208,15 @@ class RelayLive(
         mutex.withLock {
             val current = account
             val token = accounts.token()
-            if (current == null || token == null || !_allowRemote.value) {
+            if (current == null) {
                 socket.stop()
                 server.reset()
-                _devices.value = emptyList()
+                _state.value = RelayLiveState.Disabled
+                return
+            }
+            if (token == null || !_allowRemote.value) {
+                socket.stop()
+                server.reset()
                 _state.value = RelayLiveState.Disabled
                 return
             }
@@ -196,7 +243,6 @@ class RelayLive(
         if (value != RelaySocketState.Online) {
             calls.failAll(RemoteCallError(RemoteCallCodes.DISCONNECTED, "relay disconnected"))
             server.reset()
-            _devices.value = emptyList()
         }
         _state.value = mapped
     }
@@ -205,7 +251,10 @@ class RelayLive(
         when (frame) {
             is RelayServerFrame.HelloOk -> {
                 val self = account?.deviceId
-                _devices.value = frame.devices.filter { device -> device.deviceId != self }
+                _devices.value = mergeDevices(
+                    incoming = frame.devices.filter { device -> device.deviceId != self },
+                    previous = _devices.value,
+                )
                 persistDevices()
                 runCatching { memorySync.refreshIfStale(0) }
             }
@@ -213,26 +262,7 @@ class RelayLive(
             is RelayServerFrame.Presence -> {
                 val self = account?.deviceId
                 if (frame.deviceId == self) return
-                val existing = _devices.value
-                _devices.value = if (frame.online) {
-                    val bots = frame.bots ?: existing.firstOrNull { it.deviceId == frame.deviceId }?.bots.orEmpty()
-                    existing.filterNot { it.deviceId == frame.deviceId } + RelayDevice(
-                        deviceId = frame.deviceId,
-                        name = existing.firstOrNull { it.deviceId == frame.deviceId }?.name ?: frame.deviceId,
-                        platform = existing.firstOrNull { it.deviceId == frame.deviceId }?.platform.orEmpty(),
-                        online = true,
-                        lastSeen = frame.lastSeen,
-                        bots = bots,
-                    )
-                } else {
-                    existing.map { device ->
-                        if (device.deviceId == frame.deviceId) {
-                            device.copy(online = false, lastSeen = frame.lastSeen)
-                        } else {
-                            device
-                        }
-                    }
-                }
+                _devices.value = mergePresence(frame)
                 persistDevices()
             }
 
