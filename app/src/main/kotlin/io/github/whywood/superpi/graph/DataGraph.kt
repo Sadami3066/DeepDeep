@@ -31,7 +31,6 @@ import io.github.whywood.superpi.data.remote.RemoteSecrets
 import io.github.whywood.superpi.data.relay.RelayClient
 import io.github.whywood.superpi.data.relay.RelayController
 import io.github.whywood.superpi.data.relay.RelayMemoryClient
-import io.github.whywood.superpi.data.relay.RemoteMirrorStore
 import io.github.whywood.superpi.data.relay.RelayMemorySync
 import io.github.whywood.superpi.data.relay.RelayStore
 import io.github.whywood.superpi.data.WebSearchSettingsStore
@@ -90,7 +89,6 @@ internal class DataGraph(private val deps: DataGraphDeps) {
         scope = deps.scope,
     )
     val relayStore = RelayStore(deps.appContext)
-    val relayMirror = RemoteMirrorStore(File(deps.appContext.filesDir, "relay/mirror"))
     val relayController = RelayController(
         store = relayStore,
         enroller = RelayClient(platform = "android", appVersion = BuildConfig.VERSION_NAME),

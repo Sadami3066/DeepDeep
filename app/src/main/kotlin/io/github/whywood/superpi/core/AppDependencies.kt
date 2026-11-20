@@ -20,7 +20,6 @@ import io.github.whywood.superpi.data.WebSearchSettingsStore
 import io.github.whywood.superpi.data.remote.RemoteConnection
 import io.github.whywood.superpi.data.relay.RelayController
 import io.github.whywood.superpi.data.relay.RelayLive
-import io.github.whywood.superpi.data.relay.RemoteMirrorStore
 import io.github.whywood.superpi.data.update.UpdateManager
 import io.github.whywood.superpi.market.MarketRepository
 import io.github.whywood.superpi.plugin.manager.PluginManagerFacade
@@ -141,8 +140,6 @@ interface FeatureDependencies {
     val relayController: RelayController
 
     val relayLive: RelayLive
-
-    val relayMirror: RemoteMirrorStore
 
     val updateManager: UpdateManager
 }
