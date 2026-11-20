@@ -121,10 +121,9 @@ import io.github.whywood.superpi.runtime.PendingQuestion
 import io.github.whywood.superpi.runtime.ProviderSummary
 import io.github.whywood.superpi.runtime.QuestionAnswer
 import io.github.whywood.superpi.runtime.QueuedInput
-import io.github.whywood.superpi.runtime.RemoteBotRef
 import io.github.whywood.superpi.runtime.RuntimeActivity
-import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.runtime.ThinkingLevel
+import io.github.whywood.superpi.ui.common.remoteChatControls
 import io.github.whywood.superpi.ui.common.chat.ChatComposer
 import io.github.whywood.superpi.ui.common.chat.ChatComposerActions
 import io.github.whywood.superpi.ui.common.chat.ChatComposerState
@@ -188,21 +187,6 @@ data class ChatScreenActions(
     val onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit,
     val onOpenBotSettings: (String) -> Unit,
 )
-
-internal data class RemoteChatControls(
-    val remote: RemoteBotRef?,
-    val inputEnabled: Boolean,
-    val modelControlsVisible: Boolean,
-)
-
-internal fun remoteChatControls(workspaces: List<RuntimeWorkspace>, workspaceId: String): RemoteChatControls {
-    val remote = workspaces.firstOrNull { workspace -> workspace.id == workspaceId }?.remote
-    return RemoteChatControls(
-        remote = remote,
-        inputEnabled = remote?.online != false,
-        modelControlsVisible = remote == null,
-    )
-}
 
 data class ChatScreenOverlay(
     val reminderCount: Int,

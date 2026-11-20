@@ -1,4 +1,4 @@
-package io.github.whywood.superpi.ui.chat
+package io.github.whywood.superpi.ui.common
 
 import io.github.whywood.superpi.runtime.RemoteBotRef
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
