@@ -17,6 +17,7 @@
     <string name="camera_failed">Couldn\'t take the photo</string>
     <string name="camera_unavailable">Camera isn\'t available</string>
     <string name="assistant_close">Close</string>
+    <string name="assistant_remote_offline">The device is offline; history stays readable</string>
     <string name="assistant_configure_hint">No model configured</string>
     <string name="assistant_configure_input">Configure a model in settings first</string>
     <string name="assistant_copied">Copied</string>

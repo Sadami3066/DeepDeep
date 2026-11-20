@@ -121,7 +121,9 @@ import io.github.whywood.superpi.runtime.PendingQuestion
 import io.github.whywood.superpi.runtime.ProviderSummary
 import io.github.whywood.superpi.runtime.QuestionAnswer
 import io.github.whywood.superpi.runtime.QueuedInput
+import io.github.whywood.superpi.runtime.RemoteBotRef
 import io.github.whywood.superpi.runtime.RuntimeActivity
+import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.runtime.ThinkingLevel
 import io.github.whywood.superpi.ui.common.chat.ChatComposer
 import io.github.whywood.superpi.ui.common.chat.ChatComposerActions
@@ -186,6 +188,21 @@ data class ChatScreenActions(
     val onScrollAnchorChange: (sessionId: String, index: Int, offset: Int, atBottom: Boolean) -> Unit,
     val onOpenBotSettings: (String) -> Unit,
 )
+
+internal data class RemoteChatControls(
+    val remote: RemoteBotRef?,
+    val inputEnabled: Boolean,
+    val modelControlsVisible: Boolean,
+)
+
+internal fun remoteChatControls(workspaces: List<RuntimeWorkspace>, workspaceId: String): RemoteChatControls {
+    val remote = workspaces.firstOrNull { workspace -> workspace.id == workspaceId }?.remote
+    return RemoteChatControls(
+        remote = remote,
+        inputEnabled = remote?.online != false,
+        modelControlsVisible = remote == null,
+    )
+}
 
 data class ChatScreenOverlay(
     val reminderCount: Int,
@@ -278,6 +295,12 @@ fun ChatScreen(
     var overlayHeightPx by remember { mutableIntStateOf(0) }
     val copiedMessage = stringResource(R.string.assistant_copied)
     val configured = state.configured
+    val remoteControls = remember(state.workspaces, state.currentWorkspaceId) {
+        remoteChatControls(state.workspaces, state.currentWorkspaceId)
+    }
+    val remoteBot = remoteControls.remote
+    val remoteOnline = remoteControls.inputEnabled
+    val modelControlsVisible = remoteControls.modelControlsVisible
     val messages = state.messages
     val presentedCards = remember(messages) { presentedCardLookup(messages) }
     val streamMessages = remember(messages) { messages.filterNot { it.customType == TodoWriteCustomType } }
@@ -759,8 +782,8 @@ fun ChatScreen(
                         value = state.input,
                         ready = state.ready && state.historyLoaded && !state.switchingConversation,
                         sending = state.sending,
-                        configured = configured,
-                        modelLabel = if (configured) state.modelLabel else "",
+                        configured = configured || remoteBot != null,
+                        modelLabel = if (modelControlsVisible && configured) state.modelLabel else "",
                         modelId = state.modelId,
                         models = state.models,
                         providerId = state.providerId,
@@ -773,6 +796,13 @@ fun ChatScreen(
                         queuedInputs = queuedInputs,
                         importingAttachment = importingAttachment,
                         modelsOpen = modelsOpen,
+                        inputEnabled = remoteOnline,
+                        modelControlsVisible = modelControlsVisible,
+                        blockedReason = if (remoteOnline) {
+                            null
+                        } else {
+                            stringResource(R.string.assistant_remote_offline)
+                        },
                     ),
                     actions = ChatComposerActions(
                         onValueChange = onInputChange,

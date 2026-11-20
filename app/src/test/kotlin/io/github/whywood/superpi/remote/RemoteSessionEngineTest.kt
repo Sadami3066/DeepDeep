@@ -54,6 +54,7 @@ class RemoteSessionEngineTest {
         assertTrue(handle.sessionId.isNotBlank())
         assertTrue(handle.sessionFile!!.endsWith(".jsonl"))
         assertTrue(handle.messages.isEmpty())
+        handle.close()
     }
 
     private fun engine(): RemoteSessionEngine {

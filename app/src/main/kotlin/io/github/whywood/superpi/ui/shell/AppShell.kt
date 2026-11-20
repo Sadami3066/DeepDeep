@@ -139,6 +139,8 @@ internal fun AppShell(
         ?: defaultModelConfig.modelId
     LaunchedEffect(configuredProviders, storedModelConfig, state.providerId, state.conversationId, state.ready) {
         val config = storedModelConfig ?: return@LaunchedEffect
+        val workspace = state.workspaces.firstOrNull { it.id == state.currentWorkspaceId }
+        if (workspace?.remote != null) return@LaunchedEffect
         if (!state.ready || state.providerId.isBlank() || configuredProviders.isEmpty()) return@LaunchedEffect
         if (state.providerId in configuredProviders || config.providerId !in configuredProviders) return@LaunchedEffect
         chatViewModel.adoptConfiguredModel(config)

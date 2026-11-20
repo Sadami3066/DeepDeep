@@ -75,6 +75,8 @@ import io.github.whywood.superpi.design.DdIcon
 import io.github.whywood.superpi.design.DdIconButton
 import io.github.whywood.superpi.design.DdIcons
 import io.github.whywood.superpi.design.DdMotion
+import io.github.whywood.superpi.design.DdNoticeBar
+import io.github.whywood.superpi.design.DdNoticeTone
 import io.github.whywood.superpi.design.DdPressable
 import io.github.whywood.superpi.design.DdShapes
 import io.github.whywood.superpi.design.DdSpacing
@@ -116,6 +118,9 @@ data class ChatComposerState(
     val queuedInputs: List<QueuedInput>,
     val importingAttachment: Boolean,
     val modelsOpen: Boolean,
+    val inputEnabled: Boolean = true,
+    val modelControlsVisible: Boolean = true,
+    val blockedReason: String? = null,
 )
 
 data class ChatComposerActions(
@@ -152,7 +157,8 @@ internal fun ChatComposer(
         !state.configured -> stringResource(R.string.assistant_configure_input)
         else -> stringResource(R.string.assistant_hint)
     }
-    val canSend = state.ready && state.configured && value.isNotBlank() && !state.importingAttachment
+    val canSend = state.inputEnabled && state.ready && state.configured &&
+        value.isNotBlank() && !state.importingAttachment
     val stops = state.sending && value.isBlank()
     val sendDescription = when {
         stops -> stringResource(R.string.assistant_stop)
@@ -258,6 +264,14 @@ internal fun ChatComposer(
     val shape = RoundedCornerShape(cornerRadius)
 
     Column(modifier.fillMaxWidth().padding(horizontal = DdSpacing.Md, vertical = DdSpacing.Xs)) {
+        val blockedReason = state.blockedReason
+        if (blockedReason != null) {
+            DdNoticeBar(
+                text = blockedReason,
+                modifier = Modifier.fillMaxWidth().padding(bottom = DdSpacing.Xs),
+                tone = DdNoticeTone.WARNING,
+            )
+        }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier
@@ -324,6 +338,7 @@ internal fun ChatComposer(
                         ChatComposerCollapsedContent(
                             placeholder = placeholder,
                             canSend = canSend,
+                            inputEnabled = state.inputEnabled,
                             sendDescription = sendDescription,
                             onExpand = {
                                 if (state.configured || state.providers.isNotEmpty()) {
@@ -341,7 +356,7 @@ internal fun ChatComposer(
                 }
             }
         }
-        if (state.providers.isEmpty()) {
+        if (state.providers.isEmpty() && state.modelControlsVisible) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
                 Row(
                     modifier = Modifier
@@ -365,7 +380,7 @@ internal fun ChatComposer(
         }
     }
 
-    if (state.modelsOpen) {
+    if (state.modelsOpen && state.modelControlsVisible) {
         ModelPickerSheet(
             providerId = state.providerId,
             modelId = state.modelId,
@@ -434,6 +449,7 @@ private fun ComposerCard(
 private fun ChatComposerCollapsedContent(
     placeholder: String,
     canSend: Boolean,
+    inputEnabled: Boolean,
     sendDescription: String,
     onExpand: () -> Unit,
     onPickAttachment: () -> Unit,
@@ -454,15 +470,17 @@ private fun ChatComposerCollapsedContent(
             .testTag("assistant_collapsed"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DdIconButton(
-            icon = DdIcons.Plus,
-            onClick = onPickAttachment,
-            contentDescription = stringResource(R.string.assistant_attach_add),
-            modifier = Modifier.testTag("assistant_attach"),
-            size = 34.dp,
-            iconSize = 17.dp,
-            tint = colors.inkTertiary,
-        )
+        if (inputEnabled) {
+            DdIconButton(
+                icon = DdIcons.Plus,
+                onClick = onPickAttachment,
+                contentDescription = stringResource(R.string.assistant_attach_add),
+                modifier = Modifier.testTag("assistant_attach"),
+                size = 34.dp,
+                iconSize = 17.dp,
+                tint = colors.inkTertiary,
+            )
+        }
         Text(
             text = placeholder,
             modifier = Modifier
@@ -474,8 +492,10 @@ private fun ChatComposerCollapsedContent(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        ComposerMicButton(onClick = onStartVoice)
-        Spacer(Modifier.width(6.dp))
+        if (inputEnabled) {
+            ComposerMicButton(onClick = onStartVoice)
+            Spacer(Modifier.width(6.dp))
+        }
         ComposerSendButton(
             canSend = canSend,
             contentDescription = sendDescription,
@@ -595,7 +615,7 @@ private fun ChatComposerExpandedContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .onFocusChanged { onInputFocusChanged(it.isFocused) },
-                enabled = state.configured,
+                enabled = state.configured && state.inputEnabled,
                 maxLines = 8,
                 visualTransformation = SlashCommandColor(colors.accent),
                 focusRequester = focusRequester,
@@ -636,30 +656,41 @@ private fun ChatComposerExpandedContent(
         modifier = Modifier.fillMaxWidth().padding(start = DdSpacing.Sm, end = DdSpacing.Sm, bottom = DdSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DdIconButton(
-            icon = DdIcons.Plus,
-            onClick = actions.onPickAttachment,
-            contentDescription = stringResource(R.string.assistant_attach_add),
-            modifier = Modifier.testTag("assistant_attach"),
-            size = 34.dp,
-            iconSize = 17.dp,
-            tint = colors.inkTertiary,
-        )
-        ComposerChip(
-            text = label,
-            onClick = {
-                if (state.configured || state.providers.isNotEmpty()) {
-                    actions.onModelsOpenChange(true)
-                } else {
-                    actions.onManageProviders()
-                }
-            },
-            contentDescription = stringResource(R.string.assistant_model_chip, label),
-            testTag = "assistant_model",
-            maxWidth = 150.dp,
-        )
+        if (state.inputEnabled) {
+            DdIconButton(
+                icon = DdIcons.Plus,
+                onClick = actions.onPickAttachment,
+                contentDescription = stringResource(R.string.assistant_attach_add),
+                modifier = Modifier.testTag("assistant_attach"),
+                size = 34.dp,
+                iconSize = 17.dp,
+                tint = colors.inkTertiary,
+            )
+        }
+        when {
+            state.modelControlsVisible -> ComposerChip(
+                text = label,
+                onClick = {
+                    if (state.configured || state.providers.isNotEmpty()) {
+                        actions.onModelsOpenChange(true)
+                    } else {
+                        actions.onManageProviders()
+                    }
+                },
+                contentDescription = stringResource(R.string.assistant_model_chip, label),
+                testTag = "assistant_model",
+                maxWidth = 150.dp,
+            )
+
+            label.isNotBlank() -> ComposerModelBadge(
+                text = label,
+                testTag = "assistant_model_readonly",
+            )
+        }
         Spacer(Modifier.weight(1f))
-        ComposerMicButton(onClick = onStartVoice)
+        if (state.inputEnabled) {
+            ComposerMicButton(onClick = onStartVoice)
+        }
         if (state.sending && !stops) {
             Spacer(Modifier.width(6.dp))
             ComposerStopButton(onClick = actions.onStop)
@@ -830,6 +861,26 @@ internal fun QueuedInputBuffer(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ComposerModelBadge(text: String, testTag: String) {
+    val colors = superPiColors()
+    Box(
+        Modifier
+            .height(32.dp)
+            .testTag(testTag)
+            .padding(horizontal = DdSpacing.Sm),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = DdType.chip,
+            color = colors.inkTertiary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

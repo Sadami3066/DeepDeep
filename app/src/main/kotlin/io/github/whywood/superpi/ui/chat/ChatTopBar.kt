@@ -1,9 +1,10 @@
 package io.github.whywood.superpi.ui.chat
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,24 +81,54 @@ internal fun ChatTopBar(
         val botTitleMaxWidth = maxWidth * 0.52f
         Box(Modifier.fillMaxSize()) {
             if (activeBot != null) {
+                val remote = activeBot.remote
                 Row(
                     modifier = Modifier
                         .align(Alignment.Center)
                         .widthIn(max = botTitleMaxWidth)
                         .clip(RoundedCornerShape(50))
-                        .clickable { actions.onOpenBotSettings(activeBot.id) }
+                        .then(
+                            if (remote == null) {
+                                Modifier.clickable { actions.onOpenBotSettings(activeBot.id) }
+                            } else {
+                                Modifier
+                            },
+                        )
                         .testTag("assistant_bot"),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     BotAvatar(workspace = activeBot, size = 24.dp)
-                    Text(
-                        text = activeBot.name,
-                        style = DdType.label.copy(fontSize = 16.sp),
-                        color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (remote == null) {
+                        Text(
+                            text = activeBot.name,
+                            style = DdType.label.copy(fontSize = 16.sp),
+                            color = colors.ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    } else {
+                        Column {
+                            Text(
+                                text = remote.botName,
+                                style = DdType.label.copy(fontSize = 15.sp, lineHeight = 19.sp),
+                                color = if (remote.online) colors.ink else colors.inkTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = if (remote.online) {
+                                    remote.deviceName
+                                } else {
+                                    stringResource(R.string.workspace_remote_offline_annotation, remote.deviceName)
+                                },
+                                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
+                                color = colors.inkTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
             Row(
@@ -165,15 +196,17 @@ internal fun ChatTopBar(
                             onDismissRequest = { menuOpen = false },
                             menuWidth = 148.dp,
                         ) {
-                            DdMenuItem(
-                                text = stringResource(R.string.files_menu),
-                                icon = DdIcons.Folder,
-                                onClick = {
-                                    menuOpen = false
-                                    actions.onOpenFiles()
-                                },
-                                testTag = "assistant_files",
-                            )
+                            if (activeBot?.remote == null) {
+                                DdMenuItem(
+                                    text = stringResource(R.string.files_menu),
+                                    icon = DdIcons.Folder,
+                                    onClick = {
+                                        menuOpen = false
+                                        actions.onOpenFiles()
+                                    },
+                                    testTag = "assistant_files",
+                                )
+                            }
                             DdMenuItem(
                                 text = stringResource(R.string.assistant_export_session),
                                 icon = DdIcons.Download,
