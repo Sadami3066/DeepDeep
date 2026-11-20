@@ -131,6 +131,20 @@ class SuperPIDrawerEntriesTest {
     }
 
     @Test
+    fun offlineRemoteWorkspaceStillExpandsSessions() {
+        val remote = remoteWorkspace(online = false)
+        val result = buildDrawerEntries(
+            workspaces = listOf(remote),
+            sessionsByCwd = mapOf(remote.cwd to listOf(session("remote-s1", 1, cwd = remote.cwd))),
+            expandedWorkspaceIds = setOf(remote.id),
+            expandedSessionWorkspaceIds = emptySet(),
+        )
+
+        assertEquals(listOf(remote.id), result.filterIsInstance<DrawerEntry.WorkspaceEntry>().map { it.workspace.id })
+        assertEquals(listOf(remote.id), result.filterIsInstance<DrawerEntry.Session>().map { it.workspaceId })
+    }
+
+    @Test
     fun uniqueKeysForAllEntries() {
         val result = entries((1..7).map { session("s$it", it.toLong()) })
         assertEquals(result.size, result.map { it.key }.toSet().size)

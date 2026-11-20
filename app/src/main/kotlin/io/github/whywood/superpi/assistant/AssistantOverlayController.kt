@@ -30,6 +30,7 @@ import io.github.whywood.superpi.ui.common.chat.state.AttachmentImportFailure
 import io.github.whywood.superpi.ui.common.chat.state.AttachmentImporter
 import io.github.whywood.superpi.ui.common.chat.state.MAX_ATTACHMENTS
 import io.github.whywood.superpi.ui.common.chat.state.SessionDraftStore
+import io.github.whywood.superpi.ui.common.workspaceRowMeta
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -266,7 +267,7 @@ class AssistantOverlayController(
             openMutex.withLock {
                 val workspace = runCatching { runtime.workspaces() }.getOrNull()
                     ?.firstOrNull { candidate -> candidate.id == workspaceId }
-                if (workspace?.remote?.online == false) {
+                if (workspace != null && !workspaceRowMeta(workspace).canCreateSession) {
                     setError(AssistantOverlayError.StartFailed)
                     return@withLock
                 }

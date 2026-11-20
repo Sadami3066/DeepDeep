@@ -78,8 +78,10 @@ import io.github.whywood.superpi.runtime.ConversationSummary
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.ui.common.AvatarBadge
 import io.github.whywood.superpi.ui.common.BotAvatar
+import io.github.whywood.superpi.ui.common.WorkspaceMenuAction
 import io.github.whywood.superpi.ui.common.WorkspaceRowMeta
 import io.github.whywood.superpi.ui.common.preferredNewChatWorkspaceId
+import io.github.whywood.superpi.ui.common.workspaceMenuActions
 import io.github.whywood.superpi.ui.common.workspaceRowMeta
 import io.github.whywood.superpi.ui.common.LocalHapticsEnabled
 import io.github.whywood.superpi.ui.common.rememberRelativeTime
@@ -553,6 +555,7 @@ private fun DrawerWorkspaceRow(
         label = "workspace-row-wash",
     )
     var menuOpen by remember { mutableStateOf(false) }
+    val menuActions = workspaceMenuActions(workspace)
     Box(modifier.fillMaxWidth().padding(top = if (first) DdSpacing.None else 6.dp)) {
         Row(
             modifier = Modifier
@@ -561,7 +564,7 @@ private fun DrawerWorkspaceRow(
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.ink.copy(alpha = wash))
                 .then(
-                    if (meta.enabled) {
+                    if (meta.selectable) {
                         Modifier.pointerInput(workspace.id) {
                             detectTapGestures(
                                 onPress = { offset ->
@@ -580,7 +583,7 @@ private fun DrawerWorkspaceRow(
                         Modifier
                     },
                 )
-                .graphicsLayer { alpha = if (meta.enabled) 1f else DdAlpha.Disabled }
+                .graphicsLayer { alpha = if (meta.offline) DdAlpha.Disabled else 1f }
                 .testTag("workspace_${workspace.id}")
                 .padding(start = 10.dp, end = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
@@ -591,17 +594,17 @@ private fun DrawerWorkspaceRow(
                 Text(
                     text = workspace.name,
                     style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                    color = if (meta.enabled) colors.ink else colors.inkTertiary,
+                    color = if (meta.offline) colors.inkTertiary else colors.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val remote = workspace.remote
-                if (remote != null) {
+                val sourceDevice = meta.sourceDevice
+                if (sourceDevice != null) {
                     Text(
-                        text = if (remote.online) {
-                            remote.deviceName
+                        text = if (meta.offline) {
+                            stringResource(R.string.workspace_remote_offline_annotation, sourceDevice)
                         } else {
-                            stringResource(R.string.workspace_remote_offline_annotation, remote.deviceName)
+                            sourceDevice
                         },
                         style = DdType.bodySmall.copy(fontSize = 11.5.sp, lineHeight = 16.sp),
                         color = colors.inkTertiary,
@@ -610,7 +613,6 @@ private fun DrawerWorkspaceRow(
                     )
                 }
             }
-            if (meta.enabled) {
             DdIconButton(
                 icon = DdIcons.More,
                 onClick = { menuOpen = true },
@@ -620,68 +622,67 @@ private fun DrawerWorkspaceRow(
                 iconSize = 18.dp,
                 tint = colors.inkTertiary,
             )
-            }
         }
-        if (meta.enabled) {
         DdMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false },
             offset = DpOffset(x = 52.dp, y = DdSpacing.None),
             menuWidth = 196.dp,
         ) {
-            DdMenuItem(
-                text = stringResource(R.string.drawer_action_new_session),
-                icon = DdIcons.Compose,
-                testTag = "workspace_menu_new_${workspace.id}",
-                onClick = {
-                    menuOpen = false
-                    onNewSession()
-                },
-            )
-            if (!workspace.isHome && meta.manageable) {
-                DdMenuItem(
-                    text = stringResource(R.string.drawer_action_rename),
-                    icon = DdIcons.Compose,
-                    testTag = "workspace_menu_rename_${workspace.id}",
-                    onClick = {
-                        menuOpen = false
-                        onRename()
-                    },
-                )
+            menuActions.forEach { action ->
+                when (action) {
+                    WorkspaceMenuAction.NEW_SESSION -> DdMenuItem(
+                        text = stringResource(R.string.drawer_action_new_session),
+                        icon = DdIcons.Compose,
+                        testTag = "workspace_menu_new_${workspace.id}",
+                        onClick = {
+                            menuOpen = false
+                            onNewSession()
+                        },
+                    )
+
+                    WorkspaceMenuAction.RENAME -> DdMenuItem(
+                        text = stringResource(R.string.drawer_action_rename),
+                        icon = DdIcons.Compose,
+                        testTag = "workspace_menu_rename_${workspace.id}",
+                        onClick = {
+                            menuOpen = false
+                            onRename()
+                        },
+                    )
+
+                    WorkspaceMenuAction.PIN -> DdMenuItem(
+                        text = stringResource(if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin),
+                        icon = DdIcons.Pin,
+                        testTag = "workspace_menu_pin_${workspace.id}",
+                        onClick = {
+                            menuOpen = false
+                            onTogglePinned()
+                        },
+                    )
+
+                    WorkspaceMenuAction.SETTINGS -> DdMenuItem(
+                        text = stringResource(R.string.drawer_workspace_settings),
+                        icon = DdIcons.Settings,
+                        testTag = "workspace_menu_settings_${workspace.id}",
+                        onClick = {
+                            menuOpen = false
+                            onSettings()
+                        },
+                    )
+
+                    WorkspaceMenuAction.DELETE -> DdMenuItem(
+                        text = stringResource(R.string.drawer_action_delete),
+                        icon = DdIcons.Trash,
+                        destructive = true,
+                        testTag = "workspace_menu_delete_${workspace.id}",
+                        onClick = {
+                            menuOpen = false
+                            onDelete()
+                        },
+                    )
+                }
             }
-            DdMenuItem(
-                text = stringResource(if (pinned) R.string.drawer_action_unpin else R.string.drawer_action_pin),
-                icon = DdIcons.Pin,
-                testTag = "workspace_menu_pin_${workspace.id}",
-                onClick = {
-                    menuOpen = false
-                    onTogglePinned()
-                },
-            )
-            if (meta.manageable) {
-                DdMenuItem(
-                    text = stringResource(R.string.drawer_workspace_settings),
-                    icon = DdIcons.Settings,
-                    testTag = "workspace_menu_settings_${workspace.id}",
-                    onClick = {
-                        menuOpen = false
-                        onSettings()
-                    },
-                )
-            }
-            if (!workspace.isHome && meta.manageable) {
-                DdMenuItem(
-                    text = stringResource(R.string.drawer_action_delete),
-                    icon = DdIcons.Trash,
-                    destructive = true,
-                    testTag = "workspace_menu_delete_${workspace.id}",
-                    onClick = {
-                        menuOpen = false
-                        onDelete()
-                    },
-                )
-            }
-        }
         }
     }
 }

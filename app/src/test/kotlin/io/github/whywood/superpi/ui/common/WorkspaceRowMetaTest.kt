@@ -23,30 +23,61 @@ class WorkspaceRowMetaTest {
     )
 
     @Test
-    fun localWorkspaceIsEnabledAndManageable() {
+    fun localWorkspaceIsSelectableAndCreatable() {
         val meta = workspaceRowMeta(local)
 
-        assertEquals(true, meta.enabled)
+        assertEquals(true, meta.selectable)
+        assertEquals(true, meta.canCreateSession)
         assertEquals(true, meta.manageable)
+        assertEquals(false, meta.offline)
         assertNull(meta.sourceDevice)
     }
 
     @Test
-    fun onlineRemoteWorkspaceIsEnabledButNotManageable() {
+    fun onlineRemoteWorkspaceIsSelectableButNotManageable() {
         val meta = workspaceRowMeta(remote(online = true))
 
-        assertEquals(true, meta.enabled)
+        assertEquals(true, meta.selectable)
+        assertEquals(true, meta.canCreateSession)
         assertEquals(false, meta.manageable)
+        assertEquals(false, meta.offline)
         assertEquals("Mac", meta.sourceDevice)
     }
 
     @Test
-    fun offlineRemoteWorkspaceIsDisabled() {
+    fun offlineRemoteWorkspaceStaysSelectableButCannotCreateSessions() {
         val meta = workspaceRowMeta(remote(online = false))
 
-        assertEquals(false, meta.enabled)
+        assertEquals(true, meta.selectable)
+        assertEquals(false, meta.canCreateSession)
         assertEquals(false, meta.manageable)
+        assertEquals(true, meta.offline)
         assertEquals("Mac", meta.sourceDevice)
+    }
+
+    @Test
+    fun menuActionsFollowWorkspaceKind() {
+        val localHome = RuntimeWorkspace(id = "home", name = "PI", cwd = "/home", isHome = true)
+
+        assertEquals(
+            listOf(
+                WorkspaceMenuAction.NEW_SESSION,
+                WorkspaceMenuAction.RENAME,
+                WorkspaceMenuAction.PIN,
+                WorkspaceMenuAction.SETTINGS,
+                WorkspaceMenuAction.DELETE,
+            ),
+            workspaceMenuActions(local),
+        )
+        assertEquals(
+            listOf(WorkspaceMenuAction.NEW_SESSION, WorkspaceMenuAction.PIN, WorkspaceMenuAction.SETTINGS),
+            workspaceMenuActions(localHome),
+        )
+        assertEquals(
+            listOf(WorkspaceMenuAction.NEW_SESSION, WorkspaceMenuAction.PIN),
+            workspaceMenuActions(remote(online = true)),
+        )
+        assertEquals(listOf(WorkspaceMenuAction.PIN), workspaceMenuActions(remote(online = false)))
     }
 
     @Test

@@ -196,7 +196,7 @@ private fun SwitcherCard(
                 state = state,
                 onSelectWorkspace = { workspaceId ->
                     val target = state.workspaces.firstOrNull { it.id == workspaceId }
-                    if (target != null && workspaceRowMeta(target).enabled) {
+                    if (target != null && workspaceRowMeta(target).selectable) {
                         onLevelChange(OverlaySwitcherLevel.Sessions(workspaceId))
                     }
                 },
@@ -301,14 +301,14 @@ private fun WorkspaceRow(
             .height(48.dp)
             .testTag("assistant_overlay_switcher_workspace_${workspace.id}"),
         shape = RoundedCornerShape(14.dp),
-        background = if (selected && meta.enabled) colors.wash else Color.Transparent,
-        enabled = meta.enabled,
+        background = if (selected) colors.wash else Color.Transparent,
+        enabled = meta.selectable,
         contentDescription = workspace.name,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = if (meta.enabled) 1f else DdAlpha.Disabled }
+                .graphicsLayer { alpha = if (meta.offline) DdAlpha.Disabled else 1f }
                 .padding(start = 8.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -321,17 +321,17 @@ private fun WorkspaceRow(
                 Text(
                     text = workspace.name,
                     style = DdType.label.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
-                    color = if (meta.enabled) colors.ink else colors.inkTertiary,
+                    color = if (meta.offline) colors.inkTertiary else colors.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 val sourceDevice = meta.sourceDevice
                 if (sourceDevice != null) {
                     Text(
-                        text = if (meta.enabled) {
-                            sourceDevice
-                        } else {
+                        text = if (meta.offline) {
                             stringResource(R.string.workspace_remote_offline_annotation, sourceDevice)
+                        } else {
+                            sourceDevice
                         },
                         style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
                         color = colors.inkTertiary,
@@ -340,13 +340,11 @@ private fun WorkspaceRow(
                     )
                 }
             }
-            if (meta.enabled) {
-                if (selected) {
-                    DdIcon(icon = DdIcons.Check, tint = colors.inkSecondary, size = 15.dp)
-                    Spacer(Modifier.width(2.dp))
-                }
-                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
+            if (selected) {
+                DdIcon(icon = DdIcons.Check, tint = colors.inkSecondary, size = 15.dp)
+                Spacer(Modifier.width(2.dp))
             }
+            DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
         }
     }
 }
@@ -370,7 +368,7 @@ private fun SessionList(
             .fillMaxWidth()
             .padding(horizontal = 6.dp, vertical = 6.dp),
     ) {
-        val canStartSession = workspace == null || workspaceRowMeta(workspace).enabled
+        val canStartSession = workspace == null || workspaceRowMeta(workspace).canCreateSession
         if (canStartSession) {
             NewSessionRow(onClick = onNewSession)
         }
