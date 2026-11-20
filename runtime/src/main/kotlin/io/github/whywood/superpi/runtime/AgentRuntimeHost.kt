@@ -98,6 +98,8 @@ class AgentRuntimeHost internal constructor(
         runLedger = runLedger,
         goalDriver = goalDriver,
         handleFor = ::handleFor,
+        awaitSessionReady = ::awaitSessionReady,
+        isCurrentHandle = ::isCurrentHandle,
         sweepIdleHandles = ::sweepIdleHandles,
         reconfigureSession = ::reconfigureSession,
     )
@@ -327,6 +329,11 @@ class AgentRuntimeHost internal constructor(
     ): Boolean = runs.postPluginMessage(sessionId, customType, payloadJson, text, display)
 
     private suspend fun handleFor(sessionId: String): RuntimeHandle = pool.handleFor(sessionId)
+
+    private suspend fun awaitSessionReady(sessionId: String) = pool.awaitSessionReady(sessionId)
+
+    private fun isCurrentHandle(sessionId: String, handle: RuntimeHandle): Boolean =
+        pool.isCurrentHandle(sessionId, handle)
 
     private suspend fun sweepIdleHandles() = pool.sweepIdleHandles()
 

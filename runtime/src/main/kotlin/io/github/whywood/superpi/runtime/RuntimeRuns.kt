@@ -22,6 +22,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
+private data class TurnStart(
+    val handle: RuntimeHandle,
+    val start: SessionCommandPlane.Start,
+)
+
 internal class RuntimeRuns(
     private val mutex: Mutex,
     private val handles: ConcurrentHashMap<String, RuntimeHandle>,
@@ -34,13 +39,14 @@ internal class RuntimeRuns(
     private val runLedger: RunLedger,
     private val goalDriver: GoalDriver?,
     private val handleFor: suspend (String) -> RuntimeHandle,
+    private val awaitSessionReady: suspend (String) -> Unit,
+    private val isCurrentHandle: (String, RuntimeHandle) -> Boolean,
     private val sweepIdleHandles: suspend () -> Unit,
     private val reconfigureSession: suspend (String) -> Unit,
 ) {
     suspend fun send(sessionId: String, text: String, images: List<ImagePart>) {
-        val handle = handleFor(sessionId)
-        val start = begin(handle, TurnSource.USER) ?: error("Agent session is busy")
-        runTurn(handle, start.runId, text, images)
+        val turn = beginTurn(sessionId, TurnSource.USER) ?: error("Agent session is busy")
+        runTurn(turn.handle, turn.start.runId, text, images)
     }
 
     suspend fun steer(sessionId: String, text: String, images: List<ImagePart>) {
@@ -76,8 +82,9 @@ internal class RuntimeRuns(
     }
 
     suspend fun retryLastTurn(sessionId: String) {
-        val handle = handleFor(sessionId)
-        val start = begin(handle, TurnSource.RETRY) ?: error("Agent session is busy")
+        val turn = beginTurn(sessionId, TurnSource.RETRY) ?: error("Agent session is busy")
+        val handle = turn.handle
+        val start = turn.start
         if (!handle.session.canRetryLastAssistant()) {
             release(handle, start.runId)
             error("Nothing to retry")
@@ -110,8 +117,9 @@ internal class RuntimeRuns(
     }
 
     suspend fun deliverReminder(sessionId: String, text: String, reminder: String?) {
-        val handle = handleFor(sessionId)
-        when (val delivery = commands.deliver(sessionId, TurnSource.REMINDER) { handle.session.isBusy }) {
+        val (handle, delivery) = deliverCurrentCommand(sessionId, TurnSource.REMINDER)
+            ?: error("Agent session is busy")
+        when (delivery) {
             is SessionCommandPlane.Delivery.Started -> {
                 val start = delivery.start
                 afterBegin(handle, TurnSource.REMINDER)
@@ -138,8 +146,7 @@ internal class RuntimeRuns(
     }
 
     suspend fun deliverPluginTurn(sessionId: String, text: String, followUp: Boolean = false): PluginTurnResult {
-        val handle = handleFor(sessionId)
-        val delivery = commands.deliver(sessionId, TurnSource.PLUGIN) { handle.session.isBusy }
+        val (handle, delivery) = deliverCurrentCommand(sessionId, TurnSource.PLUGIN)
             ?: error("Agent session is busy")
         return when (delivery) {
             is SessionCommandPlane.Delivery.Started -> {
@@ -173,8 +180,15 @@ internal class RuntimeRuns(
         prompt: String,
         source: TurnSource,
     ) {
-        val handle = mutex.withLock { handles[sessionId] } ?: return
-        when (val delivery = commands.deliver(sessionId, source) { handle.session.isBusy }) {
+        val started = try {
+            deliverCurrentCommand(sessionId, source)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } ?: return
+        val (handle, delivery) = started
+        when (delivery) {
             is SessionCommandPlane.Delivery.Started -> {
                 val start = delivery.start
                 afterBegin(handle, source)
@@ -269,12 +283,12 @@ internal class RuntimeRuns(
         text: String,
         images: List<ImagePart>,
     ) {
-        val handle = handleFor(sessionId)
-        val start = begin(handle, TurnSource.USER)
-        if (start != null) {
-            runTurn(handle, start.runId, text, images)
+        val turn = beginTurn(sessionId, TurnSource.USER)
+        if (turn != null) {
+            runTurn(turn.handle, turn.start.runId, text, images)
             return
         }
+        val handle = handleFor(sessionId)
         handle.pending.enqueue(kind, text)
         emitQueueChanged(handle, handle.state.runId.orEmpty())
         try {
@@ -288,10 +302,53 @@ internal class RuntimeRuns(
         }
     }
 
-    private suspend fun begin(handle: RuntimeHandle, source: TurnSource): SessionCommandPlane.Start? {
-        val start = commands.begin(handle.session.sessionId, source) ?: return null
-        afterBegin(handle, source)
-        return start
+    private suspend fun deliverCurrentCommand(
+        sessionId: String,
+        source: TurnSource,
+    ): Pair<RuntimeHandle, SessionCommandPlane.Delivery>? {
+        while (true) {
+            val handle = handleFor(sessionId)
+            val delivery = commands.deliver(sessionId, source) { handle.session.isBusy }
+            if (delivery == null) {
+                if (commands.snapshot(sessionId)?.reconfiguring == true) {
+                    awaitSessionReady(sessionId)
+                    continue
+                }
+                return null
+            }
+            if (isCurrentHandle(sessionId, handle)) return handle to delivery
+            if (delivery is SessionCommandPlane.Delivery.Started) {
+                val stale = commands.finish(sessionId, delivery.start.runId)
+                if (stale.reconfigure) {
+                    backgroundScope.launch { runCatching { reconfigureSession(sessionId) } }
+                }
+            }
+            awaitSessionReady(sessionId)
+        }
+    }
+
+    private suspend fun beginTurn(sessionId: String, source: TurnSource): TurnStart? {
+        while (true) {
+            val handle = handleFor(sessionId)
+            val start = commands.begin(sessionId, source)
+            if (start == null) {
+                if (commands.snapshot(sessionId)?.reconfiguring == true) {
+                    awaitSessionReady(sessionId)
+                    continue
+                }
+                return null
+            }
+            if (!isCurrentHandle(sessionId, handle)) {
+                val stale = commands.finish(sessionId, start.runId)
+                if (stale.reconfigure) {
+                    backgroundScope.launch { runCatching { reconfigureSession(sessionId) } }
+                }
+                awaitSessionReady(sessionId)
+                continue
+            }
+            afterBegin(handle, source)
+            return TurnStart(handle, start)
+        }
     }
 
     private suspend fun afterBegin(handle: RuntimeHandle, source: TurnSource) {
