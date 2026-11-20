@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.superpi.R
+import io.github.whywood.superpi.design.DdAlpha
 import io.github.whywood.superpi.design.DdHairline
 import io.github.whywood.superpi.design.DdIcon
 import io.github.whywood.superpi.design.DdIcons
@@ -61,6 +63,7 @@ import io.github.whywood.superpi.runtime.ConversationSummary
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.ui.common.BotAvatar
 import io.github.whywood.superpi.ui.common.rememberRelativeTime
+import io.github.whywood.superpi.ui.common.workspaceRowMeta
 
 internal sealed interface OverlaySwitcherLevel {
     data object Workspaces : OverlaySwitcherLevel
@@ -192,7 +195,10 @@ private fun SwitcherCard(
             OverlaySwitcherLevel.Workspaces -> WorkspaceList(
                 state = state,
                 onSelectWorkspace = { workspaceId ->
-                    onLevelChange(OverlaySwitcherLevel.Sessions(workspaceId))
+                    val target = state.workspaces.firstOrNull { it.id == workspaceId }
+                    if (target != null && workspaceRowMeta(target).enabled) {
+                        onLevelChange(OverlaySwitcherLevel.Sessions(workspaceId))
+                    }
                 },
                 modifier = Modifier.weight(1f, fill = false),
             )
@@ -287,6 +293,7 @@ private fun WorkspaceRow(
     onClick: () -> Unit,
 ) {
     val colors = superPiColors()
+    val meta = workspaceRowMeta(workspace)
     DdPressable(
         onClick = onClick,
         modifier = Modifier
@@ -294,11 +301,15 @@ private fun WorkspaceRow(
             .height(48.dp)
             .testTag("assistant_overlay_switcher_workspace_${workspace.id}"),
         shape = RoundedCornerShape(14.dp),
-        background = if (selected) colors.wash else Color.Transparent,
+        background = if (selected && meta.enabled) colors.wash else Color.Transparent,
+        enabled = meta.enabled,
         contentDescription = workspace.name,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = if (meta.enabled) 1f else DdAlpha.Disabled }
+                .padding(start = 8.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BotAvatar(
@@ -306,19 +317,36 @@ private fun WorkspaceRow(
                 size = 28.dp,
             )
             Spacer(Modifier.width(9.dp))
-            Text(
-                text = workspace.name,
-                modifier = Modifier.weight(1f),
-                style = DdType.label.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (selected) {
-                DdIcon(icon = DdIcons.Check, tint = colors.inkSecondary, size = 15.dp)
-                Spacer(Modifier.width(2.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = workspace.name,
+                    style = DdType.label.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
+                    color = if (meta.enabled) colors.ink else colors.inkTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val sourceDevice = meta.sourceDevice
+                if (sourceDevice != null) {
+                    Text(
+                        text = if (meta.enabled) {
+                            sourceDevice
+                        } else {
+                            stringResource(R.string.workspace_remote_offline_annotation, sourceDevice)
+                        },
+                        style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
+            if (meta.enabled) {
+                if (selected) {
+                    DdIcon(icon = DdIcons.Check, tint = colors.inkSecondary, size = 15.dp)
+                    Spacer(Modifier.width(2.dp))
+                }
+                DdIcon(icon = DdIcons.ChevronRight, tint = colors.inkTertiary, size = 14.dp)
+            }
         }
     }
 }
@@ -342,7 +370,10 @@ private fun SessionList(
             .fillMaxWidth()
             .padding(horizontal = 6.dp, vertical = 6.dp),
     ) {
-        NewSessionRow(onClick = onNewSession)
+        val canStartSession = workspace == null || workspaceRowMeta(workspace).enabled
+        if (canStartSession) {
+            NewSessionRow(onClick = onNewSession)
+        }
         if (sessions.isEmpty()) {
             Text(
                 text = stringResource(R.string.assistant_overlay_switcher_empty),

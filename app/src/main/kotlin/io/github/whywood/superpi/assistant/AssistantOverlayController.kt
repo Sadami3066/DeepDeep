@@ -264,6 +264,12 @@ class AssistantOverlayController(
     fun newSession(workspaceId: String) {
         scope.launch {
             openMutex.withLock {
+                val workspace = runCatching { runtime.workspaces() }.getOrNull()
+                    ?.firstOrNull { candidate -> candidate.id == workspaceId }
+                if (workspace?.remote?.online == false) {
+                    setError(AssistantOverlayError.StartFailed)
+                    return@withLock
+                }
                 val opened = runCatching { runtime.newSession(workspaceId) }.getOrNull()
                 if (opened == null) {
                     setError(AssistantOverlayError.StartFailed)
