@@ -218,8 +218,7 @@ class ChatViewModel(
                     prepareRuntime()
                     runtime.ensureStarted()
                 }
-                val config = providers.resolveConfig(modelConfigStore.read())
-                modelConfigStore.save(config)
+                val config = modelConfigStore.read()
                 if (mutableState.value.providerId.isBlank()) modelController.applyConfig(config)
                 sessionOpener.restoreInitialSession()
             } catch (cancelled: CancellationException) {

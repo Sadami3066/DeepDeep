@@ -146,7 +146,7 @@ class AppGraph(context: Context) : AppDependencies {
     override fun reloadCustomProviders() {
         dataGraph.reloadCustomProviders()
         scope.launch {
-            dataGraph.modelSelection.ensure(configuredProviderIds())
+            reconcileModelSelection()
             host.syncCustomProviders(dataGraph.providerCatalog.customSdkProviders())
         }
     }
@@ -241,6 +241,11 @@ class AppGraph(context: Context) : AppDependencies {
     }
 
     init {
+        scope.launch {
+            dataGraph.credentials.authKinds.collect {
+                runCatching { reconcileModelSelection() }
+            }
+        }
         scope.launch {
             merge(
                 dataGraph.workspaceToolPolicies.changes.drop(1),
@@ -429,6 +434,10 @@ class AppGraph(context: Context) : AppDependencies {
             importDebugKey()
         }
         credentials.preloadAll()
+        reconcileModelSelection()
+    }
+
+    private suspend fun reconcileModelSelection() {
         dataGraph.modelSelection.ensure(configuredProviderIds())
     }
 
