@@ -144,7 +144,7 @@ class MemoryRecap(
         }
         val hash = sha256(transcript)
         if (store.isSummaryDuplicate(sessionId, hash)) return@withContext RecapOutcome.DUPLICATE
-        val raw = completeWithCheapModel(providers, buildPrompt(transcript))
+        val raw = completeWithCheapModel(providers, buildRecapPrompt(transcript))
             ?: return@withContext RecapOutcome.FAILED
         when (val parsed = parseOutcome(raw)) {
             null -> {
@@ -169,23 +169,6 @@ class MemoryRecap(
                 RecapOutcome.WRITTEN
             }
         }
-    }
-
-    private fun buildPrompt(transcript: String): String = buildString {
-        appendLine("You turn one stretch of an agent conversation into a long-term memory log. The conversation below may be only the latest part of a longer session.")
-        appendLine()
-        appendLine("Write only what is worth remembering across sessions, as a markdown unordered list with at most 6 items, one sentence each.")
-        appendLine("- Keep: the user's goals, preferences, constraints, decisions and the reasons behind them; progress, blockers and next steps in plans and life arrangements; promises made; reusable lessons; important changes in the user's state (mood, life, environment).")
-        appendLine("- Leave out: greetings and acknowledgements, narrating the process, tool-call details, one-off information, secrets such as keys or verification codes.")
-        appendLine()
-        appendLine("No heading, no preamble. Write only what appears explicitly in the conversation or follows directly from it; mark inferred items, for example with (inferred) or the equivalent in the user's language.")
-        appendLine("Write the memory in the language the user used in the conversation. Keep proper nouns such as names, project names, product names and technical terms exactly as the user wrote them; do not translate the memory into English just because these instructions are in English.")
-        appendLine("If this conversation has nothing worth keeping long term, output only SKIP.")
-        appendLine()
-        appendLine("<conversation>")
-        append(transcript)
-        appendLine()
-        appendLine("</conversation>")
     }
 
     private fun parseOutcome(raw: String?): ParsedRecap? {
@@ -262,6 +245,23 @@ class MemoryRecap(
         MessageDigest.getInstance("SHA-256")
             .digest(text.toByteArray(Charsets.UTF_8))
             .joinToString("") { byte -> "%02x".format(byte) }
+}
+
+internal fun buildRecapPrompt(transcript: String): String = buildString {
+    appendLine("You turn one stretch of an agent conversation into a long-term memory log. The conversation below may be only the latest part of a longer session.")
+    appendLine()
+    appendLine("Write only what is worth remembering across sessions, as a markdown unordered list with at most 6 items, one sentence each.")
+    appendLine("- Keep: the user's goals, preferences, constraints, decisions and the reasons behind them; progress, blockers and next steps in plans and life arrangements; promises made; reusable lessons; important changes in the user's state (mood, life, environment).")
+    appendLine("- Leave out: greetings and acknowledgements, narrating the process, tool-call details, one-off information, secrets such as keys or verification codes.")
+    appendLine()
+    appendLine("No heading, no preamble. Write only what appears explicitly in the conversation or follows directly from it; mark inferred items, for example with (inferred) or the equivalent in the user's language.")
+    appendLine("Write the memory in the language the user used in the conversation. Keep proper nouns such as names, project names, product names and technical terms exactly as the user wrote them; do not translate the memory into English just because these instructions are in English.")
+    appendLine("If this conversation has nothing worth keeping long term, output only SKIP.")
+    appendLine()
+    appendLine("<conversation>")
+    append(transcript)
+    appendLine()
+    appendLine("</conversation>")
 }
 
 suspend fun completeWithCheapModel(providers: ProviderCatalog, prompt: String): String? {
