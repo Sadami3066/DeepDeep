@@ -17,7 +17,6 @@ import io.github.whywood.superpi.data.AgentDocStore
 import io.github.whywood.superpi.data.DevPackageManager
 import io.github.whywood.superpi.data.HostFiles
 import io.github.whywood.superpi.data.LanguagePreferences
-import io.github.whywood.superpi.data.LegacyWorkspaceMigration
 import io.github.whywood.superpi.data.LinuxSettingsStore
 import io.github.whywood.superpi.data.StorageMountStore
 import io.github.whywood.superpi.data.crash.CrashLogStore
@@ -27,7 +26,6 @@ import io.github.whywood.superpi.data.OverlayEntryPreferences
 import io.github.whywood.superpi.data.PersonalizationStore
 import io.github.whywood.superpi.data.ShareStaging
 import io.github.whywood.superpi.data.SkillRepository
-import io.github.whywood.superpi.data.StorageMigration
 import io.github.whywood.superpi.data.ThemePreferences
 import io.github.whywood.superpi.data.VoicePreferences
 import io.github.whywood.superpi.data.remote.RemoteConnection
@@ -231,7 +229,6 @@ class AppGraph(context: Context) : AppDependencies {
     }
 
     init {
-        scope.launch { StorageMigration.migrate(appContext.filesDir) }
         scope.launch {
             merge(
                 dataGraph.workspaceToolPolicies.changes.drop(1),
@@ -416,7 +413,6 @@ class AppGraph(context: Context) : AppDependencies {
             notificationCenter.notifyInterruptedWork(questionCenter.interrupted.value, host.interruptedRuns.value)
         }
         withContext(Dispatchers.IO) {
-            LegacyWorkspaceMigration.migrate(appContext, dataGraph.workspaceStore)
             importDebugKey()
         }
         credentials.preloadAll()

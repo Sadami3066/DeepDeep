@@ -34,17 +34,17 @@ fun parseQuestionRecord(trace: ToolTrace): QuestionRecord? {
 
 private fun parseQuestions(raw: String): List<UserQuestion> {
     val array = Json.parseToJsonElement(raw).jsonArray
-    if (array.isEmpty()) error("questions 不能为空")
+    if (array.isEmpty()) error("questions must not be empty")
     return array.mapIndexed { index, element ->
         val item = element.jsonObject
         val id = item.string("id")?.trim().orEmpty()
-        if (id.isEmpty()) error("questions[$index].id 不能为空")
+        if (id.isEmpty()) error("questions[$index].id must not be empty")
         val question = item.string("question")?.trim().orEmpty()
-        if (question.isEmpty()) error("questions[$index].question 不能为空")
+        if (question.isEmpty()) error("questions[$index].question must not be empty")
         val options = (item["options"] as? JsonArray)?.mapIndexed { optionIndex, optionElement ->
             val option = optionElement.jsonObject
             val label = option.string("label")?.trim().orEmpty()
-            if (label.isEmpty()) error("questions[$index].options[$optionIndex].label 不能为空")
+            if (label.isEmpty()) error("questions[$index].options[$optionIndex].label must not be empty")
             QuestionOption(
                 label = label,
                 description = option.string("description")?.trim()?.takeIf { it.isNotEmpty() },
@@ -62,11 +62,11 @@ private fun parseQuestions(raw: String): List<UserQuestion> {
 
 private fun parseAnswers(raw: String, questions: List<UserQuestion>): List<QuestionAnswer> {
     val array = Json.parseToJsonElement(raw).jsonObject["answers"] as? JsonArray
-        ?: error("answers 必须是数组")
+        ?: error("answers must be an array")
     val items = array.associate { element ->
         val item = element.jsonObject
         val id = item.string("id")?.trim().orEmpty()
-        if (id.isEmpty()) error("answers[].id 不能为空")
+        if (id.isEmpty()) error("answers[].id must not be empty")
         id to item
     }
     return questions.map { question ->

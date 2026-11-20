@@ -133,10 +133,11 @@ fun AskQuestionCard(
     val last = safeIndex == count - 1
     val locked = submitted && answers == null
     val answerById = answers?.associateBy { it.questionId }
+    val listSeparator = stringResource(R.string.list_separator)
     val answeredCount = if (answers == null) {
         count
     } else {
-        questions.count { answerText(answerById?.get(it.id)) != null }
+        questions.count { answerText(answerById?.get(it.id), listSeparator) != null }
     }
     val skippedCount = if (answers == null) 0 else count - answeredCount
     val resolvedCount = if (answers == null) {
@@ -402,7 +403,7 @@ fun AskQuestionCard(
                     Spacer(Modifier.height(DdSpacing.Md))
                     questions.forEachIndexed { index, item ->
                         if (index > 0) Spacer(Modifier.height(14.dp))
-                        val text = answerText(answerById?.get(item.id))
+                        val text = answerText(answerById?.get(item.id), listSeparator)
                         item.header?.takeIf { it.isNotBlank() }?.let { header ->
                             Text(
                                 text = header,
@@ -548,11 +549,11 @@ private fun displayLabel(label: String): String {
     return label.removeSuffix(suffix).trimEnd()
 }
 
-internal fun answerText(answer: QuestionAnswer?): String? {
+internal fun answerText(answer: QuestionAnswer?, separator: String): String? {
     if (answer == null || answer.skipped) return null
     val parts = answer.selected.map(::displayLabel) +
         listOfNotNull(answer.custom?.trim()?.takeIf { it.isNotEmpty() })
-    return parts.takeIf { it.isNotEmpty() }?.joinToString("、")
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(separator)
 }
 
 private fun <T> List<T>.replaced(index: Int, value: T): List<T> =

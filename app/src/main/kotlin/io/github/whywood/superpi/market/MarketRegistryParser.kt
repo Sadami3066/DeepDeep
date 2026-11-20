@@ -14,20 +14,20 @@ internal object MarketRegistryParser {
     private val SUPPORTED_SCHEMA = 2..3
 
     fun parse(bytes: ByteArray): MarketRegistry {
-        if (bytes.size > MarketDefaults.MAX_REGISTRY_BYTES) error("市场索引过大")
+        if (bytes.size > MarketDefaults.MAX_REGISTRY_BYTES) error("market registry too large")
         val root = runCatching { Json.parseToJsonElement(bytes.decodeToString()).jsonObject }
-            .getOrElse { error("市场索引格式错误") }
-        val schemaVersion = root.int("schemaVersion") ?: error("市场索引缺少 schemaVersion")
-        if (schemaVersion !in SUPPORTED_SCHEMA) error("不支持的市场索引版本")
+            .getOrElse { error("invalid market registry format") }
+        val schemaVersion = root.int("schemaVersion") ?: error("market registry is missing schemaVersion")
+        if (schemaVersion !in SUPPORTED_SCHEMA) error("unsupported market registry version")
         val generatedAt = root.string("generatedAt").orEmpty()
         val keyId = root.string("keyId").orEmpty()
-        val array = root["entries"] as? JsonArray ?: error("市场索引缺少 entries")
-        if (array.size > MarketDefaults.MAX_ENTRIES) error("市场条目过多")
+        val array = root["entries"] as? JsonArray ?: error("market registry is missing entries")
+        if (array.size > MarketDefaults.MAX_ENTRIES) error("too many market entries")
         val seen = HashSet<String>(array.size)
         val entries = array.mapIndexed { index, element ->
-            val obj = element as? JsonObject ?: error("条目 #$index 格式错误")
+            val obj = element as? JsonObject ?: error("entry #$index has an invalid format")
             val entry = parseEntry(obj)
-            if (!seen.add(entry.id)) error("重复的市场条目：${entry.id}")
+            if (!seen.add(entry.id)) error("duplicate market entry: ${entry.id}")
             entry
         }
         return MarketRegistry(schemaVersion, generatedAt, keyId, entries)
@@ -38,9 +38,9 @@ internal object MarketRegistryParser {
             "plugin" -> MarketEntryType.Plugin
             "skill" -> MarketEntryType.Skill
             "mcp" -> MarketEntryType.Mcp
-            else -> error("未知的条目类型")
+            else -> error("unknown entry type")
         }
-        val id = obj.string("id")?.takeIf { it.isNotBlank() } ?: error("条目缺少 id")
+        val id = obj.string("id")?.takeIf { it.isNotBlank() } ?: error("entry is missing id")
         val category = obj.string("category")?.trim()?.takeIf { it.isNotEmpty() }
         val name = parseLocalized(obj, "name")
         val summary = parseLocalized(obj, "summary")
@@ -73,9 +73,9 @@ internal object MarketRegistryParser {
         }
         val mcp = (obj["mcp"] as? JsonObject)?.let {
             val url = it.string("url").orEmpty()
-            if (url.isBlank()) error("MCP 条目缺少 url")
+            if (url.isBlank()) error("MCP entry is missing url")
             val transport = it.string("transport") ?: "http"
-            if (transport != "http") error("不支持的 MCP 传输方式：$transport")
+            if (transport != "http") error("unsupported MCP transport: $transport")
             MarketMcpMeta(
                 url = url,
                 transport = transport,
@@ -87,9 +87,9 @@ internal object MarketRegistryParser {
                 auth = (it["auth"] as? JsonObject)?.let { auth -> parseAuth(auth) },
             )
         }
-        if (type == MarketEntryType.Plugin && artifact == null) error("插件条目缺少下载信息")
-        if (type == MarketEntryType.Skill && artifact == null) error("技能条目缺少下载信息")
-        if (type == MarketEntryType.Mcp && mcp == null) error("MCP 条目缺少配置")
+        if (type == MarketEntryType.Plugin && artifact == null) error("plugin entry is missing artifact")
+        if (type == MarketEntryType.Skill && artifact == null) error("skill entry is missing artifact")
+        if (type == MarketEntryType.Mcp && mcp == null) error("MCP entry is missing configuration")
         return MarketEntry(
             type = type,
             id = id,
@@ -112,10 +112,10 @@ internal object MarketRegistryParser {
             "apiKey" -> MarketMcpAuthType.ApiKey
             "oauth" -> MarketMcpAuthType.OAuth
             "none", null -> MarketMcpAuthType.None
-            else -> error("未知的连接器授权方式")
+            else -> error("unknown connector authorization type")
         }
         val header = obj.string("header")
-        if (type == MarketMcpAuthType.ApiKey && header.isNullOrBlank()) error("API Key 连接器缺少 header")
+        if (type == MarketMcpAuthType.ApiKey && header.isNullOrBlank()) error("API key connector is missing header")
         return MarketMcpAuth(
             type = type,
             header = header,
@@ -154,19 +154,19 @@ internal object MarketRegistryParser {
             val text = (value as? JsonPrimitive)?.contentOrNull.orEmpty()
             if (text.isBlank()) null else language to text
         }.toMap()
-        if (values.isEmpty()) error("缺少本地化文案")
+        if (values.isEmpty()) error("missing localized text")
         return LocalizedText(values)
     }
 
     private fun parseArtifact(obj: JsonObject, type: MarketEntryType, id: String): MarketArtifact {
         val url = obj.string("url").orEmpty()
-        if (url.isBlank()) error("条目 $id 缺少下载地址")
+        if (url.isBlank()) error("entry $id is missing artifact url")
         val sha = obj.string("sha256").orEmpty()
-        if (!SHA256.matches(sha)) error("条目 $id 的 sha256 无效")
+        if (!SHA256.matches(sha)) error("entry $id has an invalid sha256")
         val size = obj.long("size") ?: 0L
-        if (size <= 0) error("条目 $id 缺少文件大小")
+        if (size <= 0) error("entry $id is missing file size")
         val limit = if (type == MarketEntryType.Skill) MarketDefaults.MAX_SKILL_BYTES else MarketDefaults.MAX_PLUGIN_BYTES
-        if (size > limit) error("条目 $id 文件过大")
+        if (size > limit) error("entry $id file is too large")
         return MarketArtifact(url, sha, size)
     }
 

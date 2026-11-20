@@ -60,13 +60,13 @@ object VirtualScreenHelperMain {
         val port = optionValue(args, ARG_PORT)?.toIntOrNull()
         val nonce = optionValue(args, ARG_NONCE)
         if (port == null || port !in 1..65535 || nonce.isNullOrBlank()) {
-            Log.e(TAG, "缺少 --port 或 --nonce 参数")
+            Log.e(TAG, "missing --port or --nonce argument")
             return
         }
         val code = try {
             HelperServer(port, nonce).run()
         } catch (t: Throwable) {
-            Log.e(TAG, "helper 运行失败", t)
+            Log.e(TAG, "helper failed", t)
             1
         }
         exitProcess(code)
@@ -94,7 +94,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
     fun run(): Int {
         val client = connectToApp() ?: run {
-            Log.e(TAG, "连接 App 超时：127.0.0.1:$port")
+            Log.e(TAG, "timed out connecting to the app at 127.0.0.1:$port")
             println("VSH_EXIT pid=${Process.myPid()} reason=connect_timeout")
             shutdown()
             return 2
@@ -112,38 +112,38 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 put("nonce", nonce)
             },
         )
-        var exitReason = "正常结束"
+        var exitReason = "finished normally"
         try {
             if (Process.myUid() != VirtualScreenCommands.SHELL_UID) {
-                exitReason = "需要以 shell(2000) 身份运行，当前 uid=${Process.myUid()}"
+                exitReason = "must run as shell (uid 2000); current uid=${Process.myUid()}"
                 Log.e(TAG, exitReason)
                 return 3
             }
             while (running) {
                 val stream = input ?: run {
-                    exitReason = "连接已关闭"
+                    exitReason = "connection closed"
                     break
                 }
                 val frame = try {
                     VirtualScreenProtocol.read(stream)
                 } catch (t: IOException) {
-                    exitReason = "读取客户端帧失败：${t.message}"
+                    exitReason = "failed to read client frame: ${t.message}"
                     Log.w(TAG, exitReason)
                     break
                 } ?: run {
-                    exitReason = "客户端已断开"
+                    exitReason = "client disconnected"
                     break
                 }
                 if (frame.kind != VirtualScreenFrameKind.TEXT) continue
                 val json = runCatching { VirtualScreenProtocol.json(frame) }.getOrNull() ?: continue
                 if (!handle(json)) {
-                    exitReason = "收到停止命令"
+                    exitReason = "stop command received"
                     break
                 }
             }
         } finally {
             shutdown()
-            Log.i(TAG, "helper 退出：$exitReason")
+            Log.i(TAG, "helper exited: $exitReason")
             println("VSH_EXIT pid=${Process.myPid()} reason=$exitReason")
         }
         return 0
@@ -194,7 +194,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 else -> respondError(id, "Unknown command: $command")
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "$command 执行失败", t)
+            Log.w(TAG, "$command failed", t)
             respondError(id, messageOf(t))
         }
         return true
@@ -239,7 +239,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val taskDisplayId = taskDisplayOf(packageName)
         val landedOnMain = taskDisplayId == Display.DEFAULT_DISPLAY
         if (taskDisplayId != display.displayId) {
-            Log.w(TAG, "$packageName 未落在虚拟屏：taskDisplayId=$taskDisplayId，displayId=${display.displayId}")
+            Log.w(TAG, "$packageName did not land on the virtual screen: taskDisplayId=$taskDisplayId, displayId=${display.displayId}")
         }
         respond(id) {
             put("packageName", packageName)
@@ -372,7 +372,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
     private fun taskDisplayOf(packageName: String): Int {
         repeat(TASK_DISPLAY_RETRIES) { attempt ->
             val tasks = runCatching { tasksOf(packageName) }.getOrElse {
-                Log.w(TAG, "读取任务列表失败", it)
+                Log.w(TAG, "failed to read task list", it)
                 return INVALID_TASK_DISPLAY
             }
             val visible = tasks.firstOrNull { it.visible }
@@ -391,7 +391,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
 
     private fun occupancyConflict(packageName: String, displayId: Int): String? {
         val tasks = runCatching { tasksOf(packageName) }.getOrElse {
-            Log.w(TAG, "读取任务列表失败", it)
+            Log.w(TAG, "failed to read task list", it)
             throw IllegalStateException("Cannot confirm which screen the app is on; refusing to launch to avoid moving a main-screen app", it)
         }
         for (task in tasks) {
@@ -443,7 +443,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
         val started = runCatching { startActivityAsUser(intent, options) }.getOrElse {
-            Log.w(TAG, "startActivityAsUser 失败，改用 am", it)
+            Log.w(TAG, "startActivityAsUser failed; falling back to am", it)
             false
         }
         if (started) return
@@ -525,7 +525,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val process = try {
             ProcessBuilder(*command).redirectErrorStream(true).start()
         } catch (t: Throwable) {
-            Log.w(TAG, "${command.first()} 启动失败", t)
+            Log.w(TAG, "failed to start ${command.first()}", t)
             return -1
         }
         return try {
@@ -536,7 +536,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 process.exitValue()
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "${command.first()} 等待失败", t)
+            Log.w(TAG, "failed to wait for ${command.first()}", t)
             -1
         }
     }
@@ -552,7 +552,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                 try {
                     if (!writeFrame(frame)) break
                 } catch (t: Throwable) {
-                    Log.w(TAG, "写入预览帧失败", t)
+                    Log.w(TAG, "failed to write preview frame", t)
                     break
                 }
             }
@@ -567,7 +567,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
                     val jpeg = display.streamJpeg(VirtualScreenCommands.STREAM_WIDTH)
                     if (jpeg != null && !enqueueFrame(VirtualScreenProtocol.binary(jpeg))) break
                 } catch (t: Throwable) {
-                    Log.w(TAG, "编码预览帧失败", t)
+                    Log.w(TAG, "failed to encode preview frame", t)
                 }
                 val elapsed = SystemClock.uptimeMillis() - started
                 if (elapsed < FRAME_INTERVAL_MS) {
@@ -656,7 +656,7 @@ private class HelperServer(private val port: Int, private val nonce: String) {
         val now = SystemClock.uptimeMillis()
         if (now - lastFrameDropLogAt >= FRAME_DROP_LOG_INTERVAL_MS) {
             lastFrameDropLogAt = now
-            Log.w(TAG, "预览帧积压，丢弃新帧")
+            Log.w(TAG, "preview frame backlog; dropping the new frame")
         }
         return true
     }

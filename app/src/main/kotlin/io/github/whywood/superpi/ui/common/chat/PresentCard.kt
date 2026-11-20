@@ -83,10 +83,6 @@ data class PresentedItem(
     val version: String? = null,
 )
 
-private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp", "heic", "heif", "avif")
-private val VIDEO_EXTENSIONS = setOf("mp4", "mov", "webm", "mkv", "m4v", "3gp")
-private val HTML_EXTENSIONS = setOf("html", "htm")
-
 fun parsePresentedItems(trace: ToolTrace): List<PresentedItem>? {
     if (trace.name != "present") return null
     val raw = trace.output?.takeIf { it.isNotBlank() } ?: return null
@@ -96,12 +92,7 @@ fun parsePresentedItems(trace: ToolTrace): List<PresentedItem>? {
 internal fun parsePresentedItems(raw: String): List<PresentedItem>? = try {
     val root = Json.parseToJsonElement(raw).jsonObject
     val items = root["items"] as? JsonArray
-    val parsed = if (items != null) {
-        items.mapNotNull(::parsePresentedItem).distinctBy { it.key }
-    } else {
-        parseLegacyFiles(root["files"] as? JsonArray).distinctBy { it.key }
-    }
-    parsed.takeIf { it.isNotEmpty() }
+    items?.mapNotNull(::parsePresentedItem)?.distinctBy { it.key }?.takeIf { it.isNotEmpty() }
 } catch (_: Exception) {
     null
 }
@@ -151,31 +142,8 @@ private fun parsePresentedItem(element: JsonElement): PresentedItem? {
     )
 }
 
-private fun parseLegacyFiles(array: JsonArray?): List<PresentedItem> {
-    if (array == null) return emptyList()
-    return array.mapNotNull { element ->
-        val item = element as? JsonObject ?: return@mapNotNull null
-        val path = item.stringOrNull("path")?.trim().orEmpty()
-        if (path.isEmpty()) return@mapNotNull null
-        PresentedItem(
-            type = inferPresentedType(path),
-            name = derivePresentedName(path),
-            path = path,
-        )
-    }
-}
-
-private fun inferPresentedType(path: String): PresentedItemType = when {
-    path.extension() in IMAGE_EXTENSIONS -> PresentedItemType.IMAGE
-    path.extension() in VIDEO_EXTENSIONS -> PresentedItemType.VIDEO
-    path.extension() in HTML_EXTENSIONS -> PresentedItemType.HTML
-    else -> PresentedItemType.FILE
-}
-
 private fun derivePresentedName(path: String): String =
     path.trimEnd('/').substringAfterLast('/').ifBlank { path }
-
-private fun String.extension(): String = substringAfterLast('.', "").lowercase(Locale.US)
 
 private val PresentedItem.key: String
     get() = when (type) {

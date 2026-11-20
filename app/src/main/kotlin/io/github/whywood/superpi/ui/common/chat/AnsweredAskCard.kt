@@ -55,7 +55,8 @@ internal fun AnsweredAskCard(
     val questionKey = record.questions.joinToString("|") { it.id }
     var expanded by rememberSaveable(questionKey) { mutableStateOf(false) }
     val answerById = record.answers.associateBy { it.questionId }
-    val answeredCount = record.questions.count { question -> answerText(answerById[question.id]) != null }
+    val listSeparator = stringResource(R.string.list_separator)
+    val answeredCount = record.questions.count { question -> answerText(answerById[question.id], listSeparator) != null }
     val skippedCount = record.questions.size - answeredCount
     val headerText = run {
         val base = stringResource(R.string.ask_card_answered_count, answeredCount)
@@ -113,7 +114,7 @@ internal fun AnsweredAskCard(
             Column(Modifier.fillMaxWidth().padding(top = DdSpacing.Sm, bottom = 6.dp)) {
                 record.questions.forEachIndexed { index, question ->
                     if (index > 0) Spacer(Modifier.height(14.dp))
-                    val answer = answerText(answerById[question.id])
+                    val answer = answerText(answerById[question.id], listSeparator)
                     question.header?.takeIf { it.isNotBlank() }?.let { header ->
                         Text(
                             text = header,

@@ -71,17 +71,12 @@ internal class SessionListController(
 
     fun isDefaultChatTitle(title: String): Boolean =
         title.isBlank() ||
-            title == LEGACY_NEW_TITLE ||
             title == strings().newChatTitle ||
             title == ConversationStrings.fallback().newChatTitle
 
     fun titleFrom(text: String): String {
         val normalized = text.trim().replace(Regex("\\s+"), " ")
         return if (normalized.length <= 28) normalized else normalized.take(28) + "…"
-    }
-
-    private companion object {
-        const val LEGACY_NEW_TITLE = "新对话"
     }
 }
 

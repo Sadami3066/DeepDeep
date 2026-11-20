@@ -5,4 +5,5 @@
     <string name="relative_hours">%1$d 小时前</string>
     <string name="relative_yesterday">昨天</string>
     <string name="relative_days">%1$d 天前</string>
+    <string name="list_separator">、</string>
 </resources>

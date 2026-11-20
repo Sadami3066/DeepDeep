@@ -766,7 +766,7 @@ private fun PluginDetailSheet(
                         DdHairline()
                         DdListRow(
                             title = stringResource(R.string.plugins_info_skills),
-                            subtitle = snapshot.skills.joinToString("、"),
+                            subtitle = snapshot.skills.joinToString(stringResource(R.string.list_separator)),
                             subtitleMaxLines = 3,
                         )
                     }

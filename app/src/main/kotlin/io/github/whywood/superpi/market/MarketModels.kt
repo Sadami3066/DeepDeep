@@ -120,8 +120,8 @@ internal fun MarketMcpMeta.resolvedHeaders(apiKey: String?): Map<String, String>
     val auth = auth ?: return resolved
     if (auth.type == MarketMcpAuthType.ApiKey) {
         val token = apiKey?.trim().orEmpty()
-        if (token.isEmpty()) error("需要填写访问令牌")
-        val header = auth.header ?: error("连接器缺少授权头配置")
+        if (token.isEmpty()) error("access token is required")
+        val header = auth.header ?: error("connector is missing authorization header configuration")
         resolved[header] = (auth.prefix.orEmpty()) + token
     }
     return resolved

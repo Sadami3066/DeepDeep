@@ -48,42 +48,6 @@ class PresentCardParseTest {
     }
 
     @Test
-    fun parsesLegacyFiles() {
-        val items = requireNotNull(
-            parsePresentedItems(
-                trace(
-                    output = """
-                        {"files":[
-                          {"path":"reports/q3.md"},
-                          {"path":"slides.pptx"},
-                          {"path":"out/demo/"},
-                          {"path":"photo.png"},
-                          {"path":"clips/demo.mp4"},
-                          {"path":"pages/index.htm"}
-                        ]}
-                    """.trimIndent(),
-                ),
-            ),
-        )
-        assertEquals(
-            listOf(
-                PresentedItemType.FILE,
-                PresentedItemType.FILE,
-                PresentedItemType.FILE,
-                PresentedItemType.IMAGE,
-                PresentedItemType.VIDEO,
-                PresentedItemType.HTML,
-            ),
-            items.map { it.type },
-        )
-        assertEquals(
-            listOf("q3.md", "slides.pptx", "demo", "photo.png", "demo.mp4", "index.htm"),
-            items.map { it.name },
-        )
-        assertEquals("out/demo/", items[2].path)
-    }
-
-    @Test
     fun dropsBadItemsButKeepsRest() {
         val items = requireNotNull(
             parsePresentedItems(
@@ -163,9 +127,6 @@ class PresentCardParseTest {
         assertNull(parsePresentedItems(trace(output = """{"items":[]}""")))
         assertNull(parsePresentedItems(trace(output = """{"items":{}}""")))
         assertNull(parsePresentedItems(trace(output = """{"items":[{}, {"type":"file"}]}""")))
-        assertNull(parsePresentedItems(trace(output = """{"files":[]}""")))
-        assertNull(parsePresentedItems(trace(output = """{"files":{}}""")))
-        assertNull(parsePresentedItems(trace(output = """{"files":[{"path":"  "}]}""")))
     }
 
     @Test

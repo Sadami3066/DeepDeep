@@ -106,8 +106,8 @@ object GuiNodeTree {
         maxDepth: Int = GUI_DEFAULT_MAX_DEPTH,
         maxNodes: Int = GUI_DEFAULT_MAX_NODES,
     ): GuiSnapshot {
-        require(maxDepth >= 0) { "maxDepth 不能为负数" }
-        require(maxNodes > 0) { "maxNodes 必须大于 0" }
+        require(maxDepth >= 0) { "maxDepth must not be negative" }
+        require(maxNodes > 0) { "maxNodes must be greater than 0" }
         val nodes = ArrayList<GuiSnapshotNode>(minOf(maxNodes, 128))
         var truncated = false
 

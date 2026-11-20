@@ -39,15 +39,6 @@ class FloatingDeliveryTest {
     }
 
     @Test
-    fun parsesLegacyFileLists() {
-        val raw = """{"files":[{"path":"/tmp/slide.pptx"}]}"""
-        val items = parsePresentedItems(raw) ?: error("expected parsed items")
-        assertEquals(1, items.size)
-        assertEquals("slide.pptx", items.single().name)
-        assertEquals(PresentedItemType.FILE, items.single().type)
-    }
-
-    @Test
     fun malformedPayloadIsRejected() {
         assertNull(parsePresentedItems("not json"))
         assertNull(parsePresentedItems("""{"items":[]}"""))

@@ -106,7 +106,7 @@ class MarketRepositoryImpl(
                 return@withContext completeRefresh(seed, MarketSource.Seed, 0L)
             }
             if (_state.value !is MarketState.Ready) {
-                _state.value = MarketState.Failed("市场暂时无法加载，请稍后再试")
+                _state.value = MarketState.Failed("Market is temporarily unavailable. Try again later")
             }
             false
         }
@@ -144,8 +144,8 @@ class MarketRepositoryImpl(
                     -> Result.success(Unit)
 
                     else -> {
-                        setInstallState(entry.id, MarketInstallState.Failed("安装失败，请稍后再试"))
-                        Result.failure(IllegalStateException("安装失败，请稍后再试"))
+                        setInstallState(entry.id, MarketInstallState.Failed("Install failed. Try again later"))
+                        Result.failure(IllegalStateException("Install failed. Try again later"))
                     }
                 }
             } catch (cancel: CancellationException) {
@@ -155,7 +155,7 @@ class MarketRepositoryImpl(
                 if (entry.type == MarketEntryType.Plugin) {
                     runCatching { pluginManager.refreshNow() }
                 }
-                setInstallState(entry.id, MarketInstallState.Failed(failure.message ?: "安装失败，请稍后再试"))
+                setInstallState(entry.id, MarketInstallState.Failed(failure.message ?: "Install failed. Try again later"))
                 Result.failure(failure)
             }
         }
@@ -211,26 +211,26 @@ class MarketRepositoryImpl(
     }
 
     private suspend fun installPlugin(entry: MarketEntry) {
-        val artifact = entry.artifact ?: error("插件缺少下载信息")
+        val artifact = entry.artifact ?: error("plugin artifact is missing")
         val file = download(artifact, "plugins", MarketDefaults.MAX_PLUGIN_BYTES)
         try {
-            val inspection = pluginManager.inspectExternal(file) ?: error("插件包无法识别")
+            val inspection = pluginManager.inspectExternal(file) ?: error("unrecognized plugin package")
             if (inspection.pluginId != entry.id) {
-                error(inspection.error ?: "插件 ID 与市场条目不匹配")
+                error(inspection.error ?: "plugin ID does not match the market entry")
             }
-            if (!inspection.sha256.equals(artifact.sha256, ignoreCase = true)) error("插件包校验失败")
+            if (!inspection.sha256.equals(artifact.sha256, ignoreCase = true)) error("plugin package checksum mismatch")
             val result = pluginManager.installExternal(file, acceptPublisher = true)
-            if (!result.success) error(result.error ?: "插件安装失败")
+            if (!result.success) error(result.error ?: "plugin installation failed")
             pluginManager.refreshNow()
             val snapshot = pluginManager.state.value.plugins.firstOrNull { it.id == entry.id }
-            if (snapshot?.installedVersion == null) error("插件安装失败")
+            if (snapshot?.installedVersion == null) error("plugin installation failed")
         } finally {
             file.delete()
         }
     }
 
     private suspend fun installSkill(entry: MarketEntry) {
-        val artifact = entry.artifact ?: error("技能缺少下载信息")
+        val artifact = entry.artifact ?: error("skill artifact is missing")
         val file = download(artifact, "skills", MarketDefaults.MAX_SKILL_BYTES)
         try {
             val bytes = file.readBytes()
@@ -245,8 +245,8 @@ class MarketRepositoryImpl(
     }
 
     private suspend fun installMcp(entry: MarketEntry, apiKey: String?) {
-        val meta = entry.mcp ?: error("MCP 配置缺失")
-        if (meta.transport != "http") error("暂不支持该连接方式")
+        val meta = entry.mcp ?: error("MCP configuration is missing")
+        if (meta.transport != "http") error("unsupported transport")
         val servers = mcpConfigStore.loadServers()
         val existingName = servers.entries.firstOrNull { (_, config) ->
             (config as? McpServerConfig.Http)?.url == meta.url
@@ -268,9 +268,9 @@ class MarketRepositoryImpl(
         val digest = MessageDigest.getInstance("SHA-256")
         val request = Request.Builder().url(artifact.url).get().build()
         http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) error("下载失败（${response.code}）")
+            if (!response.isSuccessful) error("download failed (${response.code})")
             val body = response.body
-            if (body.contentLength() > maxBytes) error("文件超过大小限制")
+            if (body.contentLength() > maxBytes) error("file exceeds size limit")
             target.outputStream().use { output ->
                 body.byteStream().use { input ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -279,7 +279,7 @@ class MarketRepositoryImpl(
                         val read = input.read(buffer)
                         if (read <= 0) break
                         total += read
-                        if (total > maxBytes) error("文件超过大小限制")
+                        if (total > maxBytes) error("file exceeds size limit")
                         digest.update(buffer, 0, read)
                         output.write(buffer, 0, read)
                     }
@@ -289,11 +289,11 @@ class MarketRepositoryImpl(
         val sha = digest.digest().toHex()
         if (!sha.equals(artifact.sha256, ignoreCase = true)) {
             target.delete()
-            error("文件校验失败")
+            error("file checksum mismatch")
         }
         if (target.length() != artifact.size) {
             target.delete()
-            error("文件大小不符")
+            error("file size mismatch")
         }
         return target
     }
@@ -326,10 +326,10 @@ class MarketRepositoryImpl(
         val signatureDer = runCatching { MarketSignature.decodeSignatureText(signatureBytes.decodeToString()) }
             .getOrElse { signatureBytes }
         if (!MarketSignature.verify(registryBytes, signatureDer, MarketDefaults.PUBLIC_KEY_DER_BASE64)) {
-            error("市场索引签名校验失败")
+            error("market registry signature verification failed")
         }
         val registry = MarketRegistryParser.parse(registryBytes)
-        if (registry.keyId != MarketDefaults.KEY_ID) error("市场索引密钥不匹配")
+        if (registry.keyId != MarketDefaults.KEY_ID) error("market registry key id mismatch")
         return FetchedRegistry(registry, registryBytes, signatureBytes)
     }
 
