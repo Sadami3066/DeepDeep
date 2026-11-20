@@ -1,5 +1,6 @@
 package io.github.whywood.superpi.remote
 
+import io.github.whywood.superpi.data.relay.RemoteCallError
 import io.github.whywood.superpi.data.relay.RemoteEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ internal data class FakeCall(
 internal class FakeRemoteTransport(online: Boolean = true) : RemoteAgentTransport {
     private val events = MutableSharedFlow<RemoteEvent>(extraBufferCapacity = 128)
     private val onlineState = MutableStateFlow(if (online) setOf(DEVICE_ID) else emptySet())
+    private val lastError = MutableStateFlow<RemoteCallError?>(null)
     private var callCount = 0
 
     override val remoteEvents: SharedFlow<RemoteEvent> = events.asSharedFlow()
@@ -30,6 +32,8 @@ internal class FakeRemoteTransport(online: Boolean = true) : RemoteAgentTranspor
 
     val calls: MutableList<FakeCall> = mutableListOf()
 
+    var failNext: RemoteCallError? = null
+
     var result: (FakeCall) -> JsonObject? = { call ->
         if (call.method == "bot.prompt") {
             buildJsonObject { put("sessionId", PEER_SESSION_ID) }
@@ -37,6 +41,8 @@ internal class FakeRemoteTransport(online: Boolean = true) : RemoteAgentTranspor
             buildJsonObject {}
         }
     }
+
+    override fun lastCallError(): RemoteCallError? = lastError.value
 
     fun setOnline(online: Boolean) {
         onlineState.value = if (online) setOf(DEVICE_ID) else emptySet()
@@ -53,7 +59,15 @@ internal class FakeRemoteTransport(online: Boolean = true) : RemoteAgentTranspor
         val call = FakeCall(to, method, params, timeoutMillis, "route-$callCount")
         calls += call
         onRouteId(call.routeId)
-        return result(call)
+        val failure = failNext
+        if (failure != null) {
+            failNext = null
+            lastError.value = failure
+            return null
+        }
+        val value = result(call)
+        lastError.value = if (value == null) RemoteCallError("internal", "call failed") else null
+        return value
     }
 
     fun emit(routeId: String, seq: Long, event: JsonObject) {

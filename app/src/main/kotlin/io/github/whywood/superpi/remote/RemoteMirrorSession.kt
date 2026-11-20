@@ -14,6 +14,7 @@ import io.github.whywood.superpi.sdk.coding.session.SessionMessageEntry
 import io.github.whywood.superpi.sdk.coding.session.SessionStats
 import java.io.File
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -62,6 +63,18 @@ class RemoteMirrorSession internal constructor(
             },
         )
         this.peerSessionId = peerSessionId
+    }
+
+    suspend fun clearRemoteMapping(deviceId: String, botId: String) {
+        manager.appendCustomEntry(
+            CUSTOM_TYPE,
+            buildJsonObject {
+                put("deviceId", deviceId)
+                put("botId", botId)
+                put("peerSessionId", JsonNull)
+            },
+        )
+        peerSessionId = null
     }
 
     suspend fun appendName(name: String) {

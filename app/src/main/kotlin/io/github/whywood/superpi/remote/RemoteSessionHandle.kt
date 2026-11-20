@@ -61,6 +61,7 @@ class RemoteSessionHandle internal constructor(
     @Volatile
     private var closed: Boolean = false
 
+    @Volatile
     private var peerSessionId: String? = mirror.peerSessionId
 
     override val sessionId: String get() = mirror.sessionId
@@ -184,23 +185,14 @@ class RemoteSessionHandle internal constructor(
         try {
             mirror.appendUserMessage(text)
             coroutineScope {
-                val collector: Job = launch(start = CoroutineStart.UNDISPATCHED) {
+                val eventCollector: Job = launch(start = CoroutineStart.UNDISPATCHED) {
                     transport.remoteEvents.collect { event -> onRemoteEvent(turn, event) }
                 }
+                val connectionWatch: Job = launch(start = CoroutineStart.UNDISPATCHED) {
+                    transport.onlineDevices.collect { devices -> onDevicesChanged(turn, devices) }
+                }
                 try {
-                    val sessionId = peerSessionId
-                    val result = transport.call(
-                        to = target.deviceId,
-                        method = BOT_PROMPT,
-                        params = promptParams(text, sessionId),
-                        onRouteId = { route -> turn.routeId = route },
-                    )
-                    if (result == null) {
-                        turn.failure = NO_ANSWER_MESSAGE
-                    } else {
-                        rememberPeerSession(result)
-                        if (peerSessionId == null) turn.failure = NO_SESSION_MESSAGE
-                    }
+                    deliverPrompt(turn, text)
                     if (turn.failure == null && turn.aborted) {
                         peerSessionId?.let { sessionId -> abortRemote(sessionId) }
                     } else if (turn.failure == null) {
@@ -209,12 +201,46 @@ class RemoteSessionHandle internal constructor(
                     }
                     finishTurn(turn)
                 } finally {
-                    collector.cancel()
+                    eventCollector.cancel()
+                    connectionWatch.cancel()
                 }
             }
         } finally {
             activeTurn = null
         }
+    }
+
+    private suspend fun deliverPrompt(turn: RemoteTurn, text: String) {
+        val sessionId = peerSessionId
+        val result = callPrompt(turn, text, sessionId)
+        if (result != null) {
+            rememberPeerSession(result)
+            if (peerSessionId == null) turn.failure = NO_SESSION_MESSAGE
+            return
+        }
+        if (sessionId != null && isSessionNotFound()) {
+            clearPeerSession()
+            val retried = callPrompt(turn, text, null)
+            if (retried != null) {
+                rememberPeerSession(retried)
+                if (peerSessionId == null) turn.failure = NO_SESSION_MESSAGE
+                return
+            }
+        }
+        turn.failure = NO_ANSWER_MESSAGE
+    }
+
+    private suspend fun callPrompt(turn: RemoteTurn, text: String, sessionId: String?): JsonObject? = transport.call(
+        to = target.deviceId,
+        method = BOT_PROMPT,
+        params = promptParams(text, sessionId),
+        onRouteId = { route -> turn.setRoute(route) },
+    )
+
+    private fun onDevicesChanged(turn: RemoteTurn, devices: Set<String>) {
+        if (target.deviceId in devices || turn.settled.isCompleted) return
+        turn.connectionLost = true
+        turn.settled.complete(Unit)
     }
 
     private suspend fun queueInput(method: String, text: String) {
@@ -237,6 +263,17 @@ class RemoteSessionHandle internal constructor(
             },
         )
         if (result == null) {
+            if (isSessionNotFound()) {
+                clearPeerSession()
+                val turn = activeTurn
+                if (turn != null) {
+                    turn.failure = SESSION_RESTARTED_MESSAGE
+                    turn.settled.complete(Unit)
+                } else {
+                    emit(SessionEvent.SessionError(SESSION_RESTARTED_MESSAGE))
+                }
+                return
+            }
             emit(SessionEvent.SessionError(NO_ANSWER_MESSAGE))
             return
         }
@@ -253,7 +290,8 @@ class RemoteSessionHandle internal constructor(
         StandardAgentMessage(UserMessage(content = PlainTextContent(text), timestamp = System.currentTimeMillis()))
 
     private suspend fun onRemoteEvent(turn: RemoteTurn, event: RemoteEvent) {
-        if (event.routeId != turn.routeId) return
+        val route = turn.routeId ?: return
+        if (event.routeId != route) return
         if (!turn.accept(event.seq)) return
         when (val decoded = RemoteEventMapping.decode(event.event)) {
             null -> Unit
@@ -287,10 +325,15 @@ class RemoteSessionHandle internal constructor(
     }
 
     private suspend fun finishTurn(turn: RemoteTurn) {
-        val failure = turn.failure
+        if (turn.aborted) {
+            val messages = persistTurn(turn, StopReason.Aborted, null)
+            if (messages.isNotEmpty()) emitAgent(AgentEvent.AgentEnd(messages))
+            return
+        }
+        val failure = if (turn.connectionLost) connectionLostMessage() else turn.failure
         val stopReason = when {
             failure != null -> StopReason.Error
-            turn.aborted || turn.state.endStatus == STATUS_STOPPED -> StopReason.Aborted
+            turn.state.endStatus == STATUS_STOPPED -> StopReason.Aborted
             turn.state.endStatus == STATUS_FAILED -> StopReason.Error
             else -> StopReason.Stop
         }
@@ -327,15 +370,24 @@ class RemoteSessionHandle internal constructor(
         mirror.appendRemoteMapping(target.deviceId, target.botId, returned)
     }
 
+    private suspend fun clearPeerSession() {
+        if (peerSessionId == null) return
+        peerSessionId = null
+        mirror.clearRemoteMapping(target.deviceId, target.botId)
+    }
+
+    private fun isSessionNotFound(): Boolean = transport.lastCallError()?.code == SESSION_NOT_FOUND
+
     private fun abortRemote(sessionId: String) {
         if (closed) return
         scope.launch {
-            runCatching {
+            val result = runCatching {
                 transport.call(target.deviceId, BOT_ABORT, buildJsonObject {
                     put("botId", target.botId)
                     put("sessionId", sessionId)
                 })
-            }
+            }.getOrNull()
+            if (result == null && isSessionNotFound()) clearPeerSession()
         }
     }
 
@@ -359,6 +411,9 @@ class RemoteSessionHandle internal constructor(
     private fun offlineMessage(): String =
         "Remote bot ${target.botName} on ${target.deviceName} is offline."
 
+    private fun connectionLostMessage(): String =
+        "Lost connection to ${target.deviceName}; the turn may have been interrupted. Retry when the device is back online."
+
     private class RemoteTurn(modelName: String) {
         val state = RemoteTurnState(modelName)
         val settled = CompletableDeferred<Unit>()
@@ -376,7 +431,17 @@ class RemoteSessionHandle internal constructor(
         @Volatile
         var streaming: Boolean = false
 
+        @Volatile
+        var connectionLost: Boolean = false
+
         private var acceptedSeq: Long = -1L
+
+        @Synchronized
+        fun setRoute(route: String) {
+            if (routeId == route) return
+            routeId = route
+            acceptedSeq = -1L
+        }
 
         @Synchronized
         fun accept(seq: Long): Boolean {
@@ -393,6 +458,7 @@ class RemoteSessionHandle internal constructor(
         private const val BOT_ABORT = "bot.abort"
         private const val STATUS_STOPPED = "stopped"
         private const val STATUS_FAILED = "failed"
+        private const val SESSION_NOT_FOUND = "session_not_found"
         private const val ROLE_ASSISTANT = "assistant"
         private const val THINKING_LEVEL = "off"
         private const val SETTLE_TIMEOUT_MILLIS = 10 * 60 * 1000L
@@ -400,6 +466,8 @@ class RemoteSessionHandle internal constructor(
         private const val NO_SESSION_MESSAGE = "The remote bot did not start a session."
         private const val SETTLE_TIMEOUT_MESSAGE = "The remote bot did not finish the turn."
         private const val FAILED_MESSAGE = "The bot on the remote device failed."
+        private const val SESSION_RESTARTED_MESSAGE =
+            "The remote session was restarted on the device, so that message could not be delivered. Send again to start a new remote session."
     }
 }
 

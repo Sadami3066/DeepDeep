@@ -1,5 +1,6 @@
 package io.github.whywood.superpi.remote
 
+import io.github.whywood.superpi.data.relay.RemoteCallError
 import io.github.whywood.superpi.data.relay.RemoteEvent
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,6 +10,8 @@ interface RemoteAgentTransport {
     val remoteEvents: SharedFlow<RemoteEvent>
 
     val onlineDevices: StateFlow<Set<String>>
+
+    fun lastCallError(): RemoteCallError? = null
 
     suspend fun call(
         to: String,

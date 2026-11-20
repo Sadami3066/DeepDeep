@@ -3,6 +3,7 @@ package io.github.whywood.superpi.remote
 import io.github.whywood.superpi.runtime.AssistantRole
 import io.github.whywood.superpi.runtime.AssistantStep
 import io.github.whywood.superpi.runtime.ModelConfig
+import io.github.whywood.superpi.data.relay.RemoteCallError
 import io.github.whywood.superpi.runtime.SessionHandle
 import io.github.whywood.superpi.sdk.agent.AgentEvent
 import io.github.whywood.superpi.sdk.agent.asLlmMessage
@@ -27,7 +28,9 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -322,6 +325,132 @@ class RemoteSessionHandleTest {
         transport.emit(call.routeId, 0, FakeEvents.settled())
         runCurrent()
         assertTrue(job.isCompleted)
+    }
+
+    @Test
+    fun connectionLossEndsTurnWithSessionError() = runTest {
+        val transport = FakeRemoteTransport()
+        val engine = engine(transport, backgroundScope)
+        val handle = engine.create(null, ModelConfig())
+        val received = mutableListOf<SessionEvent>()
+        handle.subscribe { event -> received += event }
+
+        val job = launch { handle.prompt("hello") }
+        runCurrent()
+        val call = transport.calls.single()
+        transport.emit(call.routeId, 0, FakeEvents.textDelta("partial"))
+        runCurrent()
+        assertTrue(handle.isBusy)
+
+        transport.setOnline(false)
+        runCurrent()
+
+        assertTrue(job.isCompleted)
+        assertFalse(handle.isBusy)
+        val error = received.filterIsInstance<SessionEvent.SessionError>().single()
+        assertTrue(error.message.contains("Lost connection"))
+        assertTrue(error.message.contains("Desktop"))
+        val assistant = handle.messages.mapNotNull { it.asLlmMessage() }.filterIsInstance<AssistantMessage>().last()
+        assertEquals(StopReason.Error, assistant.stopReason)
+        assertEquals("partial", assistant.content.filterIsInstance<TextContent>().joinToString("") { it.text })
+    }
+
+    @Test
+    fun sessionNotFoundClearsMappingAndRetriesOnce() = runTest {
+        val transport = FakeRemoteTransport()
+        val engine = engine(transport, backgroundScope)
+        val first = engine.create(null, ModelConfig())
+        finishPrompt(scope = this, transport = transport, handle = first, text = "hello", reply = "hi")
+        val file = first.sessionFile!!
+        first.close()
+        transport.calls.clear()
+
+        val reopened = engine.create(file, ModelConfig())
+        transport.result = { buildJsonObject { put("sessionId", "peer-2") } }
+        transport.failNext = RemoteCallError("session_not_found", "the session is gone")
+
+        val job = launch { reopened.prompt("next") }
+        runCurrent()
+
+        val prompts = transport.calls.filter { it.method == "bot.prompt" }
+        assertEquals(2, prompts.size)
+        assertEquals(FakeRemoteTransport.PEER_SESSION_ID, prompts[0].params.getValue("sessionId").jsonPrimitive.content)
+        assertNull(prompts[1].params["sessionId"])
+
+        val retry = prompts[1]
+        transport.emit(retry.routeId, 0, FakeEvents.textDelta("fresh"))
+        transport.emit(retry.routeId, 1, FakeEvents.settled())
+        runCurrent()
+        assertTrue(job.isCompleted)
+        assertFalse(reopened.isBusy)
+
+        val lines = File(reopened.sessionFile!!).readLines()
+        assertTrue(lines.any { it.contains("\"peerSessionId\":null") })
+        assertTrue(lines.any { it.contains("\"peerSessionId\":\"peer-2\"") })
+
+        val next = launch { reopened.prompt("again") }
+        runCurrent()
+        val nextPrompt = transport.calls.last()
+        assertEquals("peer-2", nextPrompt.params.getValue("sessionId").jsonPrimitive.content)
+        transport.emit(nextPrompt.routeId, 0, FakeEvents.settled())
+        runCurrent()
+        assertTrue(next.isCompleted)
+    }
+
+    @Test
+    fun staleAbortDoesNotLeaveHandleBusy() = runTest {
+        val transport = FakeRemoteTransport()
+        val engine = engine(transport, backgroundScope)
+        val handle = engine.create(null, ModelConfig())
+        finishPrompt(scope = this, transport = transport, handle = handle, text = "hello", reply = "hi")
+
+        val turn = launch { handle.prompt("working") }
+        runCurrent()
+        transport.failNext = RemoteCallError("session_not_found", "gone")
+        handle.abort()
+        runCurrent()
+
+        assertTrue(turn.isCompleted)
+        assertFalse(handle.isBusy)
+        assertTrue(transport.calls.any { it.method == "bot.abort" })
+
+        transport.result = { buildJsonObject { put("sessionId", "peer-2") } }
+        val next = launch { handle.prompt("fresh") }
+        runCurrent()
+        val fresh = transport.calls.last()
+        assertNull(fresh.params["sessionId"])
+        transport.emit(fresh.routeId, 0, FakeEvents.settled())
+        runCurrent()
+        assertTrue(next.isCompleted)
+    }
+
+    @Test
+    fun staleSteerEndsActiveTurnWithSessionError() = runTest {
+        val transport = FakeRemoteTransport()
+        val engine = engine(transport, backgroundScope)
+        val handle = engine.create(null, ModelConfig())
+        val received = mutableListOf<SessionEvent>()
+        handle.subscribe { event -> received += event }
+        finishPrompt(scope = this, transport = transport, handle = handle, text = "hello", reply = "hi")
+
+        val turn = launch { handle.prompt("working") }
+        runCurrent()
+        transport.failNext = RemoteCallError("session_not_found", "gone")
+        handle.prompt("adjust", behavior = QueueBehavior.Steer)
+        runCurrent()
+
+        assertTrue(turn.isCompleted)
+        assertFalse(handle.isBusy)
+        val error = received.filterIsInstance<SessionEvent.SessionError>().single()
+        assertTrue(error.message.contains("restarted"))
+
+        transport.result = { buildJsonObject { put("sessionId", "peer-2") } }
+        val next = launch { handle.prompt("fresh") }
+        runCurrent()
+        assertNull(transport.calls.last().params["sessionId"])
+        transport.emit(transport.calls.last().routeId, 0, FakeEvents.settled())
+        runCurrent()
+        assertTrue(next.isCompleted)
     }
 
     private fun engine(transport: FakeRemoteTransport, scope: CoroutineScope): RemoteSessionEngine =
