@@ -50,7 +50,8 @@ class MemoryRenderTest {
         assertFalse(text.contains("\n# 2026-11-08"))
         assertFalse(text.contains("<!--"))
         assertFalse(text.contains("&lt;!--"))
-        assertTrue(text.contains("2026-11-08 09:00:00 [abc]"))
+        assertFalse(text.contains("09:00:00"))
+        assertFalse(text.contains("abc"))
     }
 
     @Test

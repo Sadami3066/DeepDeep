@@ -65,8 +65,8 @@ internal object MemoryText {
     private val commentPattern = Regex("<!--(.*?)-->", RegexOption.DOT_MATCHES_ALL)
 
     fun visibleText(content: String): String = normalize(
-        content.replace(commentPattern) { match -> match.groupValues[1].trim() },
-    )
+        content.replace(commentPattern, ""),
+    ).replace(Regex("\\n{3,}"), "\n\n")
 
     fun normalize(content: String): String = content.replace("\r\n", "\n").trimEnd()
 
