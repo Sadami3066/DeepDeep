@@ -57,12 +57,12 @@ internal class MiniappPluginService(
         if (agent == null) return draft.toPluginApp()
         launchAgent(
             buildString {
-                appendLine("创建一个小程序：${draft.manifest.name}")
+                appendLine("Create a mini app: ${draft.manifest.name}")
                 request.description.takeIf { it.isNotBlank() }?.let { appendLine(it) }
                 request.prompt.takeIf { it.isNotBlank() }?.let { appendLine(it) }
                 append(
-                    "把应用文件写到绝对路径 ${draft.directory.absolutePath}（入口默认 index.html），" +
-                        "完成后调用 miniapp_load，path 传该绝对路径。",
+                    "Write the app files under the absolute path ${draft.directory.absolutePath} (entry defaults to index.html), " +
+                        "then call miniapp_load with that absolute path.",
                 )
             },
         )
@@ -74,7 +74,7 @@ internal class MiniappPluginService(
             ?: return MiniappRun(appId = id, accepted = false, error = "miniapp not found: $id")
         if (agent == null) return MiniappRun(appId = id, accepted = false, error = MINIAPP_AGENT_UNAVAILABLE)
         launchAgent(
-            "修改已安装的小程序 ${creation.manifest.id}（目录 ${creation.directory.absolutePath}）：$instruction",
+            "Edit the installed mini app ${creation.manifest.id} (directory ${creation.directory.absolutePath}): $instruction",
         )
         return MiniappRun(appId = creation.manifest.id, accepted = true)
     }
@@ -86,7 +86,7 @@ internal class MiniappPluginService(
             ?: return MiniappRun(appId = id, accepted = false, error = "miniapp not found: $id")
         if (agent == null) return MiniappRun(appId = id, accepted = false, error = MINIAPP_AGENT_UNAVAILABLE)
         launchAgent(
-            "在小程序 ${creation.manifest.id}（目录 ${creation.directory.absolutePath}）中执行：$instruction",
+            "Run this inside the mini app ${creation.manifest.id} (directory ${creation.directory.absolutePath}): $instruction",
         )
         return MiniappRun(appId = creation.manifest.id, accepted = true)
     }
