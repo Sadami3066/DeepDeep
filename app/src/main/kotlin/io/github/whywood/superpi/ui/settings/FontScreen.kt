@@ -155,13 +155,13 @@ private fun FontPreviewRow(
                 verticalArrangement = Arrangement.spacedBy(DdSpacing.Xxs),
             ) {
                 Text(
-                    text = "我思故我在",
+                    text = "Quick brown fox",
                     style = DdType.body.copy(fontFamily = family, fontSize = 18.sp, lineHeight = 26.sp),
                     color = colors.inkSecondary,
                     maxLines = 1,
                 )
                 Text(
-                    text = "I think, therefore I am.",
+                    text = "jumps over the lazy dog",
                     style = DdType.bodySmall.copy(fontFamily = family, fontSize = 13.sp, lineHeight = 19.sp),
                     color = colors.inkTertiary,
                     maxLines = 1,
