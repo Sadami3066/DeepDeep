@@ -8,7 +8,6 @@ import io.github.whywood.superpi.data.relay.RelayLive
 import io.github.whywood.superpi.data.relay.RelayLiveState
 import io.github.whywood.superpi.data.relay.RemoteAgentEvent
 import io.github.whywood.superpi.data.relay.RemoteAgentProtocol
-import io.github.whywood.superpi.data.relay.RemoteCallCodes
 import io.github.whywood.superpi.data.relay.RemoteCallError
 import io.github.whywood.superpi.data.relay.RemoteEvent
 import io.github.whywood.superpi.data.relay.RemoteMirrorLine
@@ -56,6 +55,7 @@ internal class RemoteChatStateHolder(
     private var activeRouteId: String? = null
     private var callInFlight = false
     private var firstEventWatchdog: Job? = null
+    private var settleWatchdog: Job? = null
     private var failedText: String? = null
     private var nextKey = 0L
     private var mirrorSession: String? = null
@@ -131,10 +131,7 @@ internal class RemoteChatStateHolder(
         scope.launch {
             val result = relayLive.call(deviceId, "bot.abort", buildJsonObject { put("sessionId", current) })
             if (result == null) {
-                val error = relayLive.lastCallError.value
-                if (error?.code != RemoteCallCodes.DISCONNECTED) {
-                    appendFailure(error?.let(RemoteChatFailure::from) ?: RemoteChatFailure.Disconnected)
-                }
+                interrupt(relayLive.lastCallError.value?.let(RemoteChatFailure::from) ?: RemoteChatFailure.Disconnected)
             }
         }
     }
@@ -170,6 +167,8 @@ internal class RemoteChatStateHolder(
     }
 
     private fun failSend(text: String, error: RemoteCallError?) {
+        settleWatchdog?.cancel()
+        settleWatchdog = null
         running = false
         settled = true
         canAbort = false
@@ -196,6 +195,8 @@ internal class RemoteChatStateHolder(
         if (!running) return
         firstEventWatchdog?.cancel()
         firstEventWatchdog = null
+        settleWatchdog?.cancel()
+        settleWatchdog = null
         running = false
         settled = true
         canAbort = false
@@ -223,11 +224,21 @@ internal class RemoteChatStateHolder(
                 running = false
                 settled = true
                 canAbort = false
+                settleWatchdog?.cancel()
+                settleWatchdog = null
             }
 
             RemoteAgentEvent.AgentEnd -> {
                 running = false
                 canAbort = false
+                settleWatchdog?.cancel()
+                settleWatchdog = scope.launch {
+                    delay(SETTLE_TIMEOUT_MILLIS)
+                    if (!running && !settled) {
+                        settled = true
+                        activeRouteId = null
+                    }
+                }
             }
 
             RemoteAgentEvent.AgentSettled -> {
@@ -235,6 +246,8 @@ internal class RemoteChatStateHolder(
                 settled = true
                 canAbort = false
                 activeRouteId = null
+                settleWatchdog?.cancel()
+                settleWatchdog = null
             }
         }
         mirrorEvent(decoded)
@@ -319,5 +332,6 @@ internal class RemoteChatStateHolder(
 
     private companion object {
         private const val FIRST_EVENT_TIMEOUT_MILLIS = 30_000L
+        private const val SETTLE_TIMEOUT_MILLIS = 2_000L
     }
 }
