@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.whywood.superpi.R
 import io.github.whywood.superpi.design.DdEmptyState
 import io.github.whywood.superpi.design.DdIcon
@@ -336,7 +337,7 @@ private fun RemoteChatToolRow(block: RemoteChatBlock.Tool, running: Boolean) {
 
                 block.isError -> Text(
                     text = stringResource(R.string.remoteagent_tool_failed),
-                    style = DdType.micro,
+                    style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                     color = colors.danger,
                 )
             }

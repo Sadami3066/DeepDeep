@@ -697,7 +697,7 @@ private fun DrawerRemoteDeviceHeader(
         modifier = modifier
             .fillMaxWidth()
             .height(36.dp)
-            .padding(start = 10.dp, end = DdSpacing.Xs),
+            .padding(start = 10.dp, end = DdSpacing.Xs, top = DdSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -717,7 +717,7 @@ private fun DrawerRemoteDeviceHeader(
         if (!device.online) {
             Text(
                 text = stringResource(R.string.remoteagent_device_offline),
-                style = DdType.micro,
+                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
                 color = colors.inkTertiary,
                 maxLines = 1,
             )
