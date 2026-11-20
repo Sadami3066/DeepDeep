@@ -67,7 +67,7 @@ class QuestionPersistence(
 
     private fun write(questions: List<InterruptedQuestion>) {
         if (!directory.exists() && !directory.mkdirs()) {
-            throw IllegalStateException("无法创建待答问题目录：${directory.absolutePath}")
+            throw IllegalStateException("cannot create pending questions directory: ${directory.absolutePath}")
         }
         val root = buildJsonObject {
             put("schemaVersion", SCHEMA_VERSION)

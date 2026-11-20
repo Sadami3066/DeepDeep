@@ -253,7 +253,7 @@ class TimerService(
             ?: return rebuildIntents()
         val version = (root["schemaVersion"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
         val entries = root["intents"] as? JsonArray
-        if ((version != INTENT_SCHEMA_VERSION && version != LEGACY_INTENT_SCHEMA_VERSION) || entries == null) {
+        if (version != INTENT_SCHEMA_VERSION || entries == null) {
             return rebuildIntents()
         }
         return entries.mapNotNull { element ->
@@ -372,7 +372,6 @@ class TimerService(
     private companion object {
         const val MAX_TIMER_WAIT_MS = 15 * 60 * 1000L
         const val INTENT_SCHEMA_VERSION = 2
-        const val LEGACY_INTENT_SCHEMA_VERSION = 1
         const val FILE_NAME = "delivery-intents.json"
         const val TAG = "TimerService"
     }
@@ -385,12 +384,9 @@ private data class DeliveryIntent(
     val createdAt: Long,
 )
 
-private const val LEGACY_INTENT_TIMER_ID_KEY = "scheduleId"
-
 private fun intentFromJson(json: JsonObject): DeliveryIntent = DeliveryIntent(
     dedupeKey = json.requiredIntentString("dedupeKey"),
-    timerId = (json["timerId"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() }
-        ?: json.requiredIntentString(LEGACY_INTENT_TIMER_ID_KEY),
+    timerId = json.requiredIntentString("timerId"),
     sessionId = json.requiredIntentString("sessionId"),
     createdAt = json.requiredIntentLong("createdAt"),
 )

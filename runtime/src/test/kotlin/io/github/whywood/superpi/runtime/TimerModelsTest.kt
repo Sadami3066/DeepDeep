@@ -94,22 +94,6 @@ class TimerModelsTest {
     }
 
     @Test
-    fun weeklyDaysDecodeLegacyNames() {
-        val json = buildJsonObject {
-            put("type", "weekly")
-            put("time", "09:00")
-            put("days", buildJsonArray {
-                add(JsonPrimitive("MONDAY"))
-                add(JsonPrimitive(5))
-            })
-        }
-        assertEquals(
-            TimerTrigger.Weekly(setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), LocalTime.of(9, 0)),
-            timerTriggerFromJsonObject(json),
-        )
-    }
-
-    @Test
     fun timerJsonRoundTrip() {
         val timer = Timer(
             id = "timer-1",
@@ -185,6 +169,15 @@ class TimerModelsTest {
                         put("type", "weekly")
                         put("time", "09:00")
                         put("days", buildJsonArray { add(JsonPrimitive(9)) })
+                    },
+                )
+            }.exceptionOrNull(),
+            runCatching {
+                timerTriggerFromJsonObject(
+                    buildJsonObject {
+                        put("type", "weekly")
+                        put("time", "09:00")
+                        put("days", buildJsonArray { add(JsonPrimitive("MONDAY")) })
                     },
                 )
             }.exceptionOrNull(),

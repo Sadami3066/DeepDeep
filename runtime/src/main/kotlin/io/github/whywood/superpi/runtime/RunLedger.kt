@@ -96,7 +96,7 @@ class RunLedger(
     private fun writeEntries(target: File, entries: List<InterruptedRun>) {
         val directory = target.parentFile ?: return
         if (!directory.exists() && !directory.mkdirs()) {
-            throw IllegalStateException("无法创建运行记录目录：${directory.absolutePath}")
+            throw IllegalStateException("cannot create run ledger directory: ${directory.absolutePath}")
         }
         val root = buildJsonObject {
             put("schemaVersion", SCHEMA_VERSION)

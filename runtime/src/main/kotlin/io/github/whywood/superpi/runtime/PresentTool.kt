@@ -136,20 +136,13 @@ private suspend fun parsePresentedItems(
     miniappLookup: (suspend (String) -> PresentedMiniapp?)?,
 ): List<JsonObject> {
     val items = args["items"] as? JsonArray
-    if (items != null) {
-        if (items.size !in 1..MAX_PRESENTED_ITEMS) {
-            throw IllegalArgumentException("items needs 1..$MAX_PRESENTED_ITEMS entries")
-        }
-        return items.mapIndexed { index, element ->
-            normalizeItem(index, element, cwd, miniappLookup)
-        }
-    }
-    val files = args["files"] as? JsonArray
         ?: throw IllegalArgumentException("items must be an array")
-    if (files.size !in 1..MAX_PRESENTED_ITEMS) {
-        throw IllegalArgumentException("files needs 1..$MAX_PRESENTED_ITEMS entries")
+    if (items.size !in 1..MAX_PRESENTED_ITEMS) {
+        throw IllegalArgumentException("items needs 1..$MAX_PRESENTED_ITEMS entries")
     }
-    return files.mapIndexed { index, element -> normalizeLegacyFile(index, element, cwd) }
+    return items.mapIndexed { index, element ->
+        normalizeItem(index, element, cwd, miniappLookup)
+    }
 }
 
 private suspend fun normalizeItem(
@@ -229,36 +222,6 @@ private fun fileItem(
         put("name", file.name.ifBlank { rawPath.substringAfterLast('/') })
         put("mime", mimeOf(file.name))
         title?.let { put("title", it) }
-    }
-}
-
-private fun normalizeLegacyFile(
-    index: Int,
-    element: JsonElement,
-    cwd: File,
-): JsonObject {
-    val item = element as? JsonObject
-        ?: throw IllegalArgumentException("files[$index] must be an object")
-    val rawPath = item.argumentString("path")
-        ?: throw IllegalArgumentException("files[$index].path must not be empty")
-    val file = resolvePresentedFile(rawPath, cwd)
-    if (!file.exists()) throw IllegalArgumentException("path does not exist: $rawPath")
-    if (!file.canRead()) throw IllegalArgumentException("path is not readable: $rawPath")
-    if (!file.isFile) {
-        throw IllegalArgumentException("files[$index].path is a directory: $rawPath")
-    }
-    val extension = file.extension.lowercase(Locale.US)
-    val kind = when {
-        extension in IMAGE_EXTENSIONS -> PresentKind.IMAGE
-        extension in VIDEO_EXTENSIONS -> PresentKind.VIDEO
-        extension in HTML_EXTENSIONS -> PresentKind.HTML
-        else -> PresentKind.FILE
-    }
-    return buildJsonObject {
-        put("type", kind.json)
-        put("path", file.absolutePath)
-        put("name", file.name.ifBlank { rawPath.substringAfterLast('/') })
-        put("mime", mimeOf(file.name))
     }
 }
 

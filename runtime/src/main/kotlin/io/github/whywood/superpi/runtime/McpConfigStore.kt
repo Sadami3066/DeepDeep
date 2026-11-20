@@ -52,7 +52,7 @@ class McpConfigStore(
         val current = loadLocked().entries
         val duplicates = parsed.map { it.name }.filter { it in current }
         if (duplicates.isNotEmpty()) {
-            throw IllegalArgumentException("已存在同名服务器：${duplicates.joinToString("、")}")
+            throw IllegalArgumentException("MCP server already exists: ${duplicates.joinToString(", ")}")
         }
         val merged = LinkedHashMap(current)
         parsed.forEach { entry -> merged[entry.name] = entry.config.toConfigJsonObject() }
@@ -62,11 +62,11 @@ class McpConfigStore(
 
     suspend fun updateFromJson(originalName: String, text: String): String = mutex.withLock {
         val parsed = parseMcpEntries(text)
-        if (parsed.size != 1) throw IllegalArgumentException("一次只能编辑一个服务器")
+        if (parsed.size != 1) throw IllegalArgumentException("edit one MCP server at a time")
         val entry = parsed.first()
         val current = loadLocked().entries
         if (entry.name != originalName && entry.name in current) {
-            throw IllegalArgumentException("已存在同名服务器：${entry.name}")
+            throw IllegalArgumentException("MCP server already exists: ${entry.name}")
         }
         val merged = LinkedHashMap(current)
         merged.remove(originalName)
@@ -121,13 +121,15 @@ class McpConfigStore(
     private fun readRootLocked(): RootRead {
         if (!file.isFile) return RootRead(JsonObject(emptyMap()), null)
         val text = runCatching { file.readText() }.getOrElse { error ->
-            return RootRead(JsonObject(emptyMap()), "mcp.json 读取失败：${error.message ?: "unknown"}")
+            return RootRead(JsonObject(emptyMap()), "failed to read mcp.json: ${error.message ?: "unknown"}")
         }
         if (text.isBlank()) return RootRead(JsonObject(emptyMap()), null)
         return runCatching { PiJson.parseToJsonElement(text).jsonObject }
             .fold(
                 onSuccess = { RootRead(it, null) },
-                onFailure = { RootRead(JsonObject(emptyMap()), "mcp.json 解析失败：${it.message ?: "invalid JSON"}") },
+                onFailure = {
+                    RootRead(JsonObject(emptyMap()), "failed to parse mcp.json: ${it.message ?: "invalid JSON"}")
+                },
             )
     }
 

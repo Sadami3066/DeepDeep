@@ -319,13 +319,13 @@ class PiSessionEngine(
 
     override fun titleFor(text: String): String {
         val normalized = text.trim().replace(Regex("\\s+"), " ")
-        if (normalized.isEmpty()) return "新对话"
+        if (normalized.isEmpty()) return "New chat"
         return if (normalized.length <= 28) normalized else normalized.take(28) + "…"
     }
 
     private fun SessionInfo.toSummary(): ConversationSummary = ConversationSummary(
         id = sessionId,
-        title = name?.takeIf { it.isNotBlank() } ?: "新对话",
+        title = name?.takeIf { it.isNotBlank() } ?: "New chat",
         updatedAt = parseTimestamp(timestamp),
         filePath = sessionFile.toString(),
     )
@@ -351,15 +351,6 @@ internal fun thinkingLevelOf(value: String?): ThinkingLevel = when (value?.trim(
     "xhigh" -> ThinkingLevel.XHIGH
     "max" -> ThinkingLevel.MAX
     else -> ThinkingLevel.OFF
-}
-
-fun ThinkingLevel.displayName(): String = when (this) {
-    ThinkingLevel.OFF -> "关闭"
-    ThinkingLevel.LOW -> "低"
-    ThinkingLevel.MEDIUM -> "中"
-    ThinkingLevel.HIGH -> "高"
-    ThinkingLevel.XHIGH -> "超高"
-    ThinkingLevel.MAX -> "最大"
 }
 
 internal sealed interface PreparedPrompt {

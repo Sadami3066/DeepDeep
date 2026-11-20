@@ -182,7 +182,7 @@ class McpConfigStoreTest {
             )
         }.exceptionOrNull()
         assertTrue(failure is IllegalArgumentException)
-        assertTrue(failure?.message?.contains("已存在") == true)
+        assertTrue(failure?.message?.contains("already exists") == true)
         val snapshot = store.load()
         assertEquals(setOf("docs", "keep"), snapshot.servers.keys)
         assertEquals(

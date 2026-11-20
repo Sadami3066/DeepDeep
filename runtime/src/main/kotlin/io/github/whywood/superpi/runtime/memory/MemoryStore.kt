@@ -91,7 +91,6 @@ class MemoryStore(private val rootDir: File) {
     private val dailyDir = File(rootDir, "daily")
     private val pendingDir = File(rootDir, "pending")
     private val summaryLogFile = File(rootDir, "summaries.log")
-    private val legacyPlaybookFile = File(rootDir, "playbook.md")
 
     private var cacheValid = false
     private var cachedSection: String? = null
@@ -406,12 +405,6 @@ class MemoryStore(private val rootDir: File) {
         rootDir.mkdirs()
         dailyDir.mkdirs()
         pendingDir.mkdirs()
-        runCatching {
-            if (legacyPlaybookFile.isFile) legacyPlaybookFile.delete()
-            dailyDir.listFiles().orEmpty()
-                .filter { it.isFile && LEGACY_DAY_FILE.matches(it.name) }
-                .forEach { it.delete() }
-        }
         listOf(
             profileFile to ZONE_PROFILE,
             contextFile to ZONE_CONTEXT,
@@ -608,7 +601,6 @@ class MemoryStore(private val rootDir: File) {
         private const val MAX_PENDING_RECAPS = 30
         private val DAY_FILE = Regex("\\d{4}-\\d{2}-\\d{2}\\.md")
         private val MONTH_FILE = Regex("\\d{4}-\\d{2}\\.md")
-        private val LEGACY_DAY_FILE = Regex("\\d{4}-\\d{2}-\\d{2}\\.md")
     }
 }
 

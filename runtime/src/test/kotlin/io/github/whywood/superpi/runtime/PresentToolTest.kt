@@ -37,12 +37,6 @@ class PresentToolTest {
         putJsonArray("items") { items.forEach { add(it) } }
     }
 
-    private fun filesArgs(vararg paths: String): JsonObject = buildJsonObject {
-        putJsonArray("files") {
-            paths.forEach { path -> add(buildJsonObject { put("path", path) }) }
-        }
-    }
-
     private fun tool(
         miniappLookup: (suspend (String) -> PresentedMiniapp?)? = null,
         cwd: File = folder.root,
@@ -139,43 +133,6 @@ class PresentToolTest {
         assertFalse(items[1].containsKey("title"))
         assertEquals(page.absolutePath, items[2].string("path"))
         assertEquals("text/html", items[2].string("mime"))
-    }
-
-    @Test
-    fun legacyFilesInferItemTypes() = runTest {
-        val paths = listOf("reports/q3.md", "photo.jpeg", "site/index.html", "build/demo").map { name ->
-            File(folder.root, name).apply { parentFile.mkdirs(); writeText("content") }.absolutePath
-        }
-        val (result, text) = run(tool(), filesArgs(*paths.toTypedArray()))
-        assertNull(result.isError)
-        val root = Json.parseToJsonElement(text).jsonObject
-        assertFalse(root.containsKey("files"))
-        val items = outputItems(text)
-        assertEquals(4, items.size)
-        assertEquals(listOf("file", "image", "html", "file"), items.map { it.string("type") })
-        assertEquals(listOf("q3.md", "photo.jpeg", "index.html", "demo"), items.map { it.string("name") })
-        assertEquals(
-            listOf(
-                File(folder.root, "reports/q3.md").absolutePath,
-                File(folder.root, "photo.jpeg").absolutePath,
-                File(folder.root, "site/index.html").absolutePath,
-                File(folder.root, "build/demo").absolutePath,
-            ),
-            items.map { it.string("path") },
-        )
-    }
-
-    @Test
-    fun legacyFilesInferVideo() = runTest {
-        val clip = File(folder.root, "clips/demo.mov").apply {
-            parentFile.mkdirs()
-            writeText("content")
-        }
-        val (result, text) = run(tool(), filesArgs(clip.absolutePath))
-        assertNull(result.isError)
-        val item = outputItems(text).single()
-        assertEquals("video", item.string("type"))
-        assertEquals("video/quicktime", item.string("mime"))
     }
 
     @Test

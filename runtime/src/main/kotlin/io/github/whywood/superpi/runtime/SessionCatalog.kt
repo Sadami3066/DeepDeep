@@ -47,7 +47,7 @@ class SessionCatalog(
 
     private fun IndexedSession.toSummary(meta: SessionMeta?): ConversationSummary = ConversationSummary(
         id = sessionId,
-        title = meta?.titleOverride?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() } ?: "新对话",
+        title = meta?.titleOverride?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() } ?: "New chat",
         updatedAt = updatedAt,
         filePath = filePath,
         cwd = cwd,

@@ -6,6 +6,7 @@ import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeParseException
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -164,7 +165,7 @@ fun timerTriggerFromJsonObject(json: JsonObject): TimerTrigger {
         "daily" -> TimerTrigger.Daily(json.timeOrCorrupt("time"))
         "weekly" -> {
             val days = json["days"] as? JsonArray
-                ?: throw CorruptTimerDataException("weekly trigger 缺少 days")
+                ?: throw CorruptTimerDataException("weekly trigger is missing days")
             val parsed = days.map { element -> weekdayFromJsonElement(element) }.toSet()
             TimerTrigger.Weekly(parsed, json.timeOrCorrupt("time"))
         }
@@ -177,7 +178,7 @@ fun timerTriggerFromJsonObject(json: JsonObject): TimerTrigger {
             }
             TimerTrigger.Cron(expression)
         }
-        else -> throw CorruptTimerDataException("未知 trigger 类型：$type")
+        else -> throw CorruptTimerDataException("unknown trigger type: $type")
     }
 }
 
@@ -194,56 +195,38 @@ fun timerFromJsonObject(json: JsonObject): Timer = Timer(
     lastDeliveredAt = json.optionalLong("lastDeliveredAt"),
     lastError = json.optionalString("lastError")?.let { value ->
         runCatching { TimerError.valueOf(value) }
-            .getOrElse { throw CorruptTimerDataException("lastError 无效：$value") }
+            .getOrElse { throw CorruptTimerDataException("invalid lastError: $value") }
     },
     createdAt = json.longOrCorrupt("createdAt"),
     updatedAt = json.longOrCorrupt("updatedAt"),
 )
 
-private val LEGACY_WEEKDAYS: Map<String, DayOfWeek> = buildMap {
-    DayOfWeek.entries.forEach { day ->
-        put(day.name.lowercase(), day)
-        put(day.name.take(3).lowercase(), day)
-    }
-    put("周一", DayOfWeek.MONDAY)
-    put("周二", DayOfWeek.TUESDAY)
-    put("周三", DayOfWeek.WEDNESDAY)
-    put("周四", DayOfWeek.THURSDAY)
-    put("周五", DayOfWeek.FRIDAY)
-    put("周六", DayOfWeek.SATURDAY)
-    put("周日", DayOfWeek.SUNDAY)
-    put("周天", DayOfWeek.SUNDAY)
-}
-
-private fun weekdayFromJsonElement(element: kotlinx.serialization.json.JsonElement): DayOfWeek {
+private fun weekdayFromJsonElement(element: JsonElement): DayOfWeek {
     val raw = (element as? JsonPrimitive)?.contentOrNull
-        ?: throw CorruptTimerDataException("weekday 无效")
+        ?: throw CorruptTimerDataException("invalid weekday")
     val iso = raw.trim().toIntOrNull()
-    if (iso != null) {
-        return runCatching { DayOfWeek.of(iso) }
-            .getOrElse { throw CorruptTimerDataException("weekday 无效：$raw") }
-    }
-    return LEGACY_WEEKDAYS[raw.trim().lowercase()]
-        ?: throw CorruptTimerDataException("weekday 无效：$raw")
+        ?: throw CorruptTimerDataException("invalid weekday: $raw")
+    return runCatching { DayOfWeek.of(iso) }
+        .getOrElse { throw CorruptTimerDataException("invalid weekday: $raw") }
 }
 
 private fun JsonObject.stringOrCorrupt(name: String): String =
     (this[name] as? JsonPrimitive)?.contentOrNull
-        ?: throw CorruptTimerDataException("缺少字段：$name")
+        ?: throw CorruptTimerDataException("missing field: $name")
 
 private fun JsonObject.booleanOrCorrupt(name: String): Boolean =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toBooleanStrictOrNull()
-        ?: throw CorruptTimerDataException("字段无效：$name")
+        ?: throw CorruptTimerDataException("invalid field: $name")
 
 private fun JsonObject.longOrCorrupt(name: String): Long =
     (this[name] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
-        ?: throw CorruptTimerDataException("字段无效：$name")
+        ?: throw CorruptTimerDataException("invalid field: $name")
 
 private fun JsonObject.optionalLong(name: String): Long? {
     val element = this[name] ?: return null
     if (element is JsonNull) return null
     return (element as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
-        ?: throw CorruptTimerDataException("字段无效：$name")
+        ?: throw CorruptTimerDataException("invalid field: $name")
 }
 
 private fun JsonObject.optionalString(name: String): String? {
@@ -253,14 +236,14 @@ private fun JsonObject.optionalString(name: String): String? {
 }
 
 private fun JsonObject.objectOrCorrupt(name: String): JsonObject =
-    this[name] as? JsonObject ?: throw CorruptTimerDataException("缺少字段：$name")
+    this[name] as? JsonObject ?: throw CorruptTimerDataException("missing field: $name")
 
 private fun JsonObject.timeOrCorrupt(name: String): LocalTime {
     val raw = stringOrCorrupt(name)
     return try {
         LocalTime.parse(raw)
     } catch (error: DateTimeParseException) {
-        throw CorruptTimerDataException("时间格式无效：$raw", error)
+        throw CorruptTimerDataException("invalid time format: $raw", error)
     }
 }
 
@@ -269,6 +252,6 @@ private fun JsonObject.dateOrCorrupt(name: String): LocalDate {
     return try {
         LocalDate.parse(raw)
     } catch (error: DateTimeParseException) {
-        throw CorruptTimerDataException("日期格式无效：$raw", error)
+        throw CorruptTimerDataException("invalid date format: $raw", error)
     }
 }

@@ -29,15 +29,15 @@ internal class RuntimeWorkspaces(
         intro: String? = null,
     ): RuntimeWorkspace = mutex.withLock {
         val trimmed = name.trim()
-        require(trimmed.isNotEmpty()) { "工作区名称不能为空" }
+        require(trimmed.isNotEmpty()) { "workspace name must not be empty" }
         val id = UUID.randomUUID().toString().replace("-", "").take(12)
         val target = directory?.trim()?.takeIf { it.isNotEmpty() }?.let(::File) ?: File(workspacesDir, id)
-        require(target.isAbsolute) { "工作区目录需要绝对路径" }
+        require(target.isAbsolute) { "workspace directory must be an absolute path" }
         val cwd = target.absolutePath
-        require(cwd != homeDir.absolutePath) { "工作区目录不能是 Home 目录" }
-        require(directories.read().none { it.cwd == cwd }) { "该目录已被其他工作区使用" }
+        require(cwd != homeDir.absolutePath) { "workspace directory must not be the home directory" }
+        require(directories.read().none { it.cwd == cwd }) { "this directory is already used by another workspace" }
         if (!target.isDirectory) target.mkdirs()
-        require(target.isDirectory) { "无法创建工作区目录" }
+        require(target.isDirectory) { "cannot create workspace directory" }
         val workspace = RuntimeWorkspace(
             id = id,
             name = trimmed,

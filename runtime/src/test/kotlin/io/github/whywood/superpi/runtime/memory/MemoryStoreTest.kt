@@ -159,22 +159,6 @@ class MemoryStoreTest {
     }
 
     @Test
-    fun ensureRemovesLegacyFilesButKeepsTimeTree() = runTest {
-        store.ensure()
-        File(directory, "playbook.md").writeText("# old")
-        val flat = File(directory, "daily/2026-11-06.md")
-        flat.parentFile?.mkdirs()
-        flat.writeText("# old day")
-        store.appendDayBlock("2026-11-07", "- 新格式")
-
-        store.ensure()
-
-        assertFalse(File(directory, "playbook.md").exists())
-        assertFalse(flat.exists())
-        assertTrue(File(directory, "daily/2026/11/2026-11/2026-11-07.md").isFile)
-    }
-
-    @Test
     fun statusCountsZonesAndDays() = runTest {
         store.ensure()
         store.write("profile", "- 学生", MemoryWriteMode.APPEND, null, null, null)
@@ -203,7 +187,6 @@ class MemoryStoreTest {
         assertTrue(section.contains("# Diary"))
         assertTrue(section.contains("## Today ("))
         assertFalse(section.contains("Your Memory"))
-        assertFalse(section.contains("playbook"))
         assertFalse(section.contains("## Yesterday"))
     }
 

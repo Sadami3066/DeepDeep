@@ -405,20 +405,6 @@ class TimerStoreTest {
     }
 
     @Test
-    fun legacySchemaIsBackedUpAndRewrittenAsEmptyCurrent() = runTest {
-        val file = File(directory, "timers.json")
-        val legacy =
-            "{\"schemaVersion\":1,\"timers\":[{\"id\":\"old\",\"name\":\"Old\",\"workspaceId\":\"home\",\"prompt\":\"x\",\"trigger\":{\"type\":\"daily\",\"time\":\"08:00\"},\"enabled\":true,\"notify\":true,\"nextRunAt\":null,\"lastRunAt\":null,\"lastStatus\":null,\"lastSessionId\":null,\"lastError\":null,\"createdAt\":1,\"updatedAt\":2}]}"
-        file.writeText(legacy)
-        val store = store()
-        assertTrue(store.list().isEmpty())
-        assertEquals(legacy, File(directory, "timers.v1.bak").readText())
-        val migrated = file.readText()
-        assertTrue(migrated.contains("\"schemaVersion\":3"))
-        assertTrue(migrated.contains("\"timers\":[]"))
-    }
-
-    @Test
     fun corruptFileIsBackedUpAndReplacedWithEmpty() = runTest {
         val file = File(directory, "timers.json")
         val corrupt = "{ this is not json"
@@ -496,19 +482,14 @@ class TimerStoreTest {
     }
 
     @Test
-    fun futureSchemaIsKeptReadOnlyAndBlocksWrites() = runTest {
+    fun futureSchemaIsBackedUpAndResetAsCorrupt() = runTest {
         val file = File(directory, "timers.json")
         val future = "{\"schemaVersion\":4,\"timers\":[]}"
         file.writeText(future)
-        val store = store()
 
-        assertTrue(store.list().isEmpty())
-        assertEquals(future, file.readText())
-        assertFalse(File(directory, "timers.json.corrupt").exists())
-
-        val failure = runCatching { store.create(newTimer()) }.exceptionOrNull()
-        assertNotNull(failure)
-        assertEquals(future, file.readText())
+        assertTrue(store().list().isEmpty())
+        assertEquals(future, File(directory, "timers.json.corrupt").readText())
+        assertTrue(file.readText().contains("\"schemaVersion\":3"))
     }
 
     @Test
@@ -535,91 +516,4 @@ class TimerStoreTest {
         }.exceptionOrNull()
         assertTrue(failure is IllegalArgumentException)
     }
-
-    @Test
-    fun previousSchemaFormatIsUpgradedInPlace() = runTest {
-        val file = File(directory, "timers.json")
-        file.writeText(legacySchemaJson())
-        val store = store()
-
-        val loaded = store.list()
-
-        assertEquals(listOf("legacy-1"), loaded.map { it.id })
-        val migrated = file.readText()
-        assertTrue(migrated.contains("\"schemaVersion\":3"))
-        assertTrue(migrated.contains("\"timers\":"))
-        assertFalse(migrated.contains("\"schedules\":"))
-    }
-
-    @Test
-    fun legacyDirectoryMigrationCopiesTimersAndBackups() = runTest {
-        val root = Files.createTempDirectory("superpi-timer-migration").toFile()
-        try {
-            val legacyDirectory = File(root, "schedules")
-            assertTrue(legacyDirectory.mkdirs())
-            File(legacyDirectory, "schedules.json").writeText(legacySchemaJson())
-            File(legacyDirectory, "schedules.json.corrupt").writeText("{broken")
-            File(legacyDirectory, "delivery-intents.json").writeText("{}")
-
-            TimerStore.prepareDataDirectory(root)
-
-            val migratedFile = File(root, "timers/timers.json")
-            assertTrue(migratedFile.isFile)
-            assertEquals(legacySchemaJson(), migratedFile.readText())
-            assertTrue(File(root, "timers/timers.json.corrupt").isFile)
-            assertTrue(File(root, "timers/delivery-intents.json").isFile)
-            assertTrue(File(legacyDirectory, "schedules.json").isFile)
-
-            val migrated = TimerStore(File(root, "timers"), clock) { zone }
-            assertEquals(listOf("legacy-1"), migrated.list().map { it.id })
-        } finally {
-            root.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun legacyBackupsDoNotBecomeLiveDataAfterMigration() = runTest {
-        val root = Files.createTempDirectory("superpi-timer-migration").toFile()
-        try {
-            val legacyDirectory = File(root, "schedules")
-            assertTrue(legacyDirectory.mkdirs())
-            File(legacyDirectory, "schedules.v1.bak").writeText("{old}")
-            File(legacyDirectory, "schedules.json.corrupt").writeText("{broken")
-
-            TimerStore.prepareDataDirectory(root)
-
-            assertTrue(File(root, "timers/timers.v1.bak").isFile)
-            assertTrue(File(root, "timers/timers.json.corrupt").isFile)
-            assertFalse(File(root, "timers/timers.json").exists())
-            assertTrue(TimerStore(File(root, "timers"), clock) { zone }.list().isEmpty())
-        } finally {
-            root.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun migrationDoesNotOverwriteExistingTimers() = runTest {
-        val root = Files.createTempDirectory("superpi-timer-migration").toFile()
-        try {
-            val legacyDirectory = File(root, "schedules")
-            assertTrue(legacyDirectory.mkdirs())
-            File(legacyDirectory, "schedules.json").writeText(legacySchemaJson())
-            val currentDirectory = File(root, "timers")
-            assertTrue(currentDirectory.mkdirs())
-            val current = TimerStore(currentDirectory, clock) { zone }.create(newTimer(name = "Current"))
-
-            TimerStore.prepareDataDirectory(root)
-
-            val reopened = TimerStore(currentDirectory, clock) { zone }.list()
-            assertEquals(listOf(current), reopened)
-        } finally {
-            root.deleteRecursively()
-        }
-    }
-
-    private fun legacySchemaJson(): String =
-        "{\"schemaVersion\":2,\"schedules\":[{\"id\":\"legacy-1\",\"name\":\"Legacy\",\"prompt\":\"hello\"," +
-            "\"trigger\":{\"type\":\"daily\",\"time\":\"08:00\"},\"enabled\":true,\"sessionId\":\"session-1\"," +
-            "\"sessionFile\":\"/tmp/session-1.jsonl\",\"cwd\":\"/tmp\",\"nextRunAt\":null," +
-            "\"lastDeliveredAt\":null,\"lastError\":null,\"createdAt\":1,\"updatedAt\":2}]}"
 }

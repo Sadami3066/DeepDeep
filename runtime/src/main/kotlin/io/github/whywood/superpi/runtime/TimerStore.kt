@@ -253,41 +253,30 @@ class TimerStore(
         loadCount.incrementAndGet()
         if (!file.exists()) return emptyList()
         val text: String = runCatching { file.readText() }.getOrElse { error ->
-            return discardCorrupt("定时任务数据读取失败", error)
+            return discardCorrupt("failed to read timer data", error)
         }
         if (text.isBlank()) return emptyList()
         val root = runCatching { Json.parseToJsonElement(text) }.getOrNull() as? JsonObject
-            ?: return discardCorrupt("定时任务数据不是有效 JSON 对象")
+            ?: return discardCorrupt("timer data is not a valid JSON object")
         val version = (root["schemaVersion"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
-            ?: return discardCorrupt("定时任务数据缺少 schemaVersion")
-        if (version == LEGACY_SCHEMA_VERSION) {
-            if (backup(LEGACY_BACKUP_FILE_NAME)) runCatching { persist(emptyList()) } else blockWrites()
-            return emptyList()
+            ?: return discardCorrupt("timer data is missing schemaVersion")
+        if (version != SCHEMA_VERSION) {
+            return discardCorrupt("unsupported schemaVersion: $version")
         }
-        if (version > SCHEMA_VERSION) {
-            logWarn(TAG, "定时任务数据来自更高版本 schemaVersion=$version，只读并暂停写入")
-            writesBlocked = true
-            return emptyList()
-        }
-        if (version != SCHEMA_VERSION && version != PREVIOUS_SCHEMA_VERSION) {
-            return discardCorrupt("不支持的 schemaVersion：$version")
-        }
-        val legacyFormat = version == PREVIOUS_SCHEMA_VERSION
-        val entriesKey = if (legacyFormat) LEGACY_ENTRIES_KEY else ENTRIES_KEY
-        val entries = root[entriesKey] as? JsonArray
-            ?: return discardCorrupt("定时任务数据缺少 $entriesKey")
+        val entries = root[ENTRIES_KEY] as? JsonArray
+            ?: return discardCorrupt("timer data is missing $ENTRIES_KEY")
         val timers = mutableListOf<Timer>()
         var corruptEntries = 0
         entries.forEach { element ->
             runCatching {
-                timerFromJsonObject(element as? JsonObject ?: throw CorruptTimerDataException("定时任务条目不是对象"))
+                timerFromJsonObject(
+                    element as? JsonObject ?: throw CorruptTimerDataException("timer entry is not an object"),
+                )
             }.onSuccess { timers += it }.onFailure { corruptEntries += 1 }
         }
         if (corruptEntries > 0) {
-            logWarn(TAG, "定时任务条目损坏 $corruptEntries 条，已跳过")
+            logWarn(TAG, "$corruptEntries corrupt timer entries skipped")
             if (backup(CORRUPT_BACKUP_FILE_NAME)) runCatching { persist(timers) } else blockWrites()
-        } else if (legacyFormat) {
-            runCatching { persist(timers) }
         }
         return timers
     }
@@ -304,7 +293,7 @@ class TimerStore(
 
     private fun blockWrites() {
         writesBlocked = true
-        logError(TAG, "定时任务数据备份失败，已暂停写入以保留原文件")
+        logError(TAG, "failed to back up timer data; writes are suspended to keep the original file")
     }
 
     private fun backup(name: String): Boolean {
@@ -338,10 +327,10 @@ class TimerStore(
 
     private fun persist(timers: List<Timer>) {
         if (writesBlocked) {
-            throw IllegalStateException("定时任务数据备份失败，已暂停写入")
+            throw IllegalStateException("failed to back up timer data; writes are suspended")
         }
         if (!directory.exists() && !directory.mkdirs()) {
-            throw IllegalStateException("无法创建定时任务目录：${directory.absolutePath}")
+            throw IllegalStateException("cannot create timer directory: ${directory.absolutePath}")
         }
         val root = buildJsonObject {
             put("schemaVersion", SCHEMA_VERSION)
@@ -364,42 +353,12 @@ class TimerStore(
 
     companion object {
         const val SCHEMA_VERSION = 3
-        private const val PREVIOUS_SCHEMA_VERSION = 2
-        private const val LEGACY_SCHEMA_VERSION = 1
         private const val ENTRIES_KEY = "timers"
-        private const val LEGACY_ENTRIES_KEY = "schedules"
-        private const val LEGACY_BACKUP_FILE_NAME = "timers.v1.bak"
         private const val CORRUPT_BACKUP_FILE_NAME = "timers.json.corrupt"
         private const val FILE_NAME = "timers.json"
-        private const val INTENTS_FILE_NAME = "delivery-intents.json"
         private const val DIRECTORY_NAME = "timers"
-        private const val LEGACY_DIRECTORY_NAME = "schedules"
         private const val TAG = "TimerStore"
 
-        fun prepareDataDirectory(baseDirectory: File): File {
-            val target = File(baseDirectory, DIRECTORY_NAME)
-            val legacy = File(baseDirectory, LEGACY_DIRECTORY_NAME)
-            if (legacy.isDirectory && (!target.exists() || target.listFiles().orEmpty().isEmpty())) {
-                if (target.mkdirs() || target.isDirectory) {
-                    legacy.listFiles().orEmpty().forEach { source ->
-                        if (!source.isFile) return@forEach
-                        val name = migrateFileName(source.name) ?: return@forEach
-                        val destination = File(target, name)
-                        if (destination.exists()) return@forEach
-                        runCatching { source.copyTo(destination, overwrite = false) }
-                            .onFailure { logWarn(TAG, "定时任务数据迁移失败：${source.name}", it) }
-                    }
-                } else {
-                    logWarn(TAG, "无法创建定时任务目录，旧数据暂不迁移")
-                }
-            }
-            return target
-        }
-
-        private fun migrateFileName(name: String): String? = when {
-            name == INTENTS_FILE_NAME -> name
-            name.startsWith("$LEGACY_ENTRIES_KEY.") -> ENTRIES_KEY + name.removePrefix(LEGACY_ENTRIES_KEY)
-            else -> null
-        }
+        fun prepareDataDirectory(baseDirectory: File): File = File(baseDirectory, DIRECTORY_NAME)
     }
 }

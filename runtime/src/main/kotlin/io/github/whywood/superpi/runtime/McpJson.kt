@@ -18,13 +18,13 @@ data class McpParsedEntry(
 
 fun parseMcpEntries(text: String): List<McpParsedEntry> {
     val trimmed = text.trim().removePrefix("\uFEFF")
-    if (trimmed.isEmpty()) throw IllegalArgumentException("请粘贴 MCP JSON")
+    if (trimmed.isEmpty()) throw IllegalArgumentException("MCP JSON is empty")
     val servers = extractServers(trimmed)
-    if (servers.isEmpty()) throw IllegalArgumentException("没有解析到 MCP 服务器")
+    if (servers.isEmpty()) throw IllegalArgumentException("no MCP servers found")
     val normalized = JsonObject(servers.mapValues { (_, value) -> normalizeType(value) })
     val parsed = parseMcpConfig(buildJsonObject { put("mcpServers", normalized) })
     if (parsed.errors.isNotEmpty()) {
-        throw IllegalArgumentException("MCP 配置不正确，请检查 type、url、headers")
+        throw IllegalArgumentException("invalid MCP config; check type, url and headers")
     }
     return parsed.servers.map { (name, config) -> McpParsedEntry(name, config) }
 }
