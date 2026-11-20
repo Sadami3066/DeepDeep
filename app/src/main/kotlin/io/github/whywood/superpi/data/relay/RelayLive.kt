@@ -214,27 +214,36 @@ class RelayLive(
                 _state.value = RelayLiveState.Disabled
                 return
             }
-            if (token == null || !_allowRemote.value) {
+            if (token == null) {
                 socket.stop()
                 server.reset()
                 _state.value = RelayLiveState.Disabled
                 return
             }
-            if (socket.state.value == RelaySocketState.Online) return
+            if (socket.state.value == RelaySocketState.Online) {
+                resendHelloLocked(current)
+                return
+            }
             socket.start(current, token) {
-                RelayFrames.hello(
-                    deviceId = current.deviceId,
-                    platform = "android",
-                    appVersion = appVersion,
-                    bots = bots(),
-                ).toString()
+                helloFrame(current).toString()
             }
         }
     }
 
+    private suspend fun helloFrame(current: RelayAccount): JsonObject = RelayFrames.hello(
+        deviceId = current.deviceId,
+        platform = "android",
+        appVersion = appVersion,
+        bots = if (_allowRemote.value) bots() else emptyList(),
+    )
+
+    private suspend fun resendHelloLocked(current: RelayAccount) {
+        socket.send(helloFrame(current).toString())
+    }
+
     private fun onSocketState(value: RelaySocketState) {
         val mapped = when (value) {
-            RelaySocketState.Stopped -> if (_allowRemote.value) RelayLiveState.Offline else RelayLiveState.Disabled
+            RelaySocketState.Stopped -> RelayLiveState.Offline
             RelaySocketState.Connecting -> RelayLiveState.Connecting
             RelaySocketState.Online -> RelayLiveState.Online
             RelaySocketState.Offline -> RelayLiveState.Offline
@@ -267,7 +276,11 @@ class RelayLive(
             }
 
             is RelayServerFrame.MemoryChanged -> runCatching { memorySync.refreshIfStale(0) }
-            is RelayServerFrame.Route -> server.handle(frame)
+            is RelayServerFrame.Route -> if (_allowRemote.value) {
+                server.handle(frame)
+            } else {
+                send(RelayFrames.routeError(frame.id, "bot_not_found", "remote use is disabled on this device"))
+            }
             is RelayServerFrame.RouteOk -> calls.settle(frame.id, RemoteCallOutcome.Ok(frame.result))
             is RelayServerFrame.RouteError -> calls.settle(
                 frame.id,

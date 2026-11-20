@@ -215,6 +215,9 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
     private val engineFactory: suspend (File) -> SessionEngine = { cwd ->
         val remote = deps.remoteTarget(cwd.absolutePath)
+        if (remote == null && isRemoteCwd(cwd)) {
+            error("This bot is not available from its device right now. Connect the device again to continue.")
+        }
         if (remote != null) {
             RemoteSessionEngine(
                 workspace = cwd,
@@ -226,6 +229,12 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         } else {
             localEngine(cwd)
         }
+    }
+
+    private fun isRemoteCwd(cwd: File): Boolean {
+        val root = runCatching { deps.remoteRoot.canonicalPath }.getOrElse { deps.remoteRoot.absolutePath }
+        val path = runCatching { cwd.canonicalPath }.getOrElse { cwd.absolutePath }
+        return path.startsWith(root + File.separator)
     }
 
     private suspend fun localEngine(cwd: File): PiSessionEngine {

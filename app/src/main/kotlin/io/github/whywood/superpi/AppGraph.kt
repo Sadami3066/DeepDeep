@@ -212,6 +212,8 @@ class AppGraph(context: Context) : AppDependencies {
             override val onlineDevices
                 get() = relayTransport.onlineDevices
 
+            override fun lastCallError() = relayTransport.lastCallError()
+
             override suspend fun call(
                 to: String,
                 method: String,
@@ -405,6 +407,7 @@ class AppGraph(context: Context) : AppDependencies {
         },
         remoteTarget = ::remoteTargetFor,
         remoteTransport = remoteTransport,
+        remoteRoot = remoteWorkspaceRoot,
         apiKeyProvider = {
             dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
                 dataGraph.credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)

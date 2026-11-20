@@ -63,6 +63,7 @@ internal class RuntimeGraphDeps(
     val appPreferences: AppPreferences,
     val memoryBackend: MemoryBackend,
     val remoteWorkspaces: suspend () -> List<RuntimeWorkspace>,
+    val remoteRoot: File,
     val remoteTarget: (String) -> RemoteSessionTarget?,
     val remoteTransport: RemoteAgentTransport,
     val apiKeyProvider: suspend () -> String?,

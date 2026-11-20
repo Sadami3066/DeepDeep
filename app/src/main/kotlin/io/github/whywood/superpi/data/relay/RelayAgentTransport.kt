@@ -19,6 +19,8 @@ class RelayAgentTransport(
         .map { bots -> bots.filter { it.online }.map { it.deviceId }.toSet() }
         .stateIn(scope, SharingStarted.Eagerly, emptySet())
 
+    override fun lastCallError(): RemoteCallError? = live.lastCallError.value
+
     override suspend fun call(
         to: String,
         method: String,
