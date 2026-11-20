@@ -55,9 +55,7 @@ import io.github.whywood.superpi.data.AppLanguage
 import io.github.whywood.superpi.data.DevPackageCatalog
 import io.github.whywood.superpi.data.LanguagePreferences
 import io.github.whywood.superpi.data.OnboardingPreferences
-import io.github.whywood.superpi.data.PersonalizationUi
 import io.github.whywood.superpi.data.ProfileAvatarStore
-import io.github.whywood.superpi.data.TonePreset
 import io.github.whywood.superpi.design.DdMotion
 import io.github.whywood.superpi.design.DdSpacing
 import io.github.whywood.superpi.design.DdTextAction
@@ -66,7 +64,6 @@ import io.github.whywood.superpi.design.DdWordmark
 import io.github.whywood.superpi.design.superPiColors
 import io.github.whywood.superpi.runtime.host.HostAccess
 import io.github.whywood.superpi.shell.LinuxInstallState
-import io.github.whywood.superpi.runtime.InteractionStyle
 import io.github.whywood.superpi.runtime.ModelConfig
 import io.github.whywood.superpi.runtime.ProviderAuthKind
 import io.github.whywood.superpi.runtime.ProviderCatalog
@@ -99,7 +96,6 @@ fun OnboardingScreen(
 
     var step by rememberSaveable { mutableIntStateOf(STEP_WELCOME) }
     var nickname by rememberSaveable { mutableStateOf("") }
-    var toneName by rememberSaveable { mutableStateOf(TonePreset.WARM.name) }
     var languageTag by rememberSaveable { mutableStateOf(languagePreferences.read().tag) }
     var avatarVersion by remember { mutableIntStateOf(0) }
     var providerId by rememberSaveable { mutableStateOf(ProviderCatalog.DEFAULT_PROVIDER_ID) }
@@ -107,7 +103,6 @@ fun OnboardingScreen(
     var keyState by rememberSaveable { mutableIntStateOf(KEY_STATE_IDLE) }
     var accessName by rememberSaveable { mutableStateOf(HostAccess.LOCAL.name) }
 
-    val tone = TonePreset.entries.firstOrNull { it.name == toneName } ?: TonePreset.CUSTOM
     val language = AppLanguage.fromTag(languageTag)
     val access = HostAccess.entries.firstOrNull { it.name == accessName } ?: HostAccess.LOCAL
     val providers = remember(graph.providerCatalog) { graph.providerCatalog.summaries }
@@ -166,14 +161,11 @@ fun OnboardingScreen(
     }
 
     fun saveProfile() {
-        val instruction = tonePresetRes(tone).takeIf { it != 0 }?.let(context::getString).orEmpty()
-        val value = PersonalizationUi(
-            nickname = nickname.trim(),
-            interaction = InteractionStyle.BALANCED,
-            tone = tone,
-            instruction = instruction,
-        )
-        scope.launch { graph.personalizationStore.save(value) }
+        val trimmed = nickname.trim()
+        scope.launch {
+            val existing = graph.personalizationStore.read()
+            graph.personalizationStore.save(existing.copy(nickname = trimmed))
+        }
     }
 
     fun finish() {
@@ -341,8 +333,6 @@ fun OnboardingScreen(
                 STEP_ACCOUNT -> AccountStep(
                     nickname = nickname,
                     onNicknameChange = { nickname = it },
-                    tone = tone,
-                    onToneChange = { toneName = it.name },
                     language = language,
                     onLanguageChange = ::changeLanguage,
                     avatarVersion = avatarVersion,
@@ -484,13 +474,6 @@ fun OnboardingSplash(modifier: Modifier = Modifier) {
             DdWordmark()
         }
     }
-}
-
-private fun tonePresetRes(tone: TonePreset): Int = when (tone) {
-    TonePreset.WARM -> R.string.personalization_preset_warm
-    TonePreset.CUTE -> R.string.personalization_preset_cute
-    TonePreset.CALM -> R.string.personalization_preset_calm
-    TonePreset.CUSTOM -> 0
 }
 
 private fun Context.findActivity(): Activity? {

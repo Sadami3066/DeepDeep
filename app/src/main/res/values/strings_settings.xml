@@ -119,23 +119,9 @@
 
     <string name="personalization_nickname_title">称呼</string>
     <string name="personalization_nickname_hint">你的名字</string>
-    <string name="personalization_interaction_title">交互体验</string>
-    <string name="personalization_interaction_quiet">安静</string>
-    <string name="personalization_interaction_balanced">默认</string>
-    <string name="personalization_interaction_proactive">主动</string>
-    <string name="personalization_interaction_quiet_body">少提问、少打断；能自己判断的就自己决定。</string>
-    <string name="personalization_interaction_balanced_body">必要时问一次，平衡主动与克制。</string>
-    <string name="personalization_interaction_proactive_body">更主动澄清和追问，完成后主动给出下一步建议。</string>
-    <string name="personalization_tone_title">提示词</string>
-    <string name="personalization_tone_warm">热情</string>
-    <string name="personalization_tone_cute">可爱</string>
-    <string name="personalization_tone_calm">冷静</string>
-    <string name="personalization_tone_custom">自定义</string>
+    <string name="personalization_instruction_title">提示词</string>
     <string name="personalization_instruction_hint">写下你希望 PI 长期遵守的偏好…</string>
     <string name="personalization_instruction_counter">%1$d 字</string>
-    <string name="personalization_preset_warm">用热情、有感染力的语气回应；适度表达情绪和支持，但不要夸张、不要谄媚。</string>
-    <string name="personalization_preset_cute">用可爱、轻松的语气回应；可以使用少量语气词和颜文字，但保持信息准确、不卖萌过度。</string>
-    <string name="personalization_preset_calm">用冷静、克制的语气回应；直接给结论和依据，不寒暄，不过度共情。</string>
 
     <string name="agreement_intro">使用本应用即表示你已阅读并同意以下内容。</string>
     <string name="agreement_data_title">数据与隐私</string>

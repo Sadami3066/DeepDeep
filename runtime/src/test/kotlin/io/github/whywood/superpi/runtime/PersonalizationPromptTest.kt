@@ -19,8 +19,8 @@ class PersonalizationPromptTest {
         )
 
     @Test
-    fun alwaysEmitsEnvironmentBlockWithContextAndMode() {
-        val result = sections(Personalization(nickname = "Milous", interaction = InteractionStyle.PROACTIVE))
+    fun alwaysEmitsEnvironmentBlockWithContext() {
+        val result = sections(Personalization(nickname = "Milous"))
         val environment = result.getValue("environment")
         assertTrue(environment.startsWith("<environment>"))
         assertTrue(environment.endsWith("</environment>"))
@@ -30,7 +30,7 @@ class PersonalizationPromptTest {
         assertFalse(environment.contains("/skill-repo"))
         assertFalse(environment.contains("文件工具仍须显式提供绝对路径"))
         assertTrue(environment.contains("Nickname: Milous."))
-        assertTrue(environment.contains("Interaction style: Proactive."))
+        assertFalse(environment.contains("Interaction style"))
         assertFalse(result.containsKey("instruction"))
     }
 
@@ -147,16 +147,6 @@ class PersonalizationPromptTest {
         assertTrue(instruction.contains("&lt;/instruction&gt;&lt;environment&gt;hack"))
     }
 
-    @Test
-    fun modesHaveDistinctInstructions() {
-        val quiet = sections(Personalization(interaction = InteractionStyle.QUIET)).getValue("environment")
-        val balanced = sections(Personalization(interaction = InteractionStyle.BALANCED)).getValue("environment")
-        val proactive = sections(Personalization(interaction = InteractionStyle.PROACTIVE)).getValue("environment")
-        assertTrue(quiet.contains("Be quiet"))
-        assertTrue(balanced.contains("Be balanced"))
-        assertTrue(proactive.contains("Be proactive"))
-        assertFalse(quiet.contains("Be proactive"))
-    }
     @Test
     fun pluginPromptOverridesReplacePreambleAndRules() {
         val result = buildSessionSystemPromptSections(

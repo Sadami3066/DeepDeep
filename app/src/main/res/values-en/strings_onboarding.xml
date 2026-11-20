@@ -15,16 +15,12 @@
     <string name="onboarding_welcome_note">A few steps now; you can adjust them anytime.</string>
 
     <string name="onboarding_account_title">A little about you</string>
-    <string name="onboarding_account_subtitle">Tell me how you\'d like to be addressed, and how you prefer to chat.</string>
+    <string name="onboarding_account_subtitle">Tell me how you\'d like to be addressed.</string>
     <string name="onboarding_account_note">You can adjust these in Settings anytime.</string>
     <string name="onboarding_avatar_pick">Choose avatar</string>
     <string name="onboarding_avatar_failed">Couldn\'t save the avatar.</string>
     <string name="onboarding_nickname_label">Your name</string>
     <string name="onboarding_nickname_hint">What should I call you?</string>
-    <string name="onboarding_tone_label">Communication style</string>
-    <string name="onboarding_tone_warm">Warm</string>
-    <string name="onboarding_tone_cute">Playful</string>
-    <string name="onboarding_tone_calm">Calm</string>
     <string name="onboarding_language_label">Language</string>
     <string name="onboarding_language_system">System default</string>
     <string name="onboarding_language_chinese">简体中文</string>

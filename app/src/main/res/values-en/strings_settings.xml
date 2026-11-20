@@ -113,23 +113,9 @@
 
     <string name="personalization_nickname_title">Name</string>
     <string name="personalization_nickname_hint">Your name</string>
-    <string name="personalization_interaction_title">Interaction</string>
-    <string name="personalization_interaction_quiet">Quiet</string>
-    <string name="personalization_interaction_balanced">Balanced</string>
-    <string name="personalization_interaction_proactive">Proactive</string>
-    <string name="personalization_interaction_quiet_body">Ask less, interrupt less; decide on your own when you can.</string>
-    <string name="personalization_interaction_balanced_body">Ask once when necessary; balance initiative and restraint.</string>
-    <string name="personalization_interaction_proactive_body">Clarify proactively and suggest a next step when a task is done.</string>
-    <string name="personalization_tone_title">Prompt</string>
-    <string name="personalization_tone_warm">Warm</string>
-    <string name="personalization_tone_cute">Playful</string>
-    <string name="personalization_tone_calm">Calm</string>
-    <string name="personalization_tone_custom">Custom</string>
+    <string name="personalization_instruction_title">Prompt</string>
     <string name="personalization_instruction_hint">Write the preferences PI should follow long-term…</string>
     <string name="personalization_instruction_counter">%1$d chars</string>
-    <string name="personalization_preset_warm">Respond with warmth and energy; show appropriate emotion and support without exaggeration or flattery.</string>
-    <string name="personalization_preset_cute">Respond in a playful, light tone; a few particles or emoticons are fine, but keep the information accurate and avoid overdoing it.</string>
-    <string name="personalization_preset_calm">Respond calmly and with restraint; lead with conclusions and evidence, skip small talk and excessive empathy.</string>
 
     <string name="agreement_intro">By using this app, you agree to the following.</string>
     <string name="agreement_data_title">Data &amp; Privacy</string>

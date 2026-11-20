@@ -72,7 +72,6 @@ import io.github.whywood.superpi.core.AssistantRole
 import io.github.whywood.superpi.data.AppLanguage
 import io.github.whywood.superpi.data.DevBundle
 import io.github.whywood.superpi.data.PersonalizationStore
-import io.github.whywood.superpi.data.TonePreset
 import io.github.whywood.superpi.design.DdAlpha
 import io.github.whywood.superpi.design.DdHairline
 import io.github.whywood.superpi.design.DdIcon
@@ -95,11 +94,8 @@ import io.github.whywood.superpi.runtime.ProviderCatalog
 import io.github.whywood.superpi.runtime.ProviderSummary
 import io.github.whywood.superpi.ui.common.rememberAvatarBitmap
 import io.github.whywood.superpi.ui.common.ProviderIcon
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-private val TonePresets = listOf(TonePreset.WARM, TonePreset.CUTE, TonePreset.CALM)
 
 @Composable
 internal fun WelcomeStep(modifier: Modifier = Modifier) {
@@ -174,8 +170,6 @@ internal fun WelcomeStep(modifier: Modifier = Modifier) {
 internal fun AccountStep(
     nickname: String,
     onNicknameChange: (String) -> Unit,
-    tone: TonePreset,
-    onToneChange: (TonePreset) -> Unit,
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     avatarVersion: Int,
@@ -207,15 +201,6 @@ internal fun AccountStep(
             placeholder = stringResource(R.string.onboarding_nickname_hint),
             testTag = "onboarding_nickname",
             trailing = { AvatarButton(avatar = avatar, onPick = onPickAvatar) },
-        )
-        Spacer(Modifier.height(28.dp))
-        FieldLabel(text = stringResource(R.string.onboarding_tone_label))
-        Spacer(Modifier.height(10.dp))
-        SegmentedControl(
-            options = TonePresets.map { toneLabel(it) },
-            selectedIndex = TonePresets.indexOf(tone),
-            onSelect = { onToneChange(TonePresets[it]) },
-            testTags = TonePresets.map { "onboarding_tone_${it.name.lowercase(Locale.ROOT)}" },
         )
         Spacer(Modifier.height(28.dp))
         FieldLabel(text = stringResource(R.string.onboarding_language_label))
@@ -961,16 +946,6 @@ private fun AccessRow(
         trailing = { RadioMark(checked = selected) },
     )
 }
-
-@Composable
-private fun toneLabel(tone: TonePreset): String = stringResource(
-    when (tone) {
-        TonePreset.WARM -> R.string.onboarding_tone_warm
-        TonePreset.CUTE -> R.string.onboarding_tone_cute
-        TonePreset.CALM -> R.string.onboarding_tone_calm
-        TonePreset.CUSTOM -> R.string.onboarding_tone_warm
-    },
-)
 
 @Composable
 private fun languageLabel(language: AppLanguage): String = stringResource(

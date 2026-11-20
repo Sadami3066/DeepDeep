@@ -16,24 +16,19 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -47,12 +42,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -72,7 +65,6 @@ import io.github.whywood.superpi.design.DdIcons
 import io.github.whywood.superpi.design.DdMotion
 import io.github.whywood.superpi.design.DdPressable
 import io.github.whywood.superpi.design.DdSearchField
-import io.github.whywood.superpi.design.DdRadius
 import io.github.whywood.superpi.design.DdShapes
 import io.github.whywood.superpi.design.DdSheet
 import io.github.whywood.superpi.design.DdSheetHeader
@@ -219,79 +211,6 @@ internal fun UnderlineField(
         }
         Spacer(Modifier.height(DdSpacing.Xs))
         Box(Modifier.fillMaxWidth().height(1.dp).background(underline))
-    }
-}
-
-@Composable
-internal fun SegmentedControl(
-    options: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    testTags: List<String>? = null,
-) {
-    val colors = superPiColors()
-    val segmentShape = RoundedCornerShape(DdRadius.Indicator)
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clip(DdShapes.Segmented)
-            .background(colors.wash),
-    ) {
-        val segmentWidth = maxWidth / options.size
-        val animatedIndex by animateFloatAsState(
-            targetValue = selectedIndex.coerceIn(0, options.lastIndex).toFloat(),
-            animationSpec = DdMotion.SegmentedSpring,
-            label = "onboarding-segment-index",
-        )
-        val indicatorAlpha by animateFloatAsState(
-            targetValue = if (selectedIndex in options.indices) 1f else 0f,
-            animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-            label = "onboarding-segment-alpha",
-        )
-        Box(
-            Modifier
-                .offset(x = segmentWidth * animatedIndex)
-                .width(segmentWidth)
-                .fillMaxHeight()
-                .padding(DdSpacing.Xs),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = indicatorAlpha }
-                    .shadow(2.dp, segmentShape)
-                    .clip(segmentShape)
-                    .background(colors.surface),
-            )
-        }
-        Row(Modifier.fillMaxSize().selectableGroup()) {
-            options.forEachIndexed { index, label ->
-                val selected = index == selectedIndex
-                val textColor by animateColorAsState(
-                    targetValue = if (selected) colors.ink else colors.inkTertiary,
-                    animationSpec = tween(DdMotion.FAST, easing = DdMotion.EaseOut),
-                    label = "onboarding-segment-text-$index",
-                )
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .then(if (testTags != null) Modifier.testTag(testTags[index]) else Modifier)
-                        .selectable(
-                            selected = selected,
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            role = Role.RadioButton,
-                            onClick = { onSelect(index) },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = label, style = DdType.label, color = textColor, maxLines = 1)
-                }
-            }
-        }
     }
 }
 

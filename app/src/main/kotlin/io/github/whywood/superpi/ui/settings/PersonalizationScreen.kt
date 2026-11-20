@@ -52,7 +52,6 @@ import io.github.whywood.superpi.ui.common.rememberAvatarBitmap
 import io.github.whywood.superpi.data.PersonalizationStore
 import io.github.whywood.superpi.data.PersonalizationUi
 import io.github.whywood.superpi.data.ProfileAvatarStore
-import io.github.whywood.superpi.data.TonePreset
 import io.github.whywood.superpi.design.DdIcon
 import io.github.whywood.superpi.design.DdGroupCard
 import io.github.whywood.superpi.design.DdSpacing
@@ -62,12 +61,10 @@ import io.github.whywood.superpi.design.DdListRow
 import io.github.whywood.superpi.design.DdHairline
 import io.github.whywood.superpi.design.DdIcons
 import io.github.whywood.superpi.design.DdSectionLabel
-import io.github.whywood.superpi.design.DdSegmentedControl
 import io.github.whywood.superpi.design.DdTextArea
 import io.github.whywood.superpi.design.DdTextField
 import io.github.whywood.superpi.design.DdType
 import io.github.whywood.superpi.design.superPiColors
-import io.github.whywood.superpi.runtime.InteractionStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -111,44 +108,26 @@ fun PersonalizationScreen(
     }
     var edited by rememberSaveable { mutableStateOf(false) }
     var nickname by rememberSaveable { mutableStateOf(value.nickname) }
-    var interaction by rememberSaveable { mutableStateOf(value.interaction) }
-    var tone by rememberSaveable { mutableStateOf(value.tone) }
     var instruction by rememberSaveable { mutableStateOf(value.instruction) }
-    var customInstruction by rememberSaveable { mutableStateOf(value.customInstruction) }
     val focusManager = LocalFocusManager.current
-
-    val warmText = stringResource(R.string.personalization_preset_warm)
-    val cuteText = stringResource(R.string.personalization_preset_cute)
-    val calmText = stringResource(R.string.personalization_preset_calm)
-    val toneTexts = mapOf(
-        TonePreset.WARM to warmText,
-        TonePreset.CUTE to cuteText,
-        TonePreset.CALM to calmText,
-    )
 
     LaunchedEffect(value) {
         if (!edited) {
             nickname = value.nickname
-            interaction = value.interaction
-            tone = value.tone
             instruction = value.instruction
-            customInstruction = value.customInstruction
         }
     }
 
     fun currentValue() = PersonalizationUi(
         nickname = nickname,
-        interaction = interaction,
-        tone = tone,
         instruction = instruction,
-        customInstruction = customInstruction,
     )
 
     fun saveNow() {
         if (edited) onSave(currentValue())
     }
 
-    LaunchedEffect(nickname, instruction, customInstruction, edited) {
+    LaunchedEffect(nickname, instruction, edited) {
         if (!edited) return@LaunchedEffect
         delay(300)
         onSave(currentValue())
@@ -288,63 +267,16 @@ fun PersonalizationScreen(
 
             Spacer(Modifier.height(DdSpacing.Xl))
             DdSectionLabel(
-                stringResource(R.string.personalization_interaction_title),
+                stringResource(R.string.personalization_instruction_title),
                 Modifier.padding(start = DdSpacing.Xs),
             )
             Spacer(Modifier.height(10.dp))
             SettingsGroup {
                 Column(Modifier.fillMaxWidth().padding(DdSpacing.Lg)) {
-                    DdSegmentedControl(
-                        options = InteractionStyle.entries,
-                        selected = interaction,
-                        onSelect = {
-                            interaction = it
-                            edited = true
-                            onSave(currentValue())
-                        },
-                        modifier = Modifier.fillMaxWidth().testTag("personalization_interaction"),
-                        label = { interactionLabel(it) },
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = interactionDescription(interaction),
-                        style = DdType.bodySmall,
-                        color = colors.inkTertiary,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(DdSpacing.Xl))
-            DdSectionLabel(
-                stringResource(R.string.personalization_tone_title),
-                Modifier.padding(start = DdSpacing.Xs),
-            )
-            Spacer(Modifier.height(10.dp))
-            SettingsGroup {
-                Column(Modifier.fillMaxWidth().padding(DdSpacing.Lg)) {
-                    DdSegmentedControl(
-                        options = TonePreset.entries,
-                        selected = tone,
-                        onSelect = { selected ->
-                            tone = selected
-                            instruction = if (selected == TonePreset.CUSTOM) {
-                                customInstruction
-                            } else {
-                                toneTexts[selected].orEmpty()
-                            }
-                            edited = true
-                            onSave(currentValue())
-                        },
-                        modifier = Modifier.fillMaxWidth().testTag("personalization_tone"),
-                        label = { toneLabel(it) },
-                    )
-                    Spacer(Modifier.height(DdSpacing.Md))
                     DdTextArea(
                         value = instruction,
                         onValueChange = { next ->
                             instruction = next
-                            if (tone != TonePreset.CUSTOM) tone = TonePreset.CUSTOM
-                            customInstruction = next
                             edited = true
                         },
                         placeholder = stringResource(R.string.personalization_instruction_hint),
@@ -368,31 +300,3 @@ fun PersonalizationScreen(
         }
     }
 }
-
-@Composable
-private fun interactionLabel(style: InteractionStyle): String = stringResource(
-    when (style) {
-        InteractionStyle.QUIET -> R.string.personalization_interaction_quiet
-        InteractionStyle.BALANCED -> R.string.personalization_interaction_balanced
-        InteractionStyle.PROACTIVE -> R.string.personalization_interaction_proactive
-    },
-)
-
-@Composable
-private fun interactionDescription(style: InteractionStyle): String = stringResource(
-    when (style) {
-        InteractionStyle.QUIET -> R.string.personalization_interaction_quiet_body
-        InteractionStyle.BALANCED -> R.string.personalization_interaction_balanced_body
-        InteractionStyle.PROACTIVE -> R.string.personalization_interaction_proactive_body
-    },
-)
-
-@Composable
-private fun toneLabel(tone: TonePreset): String = stringResource(
-    when (tone) {
-        TonePreset.WARM -> R.string.personalization_tone_warm
-        TonePreset.CUTE -> R.string.personalization_tone_cute
-        TonePreset.CALM -> R.string.personalization_tone_calm
-        TonePreset.CUSTOM -> R.string.personalization_tone_custom
-    },
-)

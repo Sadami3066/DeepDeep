@@ -3,15 +3,8 @@ package io.github.whywood.superpi.runtime
 import io.github.whywood.superpi.sdk.coding.prompt.DEFAULT_SYSTEM_PROMPT_PREAMBLE
 import java.time.OffsetDateTime
 
-enum class InteractionStyle {
-    QUIET,
-    BALANCED,
-    PROACTIVE,
-}
-
 data class Personalization(
     val nickname: String = "Milous",
-    val interaction: InteractionStyle = InteractionStyle.BALANCED,
     val instruction: String = "",
 )
 
@@ -20,7 +13,6 @@ internal fun buildPersonalizationSections(
     providerId: String,
     modelId: String,
     now: OffsetDateTime,
-    rootBash: Boolean = false,
     environmentLines: List<String>? = null,
 ): Map<String, String> {
     val nickname = personalization.nickname.trim()
@@ -40,8 +32,6 @@ internal fun buildPersonalizationSections(
             } else {
                 appendLine("Address the user as \"you\".")
             }
-            appendLine("Interaction style: ${interactionLabel(personalization.interaction)}.")
-            appendLine(interactionInstructions(personalization.interaction))
         }.trim(),
     )
 
@@ -58,14 +48,13 @@ internal fun buildSessionSystemPromptSections(
     modelId: String,
     now: OffsetDateTime,
     pluginBody: String?,
-    rootBash: Boolean = false,
     environmentLines: List<String>? = null,
     promptPreamble: String? = null,
     promptRules: String? = null,
     extra: Map<String, String> = emptyMap(),
 ): Map<String, String> {
     val sections = LinkedHashMap(
-        buildPersonalizationSections(personalization, providerId, modelId, now, rootBash, environmentLines),
+        buildPersonalizationSections(personalization, providerId, modelId, now, environmentLines),
     )
     val body = pluginBody?.trim().orEmpty()
     if (body.isNotEmpty()) {
@@ -76,23 +65,6 @@ internal fun buildSessionSystemPromptSections(
     promptRules?.trim()?.takeIf { it.isNotEmpty() }?.let { sections["rules"] = wrapPromptSection("rules", it) }
     sections.putAll(extra)
     return sections
-}
-
-private fun interactionLabel(style: InteractionStyle): String = when (style) {
-    InteractionStyle.QUIET -> "Quiet"
-    InteractionStyle.BALANCED -> "Balanced"
-    InteractionStyle.PROACTIVE -> "Proactive"
-}
-
-private fun interactionInstructions(style: InteractionStyle): String = when (style) {
-    InteractionStyle.QUIET ->
-        "Be quiet: act directly and do not ask questions unless the intent is unclear or the action is risky."
-
-    InteractionStyle.BALANCED ->
-        "Be balanced: act directly when the request is clear; ask when the intent is ambiguous or the action is risky."
-
-    InteractionStyle.PROACTIVE ->
-        "Be proactive: ask more, suggest more, and act on likely follow-ups."
 }
 
 internal fun wrapPromptSection(name: String, content: String, escape: Boolean = true): String =
