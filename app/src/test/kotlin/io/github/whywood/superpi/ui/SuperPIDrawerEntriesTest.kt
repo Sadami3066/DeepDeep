@@ -131,46 +131,6 @@ class SuperPIDrawerEntriesTest {
     }
 
     @Test
-    fun workspaceMetaGatesRemoteRowsAndActions() {
-        val local = drawerWorkspaceMeta(RuntimeWorkspace(id = "ws-1", name = "Work", cwd = "/work"))
-        assertEquals(true, local.enabled)
-        assertEquals(true, local.manageable)
-        assertEquals(null, local.sourceDevice)
-
-        val online = drawerWorkspaceMeta(remoteWorkspace(online = true))
-        assertEquals(true, online.enabled)
-        assertEquals(false, online.manageable)
-        assertEquals("Mac", online.sourceDevice)
-
-        val offline = drawerWorkspaceMeta(remoteWorkspace(online = false))
-        assertEquals(false, offline.enabled)
-        assertEquals(false, offline.manageable)
-        assertEquals("Mac", offline.sourceDevice)
-    }
-
-    @Test
-    fun newChatTargetSkipsOfflineRemoteWorkspace() {
-        val local = RuntimeWorkspace(id = "home", name = "PI", cwd = "/home", isHome = true)
-        val remoteOnline = remoteWorkspace(online = true)
-        val remoteOffline = remoteWorkspace(online = false)
-
-        assertEquals(
-            local.id,
-            drawerNewChatWorkspaceId(listOf(local, remoteOffline), remoteOffline.id),
-        )
-        assertEquals(
-            remoteOnline.id,
-            drawerNewChatWorkspaceId(listOf(local, remoteOnline), remoteOnline.id),
-        )
-        assertEquals(
-            local.id,
-            drawerNewChatWorkspaceId(listOf(remoteOffline, local), local.id),
-        )
-        assertEquals(null, drawerNewChatWorkspaceId(listOf(remoteOffline), remoteOffline.id))
-        assertEquals(null, drawerNewChatWorkspaceId(emptyList(), "home"))
-    }
-
-    @Test
     fun uniqueKeysForAllEntries() {
         val result = entries((1..7).map { session("s$it", it.toLong()) })
         assertEquals(result.size, result.map { it.key }.toSet().size)

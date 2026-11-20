@@ -78,6 +78,9 @@ import io.github.whywood.superpi.runtime.ConversationSummary
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.ui.common.AvatarBadge
 import io.github.whywood.superpi.ui.common.BotAvatar
+import io.github.whywood.superpi.ui.common.WorkspaceRowMeta
+import io.github.whywood.superpi.ui.common.preferredNewChatWorkspaceId
+import io.github.whywood.superpi.ui.common.workspaceRowMeta
 import io.github.whywood.superpi.ui.common.LocalHapticsEnabled
 import io.github.whywood.superpi.ui.common.rememberRelativeTime
 import io.github.whywood.superpi.ui.sessions.DeleteSessionDialog
@@ -146,25 +149,6 @@ internal fun buildDrawerEntries(
             add(DrawerEntry.SessionMore(workspace.id, workspaceSessions.size - collapsedCount))
         }
     }
-}
-
-internal data class DrawerWorkspaceMeta(
-    val enabled: Boolean,
-    val manageable: Boolean,
-    val sourceDevice: String?,
-)
-
-internal fun drawerWorkspaceMeta(workspace: RuntimeWorkspace): DrawerWorkspaceMeta = DrawerWorkspaceMeta(
-    enabled = workspace.remote?.online != false,
-    manageable = workspace.remote == null,
-    sourceDevice = workspace.remote?.deviceName,
-)
-
-internal fun drawerNewChatWorkspaceId(workspaces: List<RuntimeWorkspace>, activeWorkspaceId: String): String? {
-    val active = workspaces.firstOrNull { workspace ->
-        workspace.id == activeWorkspaceId && drawerWorkspaceMeta(workspace).enabled
-    }
-    return (active ?: workspaces.firstOrNull { workspace -> drawerWorkspaceMeta(workspace).enabled })?.id
 }
 
 @Composable
@@ -296,7 +280,7 @@ fun SuperPIDrawer(
             )
         }
         Spacer(Modifier.height(26.dp))
-        val newChatWorkspaceId = drawerNewChatWorkspaceId(workspaces, activeWorkspaceId)
+        val newChatWorkspaceId = preferredNewChatWorkspaceId(workspaces, activeWorkspaceId)
         DrawerNewChatButton(
             onClick = { newChatWorkspaceId?.let(onNewSessionInWorkspace) },
         )
@@ -380,7 +364,7 @@ fun SuperPIDrawer(
 
                     is DrawerEntry.WorkspaceEntry -> DrawerWorkspaceRow(
                         workspace = entry.workspace,
-                        meta = drawerWorkspaceMeta(entry.workspace),
+                        meta = workspaceRowMeta(entry.workspace),
                         first = entry.first,
                         pinned = entry.workspace.id in pinnedWorkspaceIds,
                         expanded = entry.workspace.id in expandedWorkspaceIds,
@@ -548,7 +532,7 @@ private fun DrawerNewChatButton(onClick: () -> Unit) {
 @Composable
 private fun DrawerWorkspaceRow(
     workspace: RuntimeWorkspace,
-    meta: DrawerWorkspaceMeta,
+    meta: WorkspaceRowMeta,
     first: Boolean,
     pinned: Boolean,
     expanded: Boolean,
