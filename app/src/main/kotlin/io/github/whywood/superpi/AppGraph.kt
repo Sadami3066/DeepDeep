@@ -176,7 +176,11 @@ class AppGraph(context: Context) : AppDependencies {
             appVersion = BuildConfig.VERSION_NAME,
         ).also { live ->
             scope.launch {
-                live.remoteBots.collect { bots -> remoteBots.value = bots }
+                live.remoteBots.collect { bots ->
+                    val changed = bots != remoteBots.value
+                    remoteBots.value = bots
+                    if (changed) runCatching { host.refreshSessions() }
+                }
             }
         }
     }

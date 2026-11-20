@@ -80,6 +80,9 @@ class RelayLive(
     fun start() {
         if (started) return
         started = true
+        scope.launch {
+            runCatching { _devices.value = accounts.readDevices() }
+        }
         scope.launch { accounts.account.collect { value -> account = value; reconcile() } }
         scope.launch { accounts.allowRemote.collect { value -> _allowRemote.value = value; reconcile() } }
         scope.launch { socket.state.collect { value -> onSocketState(value) } }
@@ -144,6 +147,11 @@ class RelayLive(
         }
     }
 
+    private fun persistDevices() {
+        val snapshot = _devices.value
+        scope.launch { runCatching { accounts.saveDevices(snapshot) } }
+    }
+
     private suspend fun bots(): List<RelayBot> = runCatching {
         host.workspaces()
             .filter { workspace -> workspace.remote == null }
@@ -198,6 +206,7 @@ class RelayLive(
             is RelayServerFrame.HelloOk -> {
                 val self = account?.deviceId
                 _devices.value = frame.devices.filter { device -> device.deviceId != self }
+                persistDevices()
                 runCatching { memorySync.refreshIfStale(0) }
             }
 
@@ -224,6 +233,7 @@ class RelayLive(
                         }
                     }
                 }
+                persistDevices()
             }
 
             is RelayServerFrame.MemoryChanged -> runCatching { memorySync.refreshIfStale(0) }

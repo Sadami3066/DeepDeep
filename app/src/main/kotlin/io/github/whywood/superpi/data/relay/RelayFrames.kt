@@ -211,4 +211,25 @@ internal object RelayFrames {
 
     fun intOrNull(element: JsonElement?): Int? =
         element?.jsonPrimitive?.intOrNull
+
+    fun encodeDevices(devices: List<RelayDevice>): String = relayDevicesArray(devices).toString()
+
+    fun parseDeviceList(raw: String): List<RelayDevice>? {
+        val element = runCatching { Json.parseToJsonElement(raw.trim()) }.getOrNull() ?: return null
+        if (element !is JsonArray) return null
+        return parseDevices(element)
+    }
+
+    private fun relayDevicesArray(devices: List<RelayDevice>): JsonArray = JsonArray(
+        devices.map { device ->
+            buildJsonObject {
+                put("deviceId", device.deviceId)
+                put("name", device.name)
+                put("platform", device.platform)
+                put("online", device.online)
+                put("lastSeen", device.lastSeen)
+                put("bots", botsArray(device.bots))
+            }
+        },
+    )
 }

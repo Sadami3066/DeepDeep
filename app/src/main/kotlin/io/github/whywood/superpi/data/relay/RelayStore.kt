@@ -19,6 +19,7 @@ class RelayStore(context: Context) : RelayAccountStore {
     private val secrets = EncryptedSecretStore(appContext)
     private val accountKey = stringPreferencesKey("account")
     private val allowRemoteKey = stringPreferencesKey("allowRemote")
+    private val devicesKey = stringPreferencesKey("devices")
 
     override val account: Flow<RelayAccount?> = store.data
         .map { values -> RelayConfigCodec.decode(values[accountKey]) }
@@ -35,6 +36,17 @@ class RelayStore(context: Context) : RelayAccountStore {
     override suspend fun read(): RelayAccount? = account.first()
 
     suspend fun readAllowRemote(): Boolean = allowRemote.first()
+
+    suspend fun readDevices(): List<RelayDevice> {
+        val raw = store.data.first()[devicesKey] ?: return emptyList()
+        return RelayFrames.parseDeviceList(raw).orEmpty()
+    }
+
+    suspend fun saveDevices(devices: List<RelayDevice>) {
+        store.edit { values ->
+            values[devicesKey] = RelayFrames.encodeDevices(devices)
+        }
+    }
 
     suspend fun setAllowRemote(value: Boolean) {
         store.edit { values ->
