@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.superpi.R
+import io.github.whywood.superpi.data.relay.RelayLiveState
 import io.github.whywood.superpi.design.DdEmptyState
 import io.github.whywood.superpi.design.DdIcon
 import io.github.whywood.superpi.design.DdIconButton
@@ -55,7 +56,7 @@ internal fun RemoteChatScreen(
     deviceName: String,
     botName: String,
     deviceOnline: Boolean,
-    relayOnline: Boolean,
+    relayState: RelayLiveState,
     blocks: List<RemoteChatBlock>,
     running: Boolean,
     settled: Boolean,
@@ -71,6 +72,7 @@ internal fun RemoteChatScreen(
     val colors = superPiColors()
     var input by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val relayOnline = relayState == RelayLiveState.Online
     val canSend = relayOnline && deviceOnline && settled && !running && input.isNotBlank()
     val submit = {
         if (onSend(input)) input = ""
@@ -127,6 +129,7 @@ internal fun RemoteChatScreen(
         modifier = modifier.testTag("remoteagent_screen"),
     ) {
         val waiting = blocks.isNotEmpty() && !deviceOnline
+        val reconnecting = relayState == RelayLiveState.Connecting || relayState == RelayLiveState.Offline
         if (!relayOnline || waiting) {
             Column(
                 Modifier
@@ -136,10 +139,12 @@ internal fun RemoteChatScreen(
             ) {
                 if (!relayOnline) {
                     DdNoticeBar(
-                        text = stringResource(R.string.remoteagent_not_connected),
+                        text = stringResource(
+                            if (reconnecting) R.string.remoteagent_reconnecting else R.string.remoteagent_not_connected,
+                        ),
                         tone = DdNoticeTone.WARNING,
-                        actionLabel = stringResource(R.string.remoteagent_open_relay),
-                        onAction = onOpenRelay,
+                        actionLabel = if (reconnecting) null else stringResource(R.string.remoteagent_open_relay),
+                        onAction = if (reconnecting) null else onOpenRelay,
                     )
                 } else if (waiting) {
                     DdNoticeBar(
@@ -184,20 +189,24 @@ internal fun RemoteChatScreen(
             }
         }
         sendFailure?.let { failure ->
+            val openRelay = failure == RemoteChatFailure.NotConnected
+            val botGone = failure == RemoteChatFailure.BotUnavailable
             DdNoticeBar(
                 text = failure.text(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = DdSpacing.Xs),
                 tone = DdNoticeTone.DANGER,
-                actionLabel = stringResource(
-                    if (failure == RemoteChatFailure.NotConnected) {
-                        R.string.remoteagent_open_relay
-                    } else {
-                        R.string.remoteagent_retry
-                    },
-                ),
-                onAction = if (failure == RemoteChatFailure.NotConnected) onOpenRelay else onRetry,
+                actionLabel = when {
+                    openRelay -> stringResource(R.string.remoteagent_open_relay)
+                    botGone -> null
+                    else -> stringResource(R.string.remoteagent_retry)
+                },
+                onAction = when {
+                    openRelay -> onOpenRelay
+                    botGone -> null
+                    else -> onRetry
+                },
             )
         }
         Row(

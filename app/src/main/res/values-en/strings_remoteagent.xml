@@ -3,6 +3,7 @@
     <string name="remoteagent_device_status">%1$s · %2$s</string>
     <string name="remoteagent_device_online">Online</string>
     <string name="remoteagent_device_offline">Offline</string>
+    <string name="remoteagent_reconnecting">The relay connection dropped; reconnecting</string>
     <string name="remoteagent_not_connected">Not connected to the relay. Connect on the Devices page first.</string>
     <string name="remoteagent_open_relay">Connect</string>
     <string name="remoteagent_waiting">Waiting for the device; history stays readable</string>

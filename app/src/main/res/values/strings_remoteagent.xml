@@ -3,6 +3,7 @@
     <string name="remoteagent_device_status">%1$s · %2$s</string>
     <string name="remoteagent_device_online">在线</string>
     <string name="remoteagent_device_offline">离线</string>
+    <string name="remoteagent_reconnecting">中继连接已断开，正在重新连接</string>
     <string name="remoteagent_not_connected">未连接到中继，先到「设备」页完成连接</string>
     <string name="remoteagent_open_relay">去连接</string>
     <string name="remoteagent_waiting">等待设备上线，历史记录仍可查看</string>

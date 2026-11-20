@@ -38,7 +38,7 @@ internal class RemoteChatStateHolder(
         private set
     var deviceOnline by mutableStateOf(false)
         private set
-    var relayOnline by mutableStateOf(relayLive.state.value == RelayLiveState.Online)
+    var relayState by mutableStateOf(relayLive.state.value)
         private set
     var blocks by mutableStateOf<List<RemoteChatBlock>>(emptyList())
         private set
@@ -95,7 +95,7 @@ internal class RemoteChatStateHolder(
     fun send(text: String): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty() || running || !settled) return false
-        if (!relayOnline) {
+        if (relayState != RelayLiveState.Online) {
             sendFailure = RemoteChatFailure.NotConnected
             return false
         }
@@ -119,7 +119,7 @@ internal class RemoteChatStateHolder(
     fun retry(): Boolean {
         val text = failedText ?: return false
         if (running || !settled) return false
-        if (!relayOnline) {
+        if (relayState != RelayLiveState.Online) {
             sendFailure = RemoteChatFailure.NotConnected
             return false
         }
@@ -199,8 +199,8 @@ internal class RemoteChatStateHolder(
     }
 
     private fun onRelayState(state: RelayLiveState) {
-        relayOnline = state == RelayLiveState.Online
-        if (relayOnline) return
+        relayState = state
+        if (state == RelayLiveState.Online) return
         deviceOnline = false
         if (!callInFlight) interrupt(RemoteChatFailure.Disconnected)
     }

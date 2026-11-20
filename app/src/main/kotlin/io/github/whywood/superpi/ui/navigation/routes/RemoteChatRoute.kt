@@ -45,7 +45,7 @@ internal fun RemoteChatRoute(
         deviceName = holder.deviceName,
         botName = holder.botName,
         deviceOnline = holder.deviceOnline,
-        relayOnline = holder.relayOnline,
+        relayState = holder.relayState,
         blocks = holder.blocks,
         running = holder.running,
         settled = holder.settled,
