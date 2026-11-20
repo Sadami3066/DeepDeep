@@ -287,7 +287,7 @@ private fun parseDate(raw: String): LocalDate = try {
 
 private fun promptPreview(prompt: String): String {
     val normalized = prompt.trim().replace(Regex("\\s+"), " ")
-    return if (normalized.length <= 28) normalized.ifEmpty { "定时提醒" } else normalized.take(28) + "…"
+    return if (normalized.length <= 28) normalized.ifEmpty { "Reminder" } else normalized.take(28) + "…"
 }
 
 private fun JsonObject.stringOrNull(name: String): String? =

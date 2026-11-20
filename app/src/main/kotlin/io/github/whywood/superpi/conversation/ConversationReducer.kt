@@ -110,4 +110,4 @@ internal fun failRunningTools(steps: List<AssistantStep>): List<AssistantStep> =
     }
 }
 
-private const val REMINDER_HEADER = "[定时提醒]"
+private const val REMINDER_HEADER = "[Reminder]"

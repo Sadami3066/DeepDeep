@@ -406,12 +406,12 @@ private fun JsonObject.requiredIntentLong(name: String): Long =
 private fun reminderText(group: List<Timer>): Pair<String, String> {
     val first = group.first()
     if (group.size == 1) {
-        val text = "[定时提醒] ${first.name}\n这是你设置的定时提醒，现在到时间了。\n\n${first.prompt}"
+        val text = "[Reminder] ${first.name}\nThis is a reminder you set; it is due now.\n\n${first.prompt}"
         return text to first.name
     }
-    val header = "[定时提醒] ${group.size} 个提醒\n这是你设置的定时提醒，现在到时间了。"
+    val header = "[Reminder] ${group.size} reminders\nThis is a reminder you set; it is due now."
     val body = group.mapIndexed { index, timer ->
         "\n\n${index + 1}. ${timer.name}\n${timer.prompt}"
     }.joinToString("")
-    return header + body to "${group.size} 个提醒"
+    return header + body to "${group.size} reminders"
 }

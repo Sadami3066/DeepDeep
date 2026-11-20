@@ -108,7 +108,7 @@ class HistoryMapperTest {
     @Test
     fun reminderMessageSplitsNameAndBody() {
         val messages = HistoryMapper.mapEntries(
-            listOf(user("[定时提醒] 写周报\n\n请提交本周周报", 1L)),
+            listOf(user("[Reminder] 写周报\n\n请提交本周周报", 1L)),
         )
 
         assertEquals(1, messages.size)
@@ -120,18 +120,18 @@ class HistoryMapperTest {
     @Test
     fun batchReminderKeepsCountAsName() {
         val messages = HistoryMapper.mapEntries(
-            listOf(user("[定时提醒] 2 个提醒\n\n1. 写周报\n2. 喝水", 1L)),
+            listOf(user("[Reminder] 2 reminders\n\n1. 写周报\n2. 喝水", 1L)),
         )
 
         assertEquals(1, messages.size)
-        assertEquals("2 个提醒", messages[0].reminder)
+        assertEquals("2 reminders", messages[0].reminder)
         assertEquals("1. 写周报\n2. 喝水", messages[0].text)
     }
 
     @Test
     fun reminderFramingSentenceIsHiddenFromBody() {
         val messages = HistoryMapper.mapEntries(
-            listOf(user("[定时提醒] 喝水\n这是你设置的定时提醒，现在到时间了。\n\n去喝水", 1L)),
+            listOf(user("[Reminder] 喝水\nThis is a reminder you set; it is due now.\n\n去喝水", 1L)),
         )
 
         assertEquals(1, messages.size)
@@ -142,7 +142,7 @@ class HistoryMapperTest {
     @Test
     fun reminderWithoutBlankLineKeepsRemainderAsBody() {
         val messages = HistoryMapper.mapEntries(
-            listOf(user("[定时提醒] 喝水\n记得喝水", 1L)),
+            listOf(user("[Reminder] 喝水\n记得喝水", 1L)),
         )
 
         assertEquals(1, messages.size)

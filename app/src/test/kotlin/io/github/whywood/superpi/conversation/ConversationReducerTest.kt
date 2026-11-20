@@ -194,7 +194,7 @@ class ConversationReducerTest {
 
     @Test
     fun turnInjectedAppendsUserAndStreamingPlaceholder() {
-        val raw = "[定时提醒] 喝水\n这是你设置的定时提醒，现在到时间了。\n\n喝水提醒"
+        val raw = "[Reminder] 喝水\nThis is a reminder you set; it is due now.\n\n喝水提醒"
         val reduced = reduce(
             ConversationState(),
             RuntimeEvent.TurnInjected("run-9", raw, "喝水"),
@@ -795,7 +795,7 @@ class ConversationReducerTest {
 
     @Test
     fun reminderDisplayTextHandlesHeaderWithoutBlankLine() {
-        assertEquals("正文", reminderDisplayText("[定时提醒] 喝水\n正文"))
+        assertEquals("正文", reminderDisplayText("[Reminder] 喝水\n正文"))
         assertEquals("plain", reminderDisplayText("plain"))
     }
 }

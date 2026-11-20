@@ -16,7 +16,7 @@ import io.github.whywood.superpi.sdk.coding.session.SessionEntry
 import io.github.whywood.superpi.sdk.coding.session.SessionMessageEntry
 import kotlinx.serialization.json.JsonObject
 
-private const val REMINDER_PREFIX = "[定时提醒]"
+private const val REMINDER_PREFIX = "[Reminder]"
 
 object HistoryMapper {
     fun mapEntries(entries: List<SessionEntry>): List<AssistantMessage> {

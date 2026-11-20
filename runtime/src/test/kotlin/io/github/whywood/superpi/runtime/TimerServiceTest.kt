@@ -50,7 +50,7 @@ class TimerServiceTest {
             assertEquals("session-1", delivery.sessionId)
             assertEquals("写周报", delivery.reminder)
             assertEquals(
-                "[定时提醒] 写周报\n这是你设置的定时提醒，现在到时间了。\n\n提交本周周报",
+                "[Reminder] 写周报\nThis is a reminder you set; it is due now.\n\n提交本周周报",
                 delivery.text,
             )
             assertEquals(listOf(fixture.runtimeFile("session-1")), fixture.runtime.openedFiles)
@@ -88,9 +88,9 @@ class TimerServiceTest {
 
             assertEquals(1, fixture.runtime.deliveries.size)
             val delivery = fixture.runtime.deliveries.single()
-            assertEquals("2 个提醒", delivery.reminder)
+            assertEquals("2 reminders", delivery.reminder)
             assertEquals(
-                "[定时提醒] 2 个提醒\n这是你设置的定时提醒，现在到时间了。\n\n1. 甲\na\n\n2. 乙\nb",
+                "[Reminder] 2 reminders\nThis is a reminder you set; it is due now.\n\n1. 甲\na\n\n2. 乙\nb",
                 delivery.text,
             )
             val updated = fixture.store.list()
@@ -126,7 +126,7 @@ class TimerServiceTest {
                 setOf("session-1", "session-2"),
                 fixture.runtime.deliveries.map { it.sessionId }.toSet(),
             )
-            assertTrue(fixture.runtime.deliveries.none { it.text.contains("个提醒") })
+            assertTrue(fixture.runtime.deliveries.none { it.text.contains("reminders") })
         } finally {
             fixture.close()
         }
@@ -248,7 +248,7 @@ class TimerServiceTest {
             assertTrue(result.isSuccess)
             assertEquals(1, fixture.runtime.deliveries.size)
             assertEquals(
-                "[定时提醒] Manual\n这是你设置的定时提醒，现在到时间了。\n\ndo it",
+                "[Reminder] Manual\nThis is a reminder you set; it is due now.\n\ndo it",
                 fixture.runtime.deliveries.single().text,
             )
             val updated = fixture.store.list().single()
