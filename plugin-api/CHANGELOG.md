@@ -1,5 +1,13 @@
 # Plugin API changelog
 
+## 2.0.1 / API level 7
+
+Patch release, binary compatible with 2.0.0 and still API level 7:
+
+- Card delivery copy is English: `Full return (upstream, verbatim):`, `Usage:`, `Show this card: present(...)`.
+- `Cards.deliver` detects an already delivered `present` instruction by the call shape instead of a localized prefix, so a host built against 2.0.1 and a plugin built against 2.0.0 do not append the instruction twice.
+- No signature or behavior changes beyond that; plugins do not need a rebuild unless they want the English copy in their own artifacts.
+
 ## 2.0.0 / API level 7
 
 - Breaking: Kotlin package moves to `io.github.whywood.superpi.plugin.api`; the plugin entry interface is `SuperPIPlugin` and the Maven group is `io.github.sadami3066.superpi`.

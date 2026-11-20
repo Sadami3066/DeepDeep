@@ -8,7 +8,7 @@ PI plugins are **Kotlin code plugins**: implement `SuperPIPlugin` from `plugin-a
 
 ## Quick start
 
-`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.superpi.plugin.api`): the current release is `2.0.0`, whose transitive dependency is `design 1.0.0` (take the latest release in `SuperPI-Maven` as authoritative); `PLUGIN_API_LEVEL = 7`, `BASELINE_API_LEVEL = 7`, `MIN_SUPPORTED_API_LEVEL = 7`, `HOST_UI_API_LEVEL = 3`.
+`plugin-api` is the only contract artifact (Android library, package `io.github.whywood.superpi.plugin.api`): the current release is `2.0.1`, whose transitive dependency is `design 1.0.0` (take the latest release in `SuperPI-Maven` as authoritative); `PLUGIN_API_LEVEL = 7`, `BASELINE_API_LEVEL = 7`, `MIN_SUPPORTED_API_LEVEL = 7`, `HOST_UI_API_LEVEL = 3`.
 
 `plugin-api 2.0.0` / `design 1.0.0` start the SuperPI contract line at API level 7: the Kotlin package, plugin interface and Maven group are renamed, plugin ids use `io.github.whywood.superpi.plugin.*`, and host UI API level is 3. Plugins must be rebuilt and declare `apiLevel: 7`; old 1.x plugins are rejected. Later 2.x releases stay binary-compatible within level 7. The compatibility promise is in `plugin-api/COMPATIBILITY.md`: within one `apiLevel` only binary-compatible additions, and deleting, renaming, changing signatures or changing semantics requires a new `apiLevel`; the host rejects plugins with an `apiLevel` above its own, and level 5 has not been accepted since 1.0.4.
 
@@ -17,7 +17,7 @@ Start a plugin project from `template/` in [SuperPI-Plugins](https://github.com/
 Prerequisites:
 
 - JDK 17+ and the Android SDK; locate the SDK with the `ANDROID_HOME`/`ANDROID_SDK_ROOT` environment variables or `sdk.dir` in the project's `local.properties`.
-- Plugins depend on the public Maven repository `https://sadami3066.github.io/SuperPI-Maven` (group `io.github.sadami3066.superpi`, currently `plugin-api 2.0.0` / `design 1.0.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
+- Plugins depend on the public Maven repository `https://sadami3066.github.io/SuperPI-Maven` (group `io.github.sadami3066.superpi`, currently `plugin-api 2.0.1` / `design 1.0.0`, take the latest release as authoritative); no local mavenLocal publish is needed.
 
 `plugin-api` is the contract, and `design` is the UI design system shared with the app (plugin UI uses it directly, and `plugin-api` brings it in through `api()`). Publishing a new version:
 
