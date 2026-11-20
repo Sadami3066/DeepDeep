@@ -234,6 +234,48 @@ class SessionCommandPlaneTest {
     }
 
     @Test
+    fun maintenanceOwnerBlocksTurnsAndIsReleased() {
+        val plane = SessionCommandPlane()
+        plane.attach("session")
+
+        val token = plane.claimMaintenance("session")
+
+        assertTrue(token != 0L)
+        assertTrue(plane.snapshot("session")!!.reconfiguring)
+        assertNull(plane.begin("session", TurnSource.USER))
+        assertEquals(0L, plane.claimMaintenance("session"))
+        assertEquals(0L, plane.claimReconfigure("session"))
+
+        assertTrue(plane.releaseMaintenance("session", token))
+        assertFalse(plane.snapshot("session")!!.reconfiguring)
+        assertNotNull(plane.begin("session", TurnSource.USER))
+    }
+
+    @Test
+    fun maintenanceIsRejectedWhileRunIsActive() {
+        val plane = SessionCommandPlane()
+        plane.attach("session")
+        plane.begin("session", TurnSource.USER)
+
+        assertEquals(0L, plane.claimMaintenance("session"))
+        assertFalse(plane.snapshot("session")!!.reconfiguring)
+    }
+
+    @Test
+    fun reusedReconfigureClaimCanSkipDeferral() {
+        val plane = SessionCommandPlane()
+        plane.attach("session")
+        val start = plane.begin("session", TurnSource.USER)!!
+
+        assertEquals(0L, plane.claimReconfigure("session", deferWhenBusy = false))
+        assertFalse(plane.finish("session", start.runId).reconfigure)
+
+        val retried = plane.begin("session", TurnSource.USER)!!
+        assertEquals(0L, plane.claimReconfigure("session"))
+        assertTrue(plane.finish("session", retried.runId).reconfigure)
+    }
+
+    @Test
     fun activeRunTracksOwner() {
         val plane = SessionCommandPlane()
         plane.attach("session")

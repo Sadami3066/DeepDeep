@@ -34,6 +34,7 @@ class AgentRuntimeHost internal constructor(
     private val sessionArchived: ((String) -> Unit)?,
     private val runLedger: RunLedger = RunLedger(null),
     private val keepHandleAlive: (String) -> Boolean = { true },
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : AgentRuntime {
     constructor(
         homeDir: File,
@@ -50,10 +51,12 @@ class AgentRuntimeHost internal constructor(
         sessionArchived: ((String) -> Unit)? = null,
         runLedger: RunLedger = RunLedger(null),
         keepHandleAlive: (String) -> Boolean = { true },
+        clock: () -> Long = System::currentTimeMillis,
     ) : this(
         homeDir, workspacesDir, { cwd -> engineFactory(cwd) }, modelConfigStore,
         CatalogSessionDirectory(catalog), WorkspaceStoreDirectory(workspaceStore),
         providers, backgroundScope, goalDriver, titleNamer, sessionCleaner, sessionArchived, runLedger, keepHandleAlive,
+        clock,
     )
 
     private val eventsBuffer = MutableSharedFlow<SessionRuntimeEvent>(
@@ -124,6 +127,7 @@ class AgentRuntimeHost internal constructor(
         onSessionClosed = { sessionId, reason ->
             sessionClosureBuffer.tryEmit(SessionClosure(sessionId, reason))
         },
+        clock = clock,
     )
     init {
         backgroundScope.launch {

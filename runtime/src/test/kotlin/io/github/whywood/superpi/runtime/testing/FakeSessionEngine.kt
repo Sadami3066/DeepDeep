@@ -12,12 +12,14 @@ class FakeSessionEngine(
     val configs = mutableListOf<ModelConfig>()
     val idsByFile = mutableMapOf<String, String>()
     var onCreated: (FakeSessionHandle) -> Unit = {}
+    var onCreating: (suspend (String?) -> Unit)? = null
     var mcpServers: Map<String, McpServerConfig> = emptyMap()
     private var counter = 0
     val createCount: Int get() = created.size
     val handles: List<FakeSessionHandle> get() = created
 
     override suspend fun create(file: String?, config: ModelConfig): SessionHandle {
+        onCreating?.invoke(file)
         val sessionId = file?.let { path -> idsByFile.getOrPut(path) { idPrefix + "-" + (++counter) } }
             ?: (idPrefix + "-" + (++counter))
         configs += config

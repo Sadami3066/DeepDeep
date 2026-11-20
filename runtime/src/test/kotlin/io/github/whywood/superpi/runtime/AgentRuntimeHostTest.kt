@@ -35,6 +35,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -272,6 +274,156 @@ class AgentRuntimeHostTest {
     }
 
     @Test
+    fun draftSessionSurvivesIdleSweep() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val draft = fixture.host.newSession(AgentRuntimeHost.HOME_ID)
+            val draftHandle = fixture.engine.handles.last()
+            val persisted = fixture.addSession("session-1")
+            fixture.host.openSession(persisted, fixture.homeDir.absolutePath)
+            val created = fixture.engine.createCount
+
+            fixture.now = HandleBudget.IDLE_TTL_MS + 1
+            advanceTimeBy(HandleBudget.SWEEP_INTERVAL_MS + 1)
+            runCurrent()
+
+            assertTrue(draftHandle.closed.isEmpty())
+            assertEquals(created, fixture.engine.createCount)
+            fixture.host.send(draft.sessionId, "first")
+            assertEquals(listOf("first"), draftHandle.prompts.map { it.text })
+            assertEquals(created, fixture.engine.createCount)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun reloadReconnectsPersistedSessionAfterIdleSweep() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val file = fixture.addSession("session-1")
+            val opened = fixture.host.openSession(file, fixture.homeDir.absolutePath)
+            val original = fixture.engine.handles.last()
+            fixture.host.newSession(AgentRuntimeHost.HOME_ID)
+
+            fixture.now = HandleBudget.IDLE_TTL_MS + 1
+            advanceTimeBy(HandleBudget.SWEEP_INTERVAL_MS + 1)
+            runCurrent()
+            assertEquals(1, original.closed.size)
+
+            val reopened = fixture.host.reloadSession(opened.sessionId)
+
+            assertEquals(opened.sessionId, reopened)
+            assertEquals(3, fixture.engine.createCount)
+            assertTrue(fixture.engine.handles.last().closed.isEmpty())
+            fixture.host.send(opened.sessionId, "after reload")
+            assertEquals(listOf("after reload"), fixture.engine.handles.last().prompts.map { it.text })
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun reloadKeepsUnpersistedSessionResident() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val opened = fixture.host.newSession(AgentRuntimeHost.HOME_ID)
+            val handle = fixture.engine.handles.last()
+
+            val reopened = fixture.host.reloadSession(opened.sessionId)
+
+            assertEquals(opened.sessionId, reopened)
+            assertEquals(1, fixture.engine.createCount)
+            assertTrue(handle.closed.isEmpty())
+            fixture.host.send(opened.sessionId, "hello")
+            assertEquals(listOf("hello"), handle.prompts.map { it.text })
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun sendWaitsForInFlightReconfigure() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val file = fixture.addSession("session-1")
+            fixture.host.openSession(file, fixture.homeDir.absolutePath)
+            val createGate = CompletableDeferred<Unit>()
+            var creates = 0
+            fixture.engine.onCreating = {
+                creates += 1
+                if (creates == 1) createGate.await()
+            }
+            val reconfigure = backgroundScope.launch { fixture.host.reconfigure() }
+            settle()
+
+            var sent = false
+            val sender = backgroundScope.launch {
+                fixture.host.send("session-1", "during reconfigure")
+                sent = true
+            }
+            settle()
+            assertFalse(sent)
+
+            createGate.complete(Unit)
+            settle()
+            reconfigure.join()
+            sender.join()
+
+            assertTrue(sent)
+            assertEquals(2, fixture.engine.createCount)
+            assertEquals(listOf("during reconfigure"), fixture.engine.handles.last().prompts.map { it.text })
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun reloadWaitsForInFlightIdleCloseThenReconnects() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val file = fixture.addSession("session-1")
+            val opened = fixture.host.openSession(file, fixture.homeDir.absolutePath)
+            val original = fixture.engine.handles.last()
+            fixture.host.newSession(AgentRuntimeHost.HOME_ID)
+
+            val closeGate = CompletableDeferred<Unit>()
+            original.closeGate = closeGate
+            fixture.now = HandleBudget.IDLE_TTL_MS + 1
+            advanceTimeBy(HandleBudget.SWEEP_INTERVAL_MS + 1)
+            runCurrent()
+            assertTrue(original.closed.isEmpty())
+
+            var reloaded: String? = null
+            val reload = backgroundScope.launch { reloaded = fixture.host.reloadSession(opened.sessionId) }
+            settle()
+            assertNull(reloaded)
+
+            closeGate.complete(Unit)
+            settle()
+            reload.join()
+
+            assertEquals(opened.sessionId, reloaded)
+            assertEquals(3, fixture.engine.createCount)
+            fixture.host.send(opened.sessionId, "after close")
+            assertEquals(listOf("after close"), fixture.engine.handles.last().prompts.map { it.text })
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun sendOnUnknownSessionFailsAsTerminal() = runTest {
+        val fixture = Fixture(backgroundScope)
+        try {
+            val failure = runCatching { fixture.host.send("missing-session", "hello") }.exceptionOrNull()
+            assertEquals("Agent session is not ready", failure?.message)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun syncCustomProvidersReachesDraftAndPersistedSessions() = runTest {
         val fixture = Fixture(backgroundScope)
         try {
@@ -474,6 +626,8 @@ class AgentRuntimeHostTest {
         private val scope: CoroutineScope,
         private val titleNamer: SessionTitleNamer? = null,
     ) {
+        var now: Long = 0L
+
         val homeDir: File = Files.createTempDirectory("host-home").toFile()
         val workspacesDir: File = Files.createTempDirectory("host-workspaces").toFile()
         val engine = FakeSessionEngine()
@@ -496,6 +650,8 @@ class AgentRuntimeHostTest {
             titleNamer = titleNamer,
             sessionCleaner = null,
             sessionArchived = null,
+            keepHandleAlive = { false },
+            clock = { now },
         )
 
         fun sessionFile(id: String): String = File(homeDir, "$id.jsonl").absolutePath

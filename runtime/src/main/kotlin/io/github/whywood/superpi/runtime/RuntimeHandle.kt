@@ -16,7 +16,7 @@ internal class RuntimeHandle(
     @Volatile
     var activity: RuntimeActivity? = null
 
-    fun touch() {
-        lastActiveAt = System.currentTimeMillis()
+    fun touch(now: Long = System.currentTimeMillis()) {
+        lastActiveAt = now
     }
 }

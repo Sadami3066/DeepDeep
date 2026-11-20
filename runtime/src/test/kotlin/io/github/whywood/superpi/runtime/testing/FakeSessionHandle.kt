@@ -68,6 +68,8 @@ class FakeSessionHandle(
 
     val promptGate = CompletableDeferred<Unit>()
 
+    var closeGate: CompletableDeferred<Unit>? = null
+
     var onPrompt: (suspend (String) -> Unit)? = null
 
     var sessionNameValue: String? = null
@@ -84,6 +86,7 @@ class FakeSessionHandle(
     override fun abort() = Unit
 
     override suspend fun close() {
+        closeGate?.await()
         closed += System.nanoTime()
     }
 

@@ -25,15 +25,17 @@ internal class RuntimePool(
     private val clearActiveRun: (String) -> Unit,
     private val emitListChanged: suspend () -> Unit,
     private val onSessionClosed: (String, SessionCloseReason) -> Unit,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val closingSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val closingFiles = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+    private val maintenanceSessions = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private var lastOpenedSessionId: String? = null
 
     suspend fun newSession(cwd: String): OpenedSession {
         val opened = mutex.withLock {
             val handle = attach(cwd, null)
-            handle.touch()
+            handle.touch(clock())
             lastOpenedSessionId = handle.session.sessionId
             emitListChanged()
             OpenedSession(handle.session.sessionId, handle.session.sessionFile, cwd)
@@ -46,12 +48,12 @@ internal class RuntimePool(
         val opened = mutex.withLock {
             closingFiles[filePath]?.await()
             handles.values.firstOrNull { it.session.sessionFile == filePath }?.let { existing ->
-                existing.touch()
+                existing.touch(clock())
                 lastOpenedSessionId = existing.session.sessionId
                 OpenedSession(existing.session.sessionId, filePath, existing.cwd)
             } ?: run {
                 val handle = attach(cwd, filePath)
-                handle.touch()
+                handle.touch(clock())
                 lastOpenedSessionId = handle.session.sessionId
                 OpenedSession(handle.session.sessionId, handle.session.sessionFile, cwd)
             }
@@ -69,63 +71,97 @@ internal class RuntimePool(
     }
 
     suspend fun reload(sessionId: String): String {
-        val reopenedId = mutex.withLock {
-            val handle = handles[sessionId] ?: error("Agent session is not ready")
-            check(!handle.state.busy) { "Agent session is busy" }
-            val file = handle.session.sessionFile ?: error("Agent session has no file")
-            val cwd = handle.cwd
-            val selected = lastOpenedSessionId == sessionId
-            val lastActiveAt = handle.lastActiveAt
-            detach(sessionId, reason = SessionCloseReason.Reload)
-            val reopened = attach(cwd, file)
-            reopened.lastActiveAt = lastActiveAt
-            if (selected) lastOpenedSessionId = reopened.session.sessionId
-            emitListChanged()
-            reopened.session.sessionId
+        while (true) {
+            awaitLifecycle(sessionId)
+            val gate = CompletableDeferred<Unit>()
+            if (maintenanceSessions.putIfAbsent(sessionId, gate) != null) continue
+            try {
+                val resident = mutex.withLock { handles[sessionId] }
+                if (resident == null) {
+                    val reconnected = reconnect(sessionId) ?: error("Agent session is not ready")
+                    return reconnected.session.sessionId
+                }
+                if (!isPersistedSession(resident)) return resident.session.sessionId
+                val token = commands.claimMaintenance(sessionId)
+                if (token == 0L) error("Agent session is busy")
+                try {
+                    val reopenedId = mutex.withLock {
+                        val handle = handles[sessionId] ?: error("Agent session is not ready")
+                        check(!handle.state.busy) { "Agent session is busy" }
+                        val file = handle.session.sessionFile ?: return handle.session.sessionId
+                        val cwd = handle.cwd
+                        val selected = lastOpenedSessionId == sessionId
+                        val lastActiveAt = handle.lastActiveAt
+                        detach(sessionId, reason = SessionCloseReason.Reload)
+                        val reopened = attach(cwd, file)
+                        reopened.lastActiveAt = lastActiveAt
+                        if (selected) lastOpenedSessionId = reopened.session.sessionId
+                        emitListChanged()
+                        reopened.session.sessionId
+                    }
+                    sweepIdleHandles()
+                    return reopenedId
+                } finally {
+                    commands.releaseMaintenance(sessionId, token)
+                }
+            } finally {
+                maintenanceSessions.remove(sessionId, gate)
+                gate.complete(Unit)
+            }
         }
-        sweepIdleHandles()
-        return reopenedId
     }
 
     suspend fun handleFor(sessionId: String): RuntimeHandle {
-        mutex.withLock { handles[sessionId] }?.let { handle ->
-            handle.touch()
-            return handle
+        while (true) {
+            awaitLifecycle(sessionId)
+            val handle = residentHandle(sessionId) ?: reconnect(sessionId)
+                ?: error("Agent session is not ready")
+            awaitLifecycle(sessionId)
+            if (isCurrentHandle(sessionId, handle)) {
+                handle.touch(clock())
+                return handle
+            }
         }
-        closingSessions[sessionId]?.await()
-        val summary = HandleBudget.reconnectTarget(catalog.listAll(visibleCwds()), sessionId)
-            ?: error("Agent session is not ready")
-        val handle = mutex.withLock {
-            closingSessions[sessionId]?.await()
-            handles[sessionId] ?: attach(summary.cwd, summary.filePath)
-        }
-        sweepIdleHandles()
-        return handle
     }
+
+    internal suspend fun awaitSessionReady(sessionId: String) {
+        awaitLifecycle(sessionId)
+    }
+
+    internal fun isCurrentHandle(sessionId: String, handle: RuntimeHandle): Boolean =
+        handles[sessionId] === handle
 
     suspend fun reconfigureSession(sessionId: String) {
         while (true) {
-            val token = commands.claimReconfigure(sessionId)
-            if (token == 0L) return
+            awaitLifecycle(sessionId)
+            val gate = CompletableDeferred<Unit>()
+            if (maintenanceSessions.putIfAbsent(sessionId, gate) != null) continue
             var again = false
             var reattached = false
             try {
-                mutex.withLock {
-                    if (!commands.ownsReconfigure(sessionId, token)) return@withLock
-                    val handle = handles[sessionId] ?: return@withLock
-                    if (!isPersistedSession(handle)) return@withLock
-                    val cwd = handle.cwd
-                    val file = handle.session.sessionFile
-                    val selected = lastOpenedSessionId == sessionId
-                    val lastActiveAt = handle.lastActiveAt
-                    detach(sessionId, keepReconfigure = true, reason = SessionCloseReason.Reconfigure)
-                    val reopened = attach(cwd, file)
-                    reopened.lastActiveAt = lastActiveAt
-                    if (selected) lastOpenedSessionId = reopened.session.sessionId
-                    reattached = true
+                val token = commands.claimReconfigure(sessionId)
+                if (token == 0L) return
+                try {
+                    mutex.withLock {
+                        if (!commands.ownsReconfigure(sessionId, token)) return@withLock
+                        val handle = handles[sessionId] ?: return@withLock
+                        if (!isPersistedSession(handle)) return@withLock
+                        val cwd = handle.cwd
+                        val file = handle.session.sessionFile
+                        val selected = lastOpenedSessionId == sessionId
+                        val lastActiveAt = handle.lastActiveAt
+                        detach(sessionId, keepReconfigure = true, reason = SessionCloseReason.Reconfigure)
+                        val reopened = attach(cwd, file)
+                        reopened.lastActiveAt = lastActiveAt
+                        if (selected) lastOpenedSessionId = reopened.session.sessionId
+                        reattached = true
+                    }
+                } finally {
+                    again = commands.releaseReconfigure(sessionId, token)
                 }
             } finally {
-                again = commands.releaseReconfigure(sessionId, token)
+                maintenanceSessions.remove(sessionId, gate)
+                gate.complete(Unit)
             }
             if (reattached) sweepIdleHandles()
             if (!again) return
@@ -146,6 +182,27 @@ internal class RuntimePool(
         val snapshot = mutex.withLock { handles.values.toList() }
         for (handle in snapshot) {
             for (provider in providers) handle.session.registerProvider(provider)
+        }
+    }
+
+    private suspend fun awaitLifecycle(sessionId: String) {
+        while (true) {
+            val closing = closingSessions[sessionId]
+            val maintaining = maintenanceSessions[sessionId]
+            if (closing == null && maintaining == null) return
+            closing?.await()
+            maintaining?.await()
+        }
+    }
+
+    private suspend fun residentHandle(sessionId: String): RuntimeHandle? =
+        mutex.withLock { handles[sessionId] }
+
+    private suspend fun reconnect(sessionId: String): RuntimeHandle? {
+        val summary = HandleBudget.reconnectTarget(catalog.listAll(visibleCwds()), sessionId)
+            ?: return null
+        return mutex.withLock {
+            handles[sessionId] ?: attach(summary.cwd, summary.filePath)
         }
     }
 
@@ -232,15 +289,16 @@ internal class RuntimePool(
     }
 
     private fun evictionVictimsLocked(): List<String> {
-        val now = System.currentTimeMillis()
+        val now = clock()
         val entries = handles.map { (sessionId, handle) -> budgetEntryLocked(sessionId, handle, now) }
         return HandleBudget.decideEvictions(entries, now)
     }
 
     private fun evictableLocked(sessionId: String, handle: RuntimeHandle): Boolean {
-        val entry = budgetEntryLocked(sessionId, handle, System.currentTimeMillis())
+        val now = clock()
+        val entry = budgetEntryLocked(sessionId, handle, now)
         if (entry.busy || entry.reconfiguring || entry.keepAlive || entry.selected) return false
-        return System.currentTimeMillis() - handle.lastActiveAt > HandleBudget.IDLE_TTL_MS
+        return now - handle.lastActiveAt > HandleBudget.IDLE_TTL_MS
     }
 
     private fun budgetEntryLocked(sessionId: String, handle: RuntimeHandle, now: Long): HandleBudget.Entry {
@@ -249,8 +307,8 @@ internal class RuntimePool(
             sessionId = sessionId,
             lastActiveAt = handle.lastActiveAt,
             busy = snapshot?.busy == true || snapshot?.runId != null,
-            reconfiguring = snapshot?.reconfiguring == true,
-            keepAlive = keepAliveSafely(sessionId),
+            reconfiguring = snapshot?.reconfiguring == true || maintenanceSessions.containsKey(sessionId),
+            keepAlive = !isPersistedSession(handle) || keepAliveSafely(sessionId),
             selected = sessionId == lastOpenedSessionId,
         )
     }

@@ -152,17 +152,36 @@ class SessionCommandPlane {
         }
     }
 
-    fun claimReconfigure(sessionId: String): Long {
+    fun claimReconfigure(sessionId: String, deferWhenBusy: Boolean = true): Long {
         val state = states[sessionId] ?: return 0
         synchronized(state.lock) {
             if (state.reconfigureOwner != 0L || state.busy) {
-                state.pendingReconfigure = true
+                if (deferWhenBusy) state.pendingReconfigure = true
                 return 0
             }
             val token = reconfigureTokens.incrementAndGet()
             state.reconfigureOwner = token
             state.pendingReconfigure = false
             return token
+        }
+    }
+
+    fun claimMaintenance(sessionId: String): Long {
+        val state = states[sessionId] ?: return 0
+        synchronized(state.lock) {
+            if (state.reconfigureOwner != 0L || state.busy) return 0
+            val token = reconfigureTokens.incrementAndGet()
+            state.reconfigureOwner = token
+            return token
+        }
+    }
+
+    fun releaseMaintenance(sessionId: String, token: Long): Boolean {
+        val state = states[sessionId] ?: return false
+        synchronized(state.lock) {
+            if (state.reconfigureOwner != token) return false
+            state.reconfigureOwner = 0
+            return true
         }
     }
 
