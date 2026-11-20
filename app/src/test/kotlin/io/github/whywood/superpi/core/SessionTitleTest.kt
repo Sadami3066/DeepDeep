@@ -3,6 +3,7 @@ package io.github.whywood.superpi.core
 import io.github.whywood.superpi.runtime.ModelOption
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SessionTitleTest {
@@ -51,8 +52,23 @@ class SessionTitleTest {
     @Test
     fun sanitizesModelTitle() {
         assertEquals("修复登录问题", sanitizeSessionTitle("标题：\"修复登录问题\"。"))
+        assertEquals("Fix login redirect", sanitizeSessionTitle("Title: \"Fix login redirect.\""))
         assertEquals("第一行标题", sanitizeSessionTitle("第一行标题\n第二行解释"))
-        assertEquals("一二三四五六七八九十一二三四五六七八九十", sanitizeSessionTitle("一二三四五六七八九十一二三四五六七八九十一二三"))
         assertNull(sanitizeSessionTitle("  \n "))
+    }
+
+    @Test
+    fun truncatesLongTitles() {
+        val long = "A very long session title that should be truncated at the limit"
+        assertEquals(48, sanitizeSessionTitle(long)?.length)
+        assertEquals("Fix login redirect issue", sanitizeSessionTitle("Fix login redirect issue"))
+    }
+
+    @Test
+    fun promptAsksForTheUsersLanguage() {
+        val prompt = sessionTitlePrompt("请帮我修一下登录跳转的问题")
+        assertTrue(prompt.startsWith("Write a short session title"))
+        assertTrue(prompt.contains("Use the language the user wrote in"))
+        assertTrue(prompt.endsWith("请帮我修一下登录跳转的问题"))
     }
 }

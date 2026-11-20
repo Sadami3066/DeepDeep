@@ -26,7 +26,7 @@ class SessionTitleService(
             android.util.Log.w("SessionTitle", "no title model mode=${values.metadataMode} configured=$configured")
             return null
         }
-        val prompt = prompt(firstUserText)
+        val prompt = sessionTitlePrompt(firstUserText)
         for (model in candidates) {
             val raw = runCatching { catalog.complete(model.providerId, model.id, prompt) }
                 .onFailure { android.util.Log.w("SessionTitle", "completion failed ${model.providerId}/${model.id}", it) }
@@ -42,27 +42,29 @@ class SessionTitleService(
         return catalog.models(providerId).firstOrNull { it.id == modelId }
     }
 
-    private fun prompt(userText: String): String = buildString {
-        append("为下面的用户消息生成一个简短的中文会话标题，最多 12 个字，")
-        append("不要引号、标点或解释，只输出标题。\n\n用户消息：\n")
-        append(userText.take(2000))
-    }
-
     private fun sanitize(raw: String): String? = sanitizeSessionTitle(raw)
 }
 
-internal fun sanitizeSessionTitle(raw: String): String? {
+internal fun sessionTitlePrompt(userText: String): String = buildString {
+    append("Write a short session title for the user message below, at most 6 words. ")
+    append("Use the language the user wrote in and keep names and terms as the user wrote them. ")
+    append("Output only the title: no quotes, punctuation or explanation.\n\nUser message:\n")
+    append(userText.take(2000))
+}
 
-        val line = raw.lineSequence().map { it.trim() }.firstOrNull { it.isNotBlank() } ?: return null
-        val stripped = line
-            .removePrefix("标题：")
-            .removePrefix("标题:")
-            .trim()
-            .trim('"', '\'', '“', '”', '「', '」', '《', '》', '*', '#', '-', ' ')
-            .trimEnd('。', '，', ',', '！', '!', '？', '?', '；', ';', ':')
-            .trim('"', '\'', '“', '”', '「', '」', '《', '》', '*', '#', '-', ' ')
-            .trimEnd('。', '，', ',', '！', '!', '？', '?', '；', ';', ':')
-            .replace(Regex("\\s+"), " ")
-        if (stripped.isBlank()) return null
-        return if (stripped.length <= 20) stripped else stripped.take(20)
-    }
+internal fun sanitizeSessionTitle(raw: String): String? {
+    val line = raw.lineSequence().map { it.trim() }.firstOrNull { it.isNotBlank() } ?: return null
+    val stripped = line
+        .removePrefix("Title:")
+        .removePrefix("Title：")
+        .removePrefix("标题：")
+        .removePrefix("标题:")
+        .trim()
+        .trim('"', '\'', '“', '”', '「', '」', '《', '》', '*', '#', '-', ' ')
+        .trimEnd('.', '。', '，', ',', '！', '!', '？', '?', '；', ';', ':')
+        .trim('"', '\'', '“', '”', '「', '」', '《', '》', '*', '#', '-', ' ')
+        .trimEnd('.', '。', '，', ',', '！', '!', '？', '?', '；', ';', ':')
+        .replace(Regex("\\s+"), " ")
+    if (stripped.isBlank()) return null
+    return if (stripped.length <= 48) stripped else stripped.take(48).trimEnd()
+}
