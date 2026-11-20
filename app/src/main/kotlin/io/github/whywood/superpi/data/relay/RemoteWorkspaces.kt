@@ -38,6 +38,8 @@ object RemoteWorkspaces {
 
     fun remoteRoot(filesDir: File): File = File(filesDir, "remote")
 
-    private fun safeSegment(value: String): String =
-        value.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
+    private fun safeSegment(value: String): String {
+        val cleaned = value.replace(Regex("[^A-Za-z0-9._-]"), "_").replace("..", "__").trim('.')
+        return cleaned.ifEmpty { "x" }.take(64)
+    }
 }
