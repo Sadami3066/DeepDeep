@@ -30,9 +30,9 @@ class MemoryStoreTest {
     fun ensureCreatesZoneFilesWithFixedHeadings() = runTest {
         store.ensure()
 
-        assertEquals("# 用户与我", File(directory, "profile.md").readText().trim())
-        assertEquals("# 当下与将来", File(directory, "context.md").readText().trim())
-        assertEquals("# 经验与教训", File(directory, "cookbook.md").readText().trim())
+        assertEquals("# You & I", File(directory, "profile.md").readText().trim())
+        assertEquals("# Now & Ahead", File(directory, "context.md").readText().trim())
+        assertEquals("# Lessons & Methods", File(directory, "cookbook.md").readText().trim())
     }
 
     @Test
@@ -40,7 +40,7 @@ class MemoryStoreTest {
         store.ensure()
 
         val message = store.write("today", "- 喝了一杯水", MemoryWriteMode.APPEND, null, "s1", null)
-        assertTrue(message.contains("日记"))
+        assertTrue(message.contains("Appended to diary"))
 
         val text = store.read("today", null, null)
         assertTrue(text.contains("喝了一杯水"))
@@ -58,7 +58,7 @@ class MemoryStoreTest {
         store.write("profile", "## 偏好\n- 先给最小方案", MemoryWriteMode.APPEND, null, null, null)
 
         val profile = File(directory, "profile.md").readText()
-        assertTrue(profile.startsWith("# 用户与我"))
+        assertTrue(profile.startsWith("# You & I"))
         assertTrue(profile.contains("## 身份"))
         assertTrue(profile.contains("## 偏好"))
     }
@@ -90,7 +90,7 @@ class MemoryStoreTest {
         store.write("context", "- 在做一个项目", MemoryWriteMode.OVERWRITE, null, null, null)
 
         val context = File(directory, "context.md").readText()
-        assertTrue(context.startsWith("# 当下与将来"))
+        assertTrue(context.startsWith("# Now & Ahead"))
         assertTrue(context.contains("- 在做一个项目"))
     }
 
@@ -145,13 +145,14 @@ class MemoryStoreTest {
     @Test
     fun pendingRecapRoundTrip() = runTest {
         store.ensure()
-        store.savePendingRecap("sess-1", null, "User: 你好", "e-1", "自动沉淀")
+        store.savePendingRecap("sess-1", null, "User: 你好", "e-1", "auto")
 
         val pending = store.pendingRecaps()
         assertEquals(1, pending.size)
         assertEquals("sess-1", pending.first().sessionId)
         assertEquals("User: 你好", pending.first().transcript)
         assertEquals("e-1", pending.first().lastEntryId)
+        assertEquals("auto", pending.first().reason)
 
         store.deletePendingRecap("sess-1")
         assertTrue(store.pendingRecaps().isEmpty())
@@ -197,13 +198,13 @@ class MemoryStoreTest {
         val section = store.section()
 
         assertTrue(section != null)
-        assertTrue(section!!.contains("# 用户与我"))
-        assertTrue(section.contains("# 经验与教训"))
-        assertTrue(section.contains("# 日记"))
-        assertTrue(section.contains("## 今天（"))
+        assertTrue(section!!.contains("# You & I"))
+        assertTrue(section.contains("# Lessons & Methods"))
+        assertTrue(section.contains("# Diary"))
+        assertTrue(section.contains("## Today ("))
         assertFalse(section.contains("Your Memory"))
         assertFalse(section.contains("playbook"))
-        assertFalse(section.contains("## 昨天"))
+        assertFalse(section.contains("## Yesterday"))
     }
 
     @Test
@@ -211,7 +212,7 @@ class MemoryStoreTest {
         store.ensure()
 
         assertNull(store.readDay("2026-01-01"))
-        assertTrue(store.read("today", null, "2026-01-01").contains("还没有记录"))
+        assertTrue(store.read("today", null, "2026-01-01").contains("No diary entries"))
     }
 
     @Test

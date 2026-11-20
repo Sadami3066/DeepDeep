@@ -141,15 +141,15 @@ class MemoryStore(private val rootDir: File) {
         date: String?,
     ): String = withContext(Dispatchers.IO) {
         val body = MemoryText.normalize(content)
-        if (body.isBlank()) return@withContext "内容为空，未写入。"
+        if (body.isBlank()) return@withContext "Nothing written: content is empty."
         mutex.withLock {
             when (target.trim().lowercase()) {
                 "today", "daily", "diary" -> {
-                    if (mode != MemoryWriteMode.APPEND) return@withLock "日记只支持 append 模式。"
+                    if (mode != MemoryWriteMode.APPEND) return@withLock "Diary only supports append mode."
                     val day = normalizedDay(date)
                     appendDayLocked(day, MemoryText.marker(sessionId) + "\n" + body)
                     invalidateLocked()
-                    "已追加到日记 $day：\n\n" + MemoryText.preview(body)
+                    "Appended to diary $day:\n\n" + MemoryText.preview(body)
                 }
 
                 "profile", "context", "cookbook" -> {
@@ -160,7 +160,7 @@ class MemoryStore(private val rootDir: File) {
                         MemoryWriteMode.APPEND -> appendZone(current, title, body, section)
                         MemoryWriteMode.REPLACE_SECTION -> {
                             val heading = section?.takeIf { it.isNotBlank() }
-                                ?: return@withLock "replace_section 需要提供 section（要改的那段标题）。"
+                                ?: return@withLock "replace_section requires a section (the heading of the part to replace)."
                             if (current.isBlank()) {
                                 "# $title\n\n## ${heading.trimStart('#', ' ')}\n\n$body\n"
                             } else {
@@ -174,11 +174,11 @@ class MemoryStore(private val rootDir: File) {
                     dirty = true
                     invalidateLocked()
                     val action = when (mode) {
-                        MemoryWriteMode.APPEND -> if (section.isNullOrBlank()) "append" else "append 到「$section」"
-                        MemoryWriteMode.REPLACE_SECTION -> "replace_section「$section」"
+                        MemoryWriteMode.APPEND -> if (section.isNullOrBlank()) "append" else "append to \"$section\""
+                        MemoryWriteMode.REPLACE_SECTION -> "replace_section \"$section\""
                         MemoryWriteMode.OVERWRITE -> "overwrite"
                     }
-                    "已写入 ${file.name}（$action）：\n\n" + MemoryText.preview(body)
+                    "Wrote ${file.name} ($action):\n\n" + MemoryText.preview(body)
                 }
 
                 else -> unknownTarget(target)
@@ -191,26 +191,26 @@ class MemoryStore(private val rootDir: File) {
             when (target.trim().lowercase()) {
                 "today", "daily", "diary" -> {
                     val day = normalizedDay(date)
-                    readDayLocked(day).trim().ifEmpty { "日记 $day 还没有记录。" }
+                    readDayLocked(day).trim().ifEmpty { "No diary entries for $day." }
                 }
 
                 "month" -> {
                     val month = normalizedMonth(date)
-                    readMonthLocked(month).trim().ifEmpty { "本月（$month）还没有汇总。" }
+                    readMonthLocked(month).trim().ifEmpty { "No summary for $month yet." }
                 }
 
                 "year" -> {
                     val year = normalizedYear(date)
-                    readYearLocked(year).trim().ifEmpty { "本年（$year）还没有汇总。" }
+                    readYearLocked(year).trim().ifEmpty { "No summary for $year yet." }
                 }
 
                 "profile", "context", "cookbook" -> {
                     val file = zoneFile(target) ?: return@withLock unknownTarget(target)
                     val whole = file.readTextOrEmpty().trim()
-                    if (whole.isEmpty()) return@withLock "${file.name} 目前为空。"
+                    if (whole.isEmpty()) return@withLock "${file.name} is empty."
                     if (section.isNullOrBlank()) return@withLock whole
                     MemorySections.body(whole, section)?.takeIf { it.isNotBlank() }
-                        ?: "${file.name} 里找不到 section「$section」。"
+                        ?: "No section \"$section\" in ${file.name}."
                 }
 
                 else -> unknownTarget(target)
@@ -582,7 +582,7 @@ class MemoryStore(private val rootDir: File) {
             sessionFile = decode(header[0]).takeIf { it.isNotBlank() },
             transcript = parts[1],
             lastEntryId = decode(header[1]).takeIf { it.isNotBlank() },
-            reason = decode(header[2]).ifBlank { "自动沉淀" },
+            reason = decode(header[2]).ifBlank { "auto" },
         )
     }.getOrNull()
 
@@ -613,4 +613,4 @@ class MemoryStore(private val rootDir: File) {
 }
 
 private fun unknownTarget(target: String): String =
-    "未知 target：$target（写：profile / context / cookbook / today；读：再加 month / year）"
+    "Unknown target: $target (write: profile / context / cookbook / today; read: also month / year)."

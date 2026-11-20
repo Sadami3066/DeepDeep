@@ -41,7 +41,9 @@ private val writeParameters: JsonObject = buildJsonObject {
             writeTargets,
         ))
         put("content", stringProperty(
-            "Markdown to save. Keep entries short. Understanding you infer must cite its evidence and any expiry condition.",
+            "Markdown to save. Keep entries short. Write in the user's language and keep their own spellings of names, projects and terms; " +
+                "do not translate the memory into English just because these instructions are in English. " +
+                "Understanding you infer must cite its evidence and any expiry condition.",
         ))
         put("mode", stringProperty(
             "How to write. append (default) adds new content. replace_section replaces one section body and requires section. " +
@@ -72,7 +74,7 @@ private val readParameters: JsonObject = buildJsonObject {
 private val searchParameters: JsonObject = buildJsonObject {
     put("type", "object")
     put("properties", buildJsonObject {
-        put("query", stringProperty("Keywords to search for. Chinese and English both work; short distinctive words are best."))
+        put("query", stringProperty("Keywords to search for; short distinctive words work best."))
         put("limit", integerProperty("Maximum number of results to return."))
     })
     put("required", buildJsonArray { add(JsonPrimitive("query")) })
@@ -94,6 +96,7 @@ fun memoryTools(store: MemoryStore, sessionId: () -> String?): List<CodingTool> 
         promptGuidelines = listOf(
             "Use memory_write for durable understanding: preferences, current threads and commitments, and reusable lessons. " +
                 "Keep the raw log of events in today.",
+            "Write memory in the user's language, keeping the user's own spellings of names, projects and technical terms.",
             "Inferred understanding must cite its evidence and any expiry condition in the entry itself.",
             "Before replace_section or overwrite, call memory_read first and keep unrelated content.",
             "When the user says to remember something, write it immediately.",

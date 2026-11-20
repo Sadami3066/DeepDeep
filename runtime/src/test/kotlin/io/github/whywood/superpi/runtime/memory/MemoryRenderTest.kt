@@ -27,18 +27,26 @@ class MemoryRenderTest {
 
     @Test
     fun zoneHeadingIsNotDuplicated() {
+        val text = render(profile = "# You & I\n\n喜欢简洁")
+        assertEquals(1, Regex("(?m)^# You & I$").findAll(text).count())
+        assertTrue(text.contains("喜欢简洁"))
+    }
+
+    @Test
+    fun oldLevelOneHeadingIsDroppedAndReplacedWithZoneTitle() {
         val text = render(profile = "# 用户与我\n\n喜欢简洁")
-        assertEquals(1, Regex("(?m)^# 用户与我$").findAll(text).count())
+        assertTrue(text.contains("# You & I"))
+        assertFalse(text.contains("用户与我"))
         assertTrue(text.contains("喜欢简洁"))
     }
 
     @Test
     fun diaryHeadingsAreNestedBelowDiarySection() {
         val text = render(
-            todayText = "# 2026-11-08\n\n<!-- 2026-11-08 09:00:00 [abc] -->\n\n## 会话纪要（自动沉淀）\n\n内容",
+            todayText = "# 2026-11-08\n\n<!-- 2026-11-08 09:00:00 [abc] -->\n\n## Session recap (auto)\n\n内容",
         )
-        assertTrue(text.contains("## 今天（2026-11-08）"))
-        assertTrue(text.contains("### 会话纪要（自动沉淀）"))
+        assertTrue(text.contains("## Today (2026-11-08)"))
+        assertTrue(text.contains("### Session recap (auto)"))
         assertFalse(text.contains("\n# 2026-11-08"))
         assertFalse(text.contains("<!--"))
         assertFalse(text.contains("&lt;!--"))
@@ -51,9 +59,9 @@ class MemoryRenderTest {
             monthText = "# 2026-11\n\n## 2026-11-05\n\n内容甲",
             yearText = "# 2026\n\n## 2026-10\n\n内容乙",
         )
-        assertTrue(text.contains("## 本月（2026-11）"))
+        assertTrue(text.contains("## This month (2026-11)"))
         assertTrue(text.contains("### 2026-11-05"))
-        assertTrue(text.contains("## 本年（2026）"))
+        assertTrue(text.contains("## This year (2026)"))
         assertTrue(text.contains("### 2026-10"))
     }
 
@@ -62,5 +70,12 @@ class MemoryRenderTest {
         val text = render(todayText = "# 2026-11-08\n\n```\n## 不是标题\n```")
         assertTrue(text.contains("## 不是标题"))
         assertFalse(text.contains("### 不是标题"))
+    }
+
+    @Test
+    fun truncatedZoneUsesEnglishMarker() {
+        val text = render(profile = "# You & I\n\n" + "字".repeat(3_000))
+        assertTrue(text.contains("...(truncated)"))
+        assertFalse(text.contains("已截断"))
     }
 }

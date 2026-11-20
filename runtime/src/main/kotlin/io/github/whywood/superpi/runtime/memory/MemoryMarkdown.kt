@@ -15,10 +15,10 @@ private const val TODAY_BUDGET = 2_500
 private const val MONTH_BUDGET = 1_200
 private const val YEAR_BUDGET = 800
 
-internal const val ZONE_PROFILE = "用户与我"
-internal const val ZONE_CONTEXT = "当下与将来"
-internal const val ZONE_COOKBOOK = "经验与教训"
-internal const val ZONE_DIARY = "日记"
+internal const val ZONE_PROFILE = "You & I"
+internal const val ZONE_CONTEXT = "Now & Ahead"
+internal const val ZONE_COOKBOOK = "Lessons & Methods"
+internal const val ZONE_DIARY = "Diary"
 
 internal fun zoneTitle(target: String): String? = when (target.trim().lowercase()) {
     "profile" -> ZONE_PROFILE
@@ -73,7 +73,7 @@ internal object MemoryText {
     fun truncate(content: String, maxChars: Int, mode: MemoryTruncation): String {
         val text = normalize(content)
         if (text.length <= maxChars) return text
-        val marker = "…（已截断）"
+        val marker = "...(truncated)"
         return when (mode) {
             MemoryTruncation.START -> text.take(maxChars).trimEnd() + "\n\n" + marker
             MemoryTruncation.END -> marker + "\n\n" + text.takeLast(maxChars).trimStart()
@@ -174,17 +174,12 @@ internal object MemorySections {
         return merged.trimEnd() + "\n"
     }
 
-    fun dropLeadingHeading(content: String, title: String? = null): String {
+    fun dropLeadingHeading(content: String): String {
         val lines = content.replace("\r\n", "\n").split('\n').toMutableList()
         while (lines.isNotEmpty() && lines.first().isBlank()) lines.removeAt(0)
         if (lines.isEmpty()) return ""
         val match = headingLine.matchEntire(lines.first().trim()) ?: return lines.joinToString("\n")
-        if (title == null) {
-            if (match.groupValues[1].length != 1) return lines.joinToString("\n")
-        } else {
-            val text = normalizeTitle(match.groupValues[2]) ?: return lines.joinToString("\n")
-            if (!text.equals(title, ignoreCase = true)) return lines.joinToString("\n")
-        }
+        if (match.groupValues[1].length != 1) return lines.joinToString("\n")
         lines.removeAt(0)
         while (lines.isNotEmpty() && lines.first().isBlank()) lines.removeAt(0)
         return lines.joinToString("\n")
@@ -228,7 +223,7 @@ internal fun renderMemorySection(
     val blocks = ArrayList<String>()
 
     fun addZone(title: String, body: String, budget: Int) {
-        val text = MemorySections.dropLeadingHeading(MemoryText.visibleText(body), title)
+        val text = MemorySections.dropLeadingHeading(MemoryText.visibleText(body))
         if (text.isBlank()) return
         blocks += "# $title\n\n" + MemoryText.truncate(text, budget, MemoryTruncation.START)
     }
@@ -246,9 +241,9 @@ internal fun renderMemorySection(
         if (text.isBlank()) return
         diary += "## $heading\n\n" + MemoryText.truncate(text, budget, MemoryTruncation.END)
     }
-    addDiaryPart("今天（$todayLabel）", todayText, TODAY_BUDGET)
-    addDiaryPart("本月（$monthLabel）", monthText, MONTH_BUDGET)
-    addDiaryPart("本年（$yearLabel）", yearText, YEAR_BUDGET)
+    addDiaryPart("Today ($todayLabel)", todayText, TODAY_BUDGET)
+    addDiaryPart("This month ($monthLabel)", monthText, MONTH_BUDGET)
+    addDiaryPart("This year ($yearLabel)", yearText, YEAR_BUDGET)
     if (diary.isNotEmpty()) {
         blocks += "# $ZONE_DIARY\n\n" + diary.joinToString("\n\n")
     }

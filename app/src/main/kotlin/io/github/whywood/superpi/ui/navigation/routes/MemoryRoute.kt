@@ -32,7 +32,6 @@ internal fun MemoryRoute(
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
     var preview by remember { mutableStateOf<MemoryPreview?>(null) }
-    val manualReason = stringResource(R.string.memory_reason_manual)
 
     suspend fun load() {
         val result = withContext(Dispatchers.IO) {
@@ -73,7 +72,7 @@ internal fun MemoryRoute(
         notice = resources.getString(R.string.memory_summarizing)
         scope.launch {
             try {
-                dependencies.memoryRecap.summarizeMessages(sessionId, messages, manualReason)
+                dependencies.memoryRecap.summarizeMessages(sessionId, messages, "manual")
                 notice = resources.getString(R.string.memory_summarized)
             } catch (error: Exception) {
                 notice = error.message

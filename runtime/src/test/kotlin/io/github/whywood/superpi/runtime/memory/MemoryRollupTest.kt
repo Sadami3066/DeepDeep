@@ -103,4 +103,19 @@ class MemoryRollupTest {
 
         assertTrue(store.monthHasDay("2026-11-05"))
     }
+
+    @Test
+    fun promptsAskForTheRecordsLanguageAndKeepSkipRule() = runTest {
+        store.ensure()
+        store.appendDayBlock("2026-10-31", "- 事件 A")
+        val prompts = mutableListOf<String>()
+        val rollup = MemoryRollup(store, this, { prompts += it; "- 摘要" }, today = { "2026-12-01" })
+
+        rollup.runIfDue()
+
+        assertEquals(2, prompts.size)
+        assertTrue(prompts.all { it.contains("language used by the records") })
+        assertTrue(prompts.all { it.contains("do not translate") })
+        assertTrue(prompts.all { it.contains("SKIP") })
+    }
 }

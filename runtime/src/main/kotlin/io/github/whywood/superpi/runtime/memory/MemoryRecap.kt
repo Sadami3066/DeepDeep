@@ -28,11 +28,12 @@ private const val TAG = "MemoryRecap"
 internal const val RECAP_MIN_MESSAGES = 4
 internal const val RECAP_MIN_INCREMENTAL_MESSAGES = 2
 internal const val RECAP_MAX_TRANSCRIPT_CHARS = 80_000
-internal const val RECAP_REASON_AUTO = "自动沉淀"
+internal const val RECAP_REASON_AUTO = "auto"
 
 private val SKIP_PATTERN = Regex("^skip[\\s.!。]*$", RegexOption.IGNORE_CASE)
 private val EMPTY_MARKERS = setOf(
-    "无", "无。", "（无）", "(无)", "None", "None.", "- 无", "- None.", "无内容", "没有",
+    "none", "nothing", "n/a", "no content", "nothing to record",
+    "(none)", "(nothing)", "(n/a)", "(no content)",
 )
 
 internal enum class RecapOutcome {
@@ -159,7 +160,7 @@ class MemoryRecap(
             is ParsedRecap.Content -> {
                 val block = buildString {
                     appendLine(MemoryText.marker(sessionId))
-                    appendLine("## 会话纪要（$reason）")
+                    appendLine("## Session recap ($reason)")
                     appendLine()
                     append(parsed.text)
                 }
@@ -171,14 +172,15 @@ class MemoryRecap(
     }
 
     private fun buildPrompt(transcript: String): String = buildString {
-        appendLine("你负责把 agent 的一段会话整理成长期记忆日志。下面给出会话记录，可能只是整段对话的最新部分。")
+        appendLine("You turn one stretch of an agent conversation into a long-term memory log. The conversation below may be only the latest part of a longer session.")
         appendLine()
-        appendLine("只输出值得跨会话记住的内容，用 markdown 无序列表，最多 6 条，每条一句话。")
-        appendLine("- 值得记：用户的目标、偏好、约束、决定与理由；事情或生活安排的进展、阻碍、下一步；答应过的事；可复用的经验教训；用户状态的重要变化（情绪、生活、环境）。")
-        appendLine("- 不要记：寒暄与确认、过程性叙述、工具调用细节、一次性信息、密钥或验证码等敏感内容。")
+        appendLine("Write only what is worth remembering across sessions, as a markdown unordered list with at most 6 items, one sentence each.")
+        appendLine("- Keep: the user's goals, preferences, constraints, decisions and the reasons behind them; progress, blockers and next steps in plans and life arrangements; promises made; reusable lessons; important changes in the user's state (mood, life, environment).")
+        appendLine("- Leave out: greetings and acknowledgements, narrating the process, tool-call details, one-off information, secrets such as keys or verification codes.")
         appendLine()
-        appendLine("不要标题，不要开场白。只写对话里明确出现或可直接推断的内容，推断出的条目标注「（推断）」。")
-        appendLine("如果这段对话没有值得长期保留的内容，只输出 SKIP。")
+        appendLine("No heading, no preamble. Write only what appears explicitly in the conversation or follows directly from it; mark inferred items, for example with (inferred) or the equivalent in the user's language.")
+        appendLine("Write the memory in the language the user used in the conversation. Keep proper nouns such as names, project names, product names and technical terms exactly as the user wrote them; do not translate the memory into English just because these instructions are in English.")
+        appendLine("If this conversation has nothing worth keeping long term, output only SKIP.")
         appendLine()
         appendLine("<conversation>")
         append(transcript)
@@ -202,9 +204,12 @@ class MemoryRecap(
             .map { it.trim() }
             .filter { it.isNotEmpty() && it != "---" && !it.startsWith("#") }
         if (contentLines.isEmpty()) return null
-        if (contentLines.all { it.trimStart('-', '*', ' ').trim() in EMPTY_MARKERS }) return null
+        if (contentLines.all { isEmptyMarker(it) }) return null
         return ParsedRecap.Content(unfenced)
     }
+
+    private fun isEmptyMarker(line: String): Boolean =
+        line.trimStart('-', '*', ' ').trim().trimEnd('.', '!', '。').lowercase() in EMPTY_MARKERS
 
     private fun deltaEntries(entries: List<SessionEntry>, afterEntryId: String?): List<SessionEntry> {
         if (afterEntryId == null) return entries

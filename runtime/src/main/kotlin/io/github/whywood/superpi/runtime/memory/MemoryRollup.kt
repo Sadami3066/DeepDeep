@@ -91,11 +91,12 @@ class MemoryRollup(
     }
 
     private fun dayPrompt(day: String, raw: String): String = buildString {
-        appendLine("下面是一天的原始记忆记录（当天对话留下的纪要、临时记录等）。")
-        appendLine("把它压缩成当天的长期回顾：用 markdown 无序列表，最多 6 条，每条一句话。")
-        appendLine("- 保留：发生的事、决定与理由、承诺和待办、值得复用的教训、状态变化。")
-        appendLine("- 丢弃：寒暄、重复、工具调用细节、一次性信息。")
-        appendLine("不要标题，不要开场白；没有值得保留的内容只输出 SKIP。")
+        appendLine("Below are the raw memory records of one day (recaps and scratch notes left by that day's conversations).")
+        appendLine("Compress them into a day-level long-term review: a markdown unordered list with at most 6 items, one sentence each.")
+        appendLine("- Keep: what happened, decisions and the reasons behind them, promises and to-dos, lessons worth reusing, changes in state.")
+        appendLine("- Drop: greetings, repetition, tool-call details, one-off information.")
+        appendLine("No heading, no preamble. Write in the language used by the records below; keep proper nouns such as names, project names and technical terms exactly as they were written there; do not translate into English just because these instructions are in English.")
+        appendLine("If nothing is worth keeping, output only SKIP.")
         appendLine()
         appendLine("<day date=\"$day\">")
         append(raw)
@@ -104,9 +105,10 @@ class MemoryRollup(
     }
 
     private fun monthPrompt(month: String, raw: String): String = buildString {
-        appendLine("下面是 $month 这一月每天的记忆回顾。")
-        appendLine("把它压缩成一段不超过 300 字的本月回顾，只保留主线：目标进展、重要事件、决定、遗留问题。")
-        appendLine("不要标题，不要开场白；没有值得保留的内容只输出 SKIP。")
+        appendLine("Below are the daily reviews for the month $month.")
+        appendLine("Compress them into one review of this month, under 300 words. Keep only the main threads: goal progress, important events, decisions, open issues.")
+        appendLine("No heading, no preamble. Write in the language used by the records below; keep proper nouns such as names, project names and technical terms exactly as they were written there; do not translate into English just because these instructions are in English.")
+        appendLine("If nothing is worth keeping, output only SKIP.")
         appendLine()
         appendLine("<month value=\"$month\">")
         append(raw)
