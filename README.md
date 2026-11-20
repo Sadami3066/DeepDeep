@@ -4,137 +4,137 @@
 
 # Super PI Agent
 
-**运行在 Android 上的个人智能体**
+**A personal agent for Android**
 
-<sub>长按电源，一句话开始工作。</sub>
+<sub>Press and hold the power button, say what you need, and it gets to work.</sub>
 
-[简体中文](README.md) · [English](README.en.md)
+[简体中文](README.cn.md) · English
 
-<a href="https://github.com/Sadami3066/SuperPI-App/releases"><img src="https://img.shields.io/badge/下载-最新版本-111111?style=for-the-badge&logo=github&logoColor=white" alt="下载最新版本" /></a>
+<a href="https://github.com/Sadami3066/SuperPI-App/releases"><img src="https://img.shields.io/badge/Download-Latest-111111?style=for-the-badge&logo=github&logoColor=white" alt="Download latest release" /></a>
 
 <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 10+" />
 <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
 <img src="https://img.shields.io/badge/Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
-<img src="https://img.shields.io/github/v/release/Sadami3066/SuperPI-App?style=flat-square&color=111111" alt="最新版本" />
+<img src="https://img.shields.io/github/v/release/Sadami3066/SuperPI-App?style=flat-square&color=111111" alt="Latest release" />
 <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="Apache-2.0" />
 
 </div>
 
-[概览](#概览) · [能力](#能力) · [快速开始](#快速开始) · [安装与配置](#安装与配置) · [边界](#边界) · [开发](#开发与构建) · [文档](#文档与反馈) · [贡献](#贡献) · [License](#license)
+[Overview](#overview) · [Capabilities](#capabilities) · [Quick Start](#quick-start) · [Installation & Configuration](#installation--configuration) · [Boundaries](#boundaries) · [Development](#development) · [Docs](#docs--feedback) · [Contributing](#contributing) · [License](#license)
 
-## 概览
+## Overview
 
-Super PI Agent 是跑在 Android 手机上的个人智能体。长按电源键唤醒，用语音或文字说出需求，它会在本机把事情做完：读写文件、操作其他应用、运行 Linux 命令、连接外部服务。
+Super PI Agent is a personal agent that runs on an Android phone. Hold the power button, ask in voice or text, and it does the work on the device: managing files, controlling other apps, running Linux commands, and connecting to external services.
 
-它不依赖服务器，也不需要电脑常开。模型请求只发给你配置的服务商；对话、文件、凭据与插件数据都保存在本机。
+It needs no server and no always-on computer. Model requests go only to the provider you configure; conversations, files, credentials, and plugin data stay on the phone.
 
-Super PI Agent 包含一套完整的 Agent Harness：工具、技能、长期记忆、MCP 连接器与插件系统；内置轻量 Linux 环境，覆盖大部分桌面办公与代码任务；通过插件可以接入飞书、企业微信、中山大学校园服务、邮箱、地图、打车、酒店、火车票等外部能力。
+Super PI Agent ships a complete agent harness: tools, skills, long-term memory, MCP connectors, and a plugin system. A lightweight Linux environment covers most desktop office and coding tasks. Plugins connect external services such as Feishu, WeCom, campus systems, email, maps, ride hailing, hotels, and rail.
 
-项目开源，代码可审计；除模型服务商与用户配置的 MCP/插件外，没有数据上传。
+The project is open source and auditable. Apart from the model provider and the MCP servers or plugins you configure, it does not upload data.
 
-安装包从 [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases) 获取。
+Installers are available from [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases).
 
-## 能力
+## Capabilities
 
-- **多形态交互**：长按电源唤醒，悬浮层语音输入与朗读；对话、附件、图片与文件进入同一条线程。
-- **手机操作**：通过屏幕工具读取界面、点击、输入与滚动；虚拟屏幕让 Agent 在后台操作其他 App。
-- **本机执行**：内置 Alpine/proot 用户空间，可运行 shell、Node、Python 与常用编译工具链；Root 档使用原生 root 环境。
-- **帮我盯**：定时与后台任务持续检查状态，满足条件时执行下一步。
-- **小程序**：用 HTML/CSS/JS 生成轻量小应用，可从桌面快捷方式直接打开。
-- **插件生态**：安装签名 `.ddp` 插件，扩展工具、技能、页面与主题；市场提供插件、技能与远程 MCP。
-- **模型自由**：支持多家模型服务商，API Key 或 OAuth 登录；模型与思考档按会话选择。
-- **本地优先**：没有账号系统与自建后端，数据默认不离开设备。
+- **Natural interaction**: wake by holding the power button; voice input and text-to-speech in the overlay. Messages, attachments, images, and files share one thread.
+- **Phone control**: screen tools read the UI, tap, type, and scroll. A virtual display lets the agent operate other apps in the background.
+- **On-device execution**: a bundled Alpine/proot user space runs shell, Node, Python, and common toolchains. Root access runs in a native root environment.
+- **Watch for me**: scheduled and background jobs keep checking a condition and act when it matches.
+- **Miniapps**: build small HTML/CSS/JS apps and open them from a home-screen shortcut.
+- **Plugin ecosystem**: install signed `.ddp` plugins to add tools, skills, pages, and themes. The market offers plugins, skills, and remote MCP servers.
+- **Bring your own model**: multiple providers with API-key or OAuth sign-in; model and thinking level are chosen per session.
+- **Local first**: no account system and no backend of our own; data stays on the device by default.
 
-## 快速开始
+## Quick Start
 
-1. **下载安装包。** 从 [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases) 下载最新版本。
-2. **安装并打开。** 系统要求 Android 10 及以上。首次启动会进入引导；建议跟着流程走，也可以跳过，之后在设置中逐项完成。
-3. **连接模型。** 进入「设置 → 服务商」，选择服务商并填写 API Key，或使用 OAuth 登录。
-4. **初始化 Linux。** 进入「设置 → 系统访问」的「Linux 环境」区完成 Alpine 初始化。
-5. **选择系统访问。** 默认使用普通档。需要操作其他应用时，在「设置 → 系统访问」中开启无线调试或 Root；开启无线调试后，可以通过系统通知输入配对码。
+1. **Download the installer.** Get the latest build from [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases).
+2. **Install and open.** Android 10 or newer is required. The first launch walks through setup; you can follow it or skip and finish later in Settings.
+3. **Connect a model.** Open Settings → Providers, choose a provider, and enter an API key or sign in with OAuth.
+4. **Initialize Linux.** In Settings → System access → Linux environment, finish the Alpine setup.
+5. **Choose system access.** Normal access is the default. To control other apps, enable wireless debugging or root in Settings → System access; with wireless debugging, enter the pairing code from the system notification.
 
-## 安装与配置
+## Installation & Configuration
 
-### 安装
+### Installation
 
-| 项目 | 说明 |
+| Item | Details |
 |---|---|
-| 系统 | Android 10 及以上 |
-| 安装包 | 从 [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases) 下载 APK |
-| 账号 | 没有账号系统；模型 Key 仅保存在本机 |
-| 升级 | 使用同一签名覆盖安装；更换签名需要先卸载，卸载会删除本机会话与凭据 |
-| 网络 | 对话内容只发送给已配置的模型厂商；市场与更新检查访问 GitHub，部分网络环境需要代理 |
+| System | Android 10 or newer |
+| Installer | APK from [GitHub Releases](https://github.com/Sadami3066/SuperPI-App/releases) |
+| Account | No account system; model keys stay on the device |
+| Updates | Install over the same signature. Changing signatures requires uninstalling, which deletes local sessions and credentials |
+| Network | Conversations go only to the configured model provider; the market and update checks use GitHub and may need a proxy on some networks |
 
-### 配置
+### Configuration
 
-| 配置项 | 位置 | 说明 |
+| Item | Where | Notes |
 |---|---|---|
-| 模型服务商 | 设置 → 服务商 | 多家 Provider；API Key 或浏览器 OAuth |
-| 系统访问 | 设置 → 系统访问 | 普通 / 无线调试 ADB / Root 三档 |
-| Linux | 设置 → 系统访问 → Linux 环境 | 初始化 Alpine；安装命令、Node、Python 与编译工具链 |
-| Android 集成 | 设置 → 安卓配置 | 悬浮窗、系统助手、通知与分享接收 |
-| 远程连接 | 抽屉 → 远程连接 | 通过 [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) 配对电脑 |
-| 插件 | 抽屉 → 插件 | 导入签名 `.ddp`；查看能力清单与运行状态 |
-| 记忆 | 自动 | 会话结束时沉淀；可搜索，也可注入当前会话 |
+| Model providers | Settings → Providers | Multiple providers; API key or browser OAuth |
+| System access | Settings → System access | Normal, wireless ADB, or root |
+| Linux | Settings → System access → Linux environment | Initialize Alpine; install shell, Node, Python, and toolchains |
+| Android integration | Settings → Android setup | Overlay, system assistant, notifications, and share targets |
+| Remote connection | Drawer → Remote | Pair a computer through [`dsh-mobile`](https://github.com/saya-ch/dsh-mobile) |
+| Plugins | Drawer → Plugins | Import signed `.ddp` files; inspect capabilities and runtime state |
+| Memory | Automatic | Distilled when a session ends; searchable and injectable into the current session |
 
-## 边界
+## Boundaries
 
-| 项目 | 说明 |
+| Item | Details |
 |---|---|
-| **Linux 隔离** | 普通、无线调试档的 Alpine 运行在 proot 用户空间，不是安全沙箱；Root 档直接使用系统 root 环境 |
-| **插件权限** | 插件与 App 同进程、同 UID，没有沙箱 |
-| **审批** | 只分系统访问三档：普通、无线调试、Root，不逐条确认命令 |
-| **运行位置** | 任务在本机执行；关闭 App 后停止，目标续跑只在进程内有效 |
-| **受保护页面** | 支付、密码等页面禁止截图，Agent 会把控制权交还给你 |
-| **分发** | 通过 GitHub Releases 分发，未上架应用商店；源码已公开 |
+| **Linux isolation** | On normal and wireless-debugging levels, Alpine runs in a proot user space and is not a security sandbox. Root level uses the system root environment directly |
+| **Plugin permissions** | Plugins run in the app process with the same UID; there is no sandbox |
+| **Approval** | Only the three system-access levels are chosen; commands are not confirmed one by one |
+| **Where it runs** | Tasks run on the device and stop when the app stops. Goal continuation lives only in process memory |
+| **Protected screens** | Payment and password screens cannot be captured; the agent hands control back to you |
+| **Distribution** | Distributed through GitHub Releases, not an app store. The source is public |
 
-## 开发与构建
+## Development
 
 <details>
-<summary><b>模块、构建与验证</b></summary>
+<summary><b>Modules, build, and verification</b></summary>
 
-模块与依赖方向见 [架构说明](docs/ARCHITECTURE.md)。
+See [Architecture](docs/ARCHITECTURE.md) for modules and dependency direction.
 
-开发环境：
+Requirements:
 
-- JDK 17；构建固定使用 Java 17（`jvmToolchain` 17）。
-- Android SDK Platform 36、build-tools 36.0.0（约 5.6 GB）。
-- 内存 ≥ 8 GB、空闲磁盘 ≥ 10 GB；冷缓存首次构建约 15–30 分钟。
-- Android SDK 默认位置：macOS `~/Library/Android/sdk`，Linux 常见 `~/Android/Sdk`；可用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 指定。
-- Windows 不原生支持：脚本依赖 bash 与 flock，请使用 WSL2、Linux 或 macOS。
+- JDK 17. The build targets Java 17 (`jvmToolchain` 17).
+- Android SDK Platform 36 and build-tools 36.0.0 (about 5.6 GB).
+- At least 8 GB RAM and 10 GB free disk; a cold first build takes roughly 15–30 minutes.
+- Android SDK locations: macOS `~/Library/Android/sdk`, commonly `~/Android/Sdk` on Linux. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` if needed.
+- Windows is not supported natively: the scripts need bash and flock. Use WSL2, Linux, or macOS.
 
 ```bash
-./scripts/dev-setup.sh            # 首次：检查 JDK 与 Android SDK、按需安装 Platform 36/build-tools、构建 debug APK
-./scripts/build.sh quick          # 日常编译
-./scripts/build.sh test           # 定向单测
-./scripts/build.sh check          # 完整验证（等价 check.sh --full）
-./scripts/build.sh release        # 完整验证后构建 release APK
-./scripts/check.sh                # 编译 + 单测 + lint + 模块边界 + APK
-./scripts/check.sh --full         # 交付前：再加插件 SDK ABI 基线
-./scripts/api-compat.sh           # 校验插件 SDK 的公开 ABI（--update 重建基线）
+./scripts/dev-setup.sh            # first run: check JDK and Android SDK, install Platform 36/build-tools if needed, build debug APK
+./scripts/build.sh quick          # day-to-day compile
+./scripts/build.sh test           # targeted unit tests
+./scripts/build.sh check          # full verification (same as check.sh --full)
+./scripts/build.sh release        # full verification, then release APK
+./scripts/check.sh                # compile + unit tests + lint + module boundaries + APK
+./scripts/check.sh --full         # before delivery: also plugin SDK ABI baseline
+./scripts/api-compat.sh           # verify plugin SDK public ABI (--update rewrites the baseline)
 ```
 
-更完整的开发说明见 [开发指南](docs/DEVELOPER_GUIDE.md)。
+See the [Developer Guide](docs/DEVELOPER_GUIDE.md) for the complete workflow.
 
 </details>
 
-## 文档与反馈
+## Docs & Feedback
 
-- [用户指南](docs/USER_GUIDE.md)：安装、系统访问、Linux、插件、小程序、远程连接与常见问题。
-- [开发指南](docs/DEVELOPER_GUIDE.md)：环境、模块、构建、测试与代码约定。
-- [插件开发](docs/PLUGIN_DEV.md)：插件契约、清单、签名、生命周期与 UI 扩展。
-- [架构说明](docs/ARCHITECTURE.md)：模块、运行时、插件与更新模型。
-- [产品原则](docs/PRODUCT.md)：产品与设计约束。
-- [发布说明](docs/RELEASE.md)：签名、打包与分发流程。
-- [变更记录](CHANGELOG.md)：按版本记录功能与修复。
+- [User Guide](docs/USER_GUIDE.md): installation, system access, Linux, plugins, miniapps, remote connections, and troubleshooting.
+- [Developer Guide](docs/DEVELOPER_GUIDE.md): environment, modules, build, tests, and conventions.
+- [Plugin Development](docs/PLUGIN_DEV.md): plugin contracts, manifest, signing, lifecycle, and UI extensions.
+- [Architecture](docs/ARCHITECTURE.md): modules, runtime, plugins, and update model.
+- [Product Principles](docs/PRODUCT.md): product and design constraints.
+- [Release](docs/RELEASE.md): signing, packaging, and distribution.
+- [Changelog](CHANGELOG.md): changes by version.
 
-## 贡献
+## Contributing
 
-欢迎提交 Issue 与 PR。提交前请阅读[贡献指南](CONTRIBUTING.md)。插件作者可以从[插件开发](docs/PLUGIN_DEV.md)与 [Super PI Agent 官方插件](https://github.com/Sadami3066/SuperPI-Official-Plugins) 开始。安全相关问题请不要公开提交，直接联系作者。
+Issues and pull requests are welcome. Read the [Contributing Guide](CONTRIBUTING.md) first. Plugin authors can start with [Plugin Development](docs/PLUGIN_DEV.md) and [Super PI Agent official plugins](https://github.com/Sadami3066/SuperPI-Official-Plugins). Do not report security issues in public; contact the maintainer directly.
 
 ## License
 
-自有代码使用 [Apache-2.0](LICENSE)。第三方组件、字体与图标的许可信息见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+Our own code is licensed under [Apache-2.0](LICENSE). Third-party components, fonts, and icons are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ---
 
