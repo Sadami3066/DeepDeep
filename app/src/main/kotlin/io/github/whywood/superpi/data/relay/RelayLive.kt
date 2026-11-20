@@ -145,7 +145,9 @@ class RelayLive(
     }
 
     private suspend fun bots(): List<RelayBot> = runCatching {
-        host.workspaces().map { workspace -> RelayBot(workspace.id, workspace.name) }
+        host.workspaces()
+            .filter { workspace -> workspace.remote == null }
+            .map { workspace -> RelayBot(workspace.id, workspace.name) }
     }.getOrDefault(emptyList())
 
     private fun send(frame: JsonObject): Boolean = socket.send(frame.toString())

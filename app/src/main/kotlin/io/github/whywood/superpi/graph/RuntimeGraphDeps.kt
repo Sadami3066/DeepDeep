@@ -19,6 +19,8 @@ import io.github.whywood.superpi.runtime.McpConfigStore
 import io.github.whywood.superpi.runtime.ModelConfigStore
 import io.github.whywood.superpi.runtime.ProviderCatalog
 import io.github.whywood.superpi.runtime.QuestionCenter
+import io.github.whywood.superpi.remote.RemoteAgentTransport
+import io.github.whywood.superpi.remote.RemoteSessionTarget
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.runtime.SdkCredentialStore
 import io.github.whywood.superpi.runtime.SessionCatalog
@@ -61,6 +63,8 @@ internal class RuntimeGraphDeps(
     val appPreferences: AppPreferences,
     val memoryBackend: MemoryBackend,
     val remoteWorkspaces: suspend () -> List<RuntimeWorkspace>,
+    val remoteTarget: (String) -> RemoteSessionTarget?,
+    val remoteTransport: RemoteAgentTransport,
     val apiKeyProvider: suspend () -> String?,
     val webSearchKeyProvider: suspend (String) -> String?,
     val postCustomMessage: suspend (String, String, String, String) -> Boolean,

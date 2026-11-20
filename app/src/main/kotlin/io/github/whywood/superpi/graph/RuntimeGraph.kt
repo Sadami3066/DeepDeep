@@ -15,7 +15,9 @@ import io.github.whywood.superpi.runtime.AppToolContext
 import io.github.whywood.superpi.runtime.GoalPhase
 import io.github.whywood.superpi.runtime.JobStatus
 import io.github.whywood.superpi.runtime.MiniappAgentService
+import io.github.whywood.superpi.remote.RemoteSessionEngine
 import io.github.whywood.superpi.runtime.PiSessionEngine
+import io.github.whywood.superpi.runtime.SessionEngine
 import io.github.whywood.superpi.runtime.SessionCloseReason
 import io.github.whywood.superpi.runtime.RunLedger
 import io.github.whywood.superpi.runtime.memory.MemoryRecap
@@ -211,9 +213,24 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
         val mcpServers: Set<String>,
     )
 
-    private val engineFactory: suspend (File) -> PiSessionEngine = { cwd ->
+    private val engineFactory: suspend (File) -> SessionEngine = { cwd ->
+        val remote = deps.remoteTarget(cwd.absolutePath)
+        if (remote != null) {
+            RemoteSessionEngine(
+                workspace = cwd,
+                agentDir = deps.agentDir,
+                target = remote,
+                transport = deps.remoteTransport,
+                scope = deps.scope,
+            )
+        } else {
+            localEngine(cwd)
+        }
+    }
+
+    private suspend fun localEngine(cwd: File): PiSessionEngine {
         val exclusions = exclusionsFor(cwd.absolutePath)
-        PiSessionEngine(
+        return PiSessionEngine(
             workspace = cwd,
             agentDir = deps.agentDir,
             credentials = deps.credentials,

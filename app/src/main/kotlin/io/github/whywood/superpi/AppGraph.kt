@@ -181,6 +181,48 @@ class AppGraph(context: Context) : AppDependencies {
         }
     }
 
+    private val remoteWorkspaceRoot: File
+        get() = io.github.whywood.superpi.data.relay.RemoteWorkspaces.remoteRoot(appContext.filesDir)
+
+    private fun remoteTargetFor(cwd: String): io.github.whywood.superpi.remote.RemoteSessionTarget? {
+        val bot = remoteBots.value.firstOrNull { candidate ->
+            io.github.whywood.superpi.data.relay.RemoteWorkspaces.directory(remoteWorkspaceRoot, candidate).absolutePath == cwd
+        } ?: return null
+        return io.github.whywood.superpi.remote.RemoteSessionTarget(
+            deviceId = bot.deviceId,
+            deviceName = bot.deviceName,
+            botId = bot.botId,
+            botName = bot.botName,
+            isOnline = {
+                remoteBots.value.any { current ->
+                    current.deviceId == bot.deviceId && current.botId == bot.botId && current.online
+                }
+            },
+        )
+    }
+
+    private val relayTransport: io.github.whywood.superpi.remote.RemoteAgentTransport by lazy {
+        io.github.whywood.superpi.data.relay.RelayAgentTransport(relayLive, scope)
+    }
+
+    private val remoteTransport: io.github.whywood.superpi.remote.RemoteAgentTransport =
+        object : io.github.whywood.superpi.remote.RemoteAgentTransport {
+            override val remoteEvents
+                get() = relayTransport.remoteEvents
+
+            override val onlineDevices
+                get() = relayTransport.onlineDevices
+
+            override suspend fun call(
+                to: String,
+                method: String,
+                params: kotlinx.serialization.json.JsonObject,
+                timeoutMillis: Long,
+                onRouteId: (String) -> Unit,
+            ): kotlinx.serialization.json.JsonObject? =
+                relayTransport.call(to, method, params, timeoutMillis, onRouteId)
+        }
+
     private val updateInstaller: AndroidUpdateInstaller by lazy { AndroidUpdateInstaller(appContext) }
 
     override val updateManager: UpdateManager by lazy {
@@ -358,10 +400,12 @@ class AppGraph(context: Context) : AppDependencies {
         memoryBackend = dataGraph.relayMemorySync,
         remoteWorkspaces = {
             io.github.whywood.superpi.data.relay.RemoteWorkspaces.workspaces(
-                root = io.github.whywood.superpi.data.relay.RemoteWorkspaces.remoteRoot(appContext.filesDir),
+                root = remoteWorkspaceRoot,
                 bots = remoteBots.value,
             )
         },
+        remoteTarget = ::remoteTargetFor,
+        remoteTransport = remoteTransport,
         apiKeyProvider = {
             dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
                 dataGraph.credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)
