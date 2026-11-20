@@ -12,9 +12,9 @@ public object Cards {
     public const val GUIDANCE_KEY: String = "superpi.guidance"
     public const val DISPLAY_KEY: String = "superpi.display"
 
-    private const val RAW_HEADING = "完整返回（上游原样）："
-    private const val GUIDANCE_HEADING = "使用说明："
-    private const val INSTRUCTION_PREFIX = "展示这张卡片："
+    private const val RAW_HEADING = "Full return (upstream, verbatim):"
+    private const val GUIDANCE_HEADING = "Usage:"
+    private const val PRESENT_MARKER = "present({\"items\":[{\"type\":\"card\""
 
     public fun descriptor(customType: String?, title: String?, payload: JsonObject?): JsonObject =
         buildJsonObject {
@@ -24,8 +24,8 @@ public object Cards {
         }
 
     public fun instruction(callId: String, title: String?): String {
-        val label = title?.trim()?.takeIf { it.isNotEmpty() }?.let { "（$it）" }.orEmpty()
-        return "展示这张卡片：present({\"items\":[{\"type\":\"card\",\"id\":\"$callId\"}]})$label"
+        val label = title?.trim()?.takeIf { it.isNotEmpty() }?.let { " ($it)" }.orEmpty()
+        return "Show this card: present({\"items\":[{\"type\":\"card\",\"id\":\"$callId\"}]})$label"
     }
 
     public fun deliver(callId: String, result: PluginToolResult): PluginToolResult {
@@ -40,7 +40,7 @@ public object Cards {
             existing.trim().takeIf { it.isNotEmpty() }?.let(::add)
             raw?.let { add("$RAW_HEADING\n$it") }
             guidance?.let { add("$GUIDANCE_HEADING\n$it") }
-            if (card != null && !result.isError && !existing.contains(INSTRUCTION_PREFIX)) {
+            if (card != null && !result.isError && !existing.contains(PRESENT_MARKER)) {
                 add(instruction(callId, title))
             }
         }.joinToString("\n\n")

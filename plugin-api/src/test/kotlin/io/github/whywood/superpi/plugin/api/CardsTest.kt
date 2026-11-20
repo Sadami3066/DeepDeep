@@ -28,10 +28,10 @@ class CardsTest {
 
         val text = delivered.text.orEmpty()
         assertTrue(text.startsWith("原始正文"))
-        assertTrue(text.contains("完整返回（上游原样）："))
-        assertTrue(text.contains("使用说明：\n下一步：去取件"))
+        assertTrue(text.contains("Full return (upstream, verbatim):"))
+        assertTrue(text.contains("Usage:\n下一步：去取件"))
         assertEquals(
-            "展示这张卡片：present({\"items\":[{\"type\":\"card\",\"id\":\"call-1\"}]})（取件提醒）",
+            "Show this card: present({\"items\":[{\"type\":\"card\",\"id\":\"call-1\"}]}) (取件提醒)",
             text.lines().last(),
         )
         val details = delivered.details ?: JsonObject(emptyMap())
@@ -56,7 +56,7 @@ class CardsTest {
         val delivered = Cards.deliver("call-2", result)
 
         val text = delivered.text.orEmpty()
-        assertTrue(text.contains("使用说明：\n稍后重试"))
+        assertTrue(text.contains("Usage:\n稍后重试"))
         assertFalse(text.contains("present("))
         assertNull((delivered.details ?: JsonObject(emptyMap()))[Cards.KEY])
     }
@@ -119,6 +119,21 @@ class CardsTest {
     }
 
     @Test
+    fun deliverDoesNotAppendASecondInstructionWhenThePluginAlreadyDelivered() {
+        val card = Cards.descriptor(null, "标题", null)
+        val result = textResult(
+            "正文\n\n展示这张卡片：present({\"items\":[{\"type\":\"card\",\"id\":\"call-1\"}]})",
+            buildJsonObject { put(Cards.KEY, card) },
+        )
+
+        val delivered = Cards.deliver("call-1", result)
+
+        val text = delivered.text.orEmpty()
+        assertEquals(1, Regex("present\\(").findAll(text).count())
+        assertFalse(text.contains("Show this card:"))
+    }
+
+    @Test
     fun displayFallsBackToGuidanceWithoutCard() {
         val result = textResult(
             "",
@@ -128,6 +143,6 @@ class CardsTest {
         val delivered = Cards.deliver("call-5", result)
 
         assertEquals("先登录", (delivered.details?.get(Cards.DISPLAY_KEY) as JsonPrimitive).content)
-        assertTrue(delivered.text.orEmpty().contains("使用说明：\n先登录"))
+        assertTrue(delivered.text.orEmpty().contains("Usage:\n先登录"))
     }
 }
