@@ -783,7 +783,7 @@ fun ChatScreen(
                         ready = state.ready && state.historyLoaded && !state.switchingConversation,
                         sending = state.sending,
                         configured = configured || remoteBot != null,
-                        modelLabel = if (modelControlsVisible && configured) state.modelLabel else "",
+                        modelLabel = if (configured) state.modelLabel else "",
                         modelId = state.modelId,
                         models = state.models,
                         providerId = state.providerId,

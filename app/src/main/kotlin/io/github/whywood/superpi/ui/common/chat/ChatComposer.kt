@@ -667,8 +667,8 @@ private fun ChatComposerExpandedContent(
                 tint = colors.inkTertiary,
             )
         }
-        when {
-            state.modelControlsVisible -> ComposerChip(
+        if (state.modelControlsVisible) {
+            ComposerChip(
                 text = label,
                 onClick = {
                     if (state.configured || state.providers.isNotEmpty()) {
@@ -680,11 +680,6 @@ private fun ChatComposerExpandedContent(
                 contentDescription = stringResource(R.string.assistant_model_chip, label),
                 testTag = "assistant_model",
                 maxWidth = 150.dp,
-            )
-
-            label.isNotBlank() -> ComposerModelBadge(
-                text = label,
-                testTag = "assistant_model_readonly",
             )
         }
         Spacer(Modifier.weight(1f))
@@ -861,26 +856,6 @@ internal fun QueuedInputBuffer(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ComposerModelBadge(text: String, testTag: String) {
-    val colors = superPiColors()
-    Box(
-        Modifier
-            .height(32.dp)
-            .testTag(testTag)
-            .padding(horizontal = DdSpacing.Sm),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = DdType.chip,
-            color = colors.inkTertiary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
