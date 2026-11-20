@@ -40,6 +40,16 @@ class SessionSearchTest {
         assertTrue(filterSessionSearch(hits, "旅行").isEmpty())
     }
 
+    @Test
+    fun remoteHitSubtitleIncludesSourceDevice() {
+        val local = hit("Weekly plan", "默认", updatedAt = 1L)
+        val remote = hit("Trip notes", "PI", updatedAt = 2L).copy(workspaceDevice = "Mac")
+
+        assertEquals("默认 · 2m", sessionSearchSubtitle(local, "2m"))
+        assertEquals("Mac · PI · 2m", sessionSearchSubtitle(remote, "2m"))
+        assertEquals("Mac · PI", sessionSearchSubtitle(remote, ""))
+    }
+
     private fun hit(title: String, workspace: String, updatedAt: Long = 0L): SessionSearchHit =
         SessionSearchHit(
             conversation = ConversationSummary(

@@ -50,12 +50,14 @@ internal class SessionListController(
 
     suspend fun search(): List<SessionSearchHit> = withContext(ioDispatcher) {
         val workspaces = state().workspaces.ifEmpty { runtime.workspaces() }
-        val namesByCwd = workspaces.associate { it.cwd to it.name }
+        val workspacesByCwd = workspaces.associateBy { it.cwd }
         runtime.allSessions()
             .map { summary ->
+                val workspace = workspacesByCwd[summary.cwd]
                 SessionSearchHit(
                     conversation = summary.copy(title = localizedTitle(summary.title)),
-                    workspaceName = namesByCwd[summary.cwd] ?: "Home",
+                    workspaceName = workspace?.name ?: "Home",
+                    workspaceDevice = workspace?.remote?.deviceName,
                 )
             }
             .sortedByDescending { it.conversation.updatedAt }

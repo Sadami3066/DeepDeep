@@ -206,6 +206,10 @@ fun SessionSearchScreen(
     }
 }
 
+internal fun sessionSearchSubtitle(hit: SessionSearchHit, relativeTime: String): String =
+    listOfNotNull(hit.workspaceDevice, hit.workspaceName.takeIf { it.isNotBlank() }, relativeTime.takeIf { it.isNotBlank() })
+        .joinToString(" · ")
+
 @Composable
 private fun SearchSessionRow(
     hit: SessionSearchHit,
@@ -220,11 +224,7 @@ private fun SearchSessionRow(
         label = "search-row-wash",
     )
     val relativeTime = rememberRelativeTime(hit.conversation.updatedAt)
-    val subtitle = when {
-        hit.workspaceName.isBlank() -> relativeTime
-        relativeTime.isBlank() -> hit.workspaceName
-        else -> "${hit.workspaceName} · $relativeTime"
-    }
+    val subtitle = sessionSearchSubtitle(hit, relativeTime)
     Column(
         modifier = Modifier
             .fillMaxWidth()
