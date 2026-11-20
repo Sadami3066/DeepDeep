@@ -178,7 +178,6 @@ class MemoryStore(private val rootDir: File) {
         val file = zoneFile(target) ?: return null
         val title = zoneTitle(target) ?: return null
         val heading = section?.takeIf { it.isNotBlank() }?.trimStart('#', ' ')
-        val current = file.readTextOrEmpty()
         val message = when (mode) {
             MemoryWriteMode.APPEND -> submit(
                 append(file.name, heading, body),

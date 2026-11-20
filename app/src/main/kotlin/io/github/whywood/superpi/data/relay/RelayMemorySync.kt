@@ -67,6 +67,9 @@ class RelayMemorySync(
     @Volatile
     private var lastAttemptAt = 0L
 
+    @Volatile
+    private var lastFailureAt = 0L
+
     private var versions: Map<String, Long> = emptyMap()
     private var syncedAt = 0L
 
@@ -120,8 +123,10 @@ class RelayMemorySync(
         val current = account ?: return false
         val reconciled = reconciledAccount == current.accountId
         val now = clock()
+        if (now - lastFailureAt < FAILURE_BACKOFF_MILLIS) return false
         if (!reconciled && now - lastAttemptAt < RECONCILE_RETRY_MILLIS) return false
-        if (reconciled && now - syncedAt < maxAgeMillis) return false
+        val pending = mutex.withLock { queue.isNotEmpty() }
+        if (reconciled && pending.not() && now - syncedAt < maxAgeMillis) return false
         lastAttemptAt = now
         return runCatching { refreshNow(current) }
             .onFailure(::recordError)
@@ -336,6 +341,7 @@ class RelayMemorySync(
         "${current.deviceId}:${UUID.randomUUID()}"
 
     private fun recordError(error: Throwable) {
+        lastFailureAt = clock()
         val message = when (error) {
             is RelayMemoryException -> error.detail ?: error.failure.name
             else -> error.message ?: "memory sync failed"
@@ -506,6 +512,7 @@ class RelayMemorySync(
         private const val OUTBOX = "relay-memory-outbox.json"
         private const val SUMMARY_LOG = "summaries.log"
         private const val RECONCILE_RETRY_MILLIS = 60_000L
+        private const val FAILURE_BACKOFF_MILLIS = 30_000L
         private const val CONFLICT_MESSAGE =
             "Memory changed on another device. Read it again, then retry the write."
         private const val SIGNED_OUT_MESSAGE =
