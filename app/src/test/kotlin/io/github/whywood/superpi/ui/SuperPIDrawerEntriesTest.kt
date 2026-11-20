@@ -1,5 +1,7 @@
 package io.github.whywood.superpi.ui
 
+import io.github.whywood.superpi.data.relay.RelayBot
+import io.github.whywood.superpi.data.relay.RelayDevice
 import io.github.whywood.superpi.runtime.ConversationSummary
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import org.junit.Assert.assertEquals
@@ -88,6 +90,68 @@ class SuperPIDrawerEntriesTest {
         assertTrue(result.filterIsInstance<DrawerEntry.Session>().isEmpty())
         assertTrue(result.filterIsInstance<DrawerEntry.SessionMore>().isEmpty())
         assertTrue(result.any { it.key == "workspace_${workspace.id}" })
+    }
+
+    @Test
+    fun appendsRemoteDeviceGroupsWithTheirBots() {
+        val devices = listOf(
+            RelayDevice(
+                deviceId = "desktop-1",
+                name = "Mac",
+                platform = "desktop",
+                online = true,
+                lastSeen = 0L,
+                bots = listOf(RelayBot(id = "pi", name = "PI"), RelayBot(id = "work", name = "Work")),
+            ),
+            RelayDevice(
+                deviceId = "tablet-1",
+                name = "Tablet",
+                platform = "android",
+                online = false,
+                lastSeen = 0L,
+                bots = listOf(RelayBot(id = "home", name = "Home")),
+            ),
+            RelayDevice(
+                deviceId = "empty-1",
+                name = "Empty",
+                platform = "desktop",
+                online = true,
+                lastSeen = 0L,
+                bots = emptyList(),
+            ),
+        )
+
+        val result = buildDrawerEntries(
+            workspaces = listOf(workspace),
+            sessionsByCwd = emptyMap(),
+            expandedWorkspaceIds = emptySet(),
+            expandedSessionWorkspaceIds = emptySet(),
+            relayDevices = devices,
+        )
+
+        val remoteEntries = result.filter {
+            it is DrawerEntry.RemoteDeviceEntry || it is DrawerEntry.RemoteBotEntry
+        }
+        assertEquals(
+            listOf(
+                "remote_device_desktop-1",
+                "remote_bot_desktop-1_pi",
+                "remote_bot_desktop-1_work",
+                "remote_device_tablet-1",
+                "remote_bot_tablet-1_home",
+            ),
+            remoteEntries.map { it.key },
+        )
+        assertEquals(
+            result.size,
+            result.map { it.key }.toSet().size,
+        )
+    }
+
+    @Test
+    fun noRemoteEntriesWithoutRemoteDevices() {
+        val result = entries(emptyList())
+        assertTrue(result.none { it is DrawerEntry.RemoteDeviceEntry || it is DrawerEntry.RemoteBotEntry })
     }
 
     @Test

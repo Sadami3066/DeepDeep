@@ -19,6 +19,7 @@ import io.github.whywood.superpi.ui.navigation.routes.PluginsRoute
 import io.github.whywood.superpi.ui.navigation.routes.CustomProviderEditorRoute
 import io.github.whywood.superpi.ui.navigation.routes.ProviderDetailRoute
 import io.github.whywood.superpi.ui.navigation.routes.ProvidersRoute
+import io.github.whywood.superpi.ui.navigation.routes.RemoteChatRoute
 import io.github.whywood.superpi.ui.navigation.routes.RemoteConnectRoute
 import io.github.whywood.superpi.ui.navigation.routes.RelayRoute
 import io.github.whywood.superpi.ui.navigation.routes.RemoteRoute
@@ -211,6 +212,15 @@ internal fun AppRouteContent(destination: AppDestination, host: AppRouteHost) {
 
         AppDestination.Relay -> RelayRoute(
             dependencies = dependencies,
+            onBack = onBack,
+        )
+
+        is AppDestination.RemoteChat -> RemoteChatRoute(
+            deviceId = destination.deviceId,
+            botId = destination.botId,
+            dependencies = dependencies,
+            navigator = host.navigator,
+            scope = host.scope,
             onBack = onBack,
         )
 
