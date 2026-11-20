@@ -60,8 +60,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.whywood.superpi.R
-import io.github.whywood.superpi.data.relay.RelayBot
-import io.github.whywood.superpi.data.relay.RelayDevice
 import io.github.whywood.superpi.design.DdAlpha
 import io.github.whywood.superpi.design.DdHairline
 import io.github.whywood.superpi.design.DdIcon
@@ -113,14 +111,6 @@ internal sealed interface DrawerEntry {
     data class SessionLess(val workspaceId: String) : DrawerEntry {
         override val key: String = "session_less_$workspaceId"
     }
-
-    data class RemoteDeviceEntry(val device: RelayDevice) : DrawerEntry {
-        override val key: String = "remote_device_${device.deviceId}"
-    }
-
-    data class RemoteBotEntry(val device: RelayDevice, val bot: RelayBot) : DrawerEntry {
-        override val key: String = "remote_bot_${device.deviceId}_${bot.id}"
-    }
 }
 
 internal fun buildDrawerEntries(
@@ -129,7 +119,6 @@ internal fun buildDrawerEntries(
     expandedWorkspaceIds: Set<String>,
     expandedSessionWorkspaceIds: Set<String>,
     collapsedCount: Int = 5,
-    relayDevices: List<RelayDevice> = emptyList(),
 ): List<DrawerEntry> = buildList {
     add(DrawerEntry.WorkspacesHeader)
     workspaces.forEachIndexed { index, workspace ->
@@ -157,11 +146,25 @@ internal fun buildDrawerEntries(
             add(DrawerEntry.SessionMore(workspace.id, workspaceSessions.size - collapsedCount))
         }
     }
-    relayDevices.forEach { device ->
-        if (device.bots.isEmpty()) return@forEach
-        add(DrawerEntry.RemoteDeviceEntry(device))
-        device.bots.forEach { bot -> add(DrawerEntry.RemoteBotEntry(device, bot)) }
+}
+
+internal data class DrawerWorkspaceMeta(
+    val enabled: Boolean,
+    val manageable: Boolean,
+    val sourceDevice: String?,
+)
+
+internal fun drawerWorkspaceMeta(workspace: RuntimeWorkspace): DrawerWorkspaceMeta = DrawerWorkspaceMeta(
+    enabled = workspace.remote?.online != false,
+    manageable = workspace.remote == null,
+    sourceDevice = workspace.remote?.deviceName,
+)
+
+internal fun drawerNewChatWorkspaceId(workspaces: List<RuntimeWorkspace>, activeWorkspaceId: String): String? {
+    val active = workspaces.firstOrNull { workspace ->
+        workspace.id == activeWorkspaceId && drawerWorkspaceMeta(workspace).enabled
     }
+    return (active ?: workspaces.firstOrNull { workspace -> drawerWorkspaceMeta(workspace).enabled })?.id
 }
 
 @Composable
@@ -175,7 +178,6 @@ fun SuperPIDrawer(
     busySessionIds: Set<String>,
     timerSessionIds: Set<String>,
     jobSessionIds: Set<String>,
-    relayDevices: List<RelayDevice>,
     userName: String,
     avatar: ImageBitmap?,
     onOpenSearch: () -> Unit,
@@ -187,7 +189,6 @@ fun SuperPIDrawer(
     onOpenMemory: () -> Unit,
     onOpenRemote: () -> Unit,
     onOpenRelay: () -> Unit,
-    onOpenRemoteBot: (deviceId: String, botId: String) -> Unit,
     onCreateWorkspace: () -> Unit,
     onToggleWorkspaceExpanded: (String) -> Unit,
     onToggleWorkspacePinned: (String) -> Unit,
@@ -229,14 +230,12 @@ fun SuperPIDrawer(
         orderedWorkspaces,
         sessionsByCwd,
         expandedWorkspaceIds to expandedSessionWorkspaceIds,
-        relayDevices,
     ) {
         buildDrawerEntries(
             workspaces = orderedWorkspaces,
             sessionsByCwd = sessionsByCwd,
             expandedWorkspaceIds = expandedWorkspaceIds,
             expandedSessionWorkspaceIds = expandedSessionWorkspaceIds,
-            relayDevices = relayDevices,
         )
     }
     Column(
@@ -297,8 +296,7 @@ fun SuperPIDrawer(
             )
         }
         Spacer(Modifier.height(26.dp))
-        val newChatWorkspaceId = workspaces.firstOrNull { it.id == activeWorkspaceId }?.id
-            ?: workspaces.firstOrNull()?.id
+        val newChatWorkspaceId = drawerNewChatWorkspaceId(workspaces, activeWorkspaceId)
         DrawerNewChatButton(
             onClick = { newChatWorkspaceId?.let(onNewSessionInWorkspace) },
         )
@@ -382,6 +380,7 @@ fun SuperPIDrawer(
 
                     is DrawerEntry.WorkspaceEntry -> DrawerWorkspaceRow(
                         workspace = entry.workspace,
+                        meta = drawerWorkspaceMeta(entry.workspace),
                         first = entry.first,
                         pinned = entry.workspace.id in pinnedWorkspaceIds,
                         expanded = entry.workspace.id in expandedWorkspaceIds,
@@ -423,18 +422,6 @@ fun SuperPIDrawer(
                             expandedSessionWorkspaceIds = expandedSessionWorkspaceIds - entry.workspaceId
                         },
                         modifier = Modifier.animateItem(),
-                    )
-
-                    is DrawerEntry.RemoteDeviceEntry -> DrawerRemoteDeviceHeader(
-                        device = entry.device,
-                        modifier = Modifier.animateItem(),
-                    )
-
-                    is DrawerEntry.RemoteBotEntry -> DrawerRemoteBotRow(
-                        device = entry.device,
-                        bot = entry.bot,
-                        modifier = Modifier.animateItem(),
-                        onClick = { onOpenRemoteBot(entry.device.deviceId, entry.bot.id) },
                     )
 
                     is DrawerEntry.Session -> DrawerSessionRow(
@@ -561,6 +548,7 @@ private fun DrawerNewChatButton(onClick: () -> Unit) {
 @Composable
 private fun DrawerWorkspaceRow(
     workspace: RuntimeWorkspace,
+    meta: DrawerWorkspaceMeta,
     first: Boolean,
     pinned: Boolean,
     expanded: Boolean,
@@ -588,20 +576,27 @@ private fun DrawerWorkspaceRow(
                 .heightIn(min = 48.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.ink.copy(alpha = wash))
-                .pointerInput(workspace.id) {
-                    detectTapGestures(
-                        onPress = { offset ->
-                            val press = PressInteraction.Press(offset)
-                            interaction.emit(press)
-                            if (tryAwaitRelease()) {
-                                interaction.emit(PressInteraction.Release(press))
-                            } else {
-                                interaction.emit(PressInteraction.Cancel(press))
-                            }
-                        },
-                        onTap = { onToggleExpanded() },
-                    )
-                }
+                .then(
+                    if (meta.enabled) {
+                        Modifier.pointerInput(workspace.id) {
+                            detectTapGestures(
+                                onPress = { offset ->
+                                    val press = PressInteraction.Press(offset)
+                                    interaction.emit(press)
+                                    if (tryAwaitRelease()) {
+                                        interaction.emit(PressInteraction.Release(press))
+                                    } else {
+                                        interaction.emit(PressInteraction.Cancel(press))
+                                    }
+                                },
+                                onTap = { onToggleExpanded() },
+                            )
+                        }
+                    } else {
+                        Modifier
+                    },
+                )
+                .graphicsLayer { alpha = if (meta.enabled) 1f else DdAlpha.Disabled }
                 .testTag("workspace_${workspace.id}")
                 .padding(start = 10.dp, end = DdSpacing.Xxs),
             verticalAlignment = Alignment.CenterVertically,
@@ -612,11 +607,26 @@ private fun DrawerWorkspaceRow(
                 Text(
                     text = workspace.name,
                     style = DdType.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                    color = colors.ink,
+                    color = if (meta.enabled) colors.ink else colors.inkTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                val remote = workspace.remote
+                if (remote != null) {
+                    Text(
+                        text = if (remote.online) {
+                            remote.deviceName
+                        } else {
+                            stringResource(R.string.workspace_remote_offline_annotation, remote.deviceName)
+                        },
+                        style = DdType.bodySmall.copy(fontSize = 11.5.sp, lineHeight = 16.sp),
+                        color = colors.inkTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
+            if (meta.enabled) {
             DdIconButton(
                 icon = DdIcons.More,
                 onClick = { menuOpen = true },
@@ -626,7 +636,9 @@ private fun DrawerWorkspaceRow(
                 iconSize = 18.dp,
                 tint = colors.inkTertiary,
             )
+            }
         }
+        if (meta.enabled) {
         DdMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false },
@@ -642,7 +654,7 @@ private fun DrawerWorkspaceRow(
                     onNewSession()
                 },
             )
-            if (!workspace.isHome) {
+            if (!workspace.isHome && meta.manageable) {
                 DdMenuItem(
                     text = stringResource(R.string.drawer_action_rename),
                     icon = DdIcons.Compose,
@@ -662,16 +674,18 @@ private fun DrawerWorkspaceRow(
                     onTogglePinned()
                 },
             )
-            DdMenuItem(
-                text = stringResource(R.string.drawer_workspace_settings),
-                icon = DdIcons.Settings,
-                testTag = "workspace_menu_settings_${workspace.id}",
-                onClick = {
-                    menuOpen = false
-                    onSettings()
-                },
-            )
-            if (!workspace.isHome) {
+            if (meta.manageable) {
+                DdMenuItem(
+                    text = stringResource(R.string.drawer_workspace_settings),
+                    icon = DdIcons.Settings,
+                    testTag = "workspace_menu_settings_${workspace.id}",
+                    onClick = {
+                        menuOpen = false
+                        onSettings()
+                    },
+                )
+            }
+            if (!workspace.isHome && meta.manageable) {
                 DdMenuItem(
                     text = stringResource(R.string.drawer_action_delete),
                     icon = DdIcons.Trash,
@@ -684,80 +698,7 @@ private fun DrawerWorkspaceRow(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun DrawerRemoteDeviceHeader(
-    device: RelayDevice,
-    modifier: Modifier = Modifier,
-) {
-    val colors = superPiColors()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(36.dp)
-            .padding(start = 10.dp, end = DdSpacing.Xs, top = DdSpacing.Sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        DdIcon(
-            icon = if (device.platform == "android") DdIcons.Phone else DdIcons.Desktop,
-            tint = colors.inkTertiary,
-            size = 13.dp,
-        )
-        Text(
-            text = device.name,
-            modifier = Modifier.weight(1f),
-            style = DdType.chip,
-            color = colors.inkTertiary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (!device.online) {
-            Text(
-                text = stringResource(R.string.remoteagent_device_offline),
-                style = DdType.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
-                color = colors.inkTertiary,
-                maxLines = 1,
-            )
         }
-    }
-}
-
-@Composable
-private fun DrawerRemoteBotRow(
-    device: RelayDevice,
-    bot: RelayBot,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = superPiColors()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .clip(DdShapes.Medium)
-            .clickable(enabled = device.online, onClick = onClick)
-            .testTag("remote_bot_${device.deviceId}_${bot.id}")
-            .padding(start = 34.dp, end = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier
-                .size(6.dp)
-                .clip(CircleShape)
-                .background(if (device.online) colors.success else colors.hairline),
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = bot.name,
-            modifier = Modifier.weight(1f),
-            style = DdType.bodySmall.copy(fontSize = 13.5.sp, lineHeight = 18.sp),
-            color = if (device.online) colors.inkSecondary else colors.inkTertiary.copy(alpha = DdAlpha.Disabled),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 

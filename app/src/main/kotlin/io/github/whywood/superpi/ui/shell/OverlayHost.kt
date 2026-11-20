@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.whywood.superpi.data.AttachmentRef
-import io.github.whywood.superpi.data.relay.RelayDevice
 import io.github.whywood.superpi.design.DdMotion
 import io.github.whywood.superpi.design.DdSheet
 import io.github.whywood.superpi.design.DdSpacing
@@ -100,7 +99,6 @@ data class ShellDrawerState(
     val busySessionIds: Set<String>,
     val timerSessionIds: Set<String>,
     val jobSessionIds: Set<String>,
-    val relayDevices: List<RelayDevice>,
     val userName: String,
     val avatar: ImageBitmap? = null,
     val hasUpdate: Boolean = false,
@@ -114,7 +112,6 @@ data class ShellDrawerActions(
     val onRename: (String, String) -> Unit, val onSetPinned: (String, Boolean) -> Unit,
     val onSetArchived: (String, Boolean) -> Unit, val onDelete: (String) -> Unit,
     val onSettings: () -> Unit,
-    val onOpenRemoteBot: (deviceId: String, botId: String) -> Unit,
 )
 fun resolveOverlays(state: ShellOverlayState): List<ShellOverlay> = buildList {
     state.workspaceCreate?.let(::add)
@@ -260,7 +257,6 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 busySessionIds = state.busySessionIds,
                 timerSessionIds = state.timerSessionIds,
                 jobSessionIds = state.jobSessionIds,
-                relayDevices = state.relayDevices,
                 userName = state.userName,
                 avatar = state.avatar,
                 hasUpdate = state.hasUpdate,
@@ -273,7 +269,6 @@ private fun ShellDrawerHost(state: ShellDrawerState, actions: ShellDrawerActions
                 onOpenMemory = { actions.onNavigate(AppDestination.Memory) },
                 onOpenRemote = { actions.onNavigate(AppDestination.Remote) },
                 onOpenRelay = { actions.onNavigate(AppDestination.Relay) },
-                onOpenRemoteBot = actions.onOpenRemoteBot,
                 onCreateWorkspace = actions.onCreateWorkspace,
                 onToggleWorkspaceExpanded = actions.onToggleWorkspaceExpanded,
                 onToggleWorkspacePinned = actions.onToggleWorkspacePinned,

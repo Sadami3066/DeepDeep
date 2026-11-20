@@ -144,7 +144,6 @@ internal fun AppShell(
         chatViewModel.adoptConfiguredModel(config)
     }
     val timers by graph.timerService.timers.collectAsStateWithLifecycle()
-    val relayDevices by graph.relayLive.devices.collectAsStateWithLifecycle()
     val linuxState by graph.linuxEnvironment.state.collectAsStateWithLifecycle()
     val linuxEnabled by graph.linuxSettings.enabled.collectAsStateWithLifecycle(initialValue = false)
     val sharedStorageEnabled by graph.linuxSettings.sharedStorageEnabled.collectAsStateWithLifecycle(
@@ -646,7 +645,6 @@ internal fun AppShell(
             state.busySessionIds,
             timerSessionIds,
             jobSessionIds,
-            relayDevices,
             nickname,
             avatarBitmap,
             updateUi.hasUpdate,
@@ -681,10 +679,6 @@ internal fun AppShell(
             onSetArchived = chatViewModel::setSessionArchived,
             onDelete = chatViewModel::deleteSession,
             onSettings = ::openSettings,
-            onOpenRemoteBot = { deviceId, botId ->
-                drawerOpen = false
-                navigator.push(AppDestination.RemoteChat(deviceId, botId))
-            },
         )
         AppOverlays(
             graph = graph,

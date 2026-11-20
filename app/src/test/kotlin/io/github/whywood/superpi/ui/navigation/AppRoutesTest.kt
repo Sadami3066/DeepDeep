@@ -28,7 +28,6 @@ class AppRoutesTest {
         AppDestination.Plugins,
         AppDestination.Remote,
         AppDestination.RemoteConnect("demo-computer"),
-        AppDestination.RemoteChat("demo-device", "demo-bot"),
         AppDestination.Miniapp,
         AppDestination.MiniappDetail("demo-miniapp"),
         AppDestination.PluginPage("demo-plugin", "home"),
@@ -43,7 +42,7 @@ class AppRoutesTest {
 
     @Test
     fun allRoutesRoundTripThroughRouteKey() {
-        assertEquals(25, allDestinations.size)
+        assertEquals(24, allDestinations.size)
         allDestinations.forEach { assertEquals(it, AppDestination.fromRouteKey(it.routeKey)) }
     }
 
@@ -98,15 +97,6 @@ class AppRoutesTest {
             listOf(AppDestination.Remote, AppDestination.RemoteConnect("demo-computer")),
             deepLinkStack(AppDestination.RemoteConnect("demo-computer")),
         )
-    }
-
-    @Test
-    fun remoteChatRouteIsDistinctFromRemoteConnect() {
-        val destination = AppDestination.RemoteChat("demo-device", "demo-bot")
-        assertTrue(destination.routeKey.startsWith("remote-bot/"))
-        assertEquals(destination, AppDestination.fromRouteKey(destination.routeKey))
-        assertNull(routeSpec(destination).parentRouteKey)
-        assertNull(AppDestination.fromRouteKey("remote-bot/"))
     }
 
     @Test

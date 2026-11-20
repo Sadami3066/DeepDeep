@@ -94,7 +94,7 @@ internal fun WorkspaceSettingsRoute(
     val scope = rememberCoroutineScope()
     val hostState by dependencies.hostAccess.state.collectAsStateWithLifecycle()
     val screenToolsReady = hostState.effective == HostAccess.ADB || hostState.effective == HostAccess.ROOT
-    if (workspace == null) {
+    if (workspace == null || workspace.remote != null) {
         LaunchedEffect(workspaceId) { navigator.pop() }
         return
     }

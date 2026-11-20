@@ -155,12 +155,6 @@ sealed interface AppDestination {
         override val depth: Int = 1
     }
 
-    data class RemoteChat(val deviceId: String, val botId: String) : AppDestination {
-        override val routeKey: String = REMOTE_BOT_PREFIX +
-            encodeRoutePath(deviceId) + REMOTE_BOT_SEPARATOR + encodeRoutePath(botId)
-        override val depth: Int = 1
-    }
-
     data class RemoteConnect(val computerId: String) : AppDestination {
         override val routeKey: String = REMOTE_CONNECT_PREFIX + computerId
         override val depth: Int = 2
@@ -208,8 +202,6 @@ sealed interface AppDestination {
         private const val PLUGIN_DETAIL_PREFIX = "plugins/"
         private const val MINIAPP_DETAIL_PREFIX = "miniapp/"
         private const val REMOTE_CONNECT_PREFIX = "remote/"
-        private const val REMOTE_BOT_PREFIX = "remote-bot/"
-        private const val REMOTE_BOT_SEPARATOR = "/"
         private const val WORKSPACE_SETTINGS_PREFIX = "workspaces/"
         private const val WORKSPACE_SETTINGS_SUFFIX = "/settings"
         private const val PLUGIN_PAGE_MARKER = "/page/"
@@ -259,13 +251,6 @@ sealed interface AppDestination {
             routeKey == Plugins.routeKey -> Plugins
             routeKey == Remote.routeKey -> Remote
             routeKey == Relay.routeKey -> Relay
-            routeKey.startsWith(REMOTE_BOT_PREFIX) -> {
-                val encoded = routeKey.removePrefix(REMOTE_BOT_PREFIX)
-                val deviceId = decodeRoutePath(encoded.substringBefore(REMOTE_BOT_SEPARATOR))
-                val botId = decodeRoutePath(encoded.substringAfter(REMOTE_BOT_SEPARATOR, ""))
-                if (deviceId != null && botId != null) RemoteChat(deviceId, botId) else null
-            }
-
             routeKey.startsWith(REMOTE_CONNECT_PREFIX) ->
                 RemoteConnect(routeKey.removePrefix(REMOTE_CONNECT_PREFIX))
                     .takeIf { it.computerId.isNotBlank() }

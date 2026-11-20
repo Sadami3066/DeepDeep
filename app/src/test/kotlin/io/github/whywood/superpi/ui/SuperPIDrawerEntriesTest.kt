@@ -1,8 +1,7 @@
 package io.github.whywood.superpi.ui
 
-import io.github.whywood.superpi.data.relay.RelayBot
-import io.github.whywood.superpi.data.relay.RelayDevice
 import io.github.whywood.superpi.runtime.ConversationSummary
+import io.github.whywood.superpi.runtime.RemoteBotRef
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,14 +15,28 @@ class SuperPIDrawerEntriesTest {
         updatedAt: Long,
         pinned: Boolean = false,
         archived: Boolean = false,
+        cwd: String = "/work",
     ) = ConversationSummary(
         id = id,
         title = "Session $id",
         updatedAt = updatedAt,
-        filePath = "/work/$id.jsonl",
-        cwd = "/work",
+        filePath = "$cwd/$id.jsonl",
+        cwd = cwd,
         pinned = pinned,
         archived = archived,
+    )
+
+    private fun remoteWorkspace(online: Boolean) = RuntimeWorkspace(
+        id = "remote:desktop:pi",
+        name = "PI",
+        cwd = "/remote/desktop/pi",
+        remote = RemoteBotRef(
+            deviceId = "desktop",
+            deviceName = "Mac",
+            botId = "pi",
+            botName = "PI",
+            online = online,
+        ),
     )
 
     private fun entries(
@@ -93,65 +106,68 @@ class SuperPIDrawerEntriesTest {
     }
 
     @Test
-    fun appendsRemoteDeviceGroupsWithTheirBots() {
-        val devices = listOf(
-            RelayDevice(
-                deviceId = "desktop-1",
-                name = "Mac",
-                platform = "desktop",
-                online = true,
-                lastSeen = 0L,
-                bots = listOf(RelayBot(id = "pi", name = "PI"), RelayBot(id = "work", name = "Work")),
-            ),
-            RelayDevice(
-                deviceId = "tablet-1",
-                name = "Tablet",
-                platform = "android",
-                online = false,
-                lastSeen = 0L,
-                bots = listOf(RelayBot(id = "home", name = "Home")),
-            ),
-            RelayDevice(
-                deviceId = "empty-1",
-                name = "Empty",
-                platform = "desktop",
-                online = true,
-                lastSeen = 0L,
-                bots = emptyList(),
-            ),
-        )
-
+    fun remoteWorkspacesUseTheSameEntriesAsLocalBots() {
+        val local = RuntimeWorkspace(id = "ws-1", name = "Work", cwd = "/work")
+        val remote = remoteWorkspace(online = true)
         val result = buildDrawerEntries(
-            workspaces = listOf(workspace),
-            sessionsByCwd = emptyMap(),
-            expandedWorkspaceIds = emptySet(),
+            workspaces = listOf(local, remote),
+            sessionsByCwd = mapOf(
+                local.cwd to listOf(session("s1", 1)),
+                remote.cwd to listOf(session("remote-s1", 2, cwd = remote.cwd)),
+            ),
+            expandedWorkspaceIds = setOf(local.id, remote.id),
             expandedSessionWorkspaceIds = emptySet(),
-            relayDevices = devices,
         )
 
-        val remoteEntries = result.filter {
-            it is DrawerEntry.RemoteDeviceEntry || it is DrawerEntry.RemoteBotEntry
-        }
         assertEquals(
-            listOf(
-                "remote_device_desktop-1",
-                "remote_bot_desktop-1_pi",
-                "remote_bot_desktop-1_work",
-                "remote_device_tablet-1",
-                "remote_bot_tablet-1_home",
-            ),
-            remoteEntries.map { it.key },
+            listOf(local.id, remote.id),
+            result.filterIsInstance<DrawerEntry.WorkspaceEntry>().map { it.workspace.id },
         )
         assertEquals(
-            result.size,
-            result.map { it.key }.toSet().size,
+            listOf(local.id, remote.id),
+            result.filterIsInstance<DrawerEntry.Session>().map { it.workspaceId },
         )
+        assertEquals(result.size, result.map { it.key }.toSet().size)
     }
 
     @Test
-    fun noRemoteEntriesWithoutRemoteDevices() {
-        val result = entries(emptyList())
-        assertTrue(result.none { it is DrawerEntry.RemoteDeviceEntry || it is DrawerEntry.RemoteBotEntry })
+    fun workspaceMetaGatesRemoteRowsAndActions() {
+        val local = drawerWorkspaceMeta(RuntimeWorkspace(id = "ws-1", name = "Work", cwd = "/work"))
+        assertEquals(true, local.enabled)
+        assertEquals(true, local.manageable)
+        assertEquals(null, local.sourceDevice)
+
+        val online = drawerWorkspaceMeta(remoteWorkspace(online = true))
+        assertEquals(true, online.enabled)
+        assertEquals(false, online.manageable)
+        assertEquals("Mac", online.sourceDevice)
+
+        val offline = drawerWorkspaceMeta(remoteWorkspace(online = false))
+        assertEquals(false, offline.enabled)
+        assertEquals(false, offline.manageable)
+        assertEquals("Mac", offline.sourceDevice)
+    }
+
+    @Test
+    fun newChatTargetSkipsOfflineRemoteWorkspace() {
+        val local = RuntimeWorkspace(id = "home", name = "PI", cwd = "/home", isHome = true)
+        val remoteOnline = remoteWorkspace(online = true)
+        val remoteOffline = remoteWorkspace(online = false)
+
+        assertEquals(
+            local.id,
+            drawerNewChatWorkspaceId(listOf(local, remoteOffline), remoteOffline.id),
+        )
+        assertEquals(
+            remoteOnline.id,
+            drawerNewChatWorkspaceId(listOf(local, remoteOnline), remoteOnline.id),
+        )
+        assertEquals(
+            local.id,
+            drawerNewChatWorkspaceId(listOf(remoteOffline, local), local.id),
+        )
+        assertEquals(null, drawerNewChatWorkspaceId(listOf(remoteOffline), remoteOffline.id))
+        assertEquals(null, drawerNewChatWorkspaceId(emptyList(), "home"))
     }
 
     @Test

@@ -36,6 +36,7 @@
     <string name="drawer_workspace_new_session">新建会话</string>
     <string name="drawer_workspace_settings">设置</string>
     <string name="drawer_workspace_empty">暂无会话</string>
+    <string name="workspace_remote_offline_annotation">%1$s · 离线</string>
     <string name="workspace_section">Bot</string>
     <string name="drawer_workspace_create_short">新建</string>
     <string name="workspace_create">新建 Bot</string>
