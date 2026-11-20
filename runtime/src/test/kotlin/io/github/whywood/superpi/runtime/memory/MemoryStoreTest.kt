@@ -1,5 +1,6 @@
 package io.github.whywood.superpi.runtime.memory
 
+import io.github.whywood.superpi.runtime.MemoryWriteMode
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest

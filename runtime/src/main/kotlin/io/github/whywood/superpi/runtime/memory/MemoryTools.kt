@@ -1,5 +1,6 @@
 package io.github.whywood.superpi.runtime.memory
 
+import io.github.whywood.superpi.runtime.MemoryWriteMode
 import io.github.whywood.superpi.sdk.coding.tools.CodingTool
 import io.github.whywood.superpi.sdk.coding.tools.textResult
 import java.util.Locale

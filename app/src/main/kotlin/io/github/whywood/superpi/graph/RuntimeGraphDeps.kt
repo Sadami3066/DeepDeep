@@ -12,6 +12,7 @@ import io.github.whywood.superpi.data.WorkspaceToolPolicyStore
 import io.github.whywood.superpi.data.PersonalizationStore
 import io.github.whywood.superpi.plugin.manager.PluginHostManager
 import io.github.whywood.superpi.runtime.GoalService
+import io.github.whywood.superpi.runtime.MemoryBackend
 import io.github.whywood.superpi.runtime.JobRegistry
 import io.github.whywood.superpi.runtime.MiniappStore
 import io.github.whywood.superpi.runtime.McpConfigStore
@@ -57,6 +58,7 @@ internal class RuntimeGraphDeps(
     val timerService: () -> TimerService,
     val jobRegistry: () -> JobRegistry,
     val appPreferences: AppPreferences,
+    val memoryBackend: MemoryBackend,
     val apiKeyProvider: suspend () -> String?,
     val webSearchKeyProvider: suspend (String) -> String?,
     val postCustomMessage: suspend (String, String, String, String) -> Boolean,

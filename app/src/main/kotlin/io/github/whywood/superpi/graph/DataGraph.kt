@@ -30,6 +30,8 @@ import io.github.whywood.superpi.data.remote.RemoteGatewayClient
 import io.github.whywood.superpi.data.remote.RemoteSecrets
 import io.github.whywood.superpi.data.relay.RelayClient
 import io.github.whywood.superpi.data.relay.RelayController
+import io.github.whywood.superpi.data.relay.RelayMemoryClient
+import io.github.whywood.superpi.data.relay.RelayMemorySync
 import io.github.whywood.superpi.data.relay.RelayStore
 import io.github.whywood.superpi.data.WebSearchSettingsStore
 import io.github.whywood.superpi.data.isSharedStorageGranted
@@ -90,6 +92,13 @@ internal class DataGraph(private val deps: DataGraphDeps) {
     val relayController = RelayController(
         store = relayStore,
         enroller = RelayClient(platform = "android", appVersion = BuildConfig.VERSION_NAME),
+        scope = deps.scope,
+    )
+    val relayMemorySync = RelayMemorySync(
+        filesDir = deps.appContext.filesDir,
+        rootDir = File(agentDir, "memory"),
+        accounts = relayStore,
+        client = RelayMemoryClient(),
         scope = deps.scope,
     )
     val themePreferences = ThemePreferences(deps.appContext)

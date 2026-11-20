@@ -66,7 +66,7 @@ internal class RuntimeGraph(private val deps: RuntimeGraphDeps) {
 
     internal val pluginArrangeCalendar: io.github.whywood.superpi.arrange.ArrangeCalendarGateway get() = arrangeCalendar
 
-    private val memoryStore = MemoryStore(File(deps.agentDir, "memory"))
+    private val memoryStore = MemoryStore(File(deps.agentDir, "memory")).also { it.attachBackend(deps.memoryBackend) }
 
     private val memoryRecap = MemoryRecap(memoryStore, deps.providerCatalog, deps.scope)
     private val memoryRollup = MemoryRollup(

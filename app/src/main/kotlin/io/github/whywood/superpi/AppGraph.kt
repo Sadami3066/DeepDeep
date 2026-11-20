@@ -333,6 +333,7 @@ class AppGraph(context: Context) : AppDependencies {
         timerService = { serviceGraph.timerService },
         jobRegistry = { serviceGraph.jobRegistry },
         appPreferences = dataGraph.appPreferences,
+        memoryBackend = dataGraph.relayMemorySync,
         apiKeyProvider = {
             dataGraph.credentials.cachedApiKey(ProviderCatalog.DEFAULT_PROVIDER_ID) ?: run {
                 dataGraph.credentials.preload(ProviderCatalog.DEFAULT_PROVIDER_ID)

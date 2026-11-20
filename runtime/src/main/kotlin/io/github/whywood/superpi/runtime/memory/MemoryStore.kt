@@ -1,7 +1,10 @@
 package io.github.whywood.superpi.runtime.memory
 
-import io.github.whywood.superpi.sdk.coding.session.SessionEntry
+import io.github.whywood.superpi.runtime.MemoryBackend
+import io.github.whywood.superpi.runtime.MemoryWriteMode
+import io.github.whywood.superpi.runtime.MemoryWriteOutcome
 import io.github.whywood.superpi.runtime.logWarn
+import io.github.whywood.superpi.sdk.coding.session.SessionEntry
 
 import java.io.File
 import java.time.LocalDate
@@ -11,22 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-
-internal enum class MemoryWriteMode {
-    APPEND,
-    REPLACE_SECTION,
-    OVERWRITE,
-    ;
-
-    companion object {
-        fun fromWire(value: String?): MemoryWriteMode? = when (value?.trim()?.lowercase()) {
-            null, "", "append" -> APPEND
-            "replace_section", "replace-section", "replace" -> REPLACE_SECTION
-            "overwrite" -> OVERWRITE
-            else -> null
-        }
-    }
-}
 
 internal data class MemoryDoc(
     val label: String,
@@ -83,6 +70,13 @@ data class MemoryStatus(
 
 class MemoryStore(private val rootDir: File) {
     private val mutex = Mutex()
+
+    @Volatile
+    private var backend: MemoryBackend? = null
+
+    fun attachBackend(value: MemoryBackend?) {
+        backend = value
+    }
     private val captured = ConcurrentHashMap<String, CapturedTranscript>()
 
     private val profileFile = File(rootDir, "profile.md")
@@ -108,11 +102,14 @@ class MemoryStore(private val rootDir: File) {
         mutex.withLock { ensureLocked() }
     }
 
-    suspend fun section(): String? = withContext(Dispatchers.IO) {
-        mutex.withLock {
-            val today = MemoryText.todayKey()
-            if (cacheValid && !dirty && cachedDay == today) return@withLock cachedSection
-            buildSectionLocked(if (cacheValid) "refresh" else "session_start")
+    suspend fun section(): String? {
+        refreshShared()
+        return withContext(Dispatchers.IO) {
+            mutex.withLock {
+                val today = MemoryText.todayKey()
+                if (cacheValid && !dirty && cachedDay == today) return@withLock cachedSection
+                buildSectionLocked(if (cacheValid) "refresh" else "session_start")
+            }
         }
     }
 
@@ -141,48 +138,130 @@ class MemoryStore(private val rootDir: File) {
     ): String = withContext(Dispatchers.IO) {
         val body = MemoryText.normalize(content)
         if (body.isBlank()) return@withContext "Nothing written: content is empty."
-        mutex.withLock {
-            when (target.trim().lowercase()) {
-                "today", "daily", "diary" -> {
-                    if (mode != MemoryWriteMode.APPEND) return@withLock "Diary only supports append mode."
-                    val day = normalizedDay(date)
-                    appendDayLocked(day, MemoryText.marker(sessionId) + "\n" + body)
-                    invalidateLocked()
-                    "Appended to diary $day:\n\n" + MemoryText.preview(body)
-                }
+        val shared = backend?.let { it.writeShared(target, body, mode, section, date) }
+        if (shared != null) {
+            if (shared.writeLocal) {
+                mutex.withLock { localWriteLocked(target, body, mode, section, sessionId, date) }
+            }
+            mutex.withLock { invalidateLocked() }
+            return@withContext shared.message
+        }
+        mutex.withLock { localWriteLocked(target, body, mode, section, sessionId, date) }
+    }
 
-                "profile", "context", "cookbook" -> {
-                    val file = zoneFile(target) ?: return@withLock unknownTarget(target)
-                    val title = zoneTitle(target) ?: return@withLock unknownTarget(target)
-                    val current = file.readTextOrEmpty()
-                    val updated = when (mode) {
-                        MemoryWriteMode.APPEND -> appendZone(current, title, body, section)
-                        MemoryWriteMode.REPLACE_SECTION -> {
-                            val heading = section?.takeIf { it.isNotBlank() }
-                                ?: return@withLock "replace_section requires a section (the heading of the part to replace)."
-                            if (current.isBlank()) {
-                                "# $title\n\n## ${heading.trimStart('#', ' ')}\n\n$body\n"
-                            } else {
-                                MemorySections.replace(current, heading, body)
-                            }
-                        }
+    private suspend fun MemoryBackend.writeShared(
+        target: String,
+        body: String,
+        mode: MemoryWriteMode,
+        section: String?,
+        date: String?,
+    ): SharedWrite? {
+        val zone = target.trim().lowercase()
+        if (zone == "today" || zone == "daily" || zone == "diary") {
+            if (mode != MemoryWriteMode.APPEND) return null
+            val day = normalizedDay(date)
+            return when (val outcome = append(dayPath(day), null, body)) {
+                MemoryWriteOutcome.Applied, MemoryWriteOutcome.Inactive ->
+                    if (outcome == MemoryWriteOutcome.Inactive) null else SharedWrite(
+                        "Appended to diary $day:\n\n" + MemoryText.preview(body),
+                        writeLocal = false,
+                    )
 
-                        MemoryWriteMode.OVERWRITE -> ensureZoneHeading(title, body)
-                    }
-                    writeAtomically(file, updated)
-                    dirty = true
-                    invalidateLocked()
-                    val action = when (mode) {
-                        MemoryWriteMode.APPEND -> if (section.isNullOrBlank()) "append" else "append to \"$section\""
-                        MemoryWriteMode.REPLACE_SECTION -> "replace_section \"$section\""
-                        MemoryWriteMode.OVERWRITE -> "overwrite"
-                    }
-                    "Wrote ${file.name} ($action):\n\n" + MemoryText.preview(body)
-                }
+                MemoryWriteOutcome.Queued -> SharedWrite(
+                    "Saved to diary $day on this phone; it will sync when the connection returns.",
+                    writeLocal = true,
+                )
 
-                else -> unknownTarget(target)
+                is MemoryWriteOutcome.Rejected -> throw MemoryWriteRejected(outcome.message)
             }
         }
+        val file = zoneFile(target) ?: return null
+        val title = zoneTitle(target) ?: return null
+        val heading = section?.takeIf { it.isNotBlank() }?.trimStart('#', ' ')
+        val current = file.readTextOrEmpty()
+        val message = when (mode) {
+            MemoryWriteMode.APPEND -> submit(
+                append(file.name, heading, body),
+                "Wrote ${file.name} (${
+                    if (heading == null) "append" else "append to \"$heading\""
+                }):\n\n" + MemoryText.preview(body),
+            )
+
+            MemoryWriteMode.REPLACE_SECTION -> {
+                val required = heading
+                    ?: return null
+                submit(
+                    replaceSection(file.name, required, body),
+                    "Wrote ${file.name} (replace_section \"$required\"):\n\n" + MemoryText.preview(body),
+                )
+            }
+
+            MemoryWriteMode.OVERWRITE -> submit(
+                overwrite(file.name, ensureZoneHeading(title, body)),
+                "Wrote ${file.name} (overwrite):\n\n" + MemoryText.preview(body),
+            )
+        }
+        if (message == null) return null
+        return message
+    }
+
+    private fun submit(outcome: MemoryWriteOutcome, appliedMessage: String): SharedWrite? = when (outcome) {
+        MemoryWriteOutcome.Applied -> SharedWrite(appliedMessage, writeLocal = false)
+        MemoryWriteOutcome.Queued -> SharedWrite(
+            "Saved on this phone; it will sync when the connection returns.",
+            writeLocal = true,
+        )
+
+        MemoryWriteOutcome.Inactive -> null
+        is MemoryWriteOutcome.Rejected -> throw MemoryWriteRejected(outcome.message)
+    }
+
+    private fun localWriteLocked(
+        target: String,
+        body: String,
+        mode: MemoryWriteMode,
+        section: String?,
+        sessionId: String?,
+        date: String?,
+    ): String = when (target.trim().lowercase()) {
+        "today", "daily", "diary" -> {
+            if (mode != MemoryWriteMode.APPEND) return "Diary only supports append mode."
+            val day = normalizedDay(date)
+            appendDayLocked(day, MemoryText.marker(sessionId) + "\n" + body)
+            invalidateLocked()
+            "Appended to diary $day:\n\n" + MemoryText.preview(body)
+        }
+
+        "profile", "context", "cookbook" -> {
+            val file = zoneFile(target) ?: return unknownTarget(target)
+            val title = zoneTitle(target) ?: return unknownTarget(target)
+            val current = file.readTextOrEmpty()
+            val updated = when (mode) {
+                MemoryWriteMode.APPEND -> appendZone(current, title, body, section)
+                MemoryWriteMode.REPLACE_SECTION -> {
+                    val heading = section?.takeIf { it.isNotBlank() }
+                        ?: return "replace_section requires a section (the heading of the part to replace)."
+                    if (current.isBlank()) {
+                        "# $title\n\n## ${heading.trimStart('#', ' ')}\n\n$body\n"
+                    } else {
+                        MemorySections.replace(current, heading, body)
+                    }
+                }
+
+                MemoryWriteMode.OVERWRITE -> ensureZoneHeading(title, body)
+            }
+            writeAtomically(file, updated)
+            dirty = true
+            invalidateLocked()
+            val action = when (mode) {
+                MemoryWriteMode.APPEND -> if (section.isNullOrBlank()) "append" else "append to \"$section\""
+                MemoryWriteMode.REPLACE_SECTION -> "replace_section \"$section\""
+                MemoryWriteMode.OVERWRITE -> "overwrite"
+            }
+            "Wrote ${file.name} ($action):\n\n" + MemoryText.preview(body)
+        }
+
+        else -> unknownTarget(target)
     }
 
     suspend fun read(target: String, section: String?, date: String?): String = withContext(Dispatchers.IO) {
@@ -272,6 +351,14 @@ class MemoryStore(private val rootDir: File) {
     }
 
     internal suspend fun appendDayBlock(day: String, block: String) = withContext(Dispatchers.IO) {
+        val shared = backend
+        if (shared != null) {
+            val written = shared.appendBlock(dayPath(normalizedDay(day)), null, block)
+            if (written) {
+                mutex.withLock { invalidateLocked() }
+                return@withContext
+            }
+        }
         mutex.withLock { appendDayLocked(normalizedDay(day), block) }
     }
 
@@ -312,6 +399,14 @@ class MemoryStore(private val rootDir: File) {
     }.getOrDefault(false)
 
     internal suspend fun appendMonthBlock(dayKey: String, block: String) = withContext(Dispatchers.IO) {
+        val shared = backend
+        if (shared != null) {
+            val written = shared.appendBlock(monthPath(dayKey.take(7)), dayKey, block)
+            if (written) {
+                mutex.withLock { invalidateLocked() }
+                return@withContext
+            }
+        }
         mutex.withLock {
             val month = dayKey.take(7)
             val file = monthFile(dayKey)
@@ -325,6 +420,14 @@ class MemoryStore(private val rootDir: File) {
     }
 
     internal suspend fun appendYearBlock(monthKey: String, block: String) = withContext(Dispatchers.IO) {
+        val shared = backend
+        if (shared != null) {
+            val written = shared.appendBlock(yearPath(monthKey.take(4)), monthKey, block)
+            if (written) {
+                mutex.withLock { invalidateLocked() }
+                return@withContext
+            }
+        }
         mutex.withLock {
             val year = monthKey.take(4)
             val file = yearFile(monthKey)
@@ -415,6 +518,40 @@ class MemoryStore(private val rootDir: File) {
             }
         }
     }
+
+    private suspend fun refreshShared() {
+        val shared = backend ?: return
+        val changed = runCatching { shared.refreshIfStale() }.getOrDefault(false)
+        if (changed) markDirty()
+    }
+
+    private suspend fun MemoryBackend.appendBlock(path: String, section: String?, block: String): Boolean =
+        when (val outcome = append(path, section, block)) {
+            MemoryWriteOutcome.Applied -> true
+            MemoryWriteOutcome.Inactive -> false
+            MemoryWriteOutcome.Queued -> false
+            is MemoryWriteOutcome.Rejected -> {
+                logWarn(TAG, "shared memory write rejected: ${outcome.message}")
+                false
+            }
+        }
+
+    private fun dayPath(day: String): String {
+        val date = runCatching { LocalDate.parse(day) }.getOrElse { MemoryText.today() }
+        val year = date.year.toString()
+        val month = "%02d".format(date.monthValue)
+        return "daily/$year/$month/$year-$month/${MemoryText.dayKey(date)}.md"
+    }
+
+    private fun monthPath(month: String): String =
+        "daily/${month.take(4)}/${month.takeLast(2)}/$month.md"
+
+    private fun yearPath(year: String): String = "daily/$year/$year.md"
+
+    private data class SharedWrite(
+        val message: String,
+        val writeLocal: Boolean,
+    )
 
     private fun zoneFile(target: String): File? = when (target.trim().lowercase()) {
         "profile" -> profileFile
@@ -603,6 +740,8 @@ class MemoryStore(private val rootDir: File) {
         private val MONTH_FILE = Regex("\\d{4}-\\d{2}\\.md")
     }
 }
+
+internal class MemoryWriteRejected(message: String) : Exception(message)
 
 private fun unknownTarget(target: String): String =
     "Unknown target: $target (write: profile / context / cookbook / today; read: also month / year)."

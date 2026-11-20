@@ -51,6 +51,46 @@ internal object RelayProtocol {
         )
     }
 
+    fun memoryWriteRequest(
+        op: String,
+        path: String,
+        text: String,
+        section: String?,
+        baseVersion: Long?,
+        idempotencyKey: String,
+    ): String = buildJsonObject {
+        put("op", op)
+        put("path", path)
+        put("text", text)
+        put("idempotencyKey", idempotencyKey)
+        if (!section.isNullOrBlank()) put("section", section)
+        if (baseVersion != null) put("baseVersion", baseVersion)
+    }.toString()
+
+    fun parseMemorySnapshot(body: String): RelayMemorySnapshot? {
+        val json = parseObject(body) ?: return null
+        val version = json.long("version") ?: return null
+        val files = json["files"] as? JsonObject ?: return null
+        return RelayMemorySnapshot(
+            version = version,
+            files = files.mapNotNull { (key, value) ->
+                val text = runCatching { value.jsonPrimitive.contentOrNull }.getOrNull()
+                if (text == null) null else key to text
+            }.toMap(),
+            versions = (json["versions"] as? JsonObject).orEmptyMap(),
+        )
+    }
+
+    fun parseMemoryVersion(body: String): Long? {
+        val json = parseObject(body) ?: return null
+        return json.long("version")
+    }
+
+    fun parseErrorCode(body: String): String? {
+        val json = parseObject(body) ?: return null
+        return json.string("code")
+    }
+
     fun parseErrorMessage(body: String): String? {
         val json = parseObject(body) ?: return null
         return json.string("message") ?: json.string("code")
@@ -78,4 +118,10 @@ internal object RelayProtocol {
 
     private fun JsonObject.string(key: String): String? =
         this[key]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotEmpty() }
+
+    private fun JsonObject.long(key: String): Long? =
+        this[key]?.jsonPrimitive?.longOrNull
+
+    private fun JsonObject?.orEmptyMap(): Map<String, Long> =
+        this?.mapNotNull { (key, value) -> value.jsonPrimitive.longOrNull?.let { key to it } }?.toMap().orEmpty()
 }
