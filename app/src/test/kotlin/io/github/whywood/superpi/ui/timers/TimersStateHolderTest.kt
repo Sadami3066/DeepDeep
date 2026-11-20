@@ -3,6 +3,7 @@ package io.github.whywood.superpi.ui.timers
 import io.github.whywood.superpi.R
 import io.github.whywood.superpi.runtime.ConversationSummary
 import io.github.whywood.superpi.runtime.NewTimer
+import io.github.whywood.superpi.runtime.RemoteBotRef
 import io.github.whywood.superpi.runtime.RuntimeWorkspace
 import io.github.whywood.superpi.runtime.Timer
 import io.github.whywood.superpi.runtime.TimerPatch
@@ -142,6 +143,36 @@ class TimersStateHolderTest {
     }
 
     @Test
+    fun loadOmitsRemoteWorkspaceConversations() = runTest {
+        val source = FakeTimersSource()
+        source.conversations = listOf(
+            conversation("local-session", "/work"),
+            conversation("remote-session", "/remote/desktop/pi"),
+        )
+        source.workspaces = listOf(
+            RuntimeWorkspace(id = "ws-1", name = "Work", cwd = "/work"),
+            RuntimeWorkspace(
+                id = "remote:desktop:pi",
+                name = "PI",
+                cwd = "/remote/desktop/pi",
+                remote = RemoteBotRef(
+                    deviceId = "desktop",
+                    deviceName = "Mac",
+                    botId = "pi",
+                    botName = "PI",
+                    online = true,
+                ),
+            ),
+        )
+        val holder = TimersStateHolder(source, backgroundScope)
+
+        holder.load()
+
+        assertEquals(listOf("local-session"), holder.state.value.conversations.map { it.id })
+        assertEquals(setOf("/work"), holder.state.value.workspaceNames.keys)
+    }
+
+    @Test
     fun concurrentRefreshCoalescesIntoOneLoad() = runTest {
         val source = FakeTimersSource()
         val holder = TimersStateHolder(source, backgroundScope)
@@ -169,6 +200,14 @@ class TimersStateHolderTest {
         cwd = "/work",
     )
 
+    private fun conversation(id: String, cwd: String) = ConversationSummary(
+        id = id,
+        title = id,
+        updatedAt = 0L,
+        filePath = "$cwd/$id.jsonl",
+        cwd = cwd,
+    )
+
     private fun timer(id: String, name: String, prompt: String = "prompt", sessionId: String = "") = Timer(
         id = id,
         name = name,
@@ -190,6 +229,8 @@ class TimersStateHolderTest {
         var updateFailure: Exception? = null
         var listGate: CompletableDeferred<Unit>? = null
         var titles: Map<String, String?> = emptyMap()
+        var conversations: List<ConversationSummary> = emptyList()
+        var workspaces: List<RuntimeWorkspace> = emptyList()
 
         override suspend fun list(): List<Timer> {
             listCalls++
@@ -241,8 +282,8 @@ class TimersStateHolderTest {
 
         override suspend fun sessionTitle(sessionId: String): String? = titles[sessionId]
 
-        override suspend fun conversations(): List<ConversationSummary> = emptyList()
+        override suspend fun conversations(): List<ConversationSummary> = conversations
 
-        override suspend fun workspaces(): List<RuntimeWorkspace> = emptyList()
+        override suspend fun workspaces(): List<RuntimeWorkspace> = workspaces
     }
 }

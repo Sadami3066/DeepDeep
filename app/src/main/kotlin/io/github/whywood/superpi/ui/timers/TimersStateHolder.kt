@@ -113,14 +113,19 @@ internal class TimersStateHolder(
         try {
             val conversations = source.conversations()
             val workspaces = source.workspaces()
+            val remoteCwds = workspaces.filter { workspace -> workspace.remote != null }
+                .mapTo(mutableSetOf()) { workspace -> workspace.cwd }
             val items = source.list()
             _state.update {
                 it.copy(
                     loading = false,
                     items = items,
-                    conversations = conversations.filterNot { conversation -> conversation.archived }
+                    conversations = conversations
+                        .filterNot { conversation -> conversation.archived || conversation.cwd in remoteCwds }
                         .sortedByDescending { conversation -> conversation.updatedAt },
-                    workspaceNames = workspaces.associate { workspace -> workspace.cwd to workspace.name },
+                    workspaceNames = workspaces
+                        .filter { workspace -> workspace.remote == null }
+                        .associate { workspace -> workspace.cwd to workspace.name },
                 )
             }
             resolveTitles()
