@@ -1,6 +1,7 @@
 package io.github.whywood.superpi.data.relay
 
 import io.github.whywood.superpi.runtime.AgentRuntime
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -103,7 +104,13 @@ class RelayLive(
                 RemoteCallOutcome.Failed(RemoteCallError(RemoteCallCodes.NOT_CONNECTED, "relay is not connected")),
             )
         }
-        val outcome = withTimeoutOrNull(timeoutMillis) { pending.await() }
+        val completed = try {
+            withTimeoutOrNull(timeoutMillis) { pending.await() }
+        } catch (cancelled: CancellationException) {
+            calls.settle(id, RemoteCallOutcome.Failed(RemoteCallError(RemoteCallCodes.DISCONNECTED, "call cancelled")))
+            throw cancelled
+        }
+        val outcome = completed
             ?: RemoteCallOutcome.Failed(RemoteCallError(RemoteCallCodes.TIMEOUT, "the device did not answer"))
         calls.settle(id, outcome)
         return when (outcome) {
